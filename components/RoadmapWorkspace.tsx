@@ -27,15 +27,17 @@ import {
   getLatestRoadmap,
   saveClientAndRoadmap,
 } from "@/lib/store/local";
+import { captureOpError } from "@/lib/monitoring/capture";
+import { syncClientToBrevoAction } from "@/app/actions/brevo";
 
 async function downloadPdf(firstName: string) {
   const sheet = document.getElementById("roadmap-sheet");
-  if (!sheet) return;
+  if (!sheet) throw new Error("Roadmap sheet not found for PDF export");
   const html2pdf = (await import("html2pdf.js")).default;
   try {
     if (document.fonts?.ready) await document.fonts.ready;
   } catch {
-    /* ignore */
+    /* ignore font wait */
   }
   const client =
     (firstName || "client").trim().split(" ")[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "client";
@@ -112,15 +114,45 @@ export function RoadmapWorkspace({ clientId }: { clientId?: string }) {
     try {
       const result = saveClientAndRoadmap(form, clientId);
       setVersion(result.version);
-      setStatus(`Saved as version ${result.version}`);
+
+      const sync = await syncClientToBrevoAction({
+        email: form.email,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        phone: form.phone,
+        timeToBuy: form.timeToBuy,
+        stage: "roadmap_done",
+        event: result.version === 1 ? "roadmap_completed" : "roadmap_updated",
+        clientId: result.clientId,
+      });
+
+      let statusMsg = `Saved as version ${result.version}`;
+      if (sync.ok && sync.skipped) {
+        statusMsg += sync.reason ? ` · Brevo skipped (${sync.reason})` : " · Brevo skipped";
+      } else if (sync.ok) {
+        statusMsg += " · Synced to Brevo";
+      } else {
+        statusMsg += " · Brevo sync failed (logged — will not silent-drop)";
+      }
+      setStatus(statusMsg);
+
       if (andPdf) {
         setPdfBusy(true);
-        await downloadPdf(form.firstName);
-        setPdfBusy(false);
+        try {
+          await downloadPdf(form.firstName);
+        } catch (pdfErr) {
+          captureOpError(pdfErr, {
+            op: "pdf.export",
+            extra: { clientId: result.clientId, version: result.version },
+          });
+          setStatus((prev) => `${prev} · PDF export failed — try again or Print to PDF`);
+        } finally {
+          setPdfBusy(false);
+        }
       }
       if (!clientId) router.replace(`/portal/admin/roadmap/${result.clientId}`);
     } catch (e) {
-      console.error(e);
+      captureOpError(e, { op: "roadmap.save" });
       setStatus("Save failed. Try again.");
     } finally {
       setSaving(false);

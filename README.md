@@ -30,4 +30,4 @@ SQL is ready in `supabase/migrations/` and `supabase/seed/`. Create a free Supab
 
 ## Docs
 
-Strategy and specs remain in the numbered markdown files at the repo root (`01`–`05`). Prototype reference: `roadmap-generator.html`.
+Strategy and specs remain in the numbered markdown files at the repo root (`01`–`06`). Start with [`06-vision-stack-operating-system.md`](06-vision-stack-operating-system.md) for the locked vision, stack (Brevo Free + Rift), workflows, and edge cases. Prototype reference: `roadmap-generator.html`.
