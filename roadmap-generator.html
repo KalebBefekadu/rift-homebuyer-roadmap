@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homeownership Roadmap Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --brand:#1F3D2B; --accent:#B8862F;
+    --ink:#20241f; --muted:#5b6158; --line:#e4e0d5;
+    --paper:#FAF7F0; --panel:#f1eee4;
+    --app-bg:#2a2f28; --app-panel:#f7f5ef;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--app-bg);color:var(--ink);min-height:100vh}
+  .shell{display:grid;grid-template-columns:minmax(380px,460px) 1fr;min-height:100vh}
+  @media(max-width:1000px){.shell{grid-template-columns:1fr}}
+
+  /* FORM */
+  .form-panel{background:var(--app-panel);padding:26px 24px 60px;overflow-y:auto;height:100vh;border-right:1px solid rgba(0,0,0,.08)}
+  @media(max-width:1000px){.form-panel{height:auto}}
+  .brandbar{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+  .brandbar .dot{width:34px;height:34px;border-radius:9px;background:var(--brand);display:grid;place-items:center;color:#fff;font-family:'Fraunces';font-weight:600;font-size:18px}
+  .brandbar h1{font-family:'Fraunces';font-size:20px;font-weight:600;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:12.5px;margin:2px 0 22px;line-height:1.5}
+
+  .group{margin-bottom:22px}
+  .group>.legend{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);margin-bottom:11px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+  .legend .tag{font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--muted);font-size:11px}
+  label.f{display:block;margin-bottom:11px}
+  label.f>span{display:block;font-size:11.5px;font-weight:600;color:#3c433a;margin-bottom:4px}
+  input,textarea,select{width:100%;font-family:inherit;font-size:13.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--brand);outline-offset:-1px;border-color:var(--brand)}
+  textarea{resize:vertical;min-height:58px;line-height:1.45}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .inline-suffix{position:relative}
+  .inline-suffix .sfx{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none}
+  .inline-suffix input{padding-right:26px}
+
+  .collapse-head{cursor:pointer;user-select:none}
+  .collapse-head .chev{transition:transform .2s;font-size:11px;color:var(--muted)}
+  .collapsed .chev{transform:rotate(-90deg)}
+  .collapsed .collapse-body{display:none}
+  .color-row{display:flex;gap:10px}.color-row label.f{flex:1}
+  input[type=color]{padding:3px;height:38px;cursor:pointer}
+
+  .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-bottom:10px}
+  .feat{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#3c433a;cursor:pointer}
+  .feat input{width:auto;accent-color:var(--brand)}
+
+  .rep{border:1px solid var(--line);border-radius:9px;padding:10px;margin-bottom:9px;background:#fbfaf6;position:relative}
+  .rep .del{position:absolute;top:7px;right:8px;border:none;background:none;color:#b04a3a;cursor:pointer;font-size:16px;line-height:1;opacity:.7}
+  .rep .del:hover{opacity:1}
+  .addbtn{width:100%;border:1px dashed var(--brand);background:transparent;color:var(--brand);font-weight:600;font-size:12.5px;padding:9px;border-radius:8px;cursor:pointer;font-family:inherit}
+  .addbtn:hover{background:rgba(31,61,43,.05)}
+
+  /* computed readout inside form */
+  .calc-out{background:var(--brand);color:#eef2ea;border-radius:11px;padding:14px 16px;margin-top:4px}
+  .calc-out .cline{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:#cdd8cc}
+  .calc-out .cline b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+  .calc-out .big{border-top:1px solid rgba(255,255,255,.18);margin-top:7px;padding-top:9px;font-size:13px}
+  .calc-out .big b{font-family:'Fraunces';font-size:19px;color:#f3d9a0}
+  .calc-hint{font-size:11px;color:var(--muted);margin:8px 2px 0;line-height:1.45}
+
+  .dlbar{position:sticky;bottom:0;margin:24px -24px -60px;padding:16px 24px;background:linear-gradient(to top,var(--app-panel) 70%,transparent)}
+  .dl{width:100%;background:var(--brand);color:#fff;border:none;border-radius:10px;padding:13px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
+  .dl:hover{background:#16301f}.dl:disabled{opacity:.6;cursor:wait}
+  .hint{font-size:11px;color:var(--muted);text-align:center;margin-top:8px}
+
+  /* PREVIEW */
+  .preview-wrap{padding:34px 30px;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;height:100vh}
+  @media(max-width:1000px){.preview-wrap{height:auto;padding:24px 14px}}
+
+  .sheet{width:816px;min-height:1056px;background:var(--paper);color:var(--ink);padding:54px 58px 46px;box-shadow:0 24px 60px rgba(0,0,0,.35);position:relative}
+  .sheet::before{content:"";position:absolute;top:0;left:0;right:0;height:7px;background:var(--brand)}
+  .sheet::after{content:"";position:absolute;top:7px;left:0;right:0;height:2px;background:var(--accent)}
+
+  .sh-head{display:flex;justify-content:space-between;align-items:flex-start;padding-top:6px;margin-bottom:30px}
+  .sh-brand{display:flex;align-items:center;gap:11px}
+  .sh-mark{width:40px;height:40px;border-radius:10px;background:var(--brand);color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-weight:600;font-size:21px}
+  .sh-brand .name{font-family:'Fraunces';font-size:16px;font-weight:600;line-height:1.1;color:var(--brand)}
+  .sh-brand .role{font-size:11px;color:var(--muted);margin-top:2px}
+  .sh-contact{text-align:right;font-size:11px;color:var(--muted);line-height:1.6}
+
+  .sh-title{margin-bottom:24px}
+  .sh-title .eyebrow{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:9px}
+  .sh-title h2{font-family:'Fraunces';font-weight:600;font-size:38px;line-height:1.02;letter-spacing:-.02em;color:var(--brand)}
+  .sh-title .prep{margin-top:11px;font-size:12px;color:var(--muted)}
+  .sh-title .prep b{color:var(--ink);font-weight:600}
+
+  .intro{font-size:13px;line-height:1.6;color:#3d433b;background:var(--panel);border-left:3px solid var(--accent);padding:13px 16px;border-radius:0 8px 8px 0;margin-bottom:26px}
+
+  .sec{margin-bottom:24px;break-inside:avoid}
+  .sec-label{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand);margin-bottom:13px}
+  .sec-label::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .snap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .snap .cell{background:var(--paper);padding:12px 15px}
+  .snap .k{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px}
+  .snap .v{font-size:14.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .snap .v.big{font-family:'Fraunces';font-size:19px;color:var(--brand)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+  .chip{font-size:11px;font-weight:600;color:var(--brand);background:#eef1e8;border:1px solid #d9e0d2;border-radius:20px;padding:3px 10px}
+
+  .num-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ncard{border:1px solid var(--line);border-radius:11px;padding:15px 16px;background:#fff}
+  .ncard .lab{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:9px}
+  .ncard .hero{font-family:'Fraunces';font-size:27px;font-weight:600;color:var(--brand);line-height:1}
+  .ncard .heromo{font-size:12px;color:var(--muted);font-family:'Inter';font-weight:500}
+  .brk{margin-top:11px;border-top:1px solid var(--line);padding-top:9px}
+  .brk .bl{display:flex;justify-content:space-between;font-size:11.5px;color:#4a5147;padding:2.5px 0;font-variant-numeric:tabular-nums}
+  .brk .bl span:last-child{font-weight:600;color:var(--ink)}
+
+  .stack .sl{display:flex;justify-content:space-between;font-size:12px;color:#4a5147;padding:3px 0;font-variant-numeric:tabular-nums}
+  .stack .sl.minus span:last-child{color:#3f7a4f;font-weight:600}
+  .stack .sl span:last-child{font-weight:600;color:var(--ink)}
+  .stack .gap{margin-top:8px;border-top:1.5px solid var(--brand);padding-top:9px;display:flex;justify-content:space-between;align-items:baseline}
+  .stack .gap .gl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--brand)}
+  .stack .gap .gv{font-family:'Fraunces';font-size:23px;font-weight:600;color:var(--brand);font-variant-numeric:tabular-nums}
+  .stack .gap .gv.clear{color:#2f7a4a}
+
+  .gap-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .gcard{border:1px solid var(--line);border-radius:10px;padding:15px 16px;background:#fff}
+  .gcard .lab{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:9px}
+  .score-line{display:flex;align-items:center;gap:10px}
+  .score-line .now{font-family:'Fraunces';font-size:26px;font-weight:600;color:var(--ink)}
+  .score-line .arrow{color:var(--accent);font-size:16px;font-weight:700}
+  .score-line .goal{font-family:'Fraunces';font-size:26px;font-weight:600;color:var(--brand)}
+  .tag{font-size:10px;color:var(--muted)}
+  .note-card{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fff;font-size:12.5px;line-height:1.55;color:#3d433b}
+  .note-card b{color:var(--brand)}
+
+  .dpa-wrap{border:1px solid var(--accent);border-radius:11px;overflow:hidden;background:linear-gradient(180deg,#fbf6ea,#fff)}
+  .dpa-top{background:var(--brand);color:#fff;padding:11px 16px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+  .dpa-top .ttl{font-weight:600}
+  .dpa-top .total{font-family:'Fraunces';font-size:17px;font-weight:600;color:#f3d9a0}
+  .dpa-row{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:12px 16px;border-bottom:1px solid #eadfc7}
+  .dpa-row:last-child{border-bottom:none}
+  .dpa-row .pn{font-size:13px;font-weight:600;color:var(--ink)}
+  .dpa-row .pnote{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4;max-width:430px}
+  .dpa-row .pamt{font-family:'Fraunces';font-size:17px;font-weight:600;color:var(--brand);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+  .moves{position:relative;padding-left:8px}
+  .move{position:relative;padding:0 0 18px 34px;break-inside:avoid}
+  .move:last-child{padding-bottom:2px}
+  .move::before{content:"";position:absolute;left:9px;top:22px;bottom:-4px;width:2px;background:var(--line)}
+  .move:last-child::before{display:none}
+  .move .node{position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .move .mtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .move .mtxt{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.4}
+  .move .mdate{font-size:11px;font-weight:600;color:var(--accent);white-space:nowrap}
+
+  .signoff{margin-top:28px;padding-top:20px;border-top:1px solid var(--line);break-inside:avoid}
+  .signoff .msg{font-family:'Fraunces';font-size:14px;font-style:italic;line-height:1.55;color:#3d433b}
+  .signoff .from{margin-top:12px;font-size:12px;color:var(--muted)}
+  .signoff .from b{color:var(--brand);font-weight:600}
+  .keep{margin-top:20px;font-size:10px;color:var(--muted);text-align:center}
+  .disc{margin-top:8px;font-size:9px;color:#a49d8c;text-align:center;line-height:1.5}
+  .empty-ph{color:#b9b3a3;font-style:italic;font-weight:400}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- FORM -->
+  <div class="form-panel">
+    <div class="brandbar"><div class="dot">R</div><h1>Roadmap Generator</h1></div>
+    <p class="sub">Fill this in live during intake. The numbers calculate themselves and the roadmap builds on the right. Export the branded PDF when done.</p>
+
+    <div class="group collapsed" id="brandGroup">
+      <div class="legend collapse-head" onclick="toggle('brandGroup')"><span>Your branding</span><span class="tag">set once &nbsp;<span class="chev">&#9662;</span></span></div>
+      <div class="collapse-body">
+        <label class="f"><span>Your name</span><input id="advName" value="Kaleb"></label>
+        <label class="f"><span>Brand / company</span><input id="advBrand" value="Rift"></label>
+        <label class="f"><span>Role line</span><input id="advRole" value="Real Estate Agent, Keller Williams Metro Atlanta"></label>
+        <div class="row2">
+          <label class="f"><span>Phone</span><input id="advPhone" value="(404) 000-0000"></label>
+          <label class="f"><span>Email</span><input id="advEmail" value="you@rift.build"></label>
+        </div>
+        <label class="f"><span>Mark letter (logo initial)</span><input id="advMark" value="R" maxlength="2"></label>
+        <div class="color-row">
+          <label class="f"><span>Brand color</span><input type="color" id="cBrand" value="#1F3D2B"></label>
+          <label class="f"><span>Accent color</span><input type="color" id="cAccent" value="#B8862F"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>Client</span></div>
+      <div class="row2">
+        <label class="f"><span>First name</span><input id="clFirst" placeholder="Meron"></label>
+        <label class="f"><span>Last name</span><input id="clLast" placeholder="Tesfaye"></label>
+      </div>
+      <label class="f"><span>Prepared date</span><input id="clDate" type="date"></label>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>What they want</span></div>
+      <div class="row2">
+        <label class="f"><span>Target timeline to buy</span>
+          <select id="sTimeline">
+            <option value="">Select</option>
+            <option>0 to 3 months</option>
+            <option>3 to 6 months</option>
+            <option>6 to 9 months</option>
+            <option>9 to 12 months</option>
+            <option>12 to 18 months</option>
+            <option>18 to 24 months</option>
+            <option>24+ months</option>
+          </select>
+        </label>
+        <label class="f"><span>Home type</span>
+          <select id="sType">
+            <option value="">Select</option>
+            <option>Single-family home</option>
+            <option>Townhome</option>
+            <option>Condominium</option>
+            <option>Duplex / multi-family</option>
+            <option>Manufactured home</option>
+            <option>New construction</option>
+          </select>
+        </label>
+      </div>
+      <div class="row3">
+        <label class="f"><span>Beds</span><input id="sBeds" type="number" min="0" step="1" placeholder="3"></label>
+        <label class="f"><span>Baths</span><input id="sBaths" type="number" min="0" step="0.5" placeholder="2"></label>
+        <label class="f"><span>Target areas</span><input id="sAreas" placeholder="Decatur"></label>
+      </div>
+      <label class="f" style="margin-bottom:8px"><span>Must-have features</span></label>
+      <div class="feat-grid" id="featGrid"></div>
+      <label class="f"><span>Other features</span><input id="featOther" placeholder="e.g. large backyard, in-law suite"></label>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>The numbers</span><span class="tag">auto-calculated</span></div>
+      <div class="inline-suffix"><label class="f"><span>Target price</span><input id="nPrice" type="number" placeholder="300000"><span class="sfx">$</span></label></div>
+      <div class="row2">
+        <div class="inline-suffix"><label class="f"><span>Down payment</span><input id="nDownPct" type="number" step="0.5" value="3.5"><span class="sfx">%</span></label></div>
+        <div class="inline-suffix"><label class="f"><span>Interest rate (assumption)</span><input id="nRate" type="number" step="0.125" value="6.5"><span class="sfx">%</span></label></div>
+      </div>
+      <div class="row2">
+        <label class="f"><span>Loan term</span>
+          <select id="nTerm"><option value="30">30 years</option><option value="20">20 years</option><option value="15">15 years</option></select>
+        </label>
+        <div class="inline-suffix"><label class="f"><span>Current savings</span><input id="nSavings" type="number" placeholder="8000"><span class="sfx">$</span></label></div>
+      </div>
+      <div class="row3">
+        <div class="inline-suffix"><label class="f"><span>Property tax /yr</span><input id="nTax" type="number" step="0.05" value="1.0"><span class="sfx">%</span></label></div>
+        <div class="inline-suffix"><label class="f"><span>Insurance /yr</span><input id="nIns" type="number" value="1400"><span class="sfx">$</span></label></div>
+        <div class="inline-suffix"><label class="f"><span>HOA /mo</span><input id="nHoa" type="number" value="0"><span class="sfx">$</span></label></div>
+      </div>
+      <div class="row2">
+        <div class="inline-suffix"><label class="f"><span>Closing costs</span><input id="nClose" type="number" step="0.5" value="3"><span class="sfx">%</span></label></div>
+        <div class="inline-suffix"><label class="f"><span>PMI /yr (if under 20% down)</span><input id="nPmi" type="number" step="0.1" value="0.6"><span class="sfx">%</span></label></div>
+      </div>
+      <div class="calc-out" id="calcOut"></div>
+      <p class="calc-hint">Assistance programs below reduce the cash gap automatically. Rate, taxes, and insurance are editable estimates, not a quote.</p>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>Credit today</span></div>
+      <div class="row3">
+        <label class="f"><span>Score now</span><input id="gCredNow" placeholder="640"></label>
+        <label class="f"><span>Target</span><input id="gCredGoal" placeholder="700"></label>
+        <label class="f"><span>By when</span><input id="gCredWhen" placeholder="90 days"></label>
+      </div>
+      <label class="f"><span>Income &amp; documentation notes</span><textarea id="gIncome" placeholder="e.g. Self-employed. Coordinate with CPA so 2 years of returns show qualifying income."></textarea></label>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>Money they may qualify for</span></div>
+      <div id="dpaList"></div>
+      <button class="addbtn" onclick="addDpa()">+ Add a program</button>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>Their next moves</span></div>
+      <div id="moveList"></div>
+      <button class="addbtn" onclick="addMove()">+ Add a move</button>
+    </div>
+
+    <div class="group">
+      <div class="legend"><span>Personal note (optional)</span></div>
+      <label class="f"><span>A line in your voice</span><textarea id="note" placeholder="e.g. Meron, this is fully doable on your timeline. Do these three things and we will be house hunting by spring. This plan is yours to keep."></textarea></label>
+    </div>
+
+    <div class="dlbar">
+      <button class="dl" id="dlBtn" onclick="downloadPDF()">Download branded PDF</button>
+      <p class="hint">Fill the branding section once, then reuse for every client.</p>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap">
+    <div class="sheet" id="sheet">
+      <div class="sh-head">
+        <div class="sh-brand">
+          <div class="sh-mark" id="pMark">R</div>
+          <div><div class="name" id="pBrand">Rift</div><div class="role" id="pRole"></div></div>
+        </div>
+        <div class="sh-contact" id="pContact"></div>
+      </div>
+
+      <div class="sh-title">
+        <div class="eyebrow">Homeownership Roadmap</div>
+        <h2 id="pTitle"></h2>
+        <div class="prep" id="pPrep"></div>
+      </div>
+
+      <div class="intro" id="pIntro"></div>
+
+      <div class="sec"><div class="sec-label">Your snapshot</div><div class="snap" id="pSnap"></div></div>
+
+      <div class="sec" id="pNumSec"><div class="sec-label">Your numbers</div><div class="num-grid" id="pNum"></div></div>
+
+      <div class="sec"><div class="sec-label">Where you stand today</div><div class="gap-grid" id="pGap"></div></div>
+
+      <div class="sec" id="pDpaSec"><div class="sec-label">Money you may qualify for</div><div class="dpa-wrap" id="pDpa"></div></div>
+
+      <div class="sec"><div class="sec-label">Your next moves</div><div class="moves" id="pMoves"></div></div>
+
+      <div class="signoff" id="pSign"></div>
+      <div class="keep">This plan was prepared for you and is yours to keep.</div>
+      <div class="disc">Payment and cost figures are good-faith estimates for planning only, based on the assumptions shown, and are not a loan approval, quote, or commitment.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const FEATURES=['Garage','Fenced yard','Basement','Sunroom','Primary suite','Updated kitchen','Home office','Move-in ready'];
+let feats={}; FEATURES.forEach(f=>feats[f]=false);
+let dpa=[{name:'',amt:'',note:''}];
+let moves=[{txt:'',date:''}];
+
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toggle(id){document.getElementById(id).classList.toggle('collapsed');}
+function val(id){return document.getElementById(id).value;}
+function num(id){const n=parseFloat((val(id)||'').toString().replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;}
+function money(n){return '$'+Math.round(n).toLocaleString('en-US');}
+function money0(n){return '$'+Math.round(n).toLocaleString('en-US');}
+
+// features
+function renderFeatInputs(){
+  const c=document.getElementById('featGrid');c.innerHTML='';
+  FEATURES.forEach(f=>{
+    const id='ft_'+f.replace(/\s/g,'');
+    const l=document.createElement('label');l.className='feat';
+    l.innerHTML=`<input type="checkbox" id="${id}" ${feats[f]?'checked':''}> ${f}`;
+    l.querySelector('input').addEventListener('change',e=>{feats[f]=e.target.checked;render();});
+    c.appendChild(l);
+  });
+}
+
+// dpa
+function renderDpaInputs(){
+  const c=document.getElementById('dpaList');c.innerHTML='';
+  dpa.forEach((d,i)=>{
+    const el=document.createElement('div');el.className='rep';
+    el.innerHTML=`<button class="del" onclick="rmDpa(${i})">&times;</button>
+      <label class="f"><span>Program name</span><input value="${esc(d.name)}" oninput="setDpa(${i},'name',this.value)" placeholder="Georgia Dream"></label>
+      <div class="row2">
+        <label class="f"><span>Dollar amount</span><input value="${esc(d.amt)}" oninput="setDpa(${i},'amt',this.value)" placeholder="10000"></label>
+        <label class="f"><span>Short note</span><input value="${esc(d.note)}" oninput="setDpa(${i},'note',this.value)" placeholder="forgivable / grant"></label>
+      </div>`;
+    c.appendChild(el);
+  });
+}
+function addDpa(){dpa.push({name:'',amt:'',note:''});renderDpaInputs();render();}
+function rmDpa(i){dpa.splice(i,1);if(!dpa.length)dpa.push({name:'',amt:'',note:''});renderDpaInputs();render();}
+function setDpa(i,k,v){dpa[i][k]=v;render();}
+
+// moves
+function renderMoveInputs(){
+  const c=document.getElementById('moveList');c.innerHTML='';
+  moves.forEach((m,i)=>{
+    const el=document.createElement('div');el.className='rep';
+    el.innerHTML=`<button class="del" onclick="rmMove(${i})">&times;</button>
+      <label class="f"><span>Move ${i+1}</span><input value="${esc(m.txt)}" oninput="setMove(${i},'txt',this.value)" placeholder="Pay cards under 30% utilization"></label>
+      <label class="f"><span>Due by</span><input value="${esc(m.date)}" oninput="setMove(${i},'date',this.value)" placeholder="Aug 15 or 30 days"></label>`;
+    c.appendChild(el);
+  });
+}
+function addMove(){moves.push({txt:'',date:''});renderMoveInputs();render();}
+function rmMove(i){moves.splice(i,1);if(!moves.length)moves.push({txt:'',date:''});renderMoveInputs();render();}
+function setMove(i,k,v){moves[i][k]=v;render();}
+
+function niceDate(iso){if(!iso)return '';const d=new Date(iso+'T00:00:00');if(isNaN(d))return esc(iso);return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}
+
+// ---- the math ----
+function calc(){
+  const price=num('nPrice');
+  const downPct=num('nDownPct');
+  const rate=num('nRate');
+  const years=num('nTerm')||30;
+  const taxPct=num('nTax');
+  const insYr=num('nIns');
+  const hoa=num('nHoa');
+  const closePct=num('nClose');
+  const pmiPct=num('nPmi');
+  const savings=num('nSavings');
+  const down=price*downPct/100;
+  const loan=Math.max(price-down,0);
+  const r=(rate/100)/12, n=years*12;
+  let pi=0;
+  if(loan>0){ pi = r===0 ? loan/n : loan*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1); }
+  const mTax=price*taxPct/100/12;
+  const mIns=insYr/12;
+  const mPmi=(downPct<20 && pmiPct>0)?loan*pmiPct/100/12:0;
+  const mTotal=pi+mTax+mIns+mPmi+hoa;
+  const closing=price*closePct/100;
+  const cashNeeded=down+closing;
+  const dpaTotal=dpa.reduce((s,d)=>{const x=parseFloat((d.amt||'').replace(/[^0-9.]/g,''));return s+(isNaN(x)?0:x);},0);
+  const covered=savings+dpaTotal;
+  const gap=Math.max(cashNeeded-covered,0);
+  return {price,downPct,down,loan,pi,mTax,mIns,mPmi,hoa,mTotal,closing,cashNeeded,savings,dpaTotal,covered,gap,hasPrice:price>0};
+}
+
+function render(){
+  const brand=val('cBrand'), accent=val('cAccent');
+  document.documentElement.style.setProperty('--brand',brand);
+  document.documentElement.style.setProperty('--accent',accent);
+  document.querySelector('.brandbar .dot').textContent=(val('advMark')||'R');
+
+  const advName=val('advName'), advBrand=val('advBrand');
+  document.getElementById('pMark').textContent=val('advMark')||'R';
+  document.getElementById('pBrand').textContent=advBrand||advName||'Your Brand';
+  document.getElementById('pRole').textContent=val('advRole');
+  document.getElementById('pContact').innerHTML=(advName?esc(advName)+'<br>':'')+(val('advPhone')?esc(val('advPhone'))+'<br>':'')+(val('advEmail')?esc(val('advEmail')):'');
+
+  const first=(val('clFirst')||'').trim();
+  const last=(val('clLast')||'').trim();
+  const full=[first,last].filter(Boolean).join(' ');
+  document.getElementById('pTitle').innerHTML = full ? esc(full)+"'s Path to Owning" : '<span class="empty-ph">Your Client</span>\u2019s Path to Owning';
+  const dt=niceDate(val('clDate'));
+  document.getElementById('pPrep').innerHTML='Prepared by <b>'+esc(advName||'your advisor')+'</b>'+(dt?' &nbsp;&middot;&nbsp; '+dt:'');
+  const hi=first||'Here';
+  document.getElementById('pIntro').innerHTML=esc(hi)+', this is your personal plan to homeownership. It shows exactly where you stand today, what the numbers look like, the money you may qualify for, and the specific moves that get you to the closing table. Work these steps with me and we will get you there.';
+
+  const c=calc();
+
+  // in-form readout
+  const out=document.getElementById('calcOut');
+  if(c.hasPrice){
+    out.innerHTML=
+      `<div class="cline"><span>Down payment (${c.downPct}%)</span><b>${money(c.down)}</b></div>`+
+      `<div class="cline"><span>Est. closing costs</span><b>${money(c.closing)}</b></div>`+
+      `<div class="cline"><span>Cash to close</span><b>${money(c.cashNeeded)}</b></div>`+
+      `<div class="cline"><span>Covered (savings + assistance)</span><b>${money(c.covered)}</b></div>`+
+      `<div class="cline big"><span>Remaining cash gap</span><b>${c.gap>0?money(c.gap):'Fully covered'}</b></div>`+
+      `<div class="cline big"><span>Est. monthly payment</span><b>${money(c.mTotal)}/mo</b></div>`;
+  }else{
+    out.innerHTML='<div class="cline">Enter a target price to calculate.</div>';
+  }
+
+  // snapshot
+  const beds=val('sBeds'), baths=val('sBaths');
+  const bb=(beds||baths)?((beds||'?')+' bd / '+(baths||'?')+' ba'):'';
+  const cellV=(v,ph,big)=> v&&v.toString().trim()?`<div class="v ${big?'big':''}">${esc(v)}</div>`:`<div class="v ${big?'big':''}"><span class="empty-ph">${ph}</span></div>`;
+  const priceDisp=c.hasPrice?money(c.price):'';
+  const monthlyDisp=c.hasPrice?money(c.mTotal)+'<span class="heromo">/mo</span>':'';
+  let snap='';
+  snap+=`<div class="cell"><div class="k">Target timeline</div>${cellV(val('sTimeline'),'to set')}</div>`;
+  snap+=`<div class="cell"><div class="k">Home type</div>${cellV(val('sType'),'to set')}</div>`;
+  snap+=`<div class="cell"><div class="k">Size</div>${cellV(bb,'beds / baths')}</div>`;
+  snap+=`<div class="cell"><div class="k">Target areas</div>${cellV(val('sAreas'),'to set')}</div>`;
+  snap+=`<div class="cell"><div class="k">Target price</div>${cellV(priceDisp,'to set',true)}</div>`;
+  snap+=`<div class="cell"><div class="k">Est. monthly</div>${c.hasPrice?'<div class="v big">'+money(c.mTotal)+' <span class="heromo">/mo</span></div>':'<div class="v big"><span class="empty-ph">to set</span></div>'}</div>`;
+  const chosen=FEATURES.filter(f=>feats[f]);
+  const otherF=(val('featOther')||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const allF=chosen.concat(otherF);
+  if(allF.length){
+    snap+=`<div class="cell" style="grid-column:1/-1"><div class="k">Must-haves</div><div class="chips">${allF.map(f=>'<span class="chip">'+esc(f)+'</span>').join('')}</div></div>`;
+  }
+  document.getElementById('pSnap').innerHTML=snap;
+
+  // numbers section
+  const numSec=document.getElementById('pNumSec');
+  if(c.hasPrice){
+    numSec.style.display='';
+    let brk=`<div class="brk">
+      <div class="bl"><span>Principal &amp; interest</span><span>${money(c.pi)}</span></div>
+      <div class="bl"><span>Property taxes</span><span>${money(c.mTax)}</span></div>
+      <div class="bl"><span>Homeowners insurance</span><span>${money(c.mIns)}</span></div>`+
+      (c.mPmi>0?`<div class="bl"><span>Mortgage insurance</span><span>${money(c.mPmi)}</span></div>`:'')+
+      (c.hoa>0?`<div class="bl"><span>HOA</span><span>${money(c.hoa)}</span></div>`:'')+
+      `</div>`;
+    let stack=`<div class="stack">
+      <div class="sl"><span>Down payment (${c.downPct}%)</span><span>${money(c.down)}</span></div>
+      <div class="sl"><span>Estimated closing costs</span><span>${money(c.closing)}</span></div>
+      <div class="sl" style="border-top:1px solid var(--line);padding-top:6px;margin-top:3px"><span>Cash to close</span><span>${money(c.cashNeeded)}</span></div>`+
+      (c.savings>0?`<div class="sl minus"><span>Your savings</span><span>- ${money(c.savings)}</span></div>`:'')+
+      (c.dpaTotal>0?`<div class="sl minus"><span>Assistance programs</span><span>- ${money(c.dpaTotal)}</span></div>`:'')+
+      `<div class="gap"><span class="gl">${c.gap>0?'Still to save':'Cash need'}</span><span class="gv ${c.gap>0?'':'clear'}">${c.gap>0?money(c.gap):'Fully covered'}</span></div>
+    </div>`;
+    document.getElementById('pNum').innerHTML=
+      `<div class="ncard"><div class="lab">Estimated monthly payment</div><div class="hero">${money(c.mTotal)}<span class="heromo"> /month</span></div>${brk}</div>`+
+      `<div class="ncard"><div class="lab">Cash to close</div>${stack}</div>`;
+  }else{
+    numSec.style.display='none';
+  }
+
+  // where you stand (credit + income)
+  const credNow=val('gCredNow'),credGoal=val('gCredGoal'),credWhen=val('gCredWhen'),inc=val('gIncome');
+  let gap='';
+  gap+=`<div class="gcard"><div class="lab">Credit score</div>
+    <div class="score-line"><span class="now">${credNow&&credNow.trim()?esc(credNow):'-'}</span><span class="arrow">&rarr;</span><span class="goal">${credGoal&&credGoal.trim()?esc(credGoal):'-'}</span></div>
+    <div class="tag" style="margin-top:6px">${credWhen&&credWhen.trim()?'Target within '+esc(credWhen):'now to target'}</div></div>`;
+  gap+=`<div class="gcard"><div class="lab">Loan snapshot</div>
+    <div class="score-line"><span class="goal" style="font-size:22px">${c.hasPrice?money(c.loan):'-'}</span></div>
+    <div class="tag" style="margin-top:6px">${c.hasPrice?'Estimated loan amount at '+c.downPct+'% down':'set price to estimate loan'}</div></div>`;
+  if(inc&&inc.trim()){ gap+=`<div class="note-card" style="grid-column:1/-1"><b>Income &amp; documents:</b> ${esc(inc)}</div>`; }
+  document.getElementById('pGap').innerHTML=gap;
+
+  // dpa
+  const active=dpa.filter(d=>d.name.trim()||d.amt.trim());
+  const dpaSec=document.getElementById('pDpaSec');
+  if(active.length){
+    dpaSec.style.display='';
+    const totalStr=c.dpaTotal>0?'Up to '+money(c.dpaTotal):'';
+    let rows=active.map(d=>{
+      const x=parseFloat((d.amt||'').replace(/[^0-9.]/g,''));
+      const amtStr=isNaN(x)?esc(d.amt):money(x);
+      return `<div class="dpa-row"><div><div class="pn">${esc(d.name)||'Program'}</div>${d.note.trim()?'<div class="pnote">'+esc(d.note)+'</div>':''}</div><div class="pamt">${d.amt.trim()?amtStr:''}</div></div>`;
+    }).join('');
+    document.getElementById('pDpa').innerHTML=`<div class="dpa-top"><span class="ttl">Assistance you may be eligible for</span>${totalStr?'<span class="total">'+totalStr+'</span>':''}</div>${rows}`;
+  }else{ dpaSec.style.display='none'; }
+
+  // moves
+  const am=moves.filter(m=>m.txt.trim());
+  document.getElementById('pMoves').innerHTML = am.length
+    ? am.map((m,i)=>`<div class="move"><div class="node">${i+1}</div><div class="mtop"><div class="mtxt">${esc(m.txt)}</div>${m.date.trim()?'<div class="mdate">'+esc(m.date)+'</div>':''}</div></div>`).join('')
+    : '<div class="move"><div class="node">1</div><div class="mtop"><div class="mtxt empty-ph">Add the first move on the left</div></div></div>';
+
+  // sign off
+  const note=val('note'),sign=document.getElementById('pSign');
+  if(note&&note.trim()){
+    sign.style.display='';
+    sign.innerHTML=`<div class="msg">&ldquo;${esc(note)}&rdquo;</div><div class="from">With you on this, <b>${esc(advName||'Your advisor')}</b>${advBrand?', '+esc(advBrand):''}</div>`;
+  }else{ sign.style.display='none'; }
+}
+
+async function downloadPDF(){
+  const btn=document.getElementById('dlBtn');btn.disabled=true;btn.textContent='Preparing PDF...';
+  try{ if(document.fonts&&document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const sheet=document.getElementById('sheet');
+  const client=((val('clFirst')||'client').trim().split(' ')[0]||'client').toLowerCase().replace(/[^a-z0-9]/g,'')||'client';
+  const opt={margin:0,filename:'homeownership-roadmap-'+client+'.pdf',image:{type:'jpeg',quality:0.98},
+    html2canvas:{scale:2,useCORS:true,backgroundColor:'#FAF7F0',windowWidth:816},
+    jsPDF:{unit:'px',format:[816,1056],orientation:'portrait',hotfixes:['px_scaling']},
+    pagebreak:{mode:['css','legacy']}};
+  try{ await html2pdf().set(opt).from(sheet).save(); }
+  catch(e){ alert('Export ran into an issue. Try again, or use browser Print to PDF as a fallback.'); console.error(e); }
+  btn.disabled=false;btn.textContent='Download branded PDF';
+}
+
+(function init(){
+  document.getElementById('clDate').value=new Date().toISOString().slice(0,10);
+  renderFeatInputs();renderDpaInputs();renderMoveInputs();
+  document.querySelectorAll('input,textarea,select').forEach(el=>el.addEventListener('input',render));
+  render();
+})();
+</script>
+</body>
+</html>
