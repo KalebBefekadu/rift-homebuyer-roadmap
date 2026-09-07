@@ -39,8 +39,8 @@ implement around problems rather than report them. Asking for disagreement expli
 the cheapest defect-detection available.
 
 1. **A phase-1 plan, broken into commits**, each naming the test that proves it. `npm test`
-   already runs — 20 tests in `lib/prototype/compute.test.ts`. Match their style: each states
-   the rule it protects and why that rule exists.
+   already runs, over `lib/core/` and `lib/db/`. Match their style: each test states the
+   rule it protects and why that rule exists.
 
 2. **The first Supabase migration, as SQL.** Including RLS policies and the constraints named
    in `docs/schema.md` §"Constraints worth writing into the schema". Those constraints are in

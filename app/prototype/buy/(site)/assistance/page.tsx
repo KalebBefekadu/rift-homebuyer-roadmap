@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   FUNDING_LABEL, GA_COUNTIES, TYPE_LABEL, matchPrograms, type AssistanceProgram,
-} from "@/lib/prototype/registry";
-import { money } from "@/lib/prototype/compute";
+} from "@/lib/core/registry";
+import { money } from "@/lib/core/compute";
 import { Ico } from "@/components/rift/icons";
 
 

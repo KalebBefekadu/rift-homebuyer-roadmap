@@ -5,7 +5,7 @@ import Link from "next/link";
 import { StudioHead, StudioBody } from "@/components/rift/Shell";
 import { Ico } from "@/components/rift/icons";
 import { OFFERS } from "@/lib/prototype/fixtures";
-import { money } from "@/lib/prototype/compute";
+import { money } from "@/lib/core/compute";
 
 const ROWS: [string, (o: typeof OFFERS[0]) => string][] = [
   ["Offer price", (o) => money(o.price)],

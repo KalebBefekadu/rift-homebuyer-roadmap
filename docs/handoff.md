@@ -17,9 +17,10 @@ fresh clone to a running environment.
 
 Two things that did not exist at the first handoff, both of which change where you start:
 
-- **A test harness that runs.** `npm test` — 20 tests in `lib/prototype/compute.test.ts`
-  pinning the compute contract and the readout's timing rule, plus a drift guard in
-  `lib/prototype/docs.test.ts` that fails when this documentation disagrees with the code.
+- **A test harness that runs.** `npm test`. The compute contract and the readout's timing rule in
+  `lib/core/compute.test.ts`, the schema's constraints against a real Postgres in
+  `lib/db/schema.test.ts`, and a drift guard in `lib/core/docs.test.ts` that fails when this
+  documentation disagrees with the code.
   The rest of §7 is written against that harness, not from scratch.
 - **Working plumbing.** Supabase auth with a localStorage fallback, Sentry with a tunnel
   route, and a Brevo client that degrades honestly. It came from the portal MVP that Rift
@@ -125,8 +126,8 @@ These are the load-bearing rules. Each one exists because breaking it produces a
 number rather than an error, which is the only class of bug this product cannot survive.
 
 ### 4.1 Front-end value is computed, never generated
-Every customer-facing figure originates in `lib/prototype/compute.ts` or is matched from
-`lib/prototype/registry.ts`. No number is ever authored text, and no number is ever produced
+Every customer-facing figure originates in `lib/core/compute.ts` or is matched from
+`lib/core/registry.ts`. No number is ever authored text, and no number is ever produced
 by a language model. This is what makes the front end free to run, impossible to hallucinate,
 and impossible to inflate through abuse.
 
@@ -151,7 +152,7 @@ is not. The registry ships with one deliberately stale fixture so the rule stays
 ### 4.5 Core funnel questions are bound; custom ones are inert
 A question with a `bound` field writes to a compute input. Its wording, order and option
 *labels* are the agent's; its option *values* and binding are not. Custom questions never
-feed a calculation. See `lib/prototype/funnel.ts`.
+feed a calculation. See `lib/core/funnel.ts`.
 
 ### 4.6 A lead is pinned to the funnel version it answered
 Every lead stores `funnelVersion`. A readout produced under v3 keeps making sense after v5
@@ -163,7 +164,7 @@ This is what makes measuring the funnel defensible at all.
 
 ### 4.8 Fair housing bounds the inputs
 No proxy for a protected class enters lead scoring, matching, or routing. No name analysis,
-no neighbourhood scoring, no language inference, no photo. `lib/prototype/lead.ts` documents
+no neighbourhood scoring, no language inference, no photo. `lib/core/lead.ts` documents
 the complete input list; treat additions to it as a compliance change, not a feature.
 
 ### 4.9 Nothing public is requested before a private check
@@ -248,7 +249,7 @@ Do not port any of this. It exists to make the interaction model reviewable.
 These encode the rules above. Write them before the features.
 
 The `compute` block below is **already written and passing** in
-`lib/prototype/compute.test.ts` — it is left here so the list stays complete, and so the
+`lib/core/compute.test.ts` — it is left here so the list stays complete, and so the
 shape of what a good test in this codebase looks like is visible before writing the rest.
 
 ```
@@ -346,10 +347,10 @@ Scored against [benchmark.md](benchmark.md); nothing below is a surprise.
 
 ### Closed since the first handoff
 
-- **Nurture is now a cadence engine, not a band.** `lib/prototype/nurture.ts` — four
+- **Nurture is now a cadence engine, not a band.** `lib/core/nurture.ts` — four
   sequences, escalating intervals, per-step *what this gives them*, six stop conditions, and
   consent gating the channel rather than the sequence. Surfaced at Studio → Queue → Follow-up.
-- **`pending-review` has a producer.** `lib/prototype/review.ts` and the control now inside
+- **`pending-review` has a producer.** `lib/core/review.ts` and the control now inside
   `TrustLadder`. A person can ask for a figure to be checked from any readout; it lands in
   Studio → Queue → Review against a 24h promise. Two constraints hold it honest: every item
   has a **ceiling** (a repair estimate can never reach `verified`), and promoting to
@@ -357,7 +358,7 @@ Scored against [benchmark.md](benchmark.md); nothing below is a surprise.
 - **Pipeline weights learn.** `weightFor()` shrinks the agent's own closed history toward the
   starting assumption with a prior of 12, and every weight is labelled *assumed* /
   *part observed* / *his own history* wherever it is displayed.
-- **The readout → plan seam is defined.** `lib/prototype/seam.ts` — ten fields with an explicit
+- **The readout → plan seam is defined.** `lib/core/seam.ts` — ten fields with an explicit
   carry rule, a 3% drift threshold above which a changed figure must be disclosed before
   publishing, and `canPublish()` preconditions. Surfaced at Studio → Queue → Publishing.
 

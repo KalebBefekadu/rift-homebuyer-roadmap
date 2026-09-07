@@ -4,8 +4,12 @@ The model the build targets. Derived from the prototype's TypeScript types, whic
 specification; where this document and `lib/prototype/*.ts` disagree, **the prototype wins**
 and this document is wrong.
 
-Not a migration. A migration is written against a live Supabase project by the person who
-can run it; this is the shape it has to produce and the constraints that cannot be left out.
+**Built.** `supabase/migrations/20260907000000_rift_core.sql` implements everything below,
+validated against a real Postgres 16, with `lib/db/schema.test.ts` proving each constraint
+actually rejects the row it is supposed to.
+
+Tables are prefixed `rift_`. The retired portal MVP's tables are applied to the same project
+and are left untouched; nothing here reads or writes them.
 
 ---
 
@@ -18,7 +22,7 @@ wrong number instead of an error.
 `readouts` stores the **rendered figures**, not just the inputs. Recomputing a stranger's
 readout from stored inputs six weeks later gives a different answer — rates moved, a
 programme closed — and the promise made was "you keep this". Store the inputs too, for
-recompute, but never overwrite what they were shown. See `lib/prototype/seam.ts`.
+recompute, but never overwrite what they were shown. See `lib/core/seam.ts`.
 
 ### 2. Trust state belongs to a figure, not to a record
 `preliminary / pending-review / reviewed / verified` attaches to an individual number.
@@ -49,7 +53,7 @@ a change to `first_touch_*` is three lines and removes an entire class of attrib
 | Table | Holds | Notes |
 | --- | --- | --- |
 | `agents` | The agent. One row today | Multi-tenant later; put `agent_id` on everything now so it is not a migration later |
-| `business_rules` | The six owner decisions | `lib/prototype/settings.ts`. Store `value`, `decided_at`, `decided_by` — a rule still on its default must be distinguishable from one someone chose |
+| `business_rules` | The six owner decisions | `lib/core/settings.ts`. Store `value`, `decided_at`, `decided_by` — a rule still on its default must be distinguishable from one someone chose |
 
 ### The funnel
 
@@ -165,7 +169,7 @@ it becomes true.
 
 **This table must match `RETENTION` in `lib/prototype/privacy.ts` exactly**, because that array
 is what is rendered to the customer at the bottom of every readout. It is a promise, not a
-configuration value. `lib/prototype/docs.test.ts` fails if the two drift apart.
+configuration value. `lib/core/docs.test.ts` fails if the two drift apart.
 
 | Data | Kept | Why |
 | --- | --- | --- |

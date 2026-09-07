@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "./icons";
 import { Track } from "./Track";
-import type { Readout, Status, Tension } from "@/lib/prototype/results";
+import type { Readout, Status, Tension } from "@/lib/core/results";
 import { EMAIL_NOTE, RETENTION, forgetMe, heldLocally } from "@/lib/prototype/privacy";
 import { track } from "@/lib/prototype/telemetry";
 import { Trust, TrustLadder } from "./Trust";

@@ -7,14 +7,14 @@ import { Trust } from "@/components/rift/Trust";
 import {
   SEQUENCES, sequenceFor, queue, nextFor, autonomy, STOPS, stopLabel,
   CHANNEL_LABEL, type Enrolment, type Channel,
-} from "@/lib/prototype/nurture";
+} from "@/lib/core/nurture";
 import {
   SEEDED, readAsked, clearAsked, openItems, overdue, promote, nextRung, ceilingNote,
   KIND_LABEL, REVIEW_SLA_HOURS, type ReviewItem,
-} from "@/lib/prototype/review";
-import { CROSSINGS, CARRY_LABEL, CARRY_CHIP, DRIFT_PCT, drift, mustDisclose, canPublish } from "@/lib/prototype/seam";
-import { BAND_LABEL, BAND_TONE } from "@/lib/prototype/lead";
-import { money } from "@/lib/prototype/compute";
+} from "@/lib/core/review";
+import { CROSSINGS, CARRY_LABEL, CARRY_CHIP, DRIFT_PCT, drift, mustDisclose, canPublish } from "@/lib/core/seam";
+import { BAND_LABEL, BAND_TONE } from "@/lib/core/lead";
+import { money } from "@/lib/core/compute";
 
 const TABS = ["Follow-up", "Review", "Publishing"] as const;
 

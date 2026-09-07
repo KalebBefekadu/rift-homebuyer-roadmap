@@ -4,7 +4,7 @@ import Link from "next/link";
 import { StudioHead, StudioBody, Tab } from "@/components/rift/Shell";
 import { Ico } from "@/components/rift/icons";
 import { OFFERS } from "@/lib/prototype/fixtures";
-import { money } from "@/lib/prototype/compute";
+import { money } from "@/lib/core/compute";
 
 export default function Offers() {
   const best = Math.max(...OFFERS.map((o) => o.netToSeller));

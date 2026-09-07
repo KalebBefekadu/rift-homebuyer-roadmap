@@ -3,12 +3,12 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AskShell, Leave, Q, Nav, LiveCard, Carried, Field } from "@/components/rift/Ask";
-import { GA_COUNTIES, matchPrograms } from "@/lib/prototype/registry";
+import { GA_COUNTIES, matchPrograms } from "@/lib/core/registry";
 import { useFunnel } from "@/lib/prototype/funnelStore";
 import { track, useTrack } from "@/lib/prototype/telemetry";
 import { readAttribution } from "@/lib/prototype/attribution";
-import { firstTimeFrom, OWNERSHIP_CAVEAT, type Ownership } from "@/lib/prototype/funnel";
-import { BUYER_DEFAULTS, cashGap, cashToClose, money, monthlyComputed, range, type BuyerInputs } from "@/lib/prototype/compute";
+import { firstTimeFrom, OWNERSHIP_CAVEAT, type Ownership } from "@/lib/core/funnel";
+import { BUYER_DEFAULTS, cashGap, cashToClose, money, monthlyComputed, range, type BuyerInputs } from "@/lib/core/compute";
 
 type A = Record<string, unknown>;
 

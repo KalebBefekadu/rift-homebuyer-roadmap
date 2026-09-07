@@ -30,13 +30,13 @@ Entry points:
 
 ```bash
 npx tsc --noEmit    # must be clean
-npm test            # 20 tests plus the docs drift guard, must pass
+npm test            # contract, schema and docs-drift suites — must pass
 npm run build       # must compile
 ```
 
 If any of these fail on a fresh clone, fix that before starting work. All three pass today.
 
-`npm test` includes `lib/prototype/docs.test.ts`, which fails when this documentation drifts
+`npm test` includes `lib/core/docs.test.ts`, which fails when this documentation drifts
 from the code it describes. If it fails, one of the two is wrong — and unless the code is
 actually broken, it is the documentation.
 
@@ -110,7 +110,7 @@ Non-negotiable, and each one is cheap now and expensive later:
 - [ ] **The deletion job runs and actually deletes.** A retention rule with no job behind it
       is a paragraph.
 - [ ] **The rate assumption has a source and a date** displayed with every figure it touches.
-- [ ] **Fair-housing check on the lead model.** The scoring inputs in `lib/prototype/lead.ts`
+- [ ] **Fair-housing check on the lead model.** The scoring inputs in `lib/core/lead.ts`
       are documented as the complete list, with no proxy for a protected class. Confirm that
       is still true of whatever ships.
 

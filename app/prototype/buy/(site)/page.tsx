@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { track, useTrack } from "@/lib/prototype/telemetry";
-import { GA_COUNTIES, matchPrograms, FUNDING_LABEL } from "@/lib/prototype/registry";
-import { money, cashToClose, BUYER_DEFAULTS } from "@/lib/prototype/compute";
-import { firstTimeFrom, OWNERSHIP_CAVEAT, BUY_FUNNEL, type Ownership } from "@/lib/prototype/funnel";
+import { GA_COUNTIES, matchPrograms, FUNDING_LABEL } from "@/lib/core/registry";
+import { money, cashToClose, BUYER_DEFAULTS } from "@/lib/core/compute";
+import { firstTimeFrom, OWNERSHIP_CAVEAT, BUY_FUNNEL, type Ownership } from "@/lib/core/funnel";
 
 export default function Buy() {
   const [county, setCounty] = useState("DeKalb");

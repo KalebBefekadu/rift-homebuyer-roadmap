@@ -5,10 +5,10 @@ import { useSearchParams } from "next/navigation";
 import { Ico } from "@/components/rift/icons";
 import { track, useTrack } from "@/lib/prototype/telemetry";
 import { Verdict, Sec, Reframe, BlockerCard, Steps, Questions, Ladder, ActionBar, Keep, ReadoutShell } from "@/components/rift/Readout";
-import { sellerReadout } from "@/lib/prototype/results";
+import { sellerReadout } from "@/lib/core/results";
 import {
   SELLER_DEFAULTS, money, netProceeds, repairTriage, unclaimedValue, type SellerInputs,
-} from "@/lib/prototype/compute";
+} from "@/lib/core/compute";
 
 const V: Record<string, { c: string; l: string }> = {
   "pays-back": { c: "chip-pos", l: "Worth doing" },

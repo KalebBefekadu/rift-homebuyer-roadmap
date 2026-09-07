@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { StudioHead, StudioBody } from "@/components/rift/Shell";
 import { Ico } from "@/components/rift/icons";
 import { OFFERS } from "@/lib/prototype/fixtures";
-import { money } from "@/lib/prototype/compute";
+import { money } from "@/lib/core/compute";
 
 const GROUPS = ["Price", "Financing", "Deposits", "Dates", "Contingencies", "Concessions", "Documents", "Special Terms"];
 const CONF = { high: { c: "chip-pos", l: "High" }, medium: { c: "chip-warn", l: "Medium" }, low: { c: "chip-neg", l: "Low" } };

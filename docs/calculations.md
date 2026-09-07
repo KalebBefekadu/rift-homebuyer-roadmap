@@ -1,10 +1,10 @@
 # Rift Calculation Contract
 
-`lib/prototype/compute.ts` is the source of truth for every customer-facing figure. It must
+`lib/core/compute.ts` is the source of truth for every customer-facing figure. It must
 stay framework-free, I/O-free, and unit-tested. Components display its outputs; they never
 duplicate the maths.
 
-`lib/prototype/compute.test.ts` is the executable half of this document. **Change them in the
+`lib/core/compute.test.ts` is the executable half of this document. **Change them in the
 same commit.** A contract that only exists in prose is a suggestion.
 
 > This document previously specified `lib/roadmap/calc.ts`, which has been retired. That
@@ -116,7 +116,7 @@ Two rules that fail as wrong numbers rather than errors:
 
 ## The assistance rule — the most important line in the engine
 
-`buyerReadout()` in `lib/prototype/results.ts` **requires `assistance: 0`.**
+`buyerReadout()` in `lib/core/results.ts` **requires `assistance: 0`.**
 
 The headline gap, the timeline, and the readiness status are computed on savings alone.
 Matched assistance is displayed beside them as conditional upside, with the lender named as
@@ -172,7 +172,7 @@ Note the shape of it: the down payment is **$11,375** and the cash actually need
 **$26,187.50**. A buyer told only the first number is short by more than the number they
 were told.
 
-These values are pinned in `lib/prototype/compute.test.ts`. Update the test, this table, and
+These values are pinned in `lib/core/compute.test.ts`. Update the test, this table, and
 the engine together, or not at all.
 
 ## Product framing

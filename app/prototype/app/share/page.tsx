@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Ico } from "@/components/rift/icons";
-import { money } from "@/lib/prototype/compute";
+import { money } from "@/lib/core/compute";
 
 type R = "cobuyer" | "gifter" | "lender" | "friend";
 

@@ -7,11 +7,11 @@ import { Ico } from "@/components/rift/icons";
 import { track, useTrack } from "@/lib/prototype/telemetry";
 import { Trust } from "@/components/rift/Trust";
 import { Verdict, Sec, Reframe, BlockerCard, Steps, Questions, Ladder, ActionBar, Keep, ReadoutShell } from "@/components/rift/Readout";
-import { matchPrograms, FUNDING_LABEL, TYPE_LABEL } from "@/lib/prototype/registry";
-import { buyerReadout } from "@/lib/prototype/results";
+import { matchPrograms, FUNDING_LABEL, TYPE_LABEL } from "@/lib/core/registry";
+import { buyerReadout } from "@/lib/core/results";
 import {
   BUYER_DEFAULTS, cashGap, cashToClose, gapLevers, money, monthlyComputed, range, type BuyerInputs,
-} from "@/lib/prototype/compute";
+} from "@/lib/core/compute";
 
 function Results() {
   const q = useSearchParams();

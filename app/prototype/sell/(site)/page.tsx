@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { useTrack } from "@/lib/prototype/telemetry";
-import { money, netProceeds, repairTriage, SELLER_DEFAULTS, type SellerInputs } from "@/lib/prototype/compute";
-import { GA_COUNTIES } from "@/lib/prototype/registry";
+import { money, netProceeds, repairTriage, SELLER_DEFAULTS, type SellerInputs } from "@/lib/core/compute";
+import { GA_COUNTIES } from "@/lib/core/registry";
 
 const V = {
   "pays-back": { c: "chip-brand", l: "Worth doing" },

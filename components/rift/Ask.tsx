@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "./icons";
 import { Track } from "./Track";
-import { money } from "@/lib/prototype/compute";
-import type { Question as FQuestion } from "@/lib/prototype/funnel";
+import { money } from "@/lib/core/compute";
+import type { Question as FQuestion } from "@/lib/core/funnel";
 
 export function AskShell({
   v, n, total, onLeave, children, panel, hasValues,

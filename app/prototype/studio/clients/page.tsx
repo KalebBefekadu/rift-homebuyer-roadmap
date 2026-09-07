@@ -5,12 +5,12 @@ import Link from "next/link";
 import { StudioHead, StudioBody } from "@/components/rift/Shell";
 import { Ico } from "@/components/rift/icons";
 import { CLIENTS, REP_CHIP } from "@/lib/prototype/clients";
-import { ranked, sla, BAND_LABEL, BAND_TONE } from "@/lib/prototype/lead";
+import { ranked, sla, BAND_LABEL, BAND_TONE } from "@/lib/core/lead";
 import { useAttribution, describeTouch } from "@/lib/prototype/attribution";
-import { MOMENTS, REFERRAL_STATE, STATE_CHIP, dueNow, gate, referralStats } from "@/lib/prototype/referral";
-import { stallOf, STALL_CHIP, forecast, commissionOn, weightFor, evidenceMix, BASIS_CHIP } from "@/lib/prototype/pipeline";
-import { readRules, DEFAULT_RULES } from "@/lib/prototype/settings";
-import { money } from "@/lib/prototype/compute";
+import { MOMENTS, REFERRAL_STATE, STATE_CHIP, dueNow, gate, referralStats } from "@/lib/core/referral";
+import { stallOf, STALL_CHIP, forecast, commissionOn, weightFor, evidenceMix, BASIS_CHIP } from "@/lib/core/pipeline";
+import { readRules, DEFAULT_RULES } from "@/lib/core/settings";
+import { money } from "@/lib/core/compute";
 
 const SOURCES = [
   { s: "Referral", leads: 14, consults: 9, clients: 6, spend: 0, per: "—" },

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { money } from "@/lib/prototype/compute";
+import { money } from "@/lib/core/compute";
 import { Ico } from "@/components/rift/icons";
-import { MOMENTS } from "@/lib/prototype/referral";
+import { MOMENTS } from "@/lib/core/referral";
 
 const STAGES = ["Exploring", "Building readiness", "Financing", "Ready to shop", "Searching", "Offer", "Under contract", "Closing"];
 const AT = 1;

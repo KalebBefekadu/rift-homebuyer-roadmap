@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "./funnel";
+import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
 
 const KEY = (side: "buy" | "sell") => `rift.funnel.${side}`;
 const DEFAULTS: Record<"buy" | "sell", Funnel> = { buy: BUY_FUNNEL, sell: SELL_FUNNEL };

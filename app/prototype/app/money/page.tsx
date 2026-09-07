@@ -6,8 +6,8 @@ import { Ico } from "@/components/rift/icons";
 import { Trust } from "@/components/rift/Trust";
 import {
   BUYER_DEFAULTS, cashToClose, cashGap, gapLevers, monthlyComputed, money, type BuyerInputs,
-} from "@/lib/prototype/compute";
-import { matchPrograms } from "@/lib/prototype/registry";
+} from "@/lib/core/compute";
+import { matchPrograms } from "@/lib/core/registry";
 
 const M = matchPrograms({ county: "DeKalb", firstTimeBuyer: true });
 const BASE: BuyerInputs = {

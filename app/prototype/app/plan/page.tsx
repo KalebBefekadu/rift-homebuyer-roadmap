@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
-import { money, range } from "@/lib/prototype/compute";
-import { matchPrograms, FUNDING_LABEL } from "@/lib/prototype/registry";
+import { money, range } from "@/lib/core/compute";
+import { matchPrograms, FUNDING_LABEL } from "@/lib/core/registry";
 
 const M = matchPrograms({ county: "DeKalb", firstTimeBuyer: true });
 

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import {
   BUYER_DEFAULTS, cashToClose, cashGap, monthlyComputed, money, type BuyerInputs,
-} from "@/lib/prototype/compute";
-import { matchPrograms } from "@/lib/prototype/registry";
+} from "@/lib/core/compute";
+import { matchPrograms } from "@/lib/core/registry";
 
 const M = matchPrograms({ county: "DeKalb", firstTimeBuyer: true });
 const HELP = Math.round((M.openMin + M.openMax) / 2);

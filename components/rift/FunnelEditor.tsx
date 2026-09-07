@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Ico } from "./icons";
 import { useFunnel } from "@/lib/prototype/funnelStore";
 import { resetFunnel, isCustomised } from "@/lib/prototype/funnelStore";
-import { canRemove, move, newCustom, type Question, type FieldType } from "@/lib/prototype/funnel";
+import { canRemove, move, newCustom, type Question, type FieldType } from "@/lib/core/funnel";
 import { readEvents, funnelReport, diagnose, type FunnelReport } from "@/lib/prototype/telemetry";
 import { useEffect } from "react";
 

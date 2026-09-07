@@ -32,16 +32,35 @@ history. Two consequences worth stating so nobody rediscovers them the hard way:
 ```text
 Browser
   -> Next.js App Router (React 19, TypeScript)
-  -> lib/prototype/*        pure, deterministic domain logic — no I/O, no env
+  -> lib/core/*             pure, deterministic domain logic — no I/O, no env
+  -> lib/db/*               server-only data access (service role, RLS bypassed)
   -> lib/auth + lib/supabase  Supabase Auth and Postgres behind RLS
   -> lib/brevo              contact and transactional email projection
   -> lib/monitoring         Sentry, for anything that fails
 ```
 
+### Three layers, and the rule between them
+
+| Layer | Where | May import |
+| --- | --- | --- |
+| **Domain** | `lib/core/` | Nothing but itself. No React, no fetch, no `process.env` |
+| **Data** | `lib/db/` | `lib/core`, Supabase. `server-only` — importing it from a client component is a build error |
+| **Surface** | `app/`, `components/` | Both |
+
+Dependencies point one way. The domain layer was promoted out of `lib/prototype/` for exactly
+this reason: the specification and the production build must share **one** compute engine, or
+they will disagree about a number a stranger is shown and both will look correct in isolation.
+`lib/prototype/` now holds only what is genuinely prototype-shaped — fixtures, and the
+localStorage stand-ins for persistence.
+
+A cycle across this boundary is not theoretical. `TrustState` briefly lived in a React
+component that two domain modules imported, and when the component came to need one of them
+back, the readout page stopped hydrating with no error anywhere.
+
 The domain layer is deliberately I/O-free. `compute.ts`, `results.ts`, `lead.ts`,
 `pipeline.ts`, `nurture.ts`, `review.ts` and `seam.ts` are pure functions over plain data:
 they can be unit-tested without a database, a network, or a browser, and
-`lib/prototype/compute.test.ts` is the proof. **Keep it that way.** The moment a domain module
+`lib/core/compute.test.ts` is the proof. **Keep it that way.** The moment a domain module
 imports a Supabase client, the contracts in handoff.md stop being testable.
 
 Rift owns pipeline state. Brevo owns messaging. Do not create a second place to edit a stage.
@@ -55,6 +74,9 @@ Rift owns pipeline state. Brevo owns messaging. Do not create a second place to 
 | Auth | `lib/auth`, `lib/supabase`, `app/auth/callback` | Supabase Auth with a localStorage fallback |
 | Messaging | `lib/brevo/sync.ts`, `app/actions/brevo.ts` | Contact upsert and event projection |
 | Observability | `lib/monitoring`, `instrumentation*.ts`, `sentry.*.config.ts` | Capture failures without PII |
+| Domain | `lib/core` | The compute engine and every product rule, pure and tested |
+| Data access | `lib/db` | Server-only reads and writes. Every call returns `DbResult` |
+| API | `app/api` | Telemetry and attribution intake |
 | Schema | `supabase/migrations`, `supabase/seed` | The database, versioned |
 | Session refresh | `middleware.ts` | Scoped to exclude `/prototype` and `/` |
 
@@ -81,10 +103,10 @@ documentation update in the same commit.
 
 ## Calculation
 
-`lib/prototype/compute.ts` is the source of truth for every customer-facing figure. It is
+`lib/core/compute.ts` is the source of truth for every customer-facing figure. It is
 framework-free, pure, and unit-tested. Components display its output and must never duplicate
 the maths. The contract and its reference case are in [calculations.md](calculations.md), and
-its executable half is `lib/prototype/compute.test.ts` — **change them in the same commit.**
+its executable half is `lib/core/compute.test.ts` — **change them in the same commit.**
 
 ## Messaging and monitoring
 
@@ -127,28 +149,28 @@ one at a time, not as a tree.
 | `components/rift/Ask.tsx` | The assessment kit. `Field` renders any question from the funnel definition |
 | `components/rift/Readout.tsx` | The readout kit — verdict, sections, blocker, steps, question sheet, conversion ladder, capture |
 | `components/rift/FunnelEditor.tsx` | The agent-facing funnel editor |
-| `lib/prototype/compute.ts` | Deterministic value engine — every customer-facing figure originates here |
-| `lib/prototype/registry.ts` | Verified assistance-program registry with verification dates and suppression |
-| `lib/prototype/results.ts` | Derives the readout — verdict, blocker, ordered steps, question sheet — from computed values only |
-| `lib/prototype/lead.ts` | Lead scoring, with the signal breakdown as part of the output rather than a tooltip |
-| `lib/prototype/funnel.ts` | Question schema, default funnels, and the core/custom split that keeps editing safe |
+| `lib/core/compute.ts` | Deterministic value engine — every customer-facing figure originates here |
+| `lib/core/registry.ts` | Verified assistance-program registry with verification dates and suppression |
+| `lib/core/results.ts` | Derives the readout — verdict, blocker, ordered steps, question sheet — from computed values only |
+| `lib/core/lead.ts` | Lead scoring, with the signal breakdown as part of the output rather than a tooltip |
+| `lib/core/funnel.ts` | Question schema, default funnels, and the core/custom split that keeps editing safe |
 | `lib/prototype/funnelStore.ts` | localStorage persistence so editor changes drive the live funnel |
 | `lib/prototype/telemetry.ts` | Funnel instrumentation. Question ids, dwell and session id — never answers |
 | `lib/prototype/attribution.ts` | First-touch capture. First touch is immutable; later visits update last touch only |
 | `lib/prototype/privacy.ts` | Retention rules, versioned TCPA consent wording, and a real delete |
-| `lib/prototype/referral.ts` | Eight referral moments with escalating asks and the satisfaction gate |
-| `lib/prototype/pipeline.ts` | Stage rules, stall detection with named causes, weighted forward view. Weights shrink toward the agent's own closed history and are labelled with their basis |
-| `lib/prototype/nurture.ts` | The cadence engine. Four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
-| `lib/prototype/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party — enforced in `promote()`, not in the UI |
-| `lib/prototype/seam.ts` | The readout→plan crossing. Ten carry rules, a 3% drift threshold, and the preconditions on publishing |
-| `lib/prototype/settings.ts` | The six business decisions that used to be literals, each with its consequence and whose call it is |
+| `lib/core/referral.ts` | Eight referral moments with escalating asks and the satisfaction gate |
+| `lib/core/pipeline.ts` | Stage rules, stall detection with named causes, weighted forward view. Weights shrink toward the agent's own closed history and are labelled with their basis |
+| `lib/core/nurture.ts` | The cadence engine. Four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
+| `lib/core/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party — enforced in `promote()`, not in the UI |
+| `lib/core/seam.ts` | The readout→plan crossing. Ten carry rules, a 3% drift threshold, and the preconditions on publishing |
+| `lib/core/settings.ts` | The six business decisions that used to be literals, each with its consequence and whose call it is |
 | `components/rift/Trust.tsx` | The four-state trust ladder, rendered. Never colour alone |
 | `lib/prototype/fixtures.ts`, `clients.ts` | Demonstration people, tasks, offers, meetings, documents, playbooks |
 
 ### Editable funnels without breakable maths
 
 The agent can reword, reorder, hide and extend the public questions. The constraint that makes
-this safe is a split in `lib/prototype/funnel.ts`:
+this safe is a split in `lib/core/funnel.ts`:
 
 - **Core** questions carry a `bound` field name that the compute engine reads. Wording, order,
   help text and option *labels* are the agent's. Option *values* and the binding are locked,
@@ -178,8 +200,8 @@ could do to a person — and it is exactly what the arithmetic does if nobody st
 
 These are not decorative. Four product rules from [product.md](product.md) are implemented rather than described:
 
-1. **Computed, never generated.** Every figure a visitor sees is produced by `lib/prototype/compute.ts` or matched from `lib/prototype/registry.ts`. No number anywhere in the prototype is authored text.
-2. **No bare numbers.** The `Computed` type in `lib/prototype/compute.ts` requires an
+1. **Computed, never generated.** Every figure a visitor sees is produced by `lib/core/compute.ts` or matched from `lib/core/registry.ts`. No number anywhere in the prototype is authored text.
+2. **No bare numbers.** The `Computed` type in `lib/core/compute.ts` requires an
    `assumptions` list and a `couldBeWrong` statement on every figure it produces. Keeping
    this in the type rather than in review is the point: a figure that renders without them is
    a defect regardless of whether it happens to be correct.
@@ -207,7 +229,7 @@ Then open `/prototype`. Nothing needs to be configured — no Supabase, no envir
 
 ## Engineering rules
 
-1. **Calculations live in `lib/prototype/compute.ts`.** Never inline mortgage maths in a
+1. **Calculations live in `lib/core/compute.ts`.** Never inline mortgage maths in a
    component, and never let a second module compute the same figure a different way.
 2. **The domain layer stays I/O-free.** Pure functions over plain data. No fetch, no client,
    no `process.env` below `lib/prototype/`.

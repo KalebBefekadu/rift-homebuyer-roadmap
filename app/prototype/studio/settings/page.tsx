@@ -5,11 +5,11 @@ import { StudioHead, StudioBody } from "@/components/rift/Shell";
 import { Ico } from "@/components/rift/icons";
 import { FunnelEditor } from "@/components/rift/FunnelEditor";
 import { RETENTION, PHONE_CONSENT, EMAIL_NOTE, CONSENT_VERSION } from "@/lib/prototype/privacy";
-import { PROGRAMS, daysSinceVerified, isStale } from "@/lib/prototype/registry";
+import { PROGRAMS, daysSinceVerified, isStale } from "@/lib/core/registry";
 import {
   readRules, writeRule, resetRules, undecided, RULE_LABEL, DEFAULT_RULES,
   type BusinessRules,
-} from "@/lib/prototype/settings";
+} from "@/lib/core/settings";
 
 const TABS = ["Automation", "Business rules", "Funnels", "Programs", "Playbooks", "Privacy", "Profile"] as const;
 

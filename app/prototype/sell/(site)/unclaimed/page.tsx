@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
-import { SELLER_DEFAULTS, unclaimedValue, type SellerInputs } from "@/lib/prototype/compute";
-import { GA_COUNTIES } from "@/lib/prototype/registry";
+import { SELLER_DEFAULTS, unclaimedValue, type SellerInputs } from "@/lib/core/compute";
+import { GA_COUNTIES } from "@/lib/core/registry";
 
 export default function Unclaimed() {
   const [s, setS] = useState<SellerInputs>({ ...SELLER_DEFAULTS, ageOver65: false, homesteadFiled: false });

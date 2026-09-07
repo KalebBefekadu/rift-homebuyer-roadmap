@@ -39,7 +39,7 @@ a retention period stated as 13 months in `docs/schema.md` and 24 months in the 
 to the customer. An engineer building the deletion job from the document would have shipped a
 product that breaks a promise made on screen, and nothing would have failed.
 
-`npm test` now includes `lib/prototype/docs.test.ts`, which fails when the docs and the code
+`npm test` now includes `lib/core/docs.test.ts`, which fails when the docs and the code
 disagree about a number that matters. It does not check prose. Keep finding the rest.
 
 ## Read in this order
@@ -59,7 +59,7 @@ disagree about a number that matters. It does not check prose. Keep finding the 
 These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Compressed:
 
 1. **Front-end value is computed, never generated.** Every customer-facing number comes from
-   `lib/prototype/compute.ts` or `registry.ts`. **No number is ever produced by a language
+   `lib/core/compute.ts` or `registry.ts`. **No number is ever produced by a language
    model.** This is the load-bearing decision of the entire product.
 2. **Every figure carries its assumptions and its failure mode.** Enforced in the type.
 3. **Unapproved assistance is never folded into a headline.** `buyerReadout()` requires
@@ -88,7 +88,7 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 - **The domain layer is I/O-free.** No fetch, no client, no `process.env` under
   `lib/prototype/`. It is why the contracts are testable.
 - **Write the acceptance test before the feature.** The list is in handoff.md §7. The harness
-  runs: `npm test` — 20 contract tests plus the documentation drift guard.
+  runs: `npm test` — contract, schema and documentation-drift suites.
 - **A missing integration degrades visibly and says so.** Never a silent success, never a
   crash. `lib/brevo/sync.ts` is the reference.
 - **Every table ships with its RLS policy in the same migration.**
