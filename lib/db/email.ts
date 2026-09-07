@@ -110,6 +110,70 @@ export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
   }, "email.readout");
 }
 
+export interface TouchEmail {
+  to: string;
+  name?: string;
+  /** The step's own subject line, from the cadence definition. */
+  says: string;
+  /** What this touch gives them. The cadence forbids a step without one. */
+  gives: string;
+  shareUrl: string;
+  county: string | null;
+  figures: Record<string, string | number> | null;
+}
+
+/**
+ * One step of the cadence.
+ *
+ * Each touch sends its OWN content. The runner previously sent the same readout
+ * email for every step, with zeroes in place of the person's figures — so a
+ * five-step sequence was five identical messages saying "Buying in your County
+ * takes $0 at the table". That breaks the cadence's first and most important
+ * rule, that every touch carries something new, and it does it in the most
+ * damaging possible way: by proving nobody is paying attention, to somebody
+ * deciding whether to trust us with their finances.
+ *
+ * A touch with no figures behind it is not sent at all. There is no version of
+ * this email that is worth sending with the numbers missing.
+ */
+export async function sendTouch(t: TouchEmail): Promise<SendResult> {
+  if (!t.figures || t.figures.cashToClose === undefined) {
+    return { ok: true, skipped: true, reason: "no readout figures for this lead — nothing worth sending" };
+  }
+
+  const cash = Number(t.figures.cashToClose) || 0;
+  const gap = Number(t.figures.gap) || 0;
+  const where = t.county ? `${escapeHtml(t.county)} County` : "your area";
+
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">${t.name ? `${escapeHtml(t.name)},` : "Hello,"}</p>
+  <p style="font-size:15px">${escapeHtml(t.gives)}</p>
+  <p style="font-size:15px">
+    Your readout still says <strong>${money(cash)}</strong> at the table in ${where}${
+      gap > 0 ? `, with <strong>${money(gap)}</strong> still to find` : ", and your savings already cover it"
+    }.
+    <a href="${t.shareUrl}" style="color:#e8442a">Open it here</a> — it is kept up to date and it stays yours.
+  </p>
+  <p style="font-size:13px;color:#666">
+    Every figure is a planning estimate, not a lending commitment or approval. Nothing here
+    requires you to work with us.
+  </p>
+  <p style="font-size:12px;color:#888">
+    You asked for your readout at Rift. We do not run a newsletter and we do not sell anything
+    on. <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a> — one click, and it stops
+    everything.
+  </p>
+</div>`.trim();
+
+  return send({
+    to: [{ email: t.to, ...(t.name ? { name: t.name } : {}) }],
+    subject: t.says,
+    htmlContent: html,
+    tags: ["nurture"],
+  }, "email.touch");
+}
+
 /** Minimal escaping. Names come from a public form and end up in markup. */
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) =>

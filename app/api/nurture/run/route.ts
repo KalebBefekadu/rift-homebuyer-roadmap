@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { due, claimStep, markTouch } from "@/lib/db/nurture";
-import { sendReadout } from "@/lib/db/email";
+import { sendTouch } from "@/lib/db/email";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -53,18 +53,24 @@ export async function POST(req: Request) {
     const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
     if (!claim.ok || "skipped" in claim || !claim.data.claimed) { notConfigured++; continue; }
 
-    const res = await sendReadout({
+    /* The step's own words, and this person's own figures. A touch with
+       neither is not worth sending, and sendTouch refuses it. */
+    const origin = new URL(req.url).origin;
+    const res = await sendTouch({
       to: t.email,
       name: t.name,
-      shareUrl: `${new URL(req.url).origin}/buy`,
-      cashToClose: 0,
-      gap: 0,
-      monthsToClose: null,
-      county: "your",
+      says: t.says,
+      gives: t.gives,
+      shareUrl: t.shareToken ? `${origin}/r/${t.shareToken}` : `${origin}/buy`,
+      county: t.county,
+      figures: t.figures,
     });
 
     if (res.ok && !("skipped" in res)) { sent++; continue; }
     if (res.ok) {
+      /* Recorded as skipped WITH its reason, so "email is switched off" and
+         "this person has no readout to talk about" stay distinguishable in the
+         touches table. They need different fixes. */
       await markTouch(t.enrolmentId, t.stepId, "skipped", "reason" in res ? res.reason : undefined);
       notConfigured++;
       continue;

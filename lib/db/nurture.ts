@@ -70,6 +70,18 @@ export interface DueTouch {
   channel: "email" | "text" | "call" | "task";
   downgraded: string | null;
   daysLate: number;
+  /**
+   * The figures this person was actually shown, and the link to them.
+   *
+   * Carried because a touch without them cannot be written. The runner used to
+   * send zeroes — "Buying in your County takes $0 at the table" — which is
+   * worse than sending nothing at all: it is a message that proves nobody is
+   * paying attention, delivered to somebody deciding whether to trust us with
+   * their finances.
+   */
+  figures: Record<string, string | number> | null;
+  shareToken: string | null;
+  county: string | null;
 }
 
 /**
@@ -88,17 +100,45 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
   try {
     const { data, error } = await db
       .from("rift_enrolments")
-      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email),rift_touches(step_id)")
+      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id),rift_touches(step_id)")
       .eq("agent_id", agent_id)
       .is("stopped_at", null);
     if (error) return failed(error.message);
 
-    const out: DueTouch[] = [];
-    for (const row of (data ?? []) as unknown as {
+    const rows = (data ?? []) as unknown as {
       id: string; lead_id: string; band: Band; entered_at: string; phone_consent: boolean;
-      rift_leads: { name: string | null; email: string | null } | null;
+      rift_leads: { name: string | null; email: string | null; assessment_id: string | null } | null;
       rift_touches: { step_id: string }[];
-    }[]) {
+    }[];
+
+    /* One query for the whole queue rather than one per enrolment. */
+    const assessmentIds = rows
+      .map((r) => r.rift_leads?.assessment_id)
+      .filter((x): x is string => Boolean(x));
+
+    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null }>();
+    if (assessmentIds.length) {
+      const { data: reads } = await db
+        .from("rift_readouts")
+        .select("assessment_id,figures,share_token,created_at,rift_assessments(county)")
+        .in("assessment_id", assessmentIds)
+        .order("created_at", { ascending: false });
+      for (const r of (reads ?? []) as unknown as {
+        assessment_id: string; figures: Record<string, string | number>; share_token: string;
+        rift_assessments: { county: string | null } | null;
+      }[]) {
+        if (!snap.has(r.assessment_id)) {
+          snap.set(r.assessment_id, {
+            figures: r.figures,
+            token: r.share_token,
+            county: r.rift_assessments?.county ?? null,
+          });
+        }
+      }
+    }
+
+    const out: DueTouch[] = [];
+    for (const row of rows) {
       const daysIn = Math.floor((now.getTime() - new Date(row.entered_at).getTime()) / 86_400_000);
       const sent = new Set(row.rift_touches?.map((t) => t.step_id) ?? []);
 
@@ -118,6 +158,8 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 
       const step = pending[0];
       const { channel, downgraded } = resolveChannel(step, e.phoneConsent);
+      const s = row.rift_leads?.assessment_id ? snap.get(row.rift_leads.assessment_id) : undefined;
+
       out.push({
         enrolmentId: row.id,
         leadId: row.lead_id,
@@ -131,6 +173,9 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         channel,
         downgraded,
         daysLate: daysIn - step.day,
+        figures: s?.figures ?? null,
+        shareToken: s?.token ?? null,
+        county: s?.county ?? null,
       });
     }
 

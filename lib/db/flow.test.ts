@@ -295,3 +295,46 @@ describe("a lead without an assessment", () => {
     expect(rows[0].n).toBeGreaterThan(0);
   });
 });
+
+describe("what a nurture touch is allowed to say", () => {
+  test("a lead with no readout has nothing to carry", async (c) => {
+    /* The runner used to send zeroes — "Buying in your County takes $0 at the
+       table" — to somebody deciding whether to trust us with their finances.
+       There is no version of that email worth sending, so the queue has to be
+       able to tell that the figures are absent. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'snofig','buy') returning id", [AGENT]);
+    const { rows: [l] } = await c.query(
+      `insert into rift_leads (agent_id, assessment_id, side, email, score, band)
+       values ($1,$2,'buy','nofig@example.com',80,'now') returning id`, [AGENT, a.id]);
+    await c.query("insert into rift_enrolments (agent_id, lead_id, band) values ($1,$2,'now')", [AGENT, l.id]);
+
+    const { rows } = await c.query(
+      `select r.share_token from rift_leads le
+       left join rift_readouts r on r.assessment_id = le.assessment_id
+       where le.id = $1`, [l.id]);
+    expect(rows[0].share_token).toBeNull();
+  });
+
+  test("a lead with a readout carries its figures and its link", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side, county) values ($1,'sfig','buy','DeKalb') returning id", [AGENT]);
+    await c.query(
+      `insert into rift_readouts (agent_id, assessment_id, side, share_token, inputs, figures)
+       values ($1,$2,'buy','tok-touch','{}',$3)`,
+      [AGENT, a.id, JSON.stringify({ cashToClose: 26187.5, gap: 17187.5 })]);
+    const { rows: [l] } = await c.query(
+      `insert into rift_leads (agent_id, assessment_id, side, email, score, band)
+       values ($1,$2,'buy','fig@example.com',80,'now') returning id`, [AGENT, a.id]);
+    await c.query("insert into rift_enrolments (agent_id, lead_id, band) values ($1,$2,'now')", [AGENT, l.id]);
+
+    const { rows } = await c.query(
+      `select r.figures, r.share_token, ass.county from rift_leads le
+       join rift_readouts r on r.assessment_id = le.assessment_id
+       join rift_assessments ass on ass.id = le.assessment_id
+       where le.id = $1`, [l.id]);
+    expect(rows[0].figures.cashToClose).toBe(26187.5);
+    expect(rows[0].share_token).toBe("tok-touch");
+    expect(rows[0].county).toBe("DeKalb");
+  });
+});
