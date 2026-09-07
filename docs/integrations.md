@@ -253,6 +253,28 @@ When either stops being acceptable, swap the map for a shared store and keep the
 A refusal returns 429 with `Retry-After` and does **not** name the threshold. An error message
 that states the limit is a tuning guide for whoever is trying to get around it.
 
+### Deadlines
+
+The readout is the revenue path and it renders from two database reads. A read that **fails**
+already falls back — to the built-in registry, which is real verified data, and to the
+documented starting rate. A read that **hangs** had no answer at all: nothing has failed yet,
+so the page waits until the platform kills the function and the visitor sees nothing.
+
+A slow database is a likelier outage than a broken one, and it was the only kind this path
+could not survive.
+
+Both reads now run against a 2-second deadline, chosen against the visitor rather than the
+database: past about two seconds on a phone people leave, so waiting longer for a better
+answer trades a certainty for a possibility. A timeout is reported to Sentry, because a
+product that degrades invisibly looks healthy on every dashboard.
+
+Verified by freezing PostgREST entirely: the readout returned 200 in 2.2 seconds with correct
+figures and matched programmes from the built-in registry.
+
+Deliberately **not** applied to writes. A deadline only helps where there is something
+sensible to do when it expires, and giving up on a write early to report success would be
+worse than waiting.
+
 ### Request size
 
 Rate limiting caps requests per minute and says nothing about the size of each. The readout

@@ -1,6 +1,7 @@
 import "server-only";
 import { serviceClient } from "./service";
 import { describeRate, FALLBACK_RATE, type RateAssumption } from "@/lib/core/rate";
+import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 
 /**
  * The current rate assumption.
@@ -19,16 +20,24 @@ export async function currentRate(today = new Date()): Promise<RateAssumption> {
   if (!db) return describeRate(FALLBACK_RATE.pct, FALLBACK_RATE.source, null, today);
 
   try {
-    const { data, error } = await db
-      .from("rift_rate_snapshots")
-      .select("rate_pct,source,as_of")
-      .eq("product", "conventional-30-fixed")
-      .order("as_of", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    /* Same deadline as the registry, and for the same reason: the readout must
+       render. The documented starting assumption is a worse answer than a
+       recorded rate and a far better one than a blank page. */
+    /* Wrapped in Promise.resolve because supabase-js returns a thenable
+       builder rather than a real Promise, and Promise.race needs one. */
+    const query = Promise.resolve(
+      db.from("rift_rate_snapshots")
+        .select("rate_pct,source,as_of")
+        .eq("product", "conventional-30-fixed")
+        .order("as_of", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ).then((r) => (r.error ? null : r.data));
 
-    if (error || !data) return describeRate(FALLBACK_RATE.pct, FALLBACK_RATE.source, null, today);
-    return describeRate(Number(data.rate_pct), data.source as string, data.as_of as string, today);
+    const { value: row } = await withTimeout(query, READ_DEADLINE_MS, null);
+
+    if (!row) return describeRate(FALLBACK_RATE.pct, FALLBACK_RATE.source, null, today);
+    return describeRate(Number(row.rate_pct), row.source as string, row.as_of as string, today);
   } catch {
     return describeRate(FALLBACK_RATE.pct, FALLBACK_RATE.source, null, today);
   }
