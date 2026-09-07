@@ -42,8 +42,9 @@ export default async function StudioToday() {
           Sign in to see the people your readout has produced. If you arrived here by accident,
           the buyer product is a better place to be.
         </p>
-        <div className="row gap-2" style={{ marginTop: 18 }}>
-          <Link href="/buy" className="btn btn-p">Rift for buyers</Link>
+        <div className="row gap-2 wrap" style={{ marginTop: 18 }}>
+          <Link href="/studio/sign-in" className="btn btn-p">Sign in</Link>
+          <Link href="/buy" className="btn btn-g">Rift for buyers</Link>
         </div>
       </main>
     );
