@@ -502,3 +502,41 @@ describe("advancing a review is conditional on where it started", () => {
     expect(rows[0].trust_state).toBe("verified");
   });
 });
+
+describe("a lead is not a side effect of its assessment", () => {
+  test("deleting the assessment leaves the person", async (c) => {
+    /* `rift_leads.assessment_id` cascaded, so the retention sweep — whose job
+       is deleting an assessment nobody came back to — silently took the lead
+       with it: contact details, score, enrolment, every touch already sent.
+       Nobody chose that. It was a foreign key default doing something the
+       retention policy never described. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'ssurv','buy') returning id", [AGENT]);
+    const { rows: [l] } = await c.query(
+      `insert into rift_leads (agent_id, assessment_id, side, email, score, band)
+       values ($1,$2,'buy','survivor@example.com',80,'now') returning id`, [AGENT, a.id]);
+
+    await c.query("delete from rift_assessments where id=$1", [a.id]);
+
+    const { rows } = await c.query(
+      "select assessment_id, email from rift_leads where id=$1", [l.id]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].assessment_id).toBeNull();
+    expect(rows[0].email).toBe("survivor@example.com");
+  });
+
+  test("the readout still goes with the assessment", async (c) => {
+    /* The snapshot is part of the assessment's record and follows its
+       retention rule. Only the person is separated out. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'ssurv2','buy') returning id", [AGENT]);
+    await c.query(
+      `insert into rift_readouts (agent_id, assessment_id, side, share_token, inputs, figures)
+       values ($1,$2,'buy','tok-surv','{}','{}')`, [AGENT, a.id]);
+
+    await c.query("delete from rift_assessments where id=$1", [a.id]);
+
+    const { rows } = await c.query("select count(*)::int n from rift_readouts where share_token='tok-surv'");
+    expect(rows[0].n).toBe(0);
+  });
+});

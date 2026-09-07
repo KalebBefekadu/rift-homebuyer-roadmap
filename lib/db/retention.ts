@@ -38,6 +38,8 @@ export interface SweepResult {
   answers: number;
   events: number;
   attributions: number;
+  /** People, deleted deliberately rather than by cascade. */
+  leads: number;
   /** Marked abandoned rather than deleted — still recoverable. */
   marked: number;
   /** Anything the job deliberately did not touch, and why. */
@@ -144,7 +146,37 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       .from("rift_attributions").delete().eq("agent_id", agent_id).lte("first_at", ago(WINDOWS.analytics.days));
     if (atErr) return failed(atErr.message);
 
+    /* Leads, deliberately.
+       
+       They used to disappear as a cascade from the assessment — the person,
+       their score, their enrolment and every touch already sent, removed as a
+       side effect of a foreign key default that the retention policy never
+       described. That is now SET NULL, so this is the only place a person is
+       deleted and it has to say so.
+       
+       Only leads with no reply and no live sequence: somebody the agent has
+       spoken to, or is still following up, is a relationship rather than an
+       expired record, whatever its age. */
+    const { data: coldLeads } = await db
+      .from("rift_leads")
+      .select("id,rift_enrolments(stopped_at)")
+      .eq("agent_id", agent_id)
+      .is("human_replied_at", null)
+      .lte("created_at", ago(WINDOWS.unconverted.days));
+
+    const deletableLeads = ((coldLeads ?? []) as unknown as {
+      id: string; rift_enrolments: { stopped_at: string | null }[];
+    }[])
+      .filter((l) => !l.rift_enrolments?.some((e) => e.stopped_at === null))
+      .map((l) => l.id);
+
+    if (deletableLeads.length) {
+      const { error } = await db.from("rift_leads").delete().in("id", deletableLeads);
+      if (error) return failed(error.message);
+    }
+
     held.push(
+      "Leads with a recorded reply or a live sequence are untouched — those are relationships, not expired records.",
       "Client records are untouched — the period has a legal floor and is the broker's to set.",
       "Consent records are untouched — they outlive the relationship because they are what proves the contact was lawful.",
     );
@@ -152,6 +184,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
     return done({
       assessments: doomed.length,
       answers,
+      leads: deletableLeads.length,
       events: evCount ?? 0,
       attributions: atCount ?? 0,
       marked,

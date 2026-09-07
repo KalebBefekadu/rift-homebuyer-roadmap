@@ -179,6 +179,14 @@ configuration value. `lib/core/docs.test.ts` fails if the two drift apart.
 | Funnel telemetry | 24 months | Question ids and dwell only, never answers. Aggregated counts survive; individual event rows do not |
 | Consent record | The relationship, then five years | The only evidence the contact was lawful. Stores the exact wording, not a reference to it |
 
+**A lead is not a side effect of its assessment.** `rift_leads.assessment_id` is `SET NULL`,
+not `CASCADE`. It cascaded once, so the sweep that deletes an 18-month-old assessment silently
+took the person with it — contact details, score, enrolment, every touch already sent — as a
+foreign key default doing something this policy never described. Deleting a person is now the
+only thing the sweep does deliberately, and only for leads with no recorded reply and no live
+sequence: somebody the agent has spoken to, or is still following up, is a relationship rather
+than an expired record, whatever its age.
+
 **"Delete all of it" must actually delete.** Not a soft-delete flag, not an anonymised row.
 A scheduled job enforces the windows above; write it in phase 1 alongside the tables, because
 a retention rule with no job behind it is a paragraph.
