@@ -144,6 +144,27 @@ alter table events add constraint no_answer_payload
 
 ---
 
+## Cascades, audited
+
+Every `on delete cascade` in this schema was checked for the same class of accident: a
+foreign-key default doing something no policy describes.
+
+Most are genuine parent-child — an answer has no meaning without its assessment, a figure none
+without its readout. Two were not:
+
+- **`rift_leads.assessment_id`** cascaded, so the retention sweep took the person with the
+  assessment. Now `SET NULL`.
+- **`rift_agents.auth_user_id`** cascaded from `auth.users`, and every table cascades from
+  `rift_agents`. **Deleting one row in Supabase's Authentication panel would have deleted the
+  entire book of business** — every assessment, lead, consent record, readout, enrolment and
+  event. Consent records are what make that unrecoverable rather than merely catastrophic:
+  they are the evidence that contacting those people was lawful, and they cannot be
+  reconstructed from a backup of anything else. Now `SET NULL`; the bootstrap re-links a new
+  login with `--auth-user-id`.
+
+The remaining agent-scoped cascades are deliberate: deleting the agent row means deleting the
+tenant, and that is now something only a person with the service key can do on purpose.
+
 ## Row-level security
 
 Single-agent today, so the policies are simple — which is exactly why they should be written

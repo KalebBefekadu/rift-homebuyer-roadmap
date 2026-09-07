@@ -163,3 +163,34 @@ describe("rift schema", () => {
       [], /amounts_ordered/);
   });
 });
+
+describe("deleting a login does not delete the business", () => {
+  test("the agent and everything belonging to them survives", async (c) => {
+    /* `rift_agents.auth_user_id` cascaded from auth.users, and every other
+       table cascades from rift_agents. So removing one row in Supabase's
+       Authentication panel — a routine action, and an easy misclick — would
+       have deleted every assessment, lead, consent record, readout, figure,
+       enrolment and event in the product.
+       
+       Consent records are what make that unrecoverable rather than merely
+       catastrophic: they are the evidence that contacting those people was
+       lawful, and they cannot be reconstructed from a backup of anything else. */
+    const uid = "eeee0000-0000-4000-8000-000000000001";
+    await c.query("insert into auth.users (id) values ($1) on conflict do nothing", [uid]);
+    const { rows: [agent] } = await c.query(
+      "insert into rift_agents (auth_user_id, name, email) values ($1,'Temp','t@example.com') returning id", [uid]);
+    await c.query(
+      `insert into rift_consents (agent_id, kind, wording, version, granted)
+       values ($1,'phone','...','2026-09-01',true)`, [agent.id]);
+
+    await c.query("delete from auth.users where id=$1", [uid]);
+
+    const survived = await c.query("select auth_user_id from rift_agents where id=$1", [agent.id]);
+    expect(survived.rows).toHaveLength(1);
+    /* Unlinked, not deleted. The bootstrap re-links it. */
+    expect(survived.rows[0].auth_user_id).toBeNull();
+
+    const consents = await c.query("select count(*)::int n from rift_consents where agent_id=$1", [agent.id]);
+    expect(consents.rows[0].n).toBe(1);
+  });
+});
