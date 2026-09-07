@@ -46,8 +46,16 @@ export interface Step {
   /**
    * What this touch GIVES them. Rule 1. If you cannot fill this in, delete
    * the step rather than writing "checking in" — that is the whole point.
+   *
+   * This is a note to WHOEVER IS DESIGNING THE CADENCE, not copy. It is shown
+   * to the agent in Studio and it must never be sent to a customer: the first
+   * version of the email did exactly that, and people would have received
+   * "Recovery, not pursuit" as the opening line of a message about their own
+   * house purchase. Use `body` for what the person actually reads.
    */
   gives: string;
+  /** The opening line the person reads. Customer-facing copy, not rationale. */
+  body: string;
   /** Sent without the agent, or queued for him. */
   auto: boolean;
 }
@@ -84,11 +92,11 @@ export const SEQUENCES: Sequence[] = [
     why: "They are transacting inside 90 days. The only job is getting a conversation booked before somebody else does. Short, and it stops the moment a human replies.",
     ends: "After day 9, drops to the 'This week' cadence rather than going quiet.",
     steps: [
-      { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer." },
-      { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it — Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone." },
-      { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not — say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken." },
-      { id: "n4", day: 6, channel: "email", auto: true, says: "The two programs you matched, and what each would need from you", gives: "The matched assistance, itemised — new information, not a repeat of the readout." },
-      { id: "n5", day: 9, channel: "task", auto: false, says: "Decide: still live, or move to the slower cadence?", gives: "An honest reclassification instead of a permanent 'urgent' that stops meaning anything." },
+      { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
+      { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it — Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone.", body: "If it would help to go through this with somebody, there are two windows this week." },
+      { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not — say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date." },
+      { id: "n4", day: 6, channel: "email", auto: true, says: "The two programs you matched, and what each would need from you", gives: "The matched assistance, itemised — new information, not a repeat of the readout.", body: "Two Georgia programs look like they fit your answers. Here is what each one would ask of you." },
+      { id: "n5", day: 9, channel: "task", auto: false, says: "Decide: still live, or move to the slower cadence?", gives: "An honest reclassification instead of a permanent 'urgent' that stops meaning anything.", body: "Checking whether this is still something you are working towards, so we know how often to be in touch." },
     ],
   },
   {
@@ -97,11 +105,11 @@ export const SEQUENCES: Sequence[] = [
     why: "They are 3 to 9 months out and genuinely working on it. Value beats urgency here — the person who taught them something is the person they call when they are ready.",
     ends: "Rolls into the long horizon after day 45 unless something changed.",
     steps: [
-      { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked." },
-      { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date — ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date." },
-      { id: "s3", day: 9, channel: "text", auto: false, says: "Rates moved this week. Here is what it does to your monthly.", gives: "A recomputed monthly figure, only sent when the change is material." },
-      { id: "s4", day: 21, channel: "email", auto: true, says: "The assistance programs in your county, and their deadlines", gives: "Deadlines they would otherwise miss. This is the touch that most often gets replied to." },
-      { id: "s5", day: 45, channel: "call", auto: false, says: "Checkpoint — are the numbers still the numbers?", gives: "A re-run of their assessment against what has changed since." },
+      { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
+      { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date — ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date.", body: "Three things move your closing date more than anything else, and they are not the ones most people focus on." },
+      { id: "s3", day: 9, channel: "text", auto: false, says: "Rates moved this week. Here is what it does to your monthly.", gives: "A recomputed monthly figure, only sent when the change is material.", body: "Rates moved this week, which changes the monthly figure on your readout." },
+      { id: "s4", day: 21, channel: "email", auto: true, says: "The assistance programs in your county, and their deadlines", gives: "Deadlines they would otherwise miss. This is the touch that most often gets replied to.", body: "The assistance programs in your county have deadlines, and they are the sort that pass quietly." },
+      { id: "s5", day: 45, channel: "call", auto: false, says: "Checkpoint — are the numbers still the numbers?", gives: "A re-run of their assessment against what has changed since.", body: "It has been a few weeks — worth checking whether the numbers you gave us are still the numbers." },
     ],
   },
   {
@@ -110,10 +118,10 @@ export const SEQUENCES: Sequence[] = [
     why: "Nine months to two years. The failure mode is talking to them monthly until they mute you. Four touches a year, each one worth opening, is worth more than twenty that are not.",
     ends: "Repeats quarterly, indefinitely, until a stop fires.",
     steps: [
-      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout — keep this, it stays live", gives: "The readout itself, permanently linked." },
-      { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date." },
-      { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check — what changed in your county", gives: "Local price and programme movement, recomputed against their saved position." },
-      { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached." },
+      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout — keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to." },
+      { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date.", body: "The one figure that decides how long this takes, and what it would take to shorten it." },
+      { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check — what changed in your county", gives: "Local price and programme movement, recomputed against their saved position.", body: "A quarter on, here is what has changed in your county and what it does to your position." },
+      { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached.", body: "Half a year on, your gap recomputed. No ask attached to this one." },
     ],
   },
   {
@@ -122,8 +130,8 @@ export const SEQUENCES: Sequence[] = [
     why: "Incomplete assessment, no contact detail, or explicitly not now. Two touches, both useful, then stop. A list you cannot stop sending to is not a list, it is a liability.",
     ends: "Stops. Re-entry only if they come back on their own.",
     steps: [
-      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through — here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit." },
-      { id: "d2", day: 30, channel: "email", auto: true, says: "Still here if it becomes useful. Nothing needed.", gives: "A standing door and an explicit end. Says outright that this is the last one." },
+      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through — here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them." },
+      { id: "d2", day: 30, channel: "email", auto: true, says: "Still here if it becomes useful. Nothing needed.", gives: "A standing door and an explicit end. Says outright that this is the last one.", body: "Still here if this becomes useful. Nothing is needed from you." },
     ],
   },
 ];

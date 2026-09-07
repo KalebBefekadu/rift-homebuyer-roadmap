@@ -111,3 +111,29 @@ describe("recovery can actually reach somebody", () => {
     expect(enabled).toBe(BUY_FUNNEL.questions.filter((q) => q.enabled).length);
   });
 });
+
+describe("what a customer actually reads", () => {
+  it("every step has customer-facing copy, separate from its rationale", () => {
+    /* `gives` is a note to whoever designs the cadence. The first version of
+       the emails sent it — so somebody would have opened a message about their
+       own house purchase and read "Recovery, not pursuit." Caught by rendering
+       the templates and looking at them, which nothing else was doing. */
+    for (const seq of SEQUENCES) {
+      for (const step of seq.steps) {
+        expect(step.body.length, `${seq.band}/${step.id} has no body copy`).toBeGreaterThan(20);
+        expect(step.body).not.toBe(step.gives);
+      }
+    }
+  });
+
+  it("the copy does not read as an internal note", () => {
+    /* Design rationale addresses the reader in the third person — "their
+       answers", "them" — and copy addresses them directly. */
+    const tell = /\b(their|them|recovery, not pursuit|rule \d)\b/i;
+    for (const seq of SEQUENCES) {
+      for (const step of seq.steps) {
+        expect(tell.test(step.body), `${seq.band}/${step.id} reads like a design note`).toBe(false);
+      }
+    }
+  });
+})

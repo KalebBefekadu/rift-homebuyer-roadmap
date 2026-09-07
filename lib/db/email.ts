@@ -74,7 +74,7 @@ export interface ReadoutEmail {
  * is a decision. Whether this sends automatically on completion or only when
  * asked for is `autoEmailReadout`, a business rule, not a constant.
  */
-export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
+export function buildReadout(r: ReadoutEmail): { subject: string; html: string } {
   const gapLine = r.gap <= 0
     ? "Your savings already cover what it takes to close."
     : r.monthsToClose !== null
@@ -102,9 +102,14 @@ export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
   </p>
 </div>`.trim();
 
+  return { subject: `Your numbers: ${money(r.cashToClose)} to close in ${r.county} County`, html };
+}
+
+export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
+  const { subject, html } = buildReadout(r);
   return send({
     to: [{ email: r.to, ...(r.name ? { name: r.name } : {}) }],
-    subject: `Your numbers: ${money(r.cashToClose)} to close in ${r.county} County`,
+    subject,
     htmlContent: html,
     tags: ["readout"],
   }, "email.readout");
@@ -115,8 +120,8 @@ export interface TouchEmail {
   name?: string;
   /** The step's own subject line, from the cadence definition. */
   says: string;
-  /** What this touch gives them. The cadence forbids a step without one. */
-  gives: string;
+  /** The opening line the person reads. Never `gives`, which is a design note. */
+  body: string;
   shareUrl: string;
   county: string | null;
   figures: Record<string, string | number> | null;
@@ -136,10 +141,8 @@ export interface TouchEmail {
  * A touch with no figures behind it is not sent at all. There is no version of
  * this email that is worth sending with the numbers missing.
  */
-export async function sendTouch(t: TouchEmail): Promise<SendResult> {
-  if (!t.figures || t.figures.cashToClose === undefined) {
-    return { ok: true, skipped: true, reason: "no readout figures for this lead — nothing worth sending" };
-  }
+export function buildTouch(t: TouchEmail): { subject: string; html: string } | null {
+  if (!t.figures || t.figures.cashToClose === undefined) return null;
 
   const cash = Number(t.figures.cashToClose) || 0;
   const gap = Number(t.figures.gap) || 0;
@@ -148,7 +151,7 @@ export async function sendTouch(t: TouchEmail): Promise<SendResult> {
   const html = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
   <p style="font-size:15px">${t.name ? `${escapeHtml(t.name)},` : "Hello,"}</p>
-  <p style="font-size:15px">${escapeHtml(t.gives)}</p>
+  <p style="font-size:15px">${escapeHtml(t.body)}</p>
   <p style="font-size:15px">
     Your readout still says <strong>${money(cash)}</strong> at the table in ${where}${
       gap > 0 ? `, with <strong>${money(gap)}</strong> still to find` : ", and your savings already cover it"
@@ -166,10 +169,18 @@ export async function sendTouch(t: TouchEmail): Promise<SendResult> {
   </p>
 </div>`.trim();
 
+  return { subject: t.says, html };
+}
+
+export async function sendTouch(t: TouchEmail): Promise<SendResult> {
+  const built = buildTouch(t);
+  if (!built) {
+    return { ok: true, skipped: true, reason: "no readout figures for this lead — nothing worth sending" };
+  }
   return send({
     to: [{ email: t.to, ...(t.name ? { name: t.name } : {}) }],
-    subject: t.says,
-    htmlContent: html,
+    subject: built.subject,
+    htmlContent: built.html,
     tags: ["nurture"],
   }, "email.touch");
 }
@@ -178,7 +189,7 @@ export interface ResumeEmail {
   to: string;
   name?: string;
   says: string;
-  gives: string;
+  body: string;
   resumeUrl: string;
   answered: number;
   of: number;
@@ -200,17 +211,17 @@ export interface ResumeEmail {
  * is a liability — and saying so is the only version of this email that earns
  * being sent at all.
  */
-export async function sendResume(r: ResumeEmail): Promise<SendResult> {
+export function buildResume(r: ResumeEmail): { subject: string; html: string } {
   const progress = r.of > 0 ? `${r.answered} of ${r.of} questions` : "part of the way";
 
   const html = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
   <p style="font-size:15px">${r.name ? `${escapeHtml(r.name)},` : "Hello,"}</p>
-  <p style="font-size:15px">${escapeHtml(r.gives)}</p>
+  <p style="font-size:15px">${escapeHtml(r.body)}</p>
   <p style="font-size:15px">
-    You answered ${progress} and stopped. Nothing was lost —
-    <a href="${r.resumeUrl}" style="color:#e8442a">pick it up where you left off</a>, or don't.
-    It takes about two minutes from here.
+    You got through ${progress}.
+    <a href="${r.resumeUrl}" style="color:#e8442a">Pick it up where you stopped</a> — about two
+    minutes from here — or don't. Either is fine.
   </p>
   ${r.last ? `<p style="font-size:15px">
     This is the last email we will send about it. If it becomes useful later, the questions are
@@ -224,9 +235,14 @@ export async function sendResume(r: ResumeEmail): Promise<SendResult> {
   </p>
 </div>`.trim();
 
+  return { subject: r.says, html };
+}
+
+export async function sendResume(r: ResumeEmail): Promise<SendResult> {
+  const { subject, html } = buildResume(r);
   return send({
     to: [{ email: r.to, ...(r.name ? { name: r.name } : {}) }],
-    subject: r.says,
+    subject,
     htmlContent: html,
     tags: ["recovery"],
   }, "email.resume");

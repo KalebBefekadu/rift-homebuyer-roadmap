@@ -66,7 +66,10 @@ export interface DueTouch {
   band: Band;
   stepId: string;
   says: string;
+  /** The agent-facing rationale, shown in Studio. Never emailed. */
   gives: string;
+  /** The customer-facing opening line. */
+  body: string;
   auto: boolean;
   channel: "email" | "text" | "call" | "task";
   downgraded: string | null;
@@ -188,6 +191,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         stepId: step.id,
         says: step.says,
         gives: step.gives,
+        body: step.body,
         auto: step.auto,
         channel,
         downgraded,
