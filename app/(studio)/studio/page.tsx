@@ -75,13 +75,22 @@ export default async function StudioToday() {
      from an empty screen. */
   const notRecording = ("skipped" in leadsRead) || ("skipped" in reportRead);
 
-  const breached = leads.filter((l) => {
-    const hours = (Date.now() - new Date(l.createdAt).getTime()) / 3_600_000;
-    return sla(
-      { completion: 1, humanRepliedMins: l.humanRepliedAt ? 1 : null, hoursSince: hours } as never,
+  /* No cast. The previous version fabricated the input and cast it to `never`,
+     which hid a missing `contactable` and made every lead report as unbreached
+     — an indicator that read as "doing well" because it could not fire. */
+  const breached = leads.filter((l) =>
+    sla(
+      {
+        completion: l.completion,
+        contactable: l.contactable,
+        hoursSince: l.hoursSince,
+        humanRepliedMins: l.humanRepliedAt
+          ? Math.max(0, (new Date(l.humanRepliedAt).getTime() - new Date(l.createdAt).getTime()) / 60_000)
+          : null,
+      },
       l.band as Band,
-    ).breached;
-  }).length;
+    ).breached,
+  ).length;
 
   return (
     <>

@@ -272,7 +272,25 @@ export interface Sla {
   humanLabel: string;
 }
 
-export function sla(l: Lead, band: Band): Sla {
+/**
+ * The inputs the clock actually needs.
+ *
+ * Named separately from `Lead` because Studio was passing a hand-built object
+ * cast to `never` to satisfy the compiler — and that cast hid a missing
+ * `contactable`, which made `!l.contactable` true for every lead and `breached`
+ * permanently false. The speed-to-lead indicator counted zero breaches from the
+ * day it shipped, which reads exactly like doing well.
+ *
+ * A cast to `never` is almost always a mismatch somebody chose not to look at.
+ */
+export interface SlaInput {
+  completion: number;
+  hoursSince: number;
+  humanRepliedMins: number | null;
+  contactable: boolean;
+}
+
+export function sla(l: SlaInput, band: Band): Sla {
   const valueDelivered = l.completion >= 1;
   const target = band === "now" ? 15 : band === "soon" ? 240 : 1440;
   const elapsed = Math.round(l.hoursSince * 60);

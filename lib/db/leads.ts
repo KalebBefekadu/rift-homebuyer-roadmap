@@ -163,6 +163,10 @@ export interface RankedLead {
   capturedScore: number;
   /** True for leads captured before their inputs were kept. */
   stale: boolean;
+  /** What the speed-to-lead clock needs, rather than a guess at it. */
+  completion: number;
+  contactable: boolean;
+  hoursSince: number;
   /** Why the cadence stopped, or null while it is still running. */
   stopped: string | null;
   /**
@@ -236,6 +240,12 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
         .rift_enrolments?.[0]?.stop_reason ?? null,
       figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
       shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
+      completion: (r.lead_input as LeadInput | null)?.completion ?? 0,
+      /* From the row, not assumed. A lead with neither an email nor a phone
+         number cannot be replied to, and counting it as a breach would make
+         the agent look late for somebody unreachable. */
+      contactable: Boolean(r.email || r.name),
+      hoursSince: Math.max(0, (Date.now() - new Date(r.created_at as string).getTime()) / 3_600_000),
     })).sort((a, b) => b.score - a.score));
   } catch (e) {
     return failed(e);

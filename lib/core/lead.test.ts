@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreLead, type LeadInput } from "./lead";
+import { scoreLead, sla, type LeadInput } from "./lead";
 
 /**
  * Lead scoring.
@@ -120,3 +120,44 @@ describe("recency decays, and that is the point", () => {
     expect(minutes.score).toBeGreaterThan(nextDay.score);
   });
 });
+
+describe("the speed-to-lead clock", () => {
+  const input = (over: Partial<Parameters<typeof sla>[0]> = {}) => ({
+    completion: 1, hoursSince: 0, humanRepliedMins: null, contactable: true, ...over,
+  });
+
+  it("breaches when nobody has replied past the target", () => {
+    /* This is the bug that shipped: Studio passed a hand-built object cast to
+       `never`, `contactable` was undefined, and every lead reported unbreached.
+       An indicator that cannot fire reads exactly like doing well. */
+    const s = sla(input({ hoursSince: 3 }), "now");
+    expect(s.breached).toBe(true);
+  });
+
+  it("does not breach inside the target", () => {
+    expect(sla(input({ hoursSince: 0.1 }), "now").breached).toBe(false);
+  });
+
+  it("never blames the agent for somebody unreachable", () => {
+    /* A lead with no way to contact them cannot be replied to, and counting it
+       would make the agent look late for a person who left no address. */
+    expect(sla(input({ hoursSince: 99, contactable: false }), "now").breached).toBe(false);
+  });
+
+  it("holds the two clocks apart", () => {
+    /* The automated half already happened — the readout was delivered the
+       moment they finished. Conflating it with the human reply hides the fact
+       that the valuable half is done. */
+    const done = sla(input(), "now");
+    expect(done.valueDelivered).toBe(true);
+    expect(done.valueLabel).toContain("no human was needed");
+
+    const partial = sla(input({ completion: 0.4 }), "now");
+    expect(partial.valueDelivered).toBe(false);
+    expect(partial.valueLabel).toContain("nothing was delivered");
+  });
+
+  it("gives a slower band a kinder target", () => {
+    expect(sla(input(), "now").target).toBeLessThan(sla(input(), "later").target);
+  });
+})
