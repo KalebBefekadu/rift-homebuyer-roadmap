@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # A real Postgres, not a mock. The constraints these tests check exist
+    # precisely so that application code cannot route around them, and asserting
+    # them in TypeScript would test the wrong layer.
+    #
+    # Without this service the database suites would SKIP rather than fail —
+    # they are written that way so a contributor without Docker still gets a
+    # signal. In CI a silent skip is the worst possible outcome, so the service
+    # is provided and the run asserts they actually executed.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: pw
+        ports: ["55432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:pw@localhost:55432/postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx next lint
+
+      - name: Test
+        run: npm test
+
+      - name: Fail if the database suites skipped
+        # A skip here means the constraints were never exercised, and the suite
+        # would pass while proving nothing. That has happened once already.
+        run: |
+          npm test 2>&1 | tee /tmp/test.log
+          if grep -qi "skipped" /tmp/test.log; then
+            echo "::error::Database suites skipped in CI — the constraints were not exercised."
+            exit 1
+          fi
+
+      - name: Build
+        run: npx next build
+        env:
+          # Sourcemap upload needs a token that a fork's PR will not have.
+          # Building without it is the documented behaviour, not a workaround.
+          SENTRY_AUTH_TOKEN: ""

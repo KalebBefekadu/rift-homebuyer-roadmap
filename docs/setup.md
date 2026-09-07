@@ -149,6 +149,16 @@ Non-negotiable, and each one is cheap now and expensive later:
       are documented as the complete list, with no proxy for a protected class. Confirm that
       is still true of whatever ships.
 
+## 5b. Continuous integration
+
+`.github/workflows/ci.yml` runs typecheck, lint, tests and build on every push and pull
+request, against a **real Postgres 16 service**.
+
+The last step is the one worth keeping: it fails the run if any test skipped. The database
+suites skip rather than fail when no Postgres is reachable — correct locally, catastrophic in
+CI, where a skip means the constraints were never exercised and the suite passed while
+proving nothing. That has already happened once in this repository.
+
 ## 6. Deployment
 
 Vercel, project `rift-homebuyer-roadmap`. Set the same variables in the Vercel dashboard;
