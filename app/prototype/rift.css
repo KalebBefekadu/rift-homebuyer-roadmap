@@ -412,6 +412,13 @@
 /* Touch targets. The visual size stays — a dense agent surface should look
    dense — but the hit area grows to the 44px minimum on any touch device. */
 @media (pointer: coarse) {
+  /* The primary button was missed here for a long time: .btn-sm and .btn-ico
+     were raised to touch size and the base .btn was left at 38px, which meant
+     the single most important control in the product — "Show me my numbers",
+     "Next", "Ask for this time" — sat below the 44px target the specification
+     promises. Comfortable is not the point; 38px on a phone in one hand is
+     measurably harder to hit, and every miss is on the revenue path. */
+  .rift .btn { height: 44px; padding: 0 17px; }
   .rift .btn-sm { height: 36px; padding: 0 13px; }
   .rift .btn-sm::after { content: ""; position: absolute; inset: -4px; }
   .rift .btn-ico { width: 44px; height: 44px; }
