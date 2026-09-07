@@ -141,13 +141,27 @@ savings alone; matched assistance is displayed beside them as conditional upside
 lender named as the decider. **Violating this tells someone they are ready to buy when they
 are not.** There is a test case for it in §6.
 
-### 4.4 Stale programme data is suppressed, silently
+### 4.4 Stale programme data is suppressed, and the customer is told that it was
 `isStale()` removes anything unverified for longer than the configured window from
 customer-facing matching. **The window is a business rule** — `registryDays`, default 90 days
 — not a constant. `STALE_AFTER_DAYS` reads it, and so should anything else; hard-coding 90
-means the setting exists and changes nothing, which is worse than not having it.
-`matchPrograms()` returns suppressed items separately so the agent is told and the customer
-is not. The registry ships with one deliberately stale fixture so the rule stays demonstrable.
+means the setting exists and changes nothing, which is worse than not having it. The registry
+ships with one deliberately stale fixture so the rule stays demonstrable.
+
+**This contract was reversed after the code shipped disagreeing with it.** It previously said
+suppression was silent to the customer. The built readout tells them — *"2 further programs
+were withheld because we have not re-verified them in 90 days"* — and on reflection the code
+was right and the contract was wrong.
+
+Silence has one failure that outweighs the tidiness it buys. A customer in a county where
+every programme has gone stale sees an empty list and concludes **no help exists for them**.
+That is false, it is the most discouraging thing this product could tell somebody, and they
+have no way to find out otherwise. One sentence prevents it.
+
+It is also the only version consistent with the rest of the product. `/buy/programs` shows
+stale entries marked as such for the same reason: a page that claims verified data and hides
+its own gaps has made the claim untrue. Admitting the gap is what makes the verification
+rule read as real rather than as marketing.
 
 ### 4.5 Core funnel questions are bound; custom ones are inert
 A question with a `bound` field writes to a compute input. Its wording, order and option
