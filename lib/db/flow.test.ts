@@ -471,3 +471,34 @@ describe("one live assessment per visitor", () => {
     expect(rows[0].n).toBe(2);
   });
 });
+
+describe("advancing a review is conditional on where it started", () => {
+  test("a stale promotion cannot downgrade a figure somebody confirmed", async (c) => {
+    /* Two promotions racing both read "pending-review" and both wrote their
+       own next rung — so a "verified" could be overwritten by a "reviewed"
+       that started from the same stale read, silently downgrading a figure
+       confirmed in writing. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'scas','buy') returning id", [AGENT]);
+    const { rows: [r] } = await c.query(
+      `insert into rift_readouts (agent_id, assessment_id, side, share_token, inputs, figures)
+       values ($1,$2,'buy','tok-cas','{}','{}') returning id`, [AGENT, a.id]);
+    const { rows: [f] } = await c.query(
+      `insert into rift_figures (agent_id, readout_id, label, value_cents, assumptions, could_be_wrong)
+       values ($1,$2,'Cash to close',2618750,$3,'Closing costs vary by lender and loan type.') returning id`,
+      [AGENT, r.id, JSON.stringify([{ label: "Price", value: "$325,000" }])]);
+
+    /* Somebody verifies it. */
+    await c.query(
+      "update rift_figures set trust_state='verified', confirmed_by='Brookhaven Mortgage' where id=$1", [f.id]);
+
+    /* A promotion that started from the stale "preliminary" now tries to write
+       "reviewed". Conditioned on the state it read, it matches nothing. */
+    const stale = await c.query(
+      "update rift_figures set trust_state='reviewed' where id=$1 and trust_state='preliminary' returning id", [f.id]);
+    expect(stale.rows).toHaveLength(0);
+
+    const { rows } = await c.query("select trust_state from rift_figures where id=$1", [f.id]);
+    expect(rows[0].trust_state).toBe("verified");
+  });
+});

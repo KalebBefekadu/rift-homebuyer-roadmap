@@ -194,9 +194,27 @@ export async function promoteItem(id: string, confirmedBy?: string): Promise<DbR
     if (confirmedBy) patch.confirmed_by = confirmedBy.slice(0, 200);
     if (to === "verified") patch.resolved_at = new Date().toISOString();
 
+    /* Compare-and-swap on the state we read.
+       
+       Two promotions racing both saw "pending-review" and both wrote their own
+       next rung — so a "verified" could be overwritten by a "reviewed" that
+       started from the same stale read, silently downgrading a figure somebody
+       had confirmed in writing. Advancing a rung has to be conditional on the
+       rung it started from. */
     const advanced = await boundedWrite(
-      db.from("rift_review_items").update(patch).eq("id", id), "the review");
+      db.from("rift_review_items")
+        .update(patch)
+        .eq("id", id)
+        .eq("state", data.state)
+        .select("id"),
+      "the review",
+    );
     if (!advanced.ok) return advanced;
+
+    const moved = ("data" in advanced ? advanced.data : null) as { id: string }[] | null;
+    if (!moved?.length) {
+      return failed("somebody else moved this while you were looking at it — reload and check where it is now");
+    }
 
     /* And the figure itself, which is the whole point.
        
@@ -208,7 +226,14 @@ export async function promoteItem(id: string, confirmedBy?: string): Promise<DbR
     if (figureId) {
       const figurePatch: Record<string, unknown> = { trust_state: to };
       if (confirmedBy) figurePatch.confirmed_by = confirmedBy.slice(0, 200);
-      const { error: figErr } = await db.from("rift_figures").update(figurePatch).eq("id", figureId);
+      /* The figure is only advanced from the state the item was in, for the
+         same reason. A figure is what the customer sees; downgrading one is
+         worse than failing to upgrade it. */
+      const figUpdate = await boundedWrite(
+        db.from("rift_figures").update(figurePatch).eq("id", figureId).eq("trust_state", data.state),
+        "the figure",
+      );
+      const figErr = figUpdate.ok ? null : { message: figUpdate.error };
       if (figErr) {
         /* The item advanced and the figure did not, which is exactly the state
            this change exists to prevent. Loud, not swallowed. */
