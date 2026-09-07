@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { matchForVisitor } from "@/lib/db/match";
 import { currentRate } from "@/lib/db/rates";
-import { BUYER_DEFAULTS, cashToClose, cashGap, gapLevers, monthlyComputed, type BuyerInputs } from "@/lib/core/compute";
+import { cashToClose, cashGap, gapLevers, monthlyComputed } from "@/lib/core/compute";
+import { parseReadoutParams } from "@/lib/core/params";
 import { buyerReadout } from "@/lib/core/results";
-import { firstTimeFrom, type Ownership } from "@/lib/core/funnel";
+import { firstTimeFrom } from "@/lib/core/funnel";
 import { Readout } from "./Readout";
 
 export const metadata: Metadata = {
@@ -35,29 +36,14 @@ export default async function ResultsPage({
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
 
-  /* Every input is clamped to a defensible range. A negative price or a
-     billion-dollar saving rate produces a nonsense readout, and a nonsense
-     readout screenshotted is worse than an error page. */
-  const clamp = (n: number, lo: number, hi: number, fallback: number) =>
-    Number.isFinite(n) && n >= lo && n <= hi ? n : fallback;
-
-  const county = one("c") || BUYER_DEFAULTS.county;
-  const ownership = (one("o") || "none") as Ownership;
-  const timing = one("t") || "3 to 9 months";
-  /* Naming a second decision-maker is a real signal — the person who did not
-     answer these questions is usually the one who stalls it. */
-  const coBuyer = Boolean((one("w") || "").trim());
-
-  const i: BuyerInputs = {
-    ...BUYER_DEFAULTS,
-    county,
-    price: clamp(Number(one("p")), 50_000, 5_000_000, BUYER_DEFAULTS.price),
-    savings: clamp(Number(one("s")), 0, 5_000_000, BUYER_DEFAULTS.savings),
-    monthlySaving: clamp(Number(one("r")), 0, 100_000, BUYER_DEFAULTS.monthlySaving),
-    /* Never folded into the headline. The gap we lead with is the one that is
-       true today; assistance is upside, conditional on a lender saying yes. */
-    assistance: 0,
-  };
+  /* Parsed and bounded in lib/core/params.ts, where it is tested adversarially.
+     Every figure on this page comes from a query string a stranger can edit, so
+     this is a trust boundary rather than a parsing convenience — and the
+     failure it prevents is an arithmetically correct absurdity, which is worse
+     than an error page because an error page cannot be screenshotted as
+     something this product said. */
+  const { inputs: i, ownership, timing, coBuyer, substituted } = parseReadoutParams(one);
+  const county = i.county;
 
   const [{ match, source, windowDays }, rate] = await Promise.all([
     matchForVisitor(county, firstTimeFrom(ownership)),
@@ -99,6 +85,7 @@ export default async function ResultsPage({
       windowDays={windowDays}
       rate={rate}
       coBuyer={coBuyer}
+      substituted={substituted}
     />
   );
 }

@@ -43,6 +43,8 @@ interface Props {
   rate: RateAssumption;
   /** Whether they named somebody else in the decision. */
   coBuyer?: boolean;
+  /** Values in the link that were not usable, and were replaced. */
+  substituted?: string[];
 }
 
 const TONE: Record<string, string> = {
@@ -103,6 +105,19 @@ export function Readout(p: Props) {
                 </div>
               </div>
             </div>
+          ) : null}
+
+          {p.substituted?.length ? (
+            <p className="t-xs c-3 row gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
+              <Ico.info size={12} style={{ flex: "none", marginTop: 2 }} />
+              {/* Said out loud rather than quietly substituted. A link mangled
+                  by a messaging app should still produce a sensible readout —
+                  but the person is entitled to know which figures are ours
+                  rather than theirs. */}
+              Part of this link was not readable, so we used our own figures for{" "}
+              {p.substituted.join(", ")}. <Link href="/buy/start" className="c-brand">Answer again</Link> for
+              numbers that are actually yours.
+            </p>
           ) : null}
 
           <p className="t-xs c-4" style={{ marginTop: 16 }}>
