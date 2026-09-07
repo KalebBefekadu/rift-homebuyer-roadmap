@@ -11,6 +11,7 @@ import { REVIEW_SLA_HOURS } from "@/lib/core/review";
 import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { ReviewRow } from "./ReviewRow";
 import { LeadRow } from "./LeadRow";
+import { signOut } from "./actions";
 import { sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
 import { Ico, Mark } from "@/components/rift/icons";
@@ -90,7 +91,12 @@ export default async function StudioToday() {
             <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
             <span className="chip chip-out t-2xs">Studio</span>
           </div>
-          <span className="t-xs c-4">{agent.name}</span>
+          <div className="row gap-2">
+            <span className="t-xs c-4">{agent.name}</span>
+            <form action={signOut}>
+              <button className="btn btn-g btn-sm" type="submit">Sign out</button>
+            </form>
+          </div>
         </div>
       </header>
 

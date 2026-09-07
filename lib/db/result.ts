@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * How every database call reports itself.
  *

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { currentAgent } from "@/lib/db/session";
 import { promoteItem } from "@/lib/db/review";
 import { stop } from "@/lib/db/nurture";
@@ -36,4 +38,19 @@ export async function stopSequence(leadId: string, reason: StopId) {
 
   if (!r.ok) return { ok: false as const, error: r.error };
   return { ok: true as const };
+}
+
+
+/**
+ * Signs out.
+ *
+ * Studio lists strangers' finances, and the agent works from a laptop that
+ * leaves the house. Being able to end a session is not a courtesy on a surface
+ * like this — and a product that can be signed into and not out of is one
+ * people stay signed into on shared machines.
+ */
+export async function signOut() {
+  const supabase = await createClient();
+  if (supabase) await supabase.auth.signOut();
+  redirect("/studio/sign-in");
 }
