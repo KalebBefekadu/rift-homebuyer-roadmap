@@ -89,3 +89,34 @@ describe("lead scoring", () => {
     expect(s.signals.some((x) => x.label === "Reachable")).toBe(true);
   });
 });
+
+describe("recency decays, and that is the point", () => {
+  it("an identical lead scores lower once it has aged", () => {
+    /* The stored score was written once at capture and never revisited, so a
+       three-week-old lead kept the urgency it earned on the day and went on
+       outranking somebody who arrived this morning. A ranking that silently
+       goes stale is worse than none: it still costs the agent attention and
+       spends it on the wrong people, looking exactly as authoritative as when
+       it was right. */
+    const fresh = scoreLead(base({ hoursSince: 0 }));
+    const aged = scoreLead(base({ hoursSince: 21 * 24 }));
+    expect(aged.score).toBeLessThan(fresh.score);
+    expect(fresh.score - aged.score).toBeGreaterThanOrEqual(15);
+  });
+
+  it("recency turns negative once a lead has gone properly cold", () => {
+    const aged = scoreLead(base({ hoursSince: 21 * 24 }));
+    const recency = aged.signals.find((s) => s.label === "Recency")!;
+    expect(recency.points).toBeLessThan(0);
+    /* And says how cold, so the agent is not left inferring it. */
+    expect(recency.note).toMatch(/days?/);
+  });
+
+  it("the first hour is worth more than the first day", () => {
+    /* Intent decays fast and it decays steeply at the start, which is the
+       entire argument for a speed-to-lead target. */
+    const minutes = scoreLead(base({ hoursSince: 0.5 }));
+    const nextDay = scoreLead(base({ hoursSince: 20 }));
+    expect(minutes.score).toBeGreaterThan(nextDay.score);
+  });
+});

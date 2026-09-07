@@ -63,6 +63,10 @@ nohup node scripts/local/proxy.mjs > /tmp/rift-proxy.log 2>&1 &
 sleep 2
 
 echo
+echo "Note: PostgREST caches the schema at startup. After adding a migration,"
+echo "      run  docker restart rift-postgrest  or every write against the new"
+echo "      column fails with a message about a schema cache."
+echo
 echo "Up. Start the app with:"
 echo "  eval \"\$(scripts/local/env.sh)\" && npx next start"
 echo

@@ -55,7 +55,7 @@ await check("readRegistry", () => db.from("rift_programs")
   .eq("active", true).order("verified_on", { ascending: false }));
 
 await check("rankedLeads (embedded enrolment)", () => db.from("rift_leads")
-  .select("id,name,email,side,score,band,signals,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
+  .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
   .order("score", { ascending: false }).limit(5));
 
 await check("rankedLeads snapshot join", () => db.from("rift_readouts")
@@ -64,8 +64,13 @@ await check("rankedLeads snapshot join", () => db.from("rift_readouts")
   .order("created_at", { ascending: false }));
 
 await check("nurture due (embedded lead + touches)", () => db.from("rift_enrolments")
-  .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email),rift_touches(step_id)")
+  .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id),rift_touches(step_id)")
   .is("stopped_at", null));
+
+await check("nurture touch snapshot join", () => db.from("rift_readouts")
+  .select("assessment_id,figures,share_token,created_at,rift_assessments(county)")
+  .in("assessment_id", ["00000000-0000-4000-8000-000000000000"])
+  .order("created_at", { ascending: false }));
 
 await check("abandoned (embedded answers + leads)", () => db.from("rift_assessments")
   .select("id,session_id,side,county,started_at,rift_answers(question_key),rift_leads(email)")

@@ -27,6 +27,7 @@ export function LeadRow({ lead, last }: {
     stopped?: string | null;
     figures?: Record<string, string | number> | null;
     shareToken?: string | null;
+    capturedScore?: number;
   };
   last: boolean;
 }) {
@@ -53,7 +54,17 @@ export function LeadRow({ lead, last }: {
           <span className="chip">{lead.side === "buy" ? "Buyer" : "Seller"}</span>
           {lead.stopped ? <span className="chip"><Ico.pause size={10} />Sequence stopped</span> : null}
         </div>
-        <span className="num t-sm">{lead.score}</span>
+        <span className="row gap-2">
+          {/* The decay, shown when it is material. A lead that arrived urgent
+              and has been sitting is a different situation from one that was
+              never urgent, and the number alone cannot say which. */}
+          {typeof lead.capturedScore === "number" && lead.capturedScore - lead.score >= 8 ? (
+            <span className="t-2xs c-4" title="What it scored on arrival">
+              was {lead.capturedScore}
+            </span>
+          ) : null}
+          <span className="num t-sm">{lead.score}</span>
+        </span>
       </div>
 
       {/* The arithmetic, on the row rather than in a tooltip. */}

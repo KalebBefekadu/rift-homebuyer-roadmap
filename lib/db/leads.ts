@@ -70,6 +70,9 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
         score: score.score,
         band: score.band,
         signals: score.signals as never,
+        /* Kept so the score can be recomputed as recency decays. Without it a
+           three-week-old lead keeps the urgency it earned on the day. */
+        lead_input: input.lead as never,
       })
       .select("id")
       .single();
@@ -116,6 +119,36 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
   }
 }
 
+/**
+ * The score as it stands now, not as it stood at capture.
+ *
+ * Recency is one of the six signals and it decays. Recomputing on read is what
+ * keeps "call today" meaning today — and `capturedScore` is kept beside it,
+ * because the gap between what a lead was worth on arrival and what it is
+ * worth now is exactly the thing an agent should be able to see.
+ *
+ * Falls back to the stored values for leads captured before the inputs were
+ * kept. They will read as slightly too urgent until they age out, which is a
+ * better failure than refusing to rank them at all.
+ */
+function rescore(
+  input: LeadInput | null,
+  createdAt: string,
+  stored: { score: number; band: string; signals: unknown[] },
+) {
+  if (!input) return { ...stored, capturedScore: stored.score, stale: true };
+
+  const hoursSince = Math.max(0, (Date.now() - new Date(createdAt).getTime()) / 3_600_000);
+  const now = scoreLead({ ...input, hoursSince });
+  return {
+    score: now.score,
+    band: now.band as string,
+    signals: now.signals as unknown[],
+    capturedScore: stored.score,
+    stale: false,
+  };
+}
+
 export interface RankedLead {
   id: string;
   name: string | null;
@@ -126,6 +159,10 @@ export interface RankedLead {
   signals: unknown[];
   createdAt: string;
   humanRepliedAt: string | null;
+  /** What it scored on arrival. The difference from `score` is the decay. */
+  capturedScore: number;
+  /** True for leads captured before their inputs were kept. */
+  stale: boolean;
   /** Why the cadence stopped, or null while it is still running. */
   stopped: string | null;
   /**
@@ -151,8 +188,11 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,side,score,band,signals,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
+      .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
+      /* Ordered by the stored score only to bound the query. The list is
+         re-sorted below on the recomputed score, because that is the one the
+         agent acts on and the two diverge as leads age. */
       .order("score", { ascending: false })
       .limit(limit);
     if (error) return failed(error.message);
@@ -185,16 +225,18 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       name: r.name as string | null,
       email: r.email as string | null,
       side: r.side as "buy" | "sell",
-      score: (r.score as number) ?? 0,
-      band: (r.band as string) ?? "nurture",
-      signals: (r.signals as unknown[]) ?? [],
+      ...rescore(r.lead_input as LeadInput | null, r.created_at as string, {
+        score: (r.score as number) ?? 0,
+        band: (r.band as string) ?? "nurture",
+        signals: (r.signals as unknown[]) ?? [],
+      }),
       createdAt: r.created_at as string,
       humanRepliedAt: r.human_replied_at as string | null,
       stopped: (r as unknown as { rift_enrolments?: { stop_reason: string | null }[] })
         .rift_enrolments?.[0]?.stop_reason ?? null,
       figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
       shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
-    })));
+    })).sort((a, b) => b.score - a.score));
   } catch (e) {
     return failed(e);
   }
