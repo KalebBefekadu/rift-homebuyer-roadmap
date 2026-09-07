@@ -1,6 +1,9 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { type Touch } from "@/lib/core/attribution";
+
+export { stripToHost, touchFromRequest, describeTouch, type Touch } from "@/lib/core/attribution";
 
 /**
  * First-touch attribution.
@@ -18,39 +21,6 @@ import { done, failed, skipped, type DbResult } from "./result";
  * the referring URL's path or query. The referring HOST is enough to learn
  * which channel works, and everything beyond it is somebody's browsing history.
  */
-
-export interface Touch {
-  source?: string;
-  medium?: string;
-  campaign?: string;
-  /** Host only — never the full URL. `stripToHost` enforces it. */
-  referrer?: string;
-  landing?: string;
-}
-
-export function stripToHost(referrer: string | null | undefined): string | undefined {
-  if (!referrer) return undefined;
-  try {
-    return new URL(referrer).host || undefined;
-  } catch {
-    /* Not a URL. Return nothing rather than store an arbitrary string that
-       might be a path with a query in it. */
-    return undefined;
-  }
-}
-
-export function touchFromRequest(url: URL, referrer: string | null): Touch {
-  const p = url.searchParams;
-  return {
-    source: p.get("utm_source") ?? undefined,
-    medium: p.get("utm_medium") ?? undefined,
-    campaign: p.get("utm_campaign") ?? undefined,
-    referrer: stripToHost(referrer),
-    /* The path they landed on, without the query — the query is where the
-       personal data would be, and it is already parsed above. */
-    landing: url.pathname,
-  };
-}
 
 export async function captureTouch(sessionId: string, touch: Touch): Promise<DbResult<{ first: boolean; visits: number }>> {
   const db = serviceClient();
@@ -109,9 +79,3 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
   }
 }
 
-/** How a touch reads in Studio. Never "direct / unknown" twice over. */
-export function describeTouch(t: Touch): string {
-  if (t.source) return t.campaign ? `${t.source} · ${t.campaign}` : t.source;
-  if (t.referrer) return t.referrer;
-  return "direct";
-}

@@ -1,6 +1,9 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { sanitise, type EventInput } from "@/lib/core/telemetry";
+
+export { EVENT_NAMES, isEventName, sanitise, type EventName, type EventInput } from "@/lib/core/telemetry";
 
 /**
  * Telemetry writes.
@@ -17,43 +20,6 @@ import { done, failed, skipped, type DbResult } from "./result";
  * Three layers for one rule is not paranoia here. The first two are guidance a
  * future caller can route around; only the third is a guarantee.
  */
-
-export const EVENT_NAMES = [
-  "landing_view", "hero_answer", "assessment_start", "question_view",
-  "question_answer", "assessment_abandon", "assessment_resume", "readout_view",
-  "email_capture", "share_sent", "booking_start", "booking_complete",
-  "review_requested", "data_deleted",
-] as const;
-
-export type EventName = (typeof EVENT_NAMES)[number];
-
-export interface EventInput {
-  sessionId: string;
-  name: EventName;
-  side?: "buy" | "sell";
-  /** Which question, never what was said. */
-  questionKey?: string;
-  dwellMs?: number;
-  /** Counts and flags only. Anything answer-shaped is dropped. */
-  meta?: Record<string, string | number | boolean>;
-}
-
-/** Keys that would carry an answer, however innocently they got there. */
-const FORBIDDEN = new Set(["value", "answer", "input", "text", "amount", "savings", "price", "email", "phone", "name"]);
-
-export function sanitise(meta: Record<string, unknown> | undefined) {
-  const out: Record<string, string | number | boolean> = {};
-  if (!meta) return out;
-  for (const [k, v] of Object.entries(meta)) {
-    if (FORBIDDEN.has(k.toLowerCase())) continue;
-    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") out[k] = v;
-  }
-  return out;
-}
-
-export function isEventName(n: string): n is EventName {
-  return (EVENT_NAMES as readonly string[]).includes(n);
-}
 
 export async function recordEvents(events: EventInput[]): Promise<DbResult<{ written: number }>> {
   if (!events.length) return done({ written: 0 });

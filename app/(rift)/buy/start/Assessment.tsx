@@ -33,6 +33,11 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   const router = useRouter();
   const q = useSearchParams();
   const [answers, setAnswers] = useState<Answers>({});
+  /* Which questions the PERSON answered, as opposed to which have a seeded
+     default sitting in them. Without this distinction the seeded sliders would
+     count as progress and the abandonment event — the most valuable one in the
+     funnel — would never fire. */
+  const [touched, setTouched] = useState<Set<string>>(new Set());
   const [i, setI] = useState(0);
   const [ready, setReady] = useState(false);
   const assessmentId = useRef<string | null>(null);
@@ -56,10 +61,30 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     if (c) fromLanding.county = c;
     if (t) fromLanding.timing = t;
 
-    const merged = { ...restored, ...fromLanding };
+    /* Seed every numeric question from the same defaults the live panel
+       computes with.
+
+       Without this the price slider rendered "$0" while the panel beside it
+       said $26,188 — a figure derived from a $325,000 price the visitor could
+       not see and had never given. Somebody who pressed Next without touching
+       the slider would then get a readout built on $325,000 having been shown
+       $0. Shown and used must be the same number; that is the whole product. */
+    const seeded: Answers = {};
+    for (const question of questions) {
+      if (question.type !== "slider" || !question.bound) continue;
+      const d = (BUYER_DEFAULTS as unknown as Record<string, unknown>)[question.bound];
+      if (typeof d === "number") { seeded[question.id] = d; seeded[question.bound] = d; }
+    }
+
+    const merged = { ...seeded, ...restored, ...fromLanding };
     setAnswers(merged);
 
-    const answered = questions.findIndex((x) => merged[x.id] === undefined);
+    /* Seeded defaults are not answers. Resume at the first question the person
+       has not actually touched, or they would be dropped at the end of a form
+       they never filled in. */
+    const already = { ...restored, ...fromLanding };
+    setTouched(new Set(Object.keys(already)));
+    const answered = questions.findIndex((x) => already[x.id] === undefined);
     setI(answered === -1 ? questions.length - 1 : answered);
     setReady(true);
 
@@ -107,7 +132,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     return { cash, gap, inputs };
   }, [answers]);
 
-  const answeredCount = questions.filter((x) => answers[x.id] !== undefined).length;
+  const answeredCount = questions.filter((x) => touched.has(x.id)).length;
 
   const answer = (value: string | number) => {
     if (!current) return;
@@ -119,6 +144,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     });
 
     setAnswers((a) => ({ ...a, [current.id]: value, ...(current.bound ? { [key]: value } : {}) }));
+    setTouched((t) => new Set(t).add(current.id));
 
     if (assessmentId.current) {
       /* The question key is stored; the value is stored in `rift_answers`,
