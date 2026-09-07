@@ -85,12 +85,17 @@ await check("funnelReport", () => db.from("rift_events")
   .in("name", ["assessment_start", "question_view", "question_answer"]));
 
 await check("openItems", () => db.from("rift_review_items")
-  .select("id,who,kind,what,claim,state,ceiling,raised_by,to_advance,confirmed_by,raised_at")
+  .select("id,who,kind,what,claim,state,ceiling,raised_by,to_advance,confirmed_by,raised_at,figure_id,rift_figures(label,value_cents,trust_state,assumptions,could_be_wrong)")
   .is("resolved_at", null).order("raised_at", { ascending: true }));
 
 await check("currentRate", () => db.from("rift_rate_snapshots")
   .select("rate_pct,source,as_of").eq("product", "conventional-30-fixed")
   .order("as_of", { ascending: false }).limit(1).maybeSingle());
+
+await check("figures for a shared readout", () => db.from("rift_figures")
+  .select("label,value_cents,trust_state,confirmed_by,assumptions,could_be_wrong")
+  .eq("readout_id", "00000000-0000-4000-8000-000000000000")
+  .order("created_at", { ascending: true }));
 
 await check("readByToken", () => db.from("rift_readouts")
   .select("assessment_id,side,inputs,figures,matched,created_at").eq("share_token", "none").maybeSingle());

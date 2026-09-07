@@ -15,7 +15,15 @@ import { advanceReview } from "./actions";
  * greyed-out control teaches nobody anything; "this is a judgement, not a fact
  * somebody can certify" teaches the rule.
  */
-export function ReviewRow({ item, last }: { item: ReviewItem; last: boolean }) {
+export function ReviewRow({ item, last }: {
+  item: ReviewItem & {
+    figure?: {
+      label: string; value_cents: string | number;
+      assumptions: { label: string; value: string }[]; could_be_wrong: string;
+    } | null;
+  };
+  last: boolean;
+}) {
   const [naming, setNaming] = useState(false);
   const [who, setWho] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +65,36 @@ export function ReviewRow({ item, last }: { item: ReviewItem; last: boolean }) {
           <Ico.checkCircle size={11} className="c-pos" />Confirmed by {item.confirmedBy}
         </p>
       ) : null}
+
+      {/* What the figure itself assumes, and where it could be wrong.
+          
+          He is being asked to stand behind a number. Showing the request
+          without these asks him to do it from memory — which is the situation
+          contract 4.2 exists to prevent on the customer's side, and there is
+          no reason his side should be worse. */}
+      {item.figure ? (
+        <div className="card p-3" style={{ marginTop: 9, background: "var(--sunk)" }}>
+          <div className="t-2xs c-4 w6" style={{ letterSpacing: ".06em", textTransform: "uppercase" }}>
+            What this figure assumes
+          </div>
+          <div className="col gap-1" style={{ marginTop: 6 }}>
+            {item.figure.assumptions.map((a) => (
+              <div key={a.label} className="between t-xs">
+                <span className="c-3">{a.label}</span>
+                <span className="num">{a.value}</span>
+              </div>
+            ))}
+          </div>
+          <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
+            <span className="w6">Where it could be wrong: </span>{item.figure.could_be_wrong}
+          </p>
+        </div>
+      ) : (
+        <p className="t-xs c-4 row gap-2" style={{ marginTop: 8 }}>
+          <Ico.info size={11} style={{ flex: "none", marginTop: 2 }} />
+          Not linked to a stored figure, so advancing this will not change what they see.
+        </p>
+      )}
 
       {error ? (
         <p className="t-xs c-neg row gap-2" style={{ marginTop: 8 }}>

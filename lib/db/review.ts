@@ -101,7 +101,25 @@ export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
   }
 }
 
-export async function openItems(): Promise<DbResult<ReviewItem[]>> {
+/**
+ * A review item together with the figure it is about.
+ *
+ * The agent is being asked to stand behind a number. Showing the request
+ * without the number's own assumptions and failure mode asks him to do that
+ * from memory — which is exactly the situation contract 4.2 exists to prevent
+ * on the customer's side, and there is no reason his side should be worse.
+ */
+export interface ReviewItemWithFigure extends ReviewItem {
+  figure: {
+    label: string;
+    value_cents: string | number;
+    trust_state: TrustState;
+    assumptions: { label: string; value: string }[];
+    could_be_wrong: string;
+  } | null;
+}
+
+export async function openItems(): Promise<DbResult<ReviewItemWithFigure[]>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const agent_id = await currentAgentId();
@@ -110,7 +128,7 @@ export async function openItems(): Promise<DbResult<ReviewItem[]>> {
   try {
     const { data, error } = await db
       .from("rift_review_items")
-      .select("id,who,kind,what,claim,state,ceiling,raised_by,to_advance,confirmed_by,raised_at")
+      .select("id,who,kind,what,claim,state,ceiling,raised_by,to_advance,confirmed_by,raised_at,figure_id,rift_figures(label,value_cents,trust_state,assumptions,could_be_wrong)")
       .eq("agent_id", agent_id)
       .is("resolved_at", null)
       /* Oldest wait first. A review queue sorted by anything else is a to-do
@@ -132,6 +150,10 @@ export async function openItems(): Promise<DbResult<ReviewItem[]>> {
       waitingHours: Math.floor((Date.now() - new Date(r.raised_at as string).getTime()) / 3_600_000),
       toAdvance: r.to_advance as string,
       ...(r.confirmed_by ? { confirmedBy: r.confirmed_by as string } : {}),
+      figure: (r as unknown as { rift_figures?: {
+        label: string; value_cents: string | number; trust_state: TrustState;
+        assumptions: { label: string; value: string }[]; could_be_wrong: string;
+      } | null }).rift_figures ?? null,
     })));
   } catch (e) {
     return failed(e);
