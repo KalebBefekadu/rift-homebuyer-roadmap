@@ -126,13 +126,28 @@ describe("what a customer actually reads", () => {
     }
   });
 
-  it("the copy does not read as an internal note", () => {
-    /* Design rationale addresses the reader in the third person — "their
-       answers", "them" — and copy addresses them directly. */
-    const tell = /\b(their|them|recovery, not pursuit|rule \d)\b/i;
+  it("the copy addresses the reader, not a designer", () => {
+    /* Rationale refers to the reader in the third person — "their answers",
+       "the person" — and carries design vocabulary. Copy speaks to them.
+       
+       Two earlier versions of this test were wrong rather than the copy. One
+       flagged the bare word "them", which fails on "exactly where you left
+       them". One required every line to contain "you", which fails on "there
+       are two windows this week" — a perfectly direct sentence.
+       
+       Both were prescribing style rather than detecting the defect. A test
+       that rejects correct work is worse than none: the fix people reach for
+       is to weaken the writing until the test passes. What is left detects the
+       actual failure — prose about the reader instead of to them, and design
+       vocabulary that has no business in an inbox. */
+    const thirdPerson = /\btheir\b|\bthe person\b|\bthe reader\b/i;
+    const jargon = /recovery, not pursuit|\brule \d|\bcadence\b|\bsequence\b/i;
+
     for (const seq of SEQUENCES) {
       for (const step of seq.steps) {
-        expect(tell.test(step.body), `${seq.band}/${step.id} reads like a design note`).toBe(false);
+        const where = `${seq.band}/${step.id}`;
+        expect(thirdPerson.test(step.body), `${where} talks about the reader instead of to them`).toBe(false);
+        expect(jargon.test(step.body), `${where} contains design vocabulary`).toBe(false);
       }
     }
   });
