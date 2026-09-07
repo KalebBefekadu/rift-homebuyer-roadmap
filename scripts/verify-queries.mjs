@@ -55,8 +55,13 @@ await check("readRegistry", () => db.from("rift_programs")
   .eq("active", true).order("verified_on", { ascending: false }));
 
 await check("rankedLeads (embedded enrolment)", () => db.from("rift_leads")
-  .select("id,name,email,side,score,band,signals,created_at,human_replied_at,rift_enrolments(stop_reason)")
+  .select("id,name,email,side,score,band,signals,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
   .order("score", { ascending: false }).limit(5));
+
+await check("rankedLeads snapshot join", () => db.from("rift_readouts")
+  .select("assessment_id,figures,share_token,created_at")
+  .in("assessment_id", ["00000000-0000-4000-8000-000000000000"])
+  .order("created_at", { ascending: false }));
 
 await check("nurture due (embedded lead + touches)", () => db.from("rift_enrolments")
   .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email),rift_touches(step_id)")

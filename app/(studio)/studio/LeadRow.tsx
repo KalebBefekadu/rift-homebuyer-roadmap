@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { STOPS } from "@/lib/core/nurture";
+import { money } from "@/lib/core/compute";
 import { stopSequence } from "./actions";
 
 /**
@@ -24,6 +25,8 @@ export function LeadRow({ lead, last }: {
     score: number; band: string;
     signals: { label: string; points: number; note: string }[];
     stopped?: string | null;
+    figures?: Record<string, string | number> | null;
+    shareToken?: string | null;
   };
   last: boolean;
 }) {
@@ -61,6 +64,39 @@ export function LeadRow({ lead, last }: {
           </span>
         ))}
       </div>
+
+      {/* What they are actually looking at. The agent should not have to go
+          and find the numbers the person on the phone is holding — and these
+          come from the snapshot, so they are the same figures rather than a
+          fresh computation that has moved since. */}
+      {lead.figures ? (
+        <div className="card p-3" style={{ marginTop: 9, background: "var(--sunk)" }}>
+          <div className="row wrap gap-3">
+            {[
+              ["Cash to close", lead.figures.cashToClose],
+              ["Still to find", lead.figures.gap],
+              ["Monthly", lead.figures.monthly],
+              ["Assistance", lead.figures.assistance],
+            ].filter(([, v]) => v !== undefined && v !== null).map(([label, v]) => (
+              <div key={String(label)}>
+                <div className="t-2xs c-4 w6" style={{ letterSpacing: ".06em", textTransform: "uppercase" }}>{String(label)}</div>
+                <div className="num t-sm">{typeof v === "number" ? money(v) : String(v)}</div>
+              </div>
+            ))}
+          </div>
+          {lead.figures.verdict ? (
+            <p className="t-xs c-3" style={{ marginTop: 8, lineHeight: 1.5 }}>
+              They were told: &ldquo;{String(lead.figures.verdict)}&rdquo;
+            </p>
+          ) : null}
+          {lead.shareToken ? (
+            <a className="t-2xs c-3" href={`/r/${lead.shareToken}`} target="_blank" rel="noreferrer"
+              style={{ display: "inline-block", marginTop: 6 }}>
+              Open their readout ↗
+            </a>
+          ) : null}
+        </div>
+      ) : null}
 
       {error ? (
         <p className="t-xs c-neg row gap-2" style={{ marginTop: 8 }}>

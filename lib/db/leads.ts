@@ -121,6 +121,17 @@ export interface RankedLead {
   humanRepliedAt: string | null;
   /** Why the cadence stopped, or null while it is still running. */
   stopped: string | null;
+  /**
+   * The figures they were actually shown.
+   *
+   * "Who to call" without "what about" is half a tool: the agent opens the
+   * phone and then has to go and find the numbers the person is holding. These
+   * come from the readout snapshot, so what the agent reads is exactly what is
+   * on the other person's screen — not a fresh computation that has since
+   * moved and would have them talking past each other.
+   */
+  figures: Record<string, string | number> | null;
+  shareToken: string | null;
 }
 
 /** Ranked by what the answers say, never by when they arrived. */
@@ -133,11 +144,35 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,side,score,band,signals,created_at,human_replied_at,rift_enrolments(stop_reason)")
+      .select("id,name,email,side,score,band,signals,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
       .order("score", { ascending: false })
       .limit(limit);
     if (error) return failed(error.message);
+
+    /* One extra query for the whole page rather than one per lead. A list view
+       that fans out per row is the classic way a fast page becomes a slow one
+       the week somebody gets busy. */
+    const assessmentIds = (data ?? [])
+      .map((r) => r.assessment_id as string | null)
+      .filter((x): x is string => Boolean(x));
+
+    const snapshots = new Map<string, { figures: Record<string, string | number>; token: string }>();
+    if (assessmentIds.length) {
+      const { data: reads } = await db
+        .from("rift_readouts")
+        .select("assessment_id,figures,share_token,created_at")
+        .in("assessment_id", assessmentIds)
+        .order("created_at", { ascending: false });
+      for (const row of (reads ?? []) as { assessment_id: string; figures: Record<string, string | number>; share_token: string }[]) {
+        /* Newest first, so the first write per assessment wins and later
+           snapshots do not overwrite it. */
+        if (!snapshots.has(row.assessment_id)) {
+          snapshots.set(row.assessment_id, { figures: row.figures, token: row.share_token });
+        }
+      }
+    }
+
     return done((data ?? []).map((r) => ({
       id: r.id as string,
       name: r.name as string | null,
@@ -150,6 +185,8 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       humanRepliedAt: r.human_replied_at as string | null,
       stopped: (r as unknown as { rift_enrolments?: { stop_reason: string | null }[] })
         .rift_enrolments?.[0]?.stop_reason ?? null,
+      figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
+      shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
     })));
   } catch (e) {
     return failed(e);

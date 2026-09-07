@@ -215,7 +215,10 @@ export default async function StudioToday() {
               {leads.map((l, i) => (
                 <LeadRow
                   key={l.id}
-                  lead={{ ...l, signals: l.signals as { label: string; points: number; note: string }[] }}
+                  lead={{
+                    ...l,
+                    signals: l.signals as { label: string; points: number; note: string }[],
+                  }}
                   last={i === leads.length - 1}
                 />
               ))}
