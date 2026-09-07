@@ -434,3 +434,40 @@ describe("the trust ladder, end to end", () => {
     ).rejects.toThrow(/verified_needs_a_name/);
   });
 });
+
+describe("one live assessment per visitor", () => {
+  test("a second live assessment for the same session is refused", async (c) => {
+    /* startAssessment checked for an existing row and inserted if it found
+       none, and the page fires it on mount — so a double-render, a fast
+       refresh, or a retry was enough. Measured before the index: six
+       concurrent starts produced six assessments for one visitor, and nothing
+       failed. The agent would have seen six abandoned people where there was
+       one, with five sets of answers orphaned against ids the client threw
+       away. A check-then-insert cannot be made safe in application code. */
+    await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sonce','buy')", [AGENT]);
+    await expect(
+      c.query("insert into rift_assessments (agent_id, session_id, side) values ($1,'sonce','buy')", [AGENT]),
+    ).rejects.toThrow(/rift_one_live_assessment|duplicate key/i);
+  });
+
+  test("the same session may start the other side", async (c) => {
+    /* Somebody selling and buying at once is a real person, not a race. */
+    await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sonce','sell')", [AGENT]);
+    const { rows } = await c.query(
+      "select count(*)::int n from rift_assessments where session_id='sonce'");
+    expect(rows[0].n).toBe(2);
+  });
+
+  test("a completed assessment does not block a new one", async (c) => {
+    /* The index is partial for this reason: coming back months later to redo
+       the numbers is the behaviour the product wants most. */
+    await c.query("update rift_assessments set completed_at = now() where session_id='sonce' and side='buy'");
+    await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sonce','buy')", [AGENT]);
+    const { rows } = await c.query(
+      "select count(*)::int n from rift_assessments where session_id='sonce' and side='buy'");
+    expect(rows[0].n).toBe(2);
+  });
+});

@@ -69,7 +69,28 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
         .single(),
       "the assessment",
     );
-    if (!created.ok) return created;
+    if (!created.ok) {
+      /* Lost the race. The partial unique index refused the second insert,
+         which is exactly what it is for — so read back the row that won rather
+         than reporting a failure the visitor would experience as a broken
+         assessment.
+         
+         The check above is an optimisation; this is the correctness. */
+      const raced = await boundedRead(
+        db.from("rift_assessments")
+          .select("id")
+          .eq("agent_id", agent_id)
+          .eq("session_id", input.sessionId)
+          .eq("side", input.side)
+          .is("completed_at", null)
+          .maybeSingle(),
+        "the assessment re-read",
+      );
+      const winner = raced.ok && "data" in raced ? raced.data : null;
+      if (winner) return done({ id: winner.id as string });
+      return created;
+    }
+
     const row = "data" in created ? created.data : null;
     if (!row) return failed("the assessment was not returned after insert");
     return done({ id: row.id as string });
