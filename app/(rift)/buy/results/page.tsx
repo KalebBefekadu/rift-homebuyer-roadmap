@@ -44,6 +44,9 @@ export default async function ResultsPage({
   const county = one("c") || BUYER_DEFAULTS.county;
   const ownership = (one("o") || "none") as Ownership;
   const timing = one("t") || "3 to 9 months";
+  /* Naming a second decision-maker is a real signal — the person who did not
+     answer these questions is usually the one who stalls it. */
+  const coBuyer = Boolean((one("w") || "").trim());
 
   const i: BuyerInputs = {
     ...BUYER_DEFAULTS,
@@ -95,6 +98,7 @@ export default async function ResultsPage({
       registrySource={source}
       windowDays={windowDays}
       rate={rate}
+      coBuyer={coBuyer}
     />
   );
 }

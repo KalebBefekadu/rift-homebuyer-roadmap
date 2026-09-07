@@ -13,7 +13,15 @@ import { Client } from "pg";
  * Skips when no Postgres is reachable. See lib/db/schema.test.ts.
  */
 
-const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/postgres";
+/**
+ * A database of its own.
+ *
+ * These suites rebuild the schema from the migrations, so pointing them at the
+ * same database the local stack uses meant `npm test` silently destroyed the
+ * development environment — including the agent row, after which every write
+ * reported "no agent row exists yet" and the cause was two commands earlier.
+ */
+const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/rift_test";
 let db: Client | null = null;
 
 /** The Rift migrations, in filename order. The retired MVP's are skipped. */

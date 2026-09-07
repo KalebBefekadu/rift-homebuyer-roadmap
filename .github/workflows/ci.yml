@@ -30,7 +30,7 @@ jobs:
           --health-retries 10
 
     env:
-      TEST_DATABASE_URL: postgresql://postgres:pw@localhost:55432/postgres
+      TEST_DATABASE_URL: postgresql://postgres:pw@localhost:55432/rift_test
 
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +39,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Create the test database
+        run: |
+          until pg_isready -h localhost -p 55432 -U postgres; do sleep 1; done
+          PGPASSWORD=pw psql -h localhost -p 55432 -U postgres -c "create database rift_test;"
 
       - run: npm ci
 

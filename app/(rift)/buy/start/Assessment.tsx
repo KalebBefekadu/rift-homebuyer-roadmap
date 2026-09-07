@@ -179,6 +179,10 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
       r: String(answers.monthlySaving ?? BUYER_DEFAULTS.monthlySaving),
       t: String(answers.timing ?? "3 to 9 months"),
       o: String(answers.ownership ?? "none"),
+      /* Carries the co-buyer answer so the readout can score it. Their name is
+         not needed and is not sent — only that somebody else is in the
+         decision. */
+      w: answers.who ? "1" : "",
     });
     router.push(`/buy/results?${p}`);
   };

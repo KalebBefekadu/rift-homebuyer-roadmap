@@ -26,6 +26,12 @@ docker rm -f rift-pg >/dev/null 2>&1 || true
 docker run -d --name rift-pg -e POSTGRES_PASSWORD=pw -p "${PG_PORT}:5432" postgres:16-alpine >/dev/null
 for _ in $(seq 1 30); do docker exec rift-pg pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
 
+# A separate database for the test suites. They rebuild the schema from the
+# migrations, and sharing one database meant `npm test` destroyed this stack —
+# including the agent row, after which every write reported "no agent row
+# exists yet" two commands away from the cause.
+docker exec rift-pg psql -U postgres -q -c "create database rift_test;" >/dev/null 2>&1 || true
+
 echo "→ schema, seed and grants"
 docker exec -i rift-pg psql -U postgres -q -v ON_ERROR_STOP=1 < supabase/test/shim.sql
 for f in supabase/migrations/*_rift_*.sql; do

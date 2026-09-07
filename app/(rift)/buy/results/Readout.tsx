@@ -41,6 +41,8 @@ interface Props {
   registrySource: "database" | "seed";
   windowDays: number;
   rate: RateAssumption;
+  /** Whether they named somebody else in the decision. */
+  coBuyer?: boolean;
 }
 
 const TONE: Record<string, string> = {
@@ -284,6 +286,17 @@ export function Readout(p: Props) {
             }}
             matched={match.matched.map((m) => ({ id: m.id, name: m.name, min: m.min, max: m.max }))}
             bookHref={bookHref}
+            lead={{
+              timing: p.timing,
+              /* Months on savings alone — the same figure the readout leads
+                 with, and null when no saving rate was given rather than 0,
+                 which would read as "ready today". */
+              monthsToReady: gap.gap <= 0 ? 0 : gap.monthsToClose,
+              /* Deal size is the purchase price. Cash to close was being sent
+                 here, which understated every lead by roughly 90%. */
+              value: inputs.price,
+              coBuyer: Boolean(p.coBuyer),
+            }}
           />
         </div>
 
@@ -379,12 +392,22 @@ function Assumptions({ items, caveat }: { items: { label: string; value: string 
  * numbers to a partner or a parent is doing the most valuable thing that can
  * happen on this page, and it costs them one tap.
  */
-function Keep({ side, inputs, figures, matched, bookHref }: {
+function Keep({ side, inputs, figures, matched, bookHref, lead }: {
   side: "buy" | "sell";
   inputs: BuyerInputs;
   figures: Record<string, string | number>;
   matched: { id: string; name: string; min: number; max: number }[];
   bookHref: string;
+  /**
+   * Everything the score needs, from the readout that already computed it.
+   *
+   * This carried three of the six signals and passed cash-to-close where the
+   * model expects the purchase price. A lead captured here therefore scored
+   * well below what its own answers justified, and the ranking an agent is
+   * asked to trust would have been built on partial, partly wrong inputs —
+   * the fastest way to make a ranking worth ignoring.
+   */
+  lead: { timing: string; monthsToReady: number | null; value: number; coBuyer: boolean };
 }) {
   const [link, setLink] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "working" | "unavailable">("idle");
@@ -494,6 +517,7 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
             gap={Number(figures.gap) || 0}
             ensureLink={makeLink}
             link={link}
+            lead={lead}
           />
         </div>
 
@@ -524,13 +548,14 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
  * The consent note is shown before the field, not after the button. Consent
  * that appears once you have already typed is a formality.
  */
-function EmailIt({ side, county, cashToClose, gap, ensureLink, link }: {
+function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead }: {
   side: "buy" | "sell";
   county: string;
   cashToClose: number;
   gap: number;
   ensureLink: () => Promise<string | null>;
   link: string | null;
+  lead: { timing: string; monthsToReady: number | null; value: number; coBuyer: boolean };
 }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "unavailable" | "error">("idle");
@@ -546,7 +571,7 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link }: {
         body: JSON.stringify({
           assessmentId: "",
           email: email.trim(),
-          lead: { side, completion: 1, source: "readout", value: cashToClose },
+          lead: { side, completion: 1, source: "readout", ...lead },
           deliver: { shareUrl: url, cashToClose, gap, county },
         }),
       }).then((x) => x.json());

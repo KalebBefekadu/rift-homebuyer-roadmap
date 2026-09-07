@@ -16,7 +16,15 @@ import { Client } from "pg";
  *   docker run -d --name rift-pg -e POSTGRES_PASSWORD=pw -p 55432:5432 postgres:16-alpine
  */
 
-const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/postgres";
+/**
+ * A database of its own.
+ *
+ * These suites rebuild the schema from the migrations, so pointing them at the
+ * same database the local stack uses meant `npm test` silently destroyed the
+ * development environment — including the agent row, after which every write
+ * reported "no agent row exists yet" and the cause was two commands earlier.
+ */
+const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/rift_test";
 
 let db: Client | null = null;
 
