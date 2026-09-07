@@ -259,6 +259,11 @@ compute
   the gap floors at zero and reports fullyCovered instead of a negative
   reference case in calculations.md passes exactly
 
+lead
+  the full signal set scores materially higher than a partial one
+  `value` is a purchase price, never cash to close
+  the scoring inputs are the complete list — no proxy for a protected class
+
 readout
   a buyer with $9,000 saved on a $380,000 home is NOT described as ready   [rule 4.3]
   a stated timing shorter than the computed one produces a tension         [rule 4.15]
