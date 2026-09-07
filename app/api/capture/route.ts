@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { sendReadout } from "@/lib/db/email";
 import type { LeadInput } from "@/lib/core/lead";
 
 export const runtime = "nodejs";
@@ -82,7 +83,26 @@ export async function POST(req: Request) {
     captureOpError(new Error(r.error), { op: "lead.capture", extra: { hasEmail: Boolean(email), hasPhone: Boolean(phone) } });
     return NextResponse.json({ ok: false, error: "we could not save that just now" }, { status: 200 });
   }
-  if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason });
+  /* Delivery is attempted after the lead is safely stored, and its outcome is
+     reported separately. Failing the whole capture because an email bounced
+     would lose the relationship over the least important part of it — the
+     readout is already on their screen and already has a URL. */
+  let delivery: string | undefined;
+  const wants = (b.deliver ?? null) as Record<string, unknown> | null;
+  if (email && wants && typeof wants.shareUrl === "string") {
+    const sent = await sendReadout({
+      to: email,
+      name: name || undefined,
+      shareUrl: wants.shareUrl,
+      cashToClose: Number(wants.cashToClose) || 0,
+      gap: Number(wants.gap) || 0,
+      monthsToClose: typeof wants.monthsToClose === "number" ? wants.monthsToClose : null,
+      county: typeof wants.county === "string" ? wants.county : "your",
+    });
+    delivery = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
+  }
 
-  return NextResponse.json({ ok: true, band: r.data.score.band });
+  if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason, delivery });
+
+  return NextResponse.json({ ok: true, band: r.data.score.band, delivery });
 }

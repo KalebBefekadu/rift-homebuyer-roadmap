@@ -390,8 +390,8 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
   const [copied, setCopied] = useState(false);
   const assessmentId = useRef<string | null>(null);
 
-  const makeLink = async () => {
-    if (link) return;
+  const makeLink = async (): Promise<string | null> => {
+    if (link) return link;
     setState("working");
     try {
       /* The assessment id is not held on this page — it belongs to the run that
@@ -415,13 +415,15 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
         setLink(url);
         setState("idle");
         track({ name: "share_sent", side, meta: { via: "link" } });
-        return;
+        return url;
       }
       /* No token means the snapshot was not stored. Say so rather than hand
          over a link that will 404 for whoever it is sent to. */
       setState("unavailable");
+      return null;
     } catch {
       setState("unavailable");
+      return null;
     }
   };
 
@@ -473,11 +475,19 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
         </div>
 
         <div className="card p-4">
-          <div className="t-sm w6">Come back to it</div>
+          <div className="t-sm w6">Send it to your inbox</div>
           <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            Your answers are already saved on this device. Open this address again and it is
-            here, with no account and nothing to remember.
+            So it survives a closed tab and a new phone. No newsletter, no list, and one click
+            unsubscribes.
           </p>
+          <EmailIt
+            side={side}
+            county={inputs.county}
+            cashToClose={Number(figures.cashToClose) || 0}
+            gap={Number(figures.gap) || 0}
+            ensureLink={makeLink}
+            link={link}
+          />
         </div>
 
         <div className="card p-4" style={{ background: "var(--sunk)" }}>
@@ -492,5 +502,103 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
         </div>
       </div>
     </section>
+  );
+}
+
+
+/**
+ * Email capture on the readout.
+ *
+ * The address buys them a durable copy; it does not buy them the readout,
+ * which they already have. That ordering is the whole product — asking for an
+ * email to unlock what somebody is already looking at would turn a gift into a
+ * toll booth, and people can tell.
+ *
+ * The consent note is shown before the field, not after the button. Consent
+ * that appears once you have already typed is a formality.
+ */
+function EmailIt({ side, county, cashToClose, gap, ensureLink, link }: {
+  side: "buy" | "sell";
+  county: string;
+  cashToClose: number;
+  gap: number;
+  ensureLink: () => Promise<string | null>;
+  link: string | null;
+}) {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "unavailable" | "error">("idle");
+
+  const submit = async () => {
+    if (!email.trim()) return;
+    setState("sending");
+    try {
+      const url = link ?? (await ensureLink()) ?? window.location.href;
+      const res = await fetch("/api/capture", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          assessmentId: "",
+          email: email.trim(),
+          lead: { side, completion: 1, source: "readout", value: cashToClose },
+          deliver: { shareUrl: url, cashToClose, gap, county },
+        }),
+      }).then((x) => x.json());
+
+      if (res?.error) { setState("error"); return; }
+      track({ name: "email_capture", side, meta: { delivered: res?.delivery === "sent" } });
+      /* Three outcomes, three messages. "Check your inbox" for a message that
+         was never sent is the kind of small lie that costs more than the
+         feature is worth — and "not switched on yet" for a send that actually
+         failed is the same lie pointing the other way. */
+      if (res?.delivery === "sent") setState("sent");
+      else if (res?.delivery === "failed") setState("error");
+      else setState("unavailable");
+    } catch {
+      setState("error");
+    }
+  };
+
+  if (state === "sent") {
+    return (
+      <p className="t-sm c-3 row gap-2" style={{ marginTop: 12 }}>
+        <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
+        On its way. It has the link, so it works on any device.
+      </p>
+    );
+  }
+
+  if (state === "unavailable") {
+    return (
+      <p className="t-sm c-3 row gap-2" style={{ marginTop: 12 }}>
+        <Ico.info size={14} className="c-4" style={{ flex: "none", marginTop: 2 }} />
+        Noted, but email is not switched on yet — so nothing has been sent. Keep the link above;
+        it is the same document.
+      </p>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <p className="t-2xs c-4" style={{ marginBottom: 6, lineHeight: 1.5 }}>
+        We email you this readout and tell you if something in it changes. Nothing else.
+      </p>
+      <input
+        className="input"
+        type="email"
+        value={email}
+        placeholder="you@example.com"
+        onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+      />
+      <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} disabled={!email.trim() || state === "sending"} onClick={submit}>
+        <Ico.mail size={13} />{state === "sending" ? "Sending…" : "Email it to me"}
+      </button>
+      {state === "error" ? (
+        <p className="t-xs c-neg" style={{ marginTop: 8, lineHeight: 1.5 }}>
+          We could not send that. Your readout is unaffected — keep the share link above, which
+          is the same document.
+        </p>
+      ) : null}
+    </div>
   );
 }
