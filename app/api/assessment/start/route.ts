@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { startAssessment } from "@/lib/db/assessments";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -11,7 +11,9 @@ export async function POST(req: Request) {
   if (refused) return refused;
 
   try {
-    const b = (await req.json()) as { sessionId?: unknown; side?: unknown; county?: unknown };
+    const read = await readJson(req);
+    if (!read.ok) return read.res;
+    const b = read.body as { sessionId?: unknown; side?: unknown; county?: unknown };
     const sessionId = typeof b.sessionId === "string" ? b.sessionId.slice(0, 64) : "";
     const side = b.side === "buy" || b.side === "sell" ? b.side : null;
     if (!sessionId || !side) {

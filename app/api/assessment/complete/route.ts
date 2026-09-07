@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { completeAssessment } from "@/lib/db/assessments";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -11,7 +11,9 @@ export async function POST(req: Request) {
   if (refused) return refused;
 
   try {
-    const b = (await req.json()) as { assessmentId?: unknown };
+    const read = await readJson(req);
+    if (!read.ok) return read.res;
+    const b = read.body as { assessmentId?: unknown };
     const assessmentId = typeof b.assessmentId === "string" ? b.assessmentId : "";
     if (!assessmentId) return NextResponse.json({ ok: false, error: "assessmentId required" }, { status: 400 });
 

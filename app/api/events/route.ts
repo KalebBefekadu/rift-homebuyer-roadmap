@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { recordEvents, isEventName, type EventInput } from "@/lib/db/events";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -28,12 +28,9 @@ export async function POST(req: Request) {
   const refused = limited(req, "events");
   if (refused) return refused;
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
-  }
+  const read = await readJson(req);
+  if (!read.ok) return read.res;
+  const body = read.body;
 
   const raw = Array.isArray((body as { events?: unknown })?.events)
     ? ((body as { events: unknown[] }).events)

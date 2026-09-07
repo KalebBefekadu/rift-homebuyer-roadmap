@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { saveReadout } from "@/lib/db/assessments";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -23,12 +23,9 @@ export async function POST(req: Request) {
   const refused = limited(req, "readout");
   if (refused) return refused;
 
-  let b: Record<string, unknown>;
-  try {
-    b = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
-  }
+  const read = await readJson(req);
+  if (!read.ok) return read.res;
+  const b = read.body as Record<string, unknown>;
 
   const assessmentId = typeof b.assessmentId === "string" ? b.assessmentId : "";
   const side = b.side === "sell" ? "sell" : "buy";

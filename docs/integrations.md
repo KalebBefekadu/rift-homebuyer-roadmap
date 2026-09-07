@@ -253,6 +253,22 @@ When either stops being acceptable, swap the map for a shared store and keep the
 A refusal returns 429 with `Retry-After` and does **not** name the threshold. An error message
 that states the limit is a tuning guide for whoever is trying to get around it.
 
+### Request size
+
+Rate limiting caps requests per minute and says nothing about the size of each. The readout
+endpoint stores whatever `inputs` and `figures` it is given as jsonb, so ten megabytes ten
+times a minute fills a database quickly and quietly.
+
+Every public endpoint reads its body through `readJson`, which refuses anything over **64KB**
+with a 413. That is far more than any real payload — the largest is a readout with three
+tracked figures and a matched programme list, well under 8KB — and far less than anything
+worth storing by accident.
+
+It checks `Content-Length` first because that is free, then counts what actually arrives: a
+declared length is a claim, and a chunked request need not make one at all. The count is in
+bytes rather than characters, because a body of emoji is roughly four times its character
+count and the limit is about storage.
+
 ## 8. What NOT to add
 
 Stated so nobody spends a sprint on it:

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { ask, figureFor } from "@/lib/db/review";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -29,12 +29,9 @@ export async function POST(req: Request) {
   const refused = limited(req, "review");
   if (refused) return refused;
 
-  let b: Record<string, unknown>;
-  try {
-    b = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
-  }
+  const read = await readJson(req);
+  if (!read.ok) return read.res;
+  const b = read.body as Record<string, unknown>;
 
   /* A real narrowing rather than a cast through `never`. The list of kinds is
      the keys of CEILINGS, so an unknown kind falls back rather than reaching

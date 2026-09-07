@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -28,12 +28,9 @@ export async function POST(req: Request) {
   const refused = limited(req, "capture");
   if (refused) return refused;
 
-  let b: Record<string, unknown>;
-  try {
-    b = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
-  }
+  const read = await readJson(req);
+  if (!read.ok) return read.res;
+  const b = read.body as Record<string, unknown>;
 
   /* Empty means "no assessment behind this lead", which is a real case rather
      than a mistake — a share-link visitor, or somebody booking from the

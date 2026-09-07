@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { captureTouch, touchFromRequest } from "@/lib/db/attribution";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -22,7 +22,9 @@ export async function POST(req: Request) {
   let sessionId = "";
   let landingUrl = "";
   try {
-    const body = (await req.json()) as { sessionId?: unknown; url?: unknown };
+    const read = await readJson(req);
+    if (!read.ok) return read.res;
+    const body = read.body as { sessionId?: unknown; url?: unknown };
     sessionId = typeof body.sessionId === "string" ? body.sessionId.slice(0, 64) : "";
     landingUrl = typeof body.url === "string" ? body.url : "";
   } catch {

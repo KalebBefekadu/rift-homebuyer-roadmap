@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited } from "@/lib/db/guard";
+import { limited, readJson } from "@/lib/db/guard";
 import { forget } from "@/lib/db/retention";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -25,7 +25,9 @@ export async function POST(req: Request) {
 
   let sessionId = "";
   try {
-    const b = (await req.json()) as { sessionId?: unknown };
+    const read = await readJson(req);
+    if (!read.ok) return read.res;
+    const b = read.body as { sessionId?: unknown };
     sessionId = typeof b.sessionId === "string" ? b.sessionId.slice(0, 64) : "";
   } catch {
     return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
