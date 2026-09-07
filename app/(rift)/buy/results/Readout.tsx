@@ -286,6 +286,30 @@ export function Readout(p: Props) {
             }}
             matched={match.matched.map((m) => ({ id: m.id, name: m.name, min: m.min, max: m.max }))}
             bookHref={bookHref}
+            /* Each figure with what it assumes and where it could be wrong.
+               The database rejects a figure that cannot state both — contract
+               4.2, finally enforced on rows that exist rather than on a table
+               nothing ever wrote to. */
+            tracked={[
+              {
+                label: "Cash to close",
+                valueCents: Math.round(cash.total * 100),
+                assumptions: cash.assumptions,
+                couldBeWrong: cash.couldBeWrong,
+              },
+              {
+                label: "All-in monthly",
+                valueCents: Math.round(p.monthly.value * 100),
+                assumptions: p.monthly.assumptions,
+                couldBeWrong: p.monthly.couldBeWrong,
+              },
+              {
+                label: gap.gap > 0 ? "Still to find" : "Covered",
+                valueCents: Math.round(gap.gap * 100),
+                assumptions: gap.assumptions,
+                couldBeWrong: gap.couldBeWrong,
+              },
+            ]}
             lead={{
               timing: p.timing,
               /* Months on savings alone — the same figure the readout leads
@@ -392,12 +416,26 @@ function Assumptions({ items, caveat }: { items: { label: string; value: string 
  * numbers to a partner or a parent is doing the most valuable thing that can
  * happen on this page, and it costs them one tap.
  */
-function Keep({ side, inputs, figures, matched, bookHref, lead }: {
+function Keep({ side, inputs, figures, matched, bookHref, lead, tracked }: {
   side: "buy" | "sell";
   inputs: BuyerInputs;
   figures: Record<string, string | number>;
   matched: { id: string; name: string; min: number; max: number }[];
   bookHref: string;
+  /**
+   * Each figure with what it assumes and where it could be wrong.
+   *
+   * Stored as constrained rows rather than folded into the display blob,
+   * because contract 4.2 is enforced by CHECK constraints on `rift_figures` —
+   * and those constraints sat on a table nothing wrote to while every real
+   * number went into an unconstrained jsonb column beside it. A guarantee that
+   * protects no data is a decoration.
+   */
+  tracked: {
+    label: string; valueCents: number;
+    assumptions: { label: string; value: string }[];
+    couldBeWrong: string; ceiling?: "reviewed" | "verified";
+  }[];
   /**
    * Everything the score needs, from the readout that already computed it.
    *
@@ -431,7 +469,14 @@ function Keep({ side, inputs, figures, matched, bookHref, lead }: {
       const res = await fetch("/api/readout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ assessmentId: assessmentId.current ?? "", side, inputs, figures, matched }),
+        body: JSON.stringify({
+          assessmentId: assessmentId.current ?? "", side, inputs, figures, matched,
+          /* Each figure with what it assumes and where it could be wrong.
+             The database rejects a figure that cannot state both — which is
+             contract 4.2, finally enforced on the rows that actually exist
+             rather than on a table nothing wrote to. */
+          trackedFigures: tracked,
+        }),
       }).then((x) => x.json());
 
       if (res?.shareToken) {

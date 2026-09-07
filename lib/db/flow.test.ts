@@ -364,3 +364,35 @@ describe("the human reply", () => {
     expect(second[0].human_replied_at.getTime()).toBe(first[0].human_replied_at.getTime());
   });
 });
+
+describe("contract 4.2, on rows that exist", () => {
+  test("a stored figure carries its assumptions and its failure mode", async (c) => {
+    /* These constraints sat on a table nothing wrote to, while every real
+       number went into an unconstrained jsonb column beside it. A guarantee
+       that protects no data is a decoration. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sfig2','buy') returning id", [AGENT]);
+    const { rows: [r] } = await c.query(
+      `insert into rift_readouts (agent_id, assessment_id, side, share_token, inputs, figures)
+       values ($1,$2,'buy','tok-fig-2','{}','{}') returning id`, [AGENT, a.id]);
+
+    await c.query(
+      `insert into rift_figures (agent_id, readout_id, label, value_cents, assumptions, could_be_wrong)
+       values ($1,$2,'Cash to close',2618750,$3,'Closing costs vary by lender, attorney and loan type.')`,
+      [AGENT, r.id, JSON.stringify([{ label: "Purchase price", value: "$325,000" }])]);
+
+    const { rows } = await c.query(
+      "select value_cents, trust_state, ceiling from rift_figures where readout_id=$1", [r.id]);
+    expect(rows[0].value_cents).toBe("2618750");
+    /* Preliminary by default. Storing a figure does not make it truer. */
+    expect(rows[0].trust_state).toBe("preliminary");
+  });
+
+  test("money is stored in cents, not floating point", async (c) => {
+    /* $26,187.50 in a float is a rounding waiting to happen, and a rounding in
+       a cash-to-close figure is somebody arriving at a closing table short. */
+    const { rows } = await c.query(
+      "select data_type from information_schema.columns where table_name='rift_figures' and column_name='value_cents'");
+    expect(rows[0].data_type).toBe("bigint");
+  });
+});

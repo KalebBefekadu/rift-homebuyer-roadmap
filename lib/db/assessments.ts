@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
+import { captureOpError } from "@/lib/monitoring/capture";
 import { currentVersionId } from "./funnel";
 
 /**
@@ -122,8 +123,33 @@ export interface SnapshotInput {
   assessmentId: string;
   side: "buy" | "sell";
   inputs: Record<string, unknown>;
+  /** The headline strings as rendered. What they were shown, verbatim. */
   figures: Record<string, unknown>;
   matched?: unknown[];
+  /**
+   * The individual figures, each with what it assumes and where it could be
+   * wrong.
+   *
+   * Stored as ROWS rather than folded into the blob above, because contract 4.2
+   * is enforced by CHECK constraints on `rift_figures` — assumptions must be
+   * non-empty and a failure mode must be stated — and a constraint on a table
+   * nothing writes to is a decoration. Every customer-facing number went into
+   * an unconstrained jsonb column while the guarantee sat next to it, unused.
+   *
+   * It is also what the review queue needs to point at: "check this figure"
+   * has to mean a specific one.
+   */
+  trackedFigures?: TrackedFigure[];
+}
+
+export interface TrackedFigure {
+  label: string;
+  /** In cents. Money in floating point is a bug waiting for a rounding. */
+  valueCents: number;
+  assumptions: { label: string; value: string }[];
+  couldBeWrong: string;
+  /** How high this figure could ever be certified. Not everything can be verified. */
+  ceiling?: "preliminary" | "pending-review" | "reviewed" | "verified";
 }
 
 export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: string; shareToken: string }>> {
@@ -150,7 +176,33 @@ export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: 
       .select("id")
       .single();
     if (error) return failed(error.message);
-    return done({ id: data.id as string, shareToken });
+
+    const readoutId = data.id as string;
+
+    /* Written after the snapshot and reported if they fail, but never allowed
+       to fail the snapshot itself. The readout is the promise; the tracked
+       figures are how it becomes reviewable. */
+    if (input.trackedFigures?.length) {
+      const rows = input.trackedFigures.map((f) => ({
+        agent_id,
+        readout_id: readoutId,
+        label: f.label.slice(0, 120),
+        value_cents: Math.round(f.valueCents),
+        trust_state: "preliminary",
+        ceiling: f.ceiling ?? "verified",
+        assumptions: f.assumptions as never,
+        could_be_wrong: f.couldBeWrong,
+      }));
+      const { error: figErr } = await db.from("rift_figures").insert(rows as never[]);
+      if (figErr) {
+        captureOpError(new Error(figErr.message), {
+          op: "readout.figures",
+          extra: { count: rows.length },
+        });
+      }
+    }
+
+    return done({ id: readoutId, shareToken });
   } catch (e) {
     return failed(e);
   }
