@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { Client } from "pg";
 
 /**
@@ -20,14 +20,27 @@ const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhos
 
 let db: Client | null = null;
 
+/** The Rift migrations, in filename order. The retired MVP's are skipped. */
+function riftMigrations(): string[] {
+  const dir = "supabase/migrations";
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".sql") && f.includes("_rift_"))
+    .sort()
+    .map((f) => `${dir}/${f}`);
+}
+
 beforeAll(async () => {
   const c = new Client({ connectionString: URL_, connectionTimeoutMillis: 1500 });
   try {
     await c.connect();
     await c.query("drop schema if exists public cascade; create schema public;");
     await c.query(readFileSync("supabase/test/shim.sql", "utf8"));
-    await c.query(readFileSync("supabase/migrations/20260907000000_rift_core.sql", "utf8"));
-    await c.query(readFileSync("supabase/migrations/20260907120000_rift_nurture_review.sql", "utf8"));
+    /* Every Rift migration, in order, rather than a hand-written list. Naming
+       them individually meant each new migration had to be remembered in two
+       test files, and the first one forgotten dropped a table the suite then
+       reported as "not found in the schema cache" — a confusing failure a long
+       way from its cause. */
+    for (const f of riftMigrations()) await c.query(readFileSync(f, "utf8"));
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
     db = c;
   } catch (e) {

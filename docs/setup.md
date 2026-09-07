@@ -149,6 +149,24 @@ Non-negotiable, and each one is cheap now and expensive later:
       are documented as the complete list, with no proxy for a protected class. Confirm that
       is still true of whatever ships.
 
+## 5a. Verifying the query syntax
+
+The riskiest code in the data layer is the part TypeScript cannot see. Embedded selects like
+`rift_leads(name,email)` and `rift_touches(step_id)` are **strings** — the compiler does not
+check them, the build does not check them, and a broken one fails at runtime with a message
+about a schema cache, taking a page down rather than a query.
+
+```bash
+npm run verify:queries
+```
+
+Runs every query the data layer uses against a real PostgREST, through the real supabase-js
+query builder. Setup instructions are at the top of `scripts/verify-queries.mjs`; it needs the
+Postgres from §2c plus a PostgREST container.
+
+This found a live defect on its first run: the test setup was applying two of three
+migrations, so a table existed in the repository and not in the database under test.
+
 ## 5b. Continuous integration
 
 `.github/workflows/ci.yml` runs typecheck, lint, tests and build on every push and pull
