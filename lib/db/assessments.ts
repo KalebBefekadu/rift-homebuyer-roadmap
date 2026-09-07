@@ -4,6 +4,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { currentVersionId } from "./funnel";
 
 /**
@@ -223,11 +224,20 @@ export async function readByToken(
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   try {
-    const { data, error } = await db
-      .from("rift_readouts")
-      .select("id,assessment_id,side,inputs,figures,matched,created_at")
-      .eq("share_token", token)
-      .maybeSingle();
+    /* A deadline here has no fallback — there is no built-in version of
+       somebody's readout — so it converts a hang into the honest "we cannot
+       open this right now" the page already knows how to show. Waiting instead
+       leaves the recipient on a blank screen with no idea whose fault it is. */
+    const query = Promise.resolve(
+      db.from("rift_readouts")
+        .select("id,assessment_id,side,inputs,figures,matched,created_at")
+        .eq("share_token", token)
+        .maybeSingle(),
+    );
+    const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+    if (timedOut || !result) return failed("the readout could not be loaded in time");
+
+    const { data, error } = result;
     if (error) return failed(error.message);
     if (!data) return skipped("no readout with that token");
 
@@ -286,12 +296,24 @@ export async function readFunnel(side: "buy" | "sell"): Promise<DbResult<{ funne
   if (!agent_id) return done({ funnel: fallback, source: "built-in" as const });
 
   try {
-    const { data, error } = await db
-      .from("rift_funnels")
-      .select("id,version")
-      .eq("agent_id", agent_id)
-      .eq("side", side)
-      .maybeSingle();
+    /* The assessment must render. It is the second most important page in the
+       product and the fallback IS the built-in funnel — the one the compute
+       engine was designed against — so a hang has an obviously right answer
+       and was instead producing a thirty-second blank page.
+       
+       Verified by freezing the database: every other public page survived and
+       this one did not, because it was the only read still unbounded. */
+    const query = Promise.resolve(
+      db.from("rift_funnels")
+        .select("id,version")
+        .eq("agent_id", agent_id)
+        .eq("side", side)
+        .maybeSingle(),
+    );
+    const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+    if (timedOut || !result) return done({ funnel: fallback, source: "built-in" as const });
+
+    const { data, error } = result;
     if (error) return failed(error.message);
     if (!data) return done({ funnel: fallback, source: "built-in" as const });
 

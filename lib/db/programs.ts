@@ -8,6 +8,7 @@ import {
   type ProgramType,
 } from "@/lib/core/registry";
 import { DEFAULT_RULES } from "@/lib/core/settings";
+import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 
 /**
  * The assistance registry, read from the database.
@@ -85,12 +86,24 @@ export async function readRegistry(today = new Date()): Promise<DbResult<Registr
   }
 
   try {
-    const { data, error } = await db
-      .from("rift_programs")
-      .select("slug,name,administrator,type,funding_state,amount_min,amount_max,county,first_time_only,reopens,source_note,income_limit_note,price_cap_note,conditions,verified_on,verified_by")
-      .eq("active", true)
-      .order("verified_on", { ascending: false });
+    /* On a deadline. A read that fails already falls back to the built-in
+       registry below; one that hangs would leave the page waiting with a
+       perfectly good list of real, verified programmes sitting unused. */
+    const query = Promise.resolve(
+      db.from("rift_programs")
+        .select("slug,name,administrator,type,funding_state,amount_min,amount_max,county,first_time_only,reopens,source_note,income_limit_note,price_cap_note,conditions,verified_on,verified_by")
+        .eq("active", true)
+        .order("verified_on", { ascending: false }),
+    );
+    const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
 
+    if (timedOut || !result) {
+      const fresh = SEED_PROGRAMS.filter((p) => p.verifiedOn >= cutoffISO);
+      const stale = SEED_PROGRAMS.filter((p) => p.verifiedOn < cutoffISO);
+      return done({ programs: fresh, suppressed: stale, source: "seed" as const, windowDays });
+    }
+
+    const { data, error } = result;
     if (error) return failed(error.message);
     if (!data?.length) return skipped("registry table is empty — seed it before launch");
 

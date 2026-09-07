@@ -268,8 +268,25 @@ database: past about two seconds on a phone people leave, so waiting longer for 
 answer trades a certainty for a possibility. A timeout is reported to Sentry, because a
 product that degrades invisibly looks healthy on every dashboard.
 
-Verified by freezing PostgREST entirely: the readout returned 200 in 2.2 seconds with correct
-figures and matched programmes from the built-in registry.
+Applied to every read on a public page. Verified by freezing PostgREST entirely and hitting
+all five:
+
+| Page | Frozen database |
+| --- | --- |
+| `/buy` | 200 in 0.03s |
+| `/buy/programs` | 200 in 0.04s |
+| `/buy/start` | 200 in 2.1s — the built-in funnel, fully usable |
+| `/book` | 200 in 1.2s |
+| `/buy/results` | 200 in 2.2s — correct figures, programmes from the built-in registry |
+
+The assessment was the last one to hang, for thirty seconds, and it was the only read still
+unbounded. Its fallback is the built-in funnel — the definition the compute engine was
+designed against — so a hang had an obviously right answer and was producing a blank page
+instead.
+
+The shared readout is the exception with no fallback: there is no built-in version of
+somebody's own numbers. Its deadline converts a hang into the honest "we cannot open this
+right now" the page already knew how to show.
 
 Deliberately **not** applied to writes. A deadline only helps where there is something
 sensible to do when it expires, and giving up on a write early to report success would be

@@ -2,6 +2,7 @@ import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
 
 /**
@@ -38,6 +39,19 @@ export async function currentVersionId(side: "buy" | "sell"): Promise<string | n
   const agent_id = await currentAgentId();
   if (!agent_id) return null;
 
+  /* On a deadline, because this runs when an assessment starts. The pin is
+     valuable; the assessment is essential. Losing the pin for one visitor is
+     a gap in a record — losing the assessment is a lost lead. */
+  const { value } = await withTimeout(publish(db, agent_id, side), READ_DEADLINE_MS, null);
+  if (value) cache.set(side, value);
+  return value;
+}
+
+async function publish(
+  db: NonNullable<ReturnType<typeof serviceClient>>,
+  agent_id: string,
+  side: "buy" | "sell",
+): Promise<string | null> {
   try {
     const definition: Funnel = side === "buy" ? BUY_FUNNEL : SELL_FUNNEL;
 
@@ -96,7 +110,6 @@ export async function currentVersionId(side: "buy" | "sell"): Promise<string | n
       if (error) throw new Error(`could not publish questions: ${error.message}`);
     }
 
-    cache.set(side, versionId as string);
     return versionId as string;
   } catch (e) {
     /* A missing version must never stop an assessment — the pin is valuable
