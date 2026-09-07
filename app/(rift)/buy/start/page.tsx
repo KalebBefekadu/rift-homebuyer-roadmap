@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { readFunnel } from "@/lib/db/assessments";
-import { Assessment } from "./Assessment";
+import { Assessment } from "@/components/rift/Assessment";
 
 export const metadata: Metadata = {
   title: "Your numbers",

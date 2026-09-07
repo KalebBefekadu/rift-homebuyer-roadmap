@@ -1,4 +1,4 @@
-import { BUYER_DEFAULTS, type BuyerInputs } from "./compute";
+import { BUYER_DEFAULTS, SELLER_DEFAULTS, type BuyerInputs, type SellerInputs } from "./compute";
 import { GA_COUNTIES } from "./registry";
 import type { Ownership } from "./funnel";
 
@@ -95,6 +95,71 @@ export function parseReadoutParams(get: (key: string) => string | undefined): Re
     /* Naming a second decision-maker is a real signal — the person who did not
        answer these questions is usually the one who stalls it. */
     coBuyer: Boolean((get("w") ?? "").trim()),
+    substituted,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * The seller side of the same boundary
+ * ------------------------------------------------------------------ */
+
+export const SELLER_BOUNDS = {
+  price: { min: 50_000, max: 5_000_000 },
+  payoff: { min: 0, max: 5_000_000 },
+  yearsOwned: { min: 0, max: 60 },
+} as const;
+
+export interface SellerReadoutParams {
+  inputs: SellerInputs;
+  timing: string;
+  coDecider: boolean;
+  substituted: string[];
+}
+
+/**
+ * The seller readout's inputs, from the same untrusted URL.
+ *
+ * One deliberate non-clamp: a payoff larger than the price is allowed through.
+ * Being underwater is a real situation, it is exactly the situation somebody
+ * most needs an honest number for, and clamping it would replace their reality
+ * with a cheerful fiction. `netProceeds` returns a negative number and the
+ * readout says so.
+ */
+export function parseSellerParams(get: (key: string) => string | undefined): SellerReadoutParams {
+  const substituted: string[] = [];
+
+  const rawCounty = (get("c") ?? "").trim();
+  const county = GA_COUNTIES.includes(rawCounty) ? rawCounty : SELLER_DEFAULTS.county;
+  if (rawCounty && county !== rawCounty) substituted.push("county");
+
+  const rawTiming = (get("t") ?? "").trim();
+  const timing = (TIMINGS as readonly string[]).includes(rawTiming) ? rawTiming : "3 to 9 months";
+  if (rawTiming && timing !== rawTiming) substituted.push("timing");
+
+  const price = num(get("p"), SELLER_BOUNDS.price.min, SELLER_BOUNDS.price.max, SELLER_DEFAULTS.price);
+  if (get("p") && price !== Number(get("p"))) substituted.push("price");
+
+  const payoff = num(get("o"), SELLER_BOUNDS.payoff.min, SELLER_BOUNDS.payoff.max, SELLER_DEFAULTS.payoff);
+  if (get("o") && payoff !== Number(get("o"))) substituted.push("payoff");
+
+  const yearsOwned = num(get("y"), SELLER_BOUNDS.yearsOwned.min, SELLER_BOUNDS.yearsOwned.max, SELLER_DEFAULTS.yearsOwned);
+  if (get("y") && yearsOwned !== Number(get("y"))) substituted.push("years owned");
+
+  return {
+    inputs: {
+      ...SELLER_DEFAULTS,
+      county,
+      price,
+      payoff,
+      yearsOwned,
+      homesteadFiled: (get("h") ?? "") === "1",
+      /* The assessed value is not asked for. Defaulting it to the price is a
+         closer guess than a fixed figure from another home, and every line it
+         feeds is labelled an estimate. */
+      assessedValue: price,
+    },
+    timing,
+    coDecider: Boolean((get("w") ?? "").trim()),
     substituted,
   };
 }

@@ -42,7 +42,12 @@ export interface Readout {
       on a phone, where a three-clause sentence becomes a ten-line wall. */
   rider?: string;
   /** The number that changes how they think, and why it isn't the one they were told. */
-  reframe: { headline: string; body: string };
+  /* `figure` is the headline number on its own, carried as data rather than
+     recovered from `headline` by string surgery. It was being recovered with
+     `headline.split(",")[0]`, which silently truncated every figure over
+     $1,000 to its thousands digits — a $137,145 net proceeds rendered as
+     "$137" beside a body paragraph stating the real number. */
+  reframe: { headline: string; figure: string; contrast: string; body: string };
   blocker: Blocker;
   steps: Step[];
   questions: string[];
@@ -191,6 +196,8 @@ export function buyerReadout(i: BuyerInputs, m: MatchResult, timing: string): Re
 
   const reframe = {
     headline: `${money(cash.total)}, not ${money(cash.down)}`,
+    figure: money(cash.total),
+    contrast: money(cash.down),
     body: `The ${money(cash.down)} down payment is the figure you were given. The number that actually has to be in an account is ${money(cash.total)} — the difference is closing costs, prepaid escrow and inspections. This gap is the most common reason a purchase falls apart in its last three weeks, and it is entirely avoidable by knowing it now.`,
   };
 
@@ -294,6 +301,8 @@ export function sellerReadout(s: SellerInputs, timing: string): Readout {
 
   const reframe = {
     headline: `${money(r.net)}, not ${money(s.price)}`,
+    figure: money(r.net),
+    contrast: money(s.price),
     body: `Every valuation you have been given is a list price. The figure that decides what you can afford next is what survives the payoff, the commission, the concessions, the repairs and the prorations — ${money(r.net)}. Sellers who plan against the list price are the ones who find out too late that the move does not work.`,
   };
 

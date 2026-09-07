@@ -162,7 +162,8 @@ export function Reframe({ r }: { r: Readout }) {
     <div className="ans">
       <div className="ans-out">
         <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>The figure that actually matters</div>
-        <div className="ans-num" style={{ marginTop: 8 }}>{r.reframe.headline.split(",")[0]}</div>
+        <div className="ans-num" style={{ marginTop: 8 }}>{r.reframe.figure}</div>
+        <div className="t-sm" style={{ marginTop: 6, color: "rgba(255,255,255,.55)" }}>not {r.reframe.contrast}</div>
         <p style={{ marginTop: 16, color: "rgba(255,255,255,.75)", fontSize: 15.5, lineHeight: 1.65, maxWidth: 620 }}>
           {r.reframe.body}
         </p>
@@ -391,10 +392,58 @@ export function PrivacyPanel() {
 }
 
 /** Capture. Email only, after the value, and it buys durability — not access. */
+/**
+ * The keep-it dialog.
+ *
+ * The email field is controlled and the address is handed to the caller, which
+ * sounds obvious and was not true before: this rendered an uncontrolled input
+ * and called `onDone()` with nothing, so every address typed into it was
+ * discarded. It looked like it worked from the outside — the dialog closed and
+ * said thank you — which is the only reason it survived this long.
+ *
+ * The caller performs the capture and returns what actually happened, because
+ * only the caller knows. "Check your inbox" for a message that was never sent
+ * is a small lie that costs more than the feature is worth.
+ */
 export function Keep({ v, onDone, onClose, coBuyer }: {
-  v: "buy" | "sell"; onDone: () => void; onClose: () => void; coBuyer?: string;
+  v: "buy" | "sell";
+  onDone: (email: string, alsoCoBuyer: boolean) => void | Promise<"sent" | "unavailable" | "error">;
+  onClose: () => void;
+  coBuyer?: string;
 }) {
   const [also, setAlso] = useState(false);
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "unavailable" | "error">("idle");
+
+  const valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+
+  const submit = async () => {
+    if (!valid || state === "sending") return;
+    setState("sending");
+    const result = await onDone(email.trim(), also);
+    setState(result ?? "sent");
+  };
+
+  if (state === "sent" || state === "unavailable") {
+    return (
+      <div className="cmdk-veil" style={{ alignItems: "center" }} onMouseDown={onClose}>
+        <div className={`card fade-in ${v}`} style={{ maxWidth: 430, width: "100%", padding: 28 }} onMouseDown={(e) => e.stopPropagation()}>
+          <h2 className="serif" style={{ fontSize: 25, letterSpacing: "-0.022em" }}>
+            {state === "sent" ? "On its way." : "Saved."}
+          </h2>
+          <p className="t-sm c-2" style={{ marginTop: 10, lineHeight: 1.6 }}>
+            {state === "sent"
+              ? `We sent the link to ${email.trim()}. It stays live, and nothing here changes.`
+              : "Noted — but email is not switched on yet, so nothing has been sent. This page is still yours: the link in your address bar keeps working."}
+          </p>
+          <button className="btn btn-p btn-lg" style={{ width: "100%", marginTop: 18 }} onClick={onClose}>
+            Back to the readout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="cmdk-veil" style={{ alignItems: "center" }} onMouseDown={onClose}>
       <div className={`card fade-in ${v}`} style={{ maxWidth: 430, width: "100%", padding: 28 }} onMouseDown={(e) => e.stopPropagation()}>
@@ -406,7 +455,15 @@ export function Keep({ v, onDone, onClose, coBuyer }: {
           live, and a note if {v === "buy" ? "a program you matched changes or runs out of money" : "your county opens an appeal window"}.
         </p>
         <label className="field" style={{ marginTop: 18 }}>
-          <input className="input input-lg" placeholder="you@example.com" autoFocus />
+          <input
+            className="input input-lg"
+            placeholder="you@example.com"
+            type="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          />
         </label>
         {coBuyer && coBuyer !== "none" ? (
           <label className="opt" data-on={also} style={{ marginTop: 10 }}>
@@ -414,8 +471,19 @@ export function Keep({ v, onDone, onClose, coBuyer }: {
             <span className="t-sm">Send a copy to {coBuyer} too</span>
           </label>
         ) : null}
-        <button className="btn btn-brand btn-lg" style={{ width: "100%", marginTop: 16 }} onClick={onDone}>
-          Send it
+        {state === "error" ? (
+          <p className="t-sm c-neg" style={{ marginTop: 12, lineHeight: 1.55 }}>
+            That did not go through. Your readout is unaffected — the link in your address bar
+            still works, and you can try again.
+          </p>
+        ) : null}
+        <button
+          className="btn btn-brand btn-lg"
+          style={{ width: "100%", marginTop: 16 }}
+          disabled={!valid || state === "sending"}
+          onClick={submit}
+        >
+          {state === "sending" ? "Sending…" : "Send it"}
         </button>
         <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.55 }}>
           {EMAIL_NOTE} No password, no phone number, and no call unless you ask for one.
@@ -424,3 +492,4 @@ export function Keep({ v, onDone, onClose, coBuyer }: {
     </div>
   );
 }
+

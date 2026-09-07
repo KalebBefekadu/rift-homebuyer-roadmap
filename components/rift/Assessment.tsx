@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import type { Funnel, Question } from "@/lib/core/funnel";
 import { OWNERSHIP_CAVEAT, type Ownership } from "@/lib/core/funnel";
-import { BUYER_DEFAULTS, cashToClose, cashGap, money } from "@/lib/core/compute";
+import { BUYER_DEFAULTS, SELLER_DEFAULTS, cashToClose, cashGap, netProceeds, unclaimedValue, money } from "@/lib/core/compute";
 import { track, flush, useCaptureTouch } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
 
@@ -91,12 +91,12 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     setReady(true);
 
     const resumed = Object.keys(restored).length > 0;
-    track({ name: resumed ? "assessment_resume" : "assessment_start", side: "buy", meta: { prefilled: Object.keys(fromLanding).length } });
+    track({ name: resumed ? "assessment_resume" : "assessment_start", side: funnel.side, meta: { prefilled: Object.keys(fromLanding).length } });
 
     fetch("/api/assessment/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId: sessionId(), side: "buy", county: merged.county ?? null }),
+      body: JSON.stringify({ sessionId: sessionId(), side: funnel.side, county: merged.county ?? null }),
     })
       .then((r) => r.json())
       .then((d) => { if (d?.id) assessmentId.current = d.id; })
@@ -114,13 +114,36 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   useEffect(() => {
     if (!ready || !current) return;
     shownAt.current = Date.now();
-    track({ name: "question_view", side: "buy", questionKey: current.id, meta: { step: i + 1, of: questions.length } });
+    track({ name: "question_view", side: funnel.side, questionKey: current.id, meta: { step: i + 1, of: questions.length } });
   }, [i, ready, current, questions.length]);
 
   /* The panel is computed from whatever has been answered so far, on defaults
      for the rest. Showing a number that moves as they answer is the entire
      argument for finishing. */
   const live = useMemo(() => {
+    if (funnel.side === "sell") {
+      const inputs = {
+        ...SELLER_DEFAULTS,
+        county: String(answers.county ?? SELLER_DEFAULTS.county),
+        price: Number(answers.price ?? SELLER_DEFAULTS.price),
+        payoff: Number(answers.payoff ?? SELLER_DEFAULTS.payoff),
+        yearsOwned: Number(answers.yearsOwned ?? SELLER_DEFAULTS.yearsOwned),
+      };
+      const r = netProceeds(inputs);
+      const unclaimed = unclaimedValue(inputs);
+      return {
+        headline: money(r.net),
+        note: `reaches you, not the ${money(inputs.price)} price`,
+        /* Underwater is a real outcome and the one most worth knowing early.
+           It is stated rather than softened. */
+        sub: r.net < 0
+          ? { text: `${money(Math.abs(r.net))} short of the payoff`, tone: "c-neg", detail: "Selling at this price would need money brought to closing." }
+          : unclaimed.length > 0
+            ? { text: `${unclaimed.length} things worth a phone call`, tone: "c-brand", detail: "Exemptions and refunds that have nothing to do with selling." }
+            : null,
+        foot: "Updating as you answer. Costs are Georgia averages until we see the listing.",
+      };
+    }
     const inputs = {
       ...BUYER_DEFAULTS,
       county: String(answers.county ?? BUYER_DEFAULTS.county),
@@ -131,8 +154,19 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     };
     const cash = cashToClose(inputs);
     const gap = cashGap(inputs);
-    return { cash, gap, inputs };
-  }, [answers]);
+    return {
+      headline: money(cash.total),
+      note: `cash to close, not ${money(cash.down)} down`,
+      sub: gap.gap > 0
+        ? {
+            text: `${money(gap.gap)} still to find`,
+            tone: "",
+            detail: gap.monthsToClose !== null ? `about ${gap.monthsToClose} months at your rate` : "tell us a saving rate for a date",
+          }
+        : { text: "Covered on savings alone", tone: "c-pos", detail: "" },
+      foot: "Updating as you answer. Assistance is not counted here — it is upside, and only",
+    };
+  }, [answers, funnel.side]);
 
   const answeredCount = questions.filter((x) => touched.has(x.id)).length;
 
@@ -140,7 +174,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     if (!current) return;
     const key = current.bound ?? current.id;
     track({
-      name: "question_answer", side: "buy", questionKey: current.id,
+      name: "question_answer", side: funnel.side, questionKey: current.id,
       dwellMs: Date.now() - shownAt.current,
       meta: { step: i + 1 },
     });
@@ -177,19 +211,34 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
         body: JSON.stringify({ assessmentId: assessmentId.current }),
       }).catch(() => { /* ignore */ });
     }
-    const p = new URLSearchParams({
-      c: String(answers.county ?? BUYER_DEFAULTS.county),
-      p: String(answers.price ?? BUYER_DEFAULTS.price),
-      s: String(answers.savings ?? BUYER_DEFAULTS.savings),
-      r: String(answers.monthlySaving ?? BUYER_DEFAULTS.monthlySaving),
-      t: String(answers.timing ?? "3 to 9 months"),
-      o: String(answers.ownership ?? "none"),
-      /* Carries the co-buyer answer so the readout can score it. Their name is
-         not needed and is not sent — only that somebody else is in the
-         decision. */
-      w: answers.who ? "1" : "",
-    });
-    router.push(`/buy/results?${p}`);
+    /* The readout is reached by URL, so the answers travel as query
+       parameters rather than in a store. Each side carries the inputs its own
+       compute engine needs — the keys differ because the questions do.
+
+       Note "o" means ownership for a buyer and payoff for a seller. They never
+       share a page, and each is parsed by its own side's parser. */
+    const p = funnel.side === "sell"
+      ? new URLSearchParams({
+          c: String(answers.county ?? SELLER_DEFAULTS.county),
+          p: String(answers.price ?? SELLER_DEFAULTS.price),
+          o: String(answers.payoff ?? SELLER_DEFAULTS.payoff),
+          y: String(answers.yearsOwned ?? SELLER_DEFAULTS.yearsOwned),
+          t: String(answers.timing ?? "3 to 9 months"),
+          w: answers.who ? "1" : "",
+        })
+      : new URLSearchParams({
+          c: String(answers.county ?? BUYER_DEFAULTS.county),
+          p: String(answers.price ?? BUYER_DEFAULTS.price),
+          s: String(answers.savings ?? BUYER_DEFAULTS.savings),
+          r: String(answers.monthlySaving ?? BUYER_DEFAULTS.monthlySaving),
+          t: String(answers.timing ?? "3 to 9 months"),
+          o: String(answers.ownership ?? "none"),
+          /* Carries the co-buyer answer so the readout can score it. Their name
+             is not needed and is not sent — only that somebody else is in the
+             decision. */
+          w: answers.who ? "1" : "",
+        });
+    router.push(`/${funnel.side}/results?${p}`);
   };
 
   /* Leaving without finishing is the most common outcome and the most valuable
@@ -207,7 +256,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
       if (abandonSent.current) return;
       if (answeredCount >= questions.length) return;
       abandonSent.current = true;
-      track({ name: "assessment_abandon", side: "buy", questionKey: current?.id, meta: { answered: answeredCount, of: questions.length } });
+      track({ name: "assessment_abandon", side: funnel.side, questionKey: current?.id, meta: { answered: answeredCount, of: questions.length } });
       flush();
     };
     document.addEventListener("visibilitychange", onHide);
@@ -222,10 +271,10 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   const hasValues = answeredCount > 0;
 
   return (
-    <div className="buy">
+    <div className={funnel.side}>
       <header style={{ borderBottom: "1px solid var(--line-2)", background: "var(--paper)" }}>
         <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/buy" className="row gap-2">
+          <Link href={`/${funnel.side}`} className="row gap-2">
             <Mark size={19} />
             <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
           </Link>
@@ -242,23 +291,19 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
             <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
               So far
             </div>
-            <div className="num" style={{ fontSize: 26, marginTop: 6 }}>{money(live.cash.total)}</div>
-            <div className="t-xs c-4">cash to close, not {money(live.cash.down)} down</div>
-            {live.gap.gap > 0 ? (
+            <div className="num" style={{ fontSize: 26, marginTop: 6 }}>{live.headline}</div>
+            <div className="t-xs c-4">{live.note}</div>
+            {live.sub ? (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line-3)" }}>
-                <div className="t-sm w6">{money(live.gap.gap)} still to find</div>
-                <div className="t-xs c-4" style={{ marginTop: 2 }}>
-                  {live.gap.monthsToClose !== null ? `about ${live.gap.monthsToClose} months at your rate` : "tell us a saving rate for a date"}
-                </div>
+                <div className={`t-sm w6 ${live.sub.tone}`}>{live.sub.text}</div>
+                {live.sub.detail ? (
+                  <div className="t-xs c-4" style={{ marginTop: 2 }}>{live.sub.detail}</div>
+                ) : null}
               </div>
-            ) : (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line-3)" }}>
-                <div className="t-sm w6 c-pos">Covered on savings alone</div>
-              </div>
-            )}
+            ) : null}
             <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.5 }}>
-              Updating as you answer. Assistance is not counted here — it is upside, and only
-              a lender can confirm it.
+              {live.foot}
+              {funnel.side === "buy" ? " a lender can confirm it." : ""}
             </p>
           </div>
         </aside>
