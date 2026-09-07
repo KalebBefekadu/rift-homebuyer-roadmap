@@ -208,17 +208,38 @@ export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: 
   }
 }
 
-export async function readByToken(token: string): Promise<DbResult<SnapshotInput & { createdAt: string }>> {
+export interface StoredFigure {
+  label: string;
+  valueCents: number;
+  trustState: "preliminary" | "pending-review" | "reviewed" | "verified";
+  confirmedBy: string | null;
+  assumptions: { label: string; value: string }[];
+  couldBeWrong: string;
+}
+
+export async function readByToken(
+  token: string,
+): Promise<DbResult<SnapshotInput & { createdAt: string; stored: StoredFigure[] }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   try {
     const { data, error } = await db
       .from("rift_readouts")
-      .select("assessment_id,side,inputs,figures,matched,created_at")
+      .select("id,assessment_id,side,inputs,figures,matched,created_at")
       .eq("share_token", token)
       .maybeSingle();
     if (error) return failed(error.message);
     if (!data) return skipped("no readout with that token");
+
+    /* The figures as they stand NOW, including anything the agent has since
+       been through. The snapshot's numbers never change; how sure we are about
+       them can, and that is the one thing a shared readout should update. */
+    const { data: figs } = await db
+      .from("rift_figures")
+      .select("label,value_cents,trust_state,confirmed_by,assumptions,could_be_wrong")
+      .eq("readout_id", data.id)
+      .order("created_at", { ascending: true });
+
     return done({
       assessmentId: data.assessment_id as string,
       side: data.side as "buy" | "sell",
@@ -226,6 +247,17 @@ export async function readByToken(token: string): Promise<DbResult<SnapshotInput
       figures: data.figures as Record<string, unknown>,
       matched: data.matched as unknown[],
       createdAt: data.created_at as string,
+      stored: ((figs ?? []) as {
+        label: string; value_cents: string | number; trust_state: StoredFigure["trustState"];
+        confirmed_by: string | null; assumptions: { label: string; value: string }[]; could_be_wrong: string;
+      }[]).map((f) => ({
+        label: f.label,
+        valueCents: Number(f.value_cents),
+        trustState: f.trust_state,
+        confirmedBy: f.confirmed_by,
+        assumptions: f.assumptions ?? [],
+        couldBeWrong: f.could_be_wrong,
+      })),
     });
   } catch (e) {
     return failed(e);

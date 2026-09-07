@@ -396,3 +396,41 @@ describe("contract 4.2, on rows that exist", () => {
     expect(rows[0].data_type).toBe("bigint");
   });
 });
+
+describe("the trust ladder, end to end", () => {
+  test("advancing a review advances the figure the customer sees", async (c) => {
+    /* The ladder was described end to end and connected at neither end.
+       Promoting a review item changed a row in Studio while the number on the
+       customer's screen stayed "preliminary" forever — so "Kaleb has been
+       through this" was a fact recorded for the one person who already knew. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sladder','buy') returning id", [AGENT]);
+    const { rows: [r] } = await c.query(
+      `insert into rift_readouts (agent_id, assessment_id, side, share_token, inputs, figures)
+       values ($1,$2,'buy','tok-ladder','{}','{}') returning id`, [AGENT, a.id]);
+    const { rows: [f] } = await c.query(
+      `insert into rift_figures (agent_id, readout_id, label, value_cents, assumptions, could_be_wrong)
+       values ($1,$2,'Cash to close',2618750,$3,'Closing costs vary by lender and loan type.') returning id`,
+      [AGENT, r.id, JSON.stringify([{ label: "Price", value: "$325,000" }])]);
+
+    await c.query(
+      `insert into rift_review_items (agent_id, figure_id, who, kind, what, claim, raised_by, to_advance)
+       values ($1,$2,'You','figure','Cash to close','$26,188','client','Confirm the arithmetic.')`,
+      [AGENT, f.id]);
+
+    /* What promoteItem does, in the order it does it. */
+    await c.query("update rift_review_items set state='reviewed' where figure_id=$1", [f.id]);
+    await c.query("update rift_figures set trust_state='reviewed' where id=$1", [f.id]);
+
+    const { rows } = await c.query("select trust_state from rift_figures where id=$1", [f.id]);
+    expect(rows[0].trust_state).toBe("reviewed");
+  });
+
+  test("a figure still cannot reach verified without a name", async (c) => {
+    /* The link must not become a way round the rule it was built to serve. */
+    const { rows } = await c.query("select id from rift_figures where label='Cash to close' limit 1");
+    await expect(
+      c.query("update rift_figures set trust_state='verified' where id=$1", [rows[0].id]),
+    ).rejects.toThrow(/verified_needs_a_name/);
+  });
+});

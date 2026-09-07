@@ -361,7 +361,8 @@ running, not in pieces.
 | Capture | Scored with the full six signals, both consent records stored with their exact wording |
 | Consent gate | A phone number without the box ticked is refused outright |
 | Enrolment | Automatic on capture, carrying phone consent |
-| Snapshot + share link | Rendered as saved, never recomputed |
+| Snapshot + share link | Numbers rendered as saved, never recomputed. What *does* update is how sure anybody is about them |
+| Trust ladder | Connected end to end: a request from the readout creates a review item against a specific figure, and advancing it in Studio changes the chip the customer sees |
 | Scheduled jobs | Both reject an unauthenticated call and report honestly |
 | Retention | Deletion is deletion; "delete all of it" reachable from the readout |
 | Studio | Ranked leads with their arithmetic and their figures, review queue, follow-up, abandoned, drop-off, stale programmes, stale rate |

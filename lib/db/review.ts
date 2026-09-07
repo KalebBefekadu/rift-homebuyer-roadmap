@@ -29,6 +29,8 @@ export interface AskInput {
   claim: string;
   ceiling: TrustState;
   readoutId?: string;
+  /** The specific figure. "Check this" has to mean a particular number. */
+  figureId?: string;
 }
 
 const TO_ADVANCE: Record<ReviewKind, string> = {
@@ -50,6 +52,7 @@ export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
       .insert({
         agent_id,
         readout_id: input.readoutId ?? null,
+        figure_id: input.figureId ?? null,
         who: input.who.slice(0, 120),
         kind: input.kind,
         what: input.what.slice(0, 200),
@@ -118,7 +121,7 @@ export async function promoteItem(id: string, confirmedBy?: string): Promise<DbR
   try {
     const { data, error } = await db
       .from("rift_review_items")
-      .select("id,state,ceiling,kind")
+      .select("id,state,ceiling,kind,figure_id")
       .eq("id", id)
       .maybeSingle();
     if (error) return failed(error.message);
@@ -137,6 +140,25 @@ export async function promoteItem(id: string, confirmedBy?: string): Promise<DbR
 
     const { error: upErr } = await db.from("rift_review_items").update(patch).eq("id", id);
     if (upErr) return failed(upErr.message);
+
+    /* And the figure itself, which is the whole point.
+       
+       Without this the ladder was connected at neither end: promoting an item
+       changed a row in Studio while the number the customer is looking at
+       stayed "preliminary" forever. "Kaleb has been through this" was a fact
+       recorded for the one person who already knew it. */
+    const figureId = (data as { figure_id?: string | null }).figure_id;
+    if (figureId) {
+      const figurePatch: Record<string, unknown> = { trust_state: to };
+      if (confirmedBy) figurePatch.confirmed_by = confirmedBy.slice(0, 200);
+      const { error: figErr } = await db.from("rift_figures").update(figurePatch).eq("id", figureId);
+      if (figErr) {
+        /* The item advanced and the figure did not, which is exactly the state
+           this change exists to prevent. Loud, not swallowed. */
+        return failed(`review advanced but the figure did not: ${figErr.message}`);
+      }
+    }
+
     return done({ state: to });
   } catch (e) {
     return failed(e);

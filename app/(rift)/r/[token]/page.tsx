@@ -81,20 +81,41 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
           </p>
         </div>
 
+        {/* Each figure with how sure anybody is about it.
+            
+            The numbers are frozen — that is what a snapshot is. What can change
+            is whether somebody has since been through them, and that is the one
+            update a shared readout should carry: it is the difference between
+            "we worked this out" and "a person checked it". */}
         <div className="card glance" style={{ marginTop: 20, overflow: "hidden" }}>
-          {[
-            ["Cash to close", figures.cashToClose],
-            ["All-in monthly", figures.monthly],
-            ["Still to find", figures.gap],
-            ["Assistance, if approved", figures.assistance],
-          ].filter(([, v]) => v !== undefined).map(([label, v]) => (
-            <div key={String(label)} style={{ padding: "16px 18px" }}>
-              <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>{String(label)}</div>
-              <div className="num" style={{ fontSize: "clamp(17px,2vw,24px)", marginTop: 5 }}>
-                {typeof v === "number" ? money(v) : String(v)}
-              </div>
-            </div>
-          ))}
+          {snap.stored.length
+            ? snap.stored.map((f) => (
+                <div key={f.label} style={{ padding: "16px 18px" }}>
+                  <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>{f.label}</div>
+                  <div className="num" style={{ fontSize: "clamp(17px,2vw,24px)", marginTop: 5 }}>
+                    {money(f.valueCents / 100)}
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <Trust state={f.trustState} short />
+                  </div>
+                  {f.confirmedBy ? (
+                    <div className="t-2xs c-4" style={{ marginTop: 4 }}>Confirmed by {f.confirmedBy}</div>
+                  ) : null}
+                </div>
+              ))
+            : [
+                ["Cash to close", figures.cashToClose],
+                ["All-in monthly", figures.monthly],
+                ["Still to find", figures.gap],
+                ["Assistance, if approved", figures.assistance],
+              ].filter(([, v]) => v !== undefined).map(([label, v]) => (
+                <div key={String(label)} style={{ padding: "16px 18px" }}>
+                  <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>{String(label)}</div>
+                  <div className="num" style={{ fontSize: "clamp(17px,2vw,24px)", marginTop: 5 }}>
+                    {typeof v === "number" ? money(v) : String(v)}
+                  </div>
+                </div>
+              ))}
         </div>
 
         <div className="card p-5" style={{ marginTop: 24, maxWidth: 620 }}>
