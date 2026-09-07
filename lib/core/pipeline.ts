@@ -240,3 +240,53 @@ export function forecast(
  */
 export const COMMISSION_PCT = DEFAULT_RULES.commissionPct.value;
 export const commissionOn = (value: number, pct = COMMISSION_PCT) => (value * pct) / 100;
+
+/* ------------------------------------------------------------------ *
+ * The managed record, as the surface sees it
+ * ------------------------------------------------------------------ */
+
+/**
+ * The closed stage vocabulary, including the two terminal states the board
+ * itself does not forecast from.
+ *
+ * It lives in core rather than beside the queries because the client components
+ * that render stage buttons cannot import lib/db — it is `server-only`, and
+ * lib/core/layers.test.ts exists to keep that true. A stage list is domain
+ * knowledge, not data access, so this is where it belonged anyway.
+ */
+export const STAGE_NAMES = [
+  ...STAGES.map((s) => s.stage),
+  "Closed",
+  "Lost",
+] as const;
+
+export type Stage = (typeof STAGE_NAMES)[number];
+
+export type NoteKind = "note" | "call" | "email" | "text" | "meeting" | "stage";
+
+export interface LeadNote {
+  id: string;
+  kind: NoteKind;
+  body: string;
+  fromStage: string | null;
+  toStage: string | null;
+  at: string;
+}
+
+export interface ManagedLead {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  side: "buy" | "sell";
+  stage: Stage | null;
+  stageSince: string | null;
+  source: string;
+  contactBasis: string | null;
+  score: number | null;
+  band: string | null;
+  createdAt: string;
+  archivedAt: string | null;
+  archivedReason: string | null;
+  stall: Stall | null;
+}

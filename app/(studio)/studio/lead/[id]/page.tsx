@@ -1,0 +1,52 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { currentAgent } from "@/lib/db/session";
+import { redirect } from "next/navigation";
+import { readLead } from "@/lib/db/clients";
+import { Record as ClientRecord } from "./Record";
+
+export const metadata: Metadata = { title: "Record", robots: { index: false } };
+export const dynamic = "force-dynamic";
+
+/**
+ * One person.
+ *
+ * The screen the agent is actually on while the phone is ringing, so it is
+ * ordered by what he needs in that moment: who they are and how to reach them,
+ * where they are and how long they have been there, then everything that has
+ * ever been said — newest first, because the last conversation is the one he
+ * is continuing.
+ */
+export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
+  const agent = await currentAgent();
+  if (!agent) redirect("/studio/sign-in");
+
+  const { id } = await params;
+  const read = await readLead(id);
+
+  if (!read.ok) {
+    return (
+      <main className="shell-w" style={{ paddingTop: 60 }}>
+        <h1 className="serif" style={{ fontSize: 26 }}>This record could not be loaded.</h1>
+        <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
+          The database did not answer. Nothing has been lost — this is a read, and the record is
+          still there. It has been reported, and the error was: {read.error}
+        </p>
+        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Studio</Link>
+      </main>
+    );
+  }
+  if ("skipped" in read) {
+    return (
+      <main className="shell-w" style={{ paddingTop: 60 }}>
+        <h1 className="serif" style={{ fontSize: 26 }}>Not available yet.</h1>
+        <p className="t-sm c-3" style={{ marginTop: 10 }}>{read.reason}</p>
+        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Studio</Link>
+      </main>
+    );
+  }
+  if (!read.data) notFound();
+
+  return <ClientRecord lead={read.data.lead} notes={read.data.notes} />;
+}

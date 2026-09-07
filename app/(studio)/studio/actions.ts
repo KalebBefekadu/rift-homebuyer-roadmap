@@ -7,6 +7,7 @@ import { currentAgent } from "@/lib/db/session";
 import { promoteItem } from "@/lib/db/review";
 import { stop } from "@/lib/db/nurture";
 import { markReplied } from "@/lib/db/leads";
+import { addLead, addNote, setStage, archiveLead, type NewLead, type NoteKind, type Stage } from "@/lib/db/clients";
 import type { StopId } from "@/lib/core/nurture";
 
 /**
@@ -75,4 +76,66 @@ export async function signOut() {
   const supabase = await createClient();
   if (supabase) await supabase.auth.signOut();
   redirect("/studio/sign-in");
+}
+
+/* ------------------------------------------------------------------ *
+ * Managing people who never took an assessment
+ * ------------------------------------------------------------------ */
+
+/**
+ * Put somebody in by hand.
+ *
+ * Returns the id so the caller can go straight to their record. An agent who
+ * has just typed in everything he knows about a client wants to be looking at
+ * that client, not back at a list wondering whether it saved.
+ */
+export async function createLead(input: NewLead) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addLead(input);
+  revalidatePath("/studio");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function logContact(leadId: string, kind: NoteKind, body: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addNote(leadId, kind, body);
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath("/studio");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function moveStage(leadId: string, stage: Stage, why?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setStage(leadId, stage, why);
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath("/studio");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, stage: r.data.stage };
+}
+
+export async function archive(leadId: string, reason: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await archiveLead(leadId, reason);
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath("/studio");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
 }

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { currentAgent } from "@/lib/db/session";
 import { rankedLeads } from "@/lib/db/leads";
 import { funnelReport } from "@/lib/db/events";
+import { board } from "@/lib/db/clients";
+import { STALL_CHIP } from "@/lib/core/pipeline";
 import { readStale } from "@/lib/db/programs";
 import { openItems } from "@/lib/db/review";
 import { due } from "@/lib/db/nurture";
@@ -58,11 +60,12 @@ export default async function StudioToday() {
      last two — for no reason beyond the order they were written in. Studio is
      the screen the agent opens first thing, so its latency is the product's
      felt speed. */
-  const [leadsRead, reportRead, sellReportRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
       funnelReport("sell"),
+      board(),
       readStale(new Date()),
       openItems(),
       due(new Date()),
@@ -75,6 +78,7 @@ export default async function StudioToday() {
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
   const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
   const sellReport = sellReportRead.ok && "data" in sellReportRead ? sellReportRead.data : null;
+  const working = boardRead.ok && "data" in boardRead ? boardRead.data : [];
   const stale = staleRead.ok && "data" in staleRead ? staleRead.data : [];
   const review = reviewRead.ok && "data" in reviewRead ? reviewRead.data : [];
   const touches = dueRead.ok && "data" in dueRead ? dueRead.data : [];
@@ -88,7 +92,7 @@ export default async function StudioToday() {
      list, so a database error rendered "No leads yet" alongside copy assuring
      the agent that the readout is live and instrumented. That is the product
      telling him a comforting thing it cannot know. */
-  const reads = [leadsRead, reportRead, sellReportRead, staleRead, reviewRead, dueRead, abandonedRead];
+  const reads = [leadsRead, reportRead, sellReportRead, boardRead, staleRead, reviewRead, dueRead, abandonedRead];
   const notRecording = reads.some((r) => "skipped" in r);
   const failures = reads.filter((r) => !r.ok).map((r) => (r as { error: string }).error);
   /* Shown to the agent AND reported. He can see something is wrong; only the
@@ -123,6 +127,7 @@ export default async function StudioToday() {
             <span className="chip chip-out t-2xs">Studio</span>
           </div>
           <div className="row gap-2">
+            <Link href="/studio/add" className="btn btn-p btn-sm">Add someone</Link>
             <span className="t-xs c-4">{agent.name}</span>
             <form action={signOut}>
               <button className="btn btn-g btn-sm" type="submit">Sign out</button>
@@ -334,6 +339,61 @@ export default async function StudioToday() {
             </div>
           </section>
         ) : null}
+
+        {/* The people being worked */}
+        <section style={{ marginTop: 32 }}>
+          <div className="between wrap gap-2">
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Who you are working
+            </h2>
+            <Link href="/studio/add" className="btn btn-p btn-sm">Add someone</Link>
+          </div>
+          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+            Ordered by how long they have sat where they are, not by when they arrived. A
+            relationship rarely dies of a decision — it dies of forty quiet days, and this list
+            is sorted to put those at the top.
+          </p>
+
+          {working.length === 0 ? (
+            <div className="card p-4" style={{ marginTop: 14, background: "var(--sunk)" }}>
+              <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+                Nobody on the board yet. People who come through the funnel arrive below; anyone
+                you are already working with has to be added by hand once.
+              </p>
+              <Link href="/studio/add" className="btn btn-brand btn-sm" style={{ marginTop: 12 }}>
+                Add your first
+              </Link>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {working.map((p, i) => (
+                <Link
+                  key={p.id}
+                  href={`/studio/lead/${p.id}`}
+                  className="between wrap gap-2"
+                  style={{
+                    padding: "13px 16px", textDecoration: "none",
+                    borderBottom: i === working.length - 1 ? undefined : "1px solid var(--line-3)",
+                  }}
+                >
+                  <div>
+                    <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
+                    <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                      {p.stage} · {p.side === "buy" ? "buyer" : "seller"}
+                      {p.stall ? ` · ${p.stall.days} day${p.stall.days === 1 ? "" : "s"} here` : ""}
+                    </div>
+                    {p.stall && p.stall.level !== "moving" ? (
+                      <p className="t-xs c-3" style={{ marginTop: 4, maxWidth: 460, lineHeight: 1.5 }}>{p.stall.unstick}</p>
+                    ) : null}
+                  </div>
+                  {p.stall ? (
+                    <span className={`chip ${STALL_CHIP[p.stall.level].c}`}>{STALL_CHIP[p.stall.level].l}</span>
+                  ) : null}
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Funnel */}
         <section style={{ marginTop: 32 }}>

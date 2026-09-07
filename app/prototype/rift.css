@@ -49,8 +49,21 @@
 
 .rift *, .rift *::before, .rift *::after { box-sizing: border-box; }
 .rift p, .rift h1, .rift h2, .rift h3, .rift h4, .rift figure { margin: 0; }
-.rift a { color: inherit; text-decoration: none; }
-.rift button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+/* Same specificity trap as the button reset below: `.rift a` is (0,1,1) and
+   `.btn-p` is (0,1,0), so `color: inherit` beat the button classes and every
+   <a class="btn btn-p"> rendered its label in the inherited ink ON the ink
+   background — an invisible label on a solid black rectangle. That was the
+   primary call to action on both public landing pages. */
+.rift a { text-decoration: none; }
+.rift a:not([class~="btn"]) { color: inherit; }
+/* The reset deliberately does not touch .btn. `.rift button` is (0,1,1) and
+   `.btn-p` is (0,1,0), so stripping background/border/padding here silently
+   out-specified every button class in the product: a <button class="btn btn-p">
+   rendered as bare text with no fill, while the identical <a class="btn btn-p">
+   looked right — which is why it survived. Links were never matched by this
+   selector. */
+.rift button { font: inherit; cursor: pointer; }
+.rift button:not([class~="btn"]) { color: inherit; background: none; border: 0; padding: 0; }
 .rift ul, .rift ol { margin: 0; padding: 0; list-style: none; }
 .rift input, .rift select, .rift textarea { font: inherit; color: inherit; }
 

@@ -1,0 +1,292 @@
+import "server-only";
+import { serviceClient, currentAgentId } from "./service";
+import { done, failed, skipped, type DbResult } from "./result";
+import { boundedRead, boundedWrite } from "./bounded";
+import {
+  stallOf,
+  STAGE_NAMES,
+  type Stage,
+  type NoteKind,
+  type LeadNote,
+  type ManagedLead,
+} from "@/lib/core/pipeline";
+
+export { STAGE_NAMES };
+export type { Stage, NoteKind, LeadNote, ManagedLead };
+
+/**
+ * People the agent is actually working.
+ *
+ * The rest of lib/db serves the funnel: somebody arrives, is scored, and is
+ * followed up automatically. This module serves the other half of the job,
+ * which came first in practice and second in the build — the ten relationships
+ * that already exist and have never been near a form.
+ *
+ * Two rules hold this together:
+ *
+ * A STAGE IS NOT A SCORE. `band` is computed urgency and moves on its own as
+ * recency decays. `stage` is where somebody IS, it moves only when a human
+ * says so, and it is the thing the business is actually run from.
+ *
+ * THE HISTORY IS APPEND-ONLY. Notes cannot be edited or deleted through the
+ * app, and a stage change writes its own note. The value of a contact record
+ * is that it says what was true at the time; one that can be tidied up later
+ * is a record of the agent's current opinion instead.
+ */
+
+export interface NewLead {
+  name: string;
+  email?: string;
+  phone?: string;
+  side: "buy" | "sell";
+  stage: Stage;
+  /** Why this person can be contacted. Required, never inferred. */
+  contactBasis: string;
+  /** Optional opening note — usually everything the agent already knows. */
+  note?: string;
+}
+
+const daysSince = (iso: string | null, now: Date) =>
+  iso ? Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000)) : 0;
+
+function shape(r: Record<string, unknown>, now: Date): ManagedLead {
+  const stage = (r.stage as Stage | null) ?? null;
+  const stageSince = (r.stage_since as string | null) ?? null;
+  return {
+    id: r.id as string,
+    name: (r.name as string | null) ?? null,
+    email: (r.email as string | null) ?? null,
+    phone: (r.phone as string | null) ?? null,
+    side: r.side as "buy" | "sell",
+    stage,
+    stageSince,
+    source: (r.source as string) ?? "funnel",
+    contactBasis: (r.contact_basis as string | null) ?? null,
+    score: (r.score as number | null) ?? null,
+    band: (r.band as string | null) ?? null,
+    createdAt: r.created_at as string,
+    archivedAt: (r.archived_at as string | null) ?? null,
+    archivedReason: (r.archived_reason as string | null) ?? null,
+    /* Only meaningful once somebody has been placed on the board. A lead with
+       no stage is not "moving slowly", it is simply not being worked yet. */
+    stall: stage && !r.archived_at ? stallOf(stage, daysSince(stageSince, now)) : null,
+  };
+}
+
+const SELECT =
+  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason";
+
+/**
+ * Put somebody in by hand.
+ *
+ * `contact_basis` is required by the database rather than defaulted here. An
+ * agent typing in a person he has known for two years knows exactly why he is
+ * allowed to call them; the system does not, and should not guess on his
+ * behalf when the guess is the thing a regulator would ask about.
+ */
+export async function addLead(input: NewLead): Promise<DbResult<{ id: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const name = input.name.trim();
+  const email = input.email?.trim() || null;
+  const phone = input.phone?.trim() || null;
+  const basis = input.contactBasis.trim();
+
+  if (!name) return failed("a name is required");
+  if (!email && !phone) return failed("an email address or a phone number is required");
+  if (!basis) return failed("a reason you can contact them is required");
+
+  const created = await boundedWrite(
+    db.from("rift_leads").insert({
+      agent_id,
+      assessment_id: null,
+      name,
+      email,
+      phone,
+      side: input.side,
+      stage: input.stage,
+      stage_since: new Date().toISOString(),
+      source: "manual",
+      contact_basis: basis,
+      /* Deliberately unscored. The score explains a funnel answer set, and
+         inventing one for somebody who never answered anything would put a
+         fabricated number next to a real person. Studio shows the stage. */
+      score: null,
+      band: null,
+    }).select("id").single(),
+    "adding the person",
+  );
+  if (!created.ok || !("data" in created)) return created as DbResult<{ id: string }>;
+
+  const id = (created.data as { id: string }).id;
+
+  /* Best effort, and deliberately not awaited into the failure path: the
+     person is in, which is the thing that was asked for. A lost opening note
+     is recoverable by typing it again; a failed insert that discarded the
+     whole person is not. */
+  if (input.note?.trim()) {
+    await addNote(id, "note", input.note.trim());
+  }
+  await addNote(id, "stage", `Added at ${input.stage}.`, { toStage: input.stage });
+
+  return done({ id });
+}
+
+export async function addNote(
+  leadId: string,
+  kind: NoteKind,
+  body: string,
+  stages?: { fromStage?: string | null; toStage?: string | null },
+): Promise<DbResult<{ id: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+  if (!body.trim()) return failed("an empty note is not a note");
+
+  const res = await boundedWrite(
+    db.from("rift_lead_notes").insert({
+      lead_id: leadId,
+      agent_id,
+      kind,
+      body: body.trim(),
+      from_stage: stages?.fromStage ?? null,
+      to_stage: stages?.toStage ?? null,
+    }).select("id").single(),
+    "saving the note",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<{ id: string }>;
+  return done({ id: (res.data as { id: string }).id });
+}
+
+/**
+ * Move somebody, and say so in the history.
+ *
+ * Reads the current stage first so the note can record what it moved FROM.
+ * A history of destinations with no origins cannot answer the one question an
+ * agent asks it — "how long was this stuck before I noticed?"
+ */
+export async function setStage(leadId: string, stage: Stage, why?: string): Promise<DbResult<{ stage: Stage }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const current = await boundedRead(
+    db.from("rift_leads").select("stage").eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
+    "reading the current stage",
+  );
+  const from = current.ok && "data" in current
+    ? ((current.data as { stage: string | null } | null)?.stage ?? null)
+    : null;
+
+  if (from === stage && !why) return done({ stage });
+
+  const res = await boundedWrite(
+    db.from("rift_leads")
+      .update({ stage, stage_since: new Date().toISOString() })
+      .eq("id", leadId)
+      .eq("agent_id", agent_id)
+      .select("id").single(),
+    "moving them",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<{ stage: Stage }>;
+
+  await addNote(
+    leadId,
+    "stage",
+    why?.trim() || `${from ?? "Unplaced"} → ${stage}`,
+    { fromStage: from, toStage: stage },
+  );
+  return done({ stage });
+}
+
+export async function archiveLead(leadId: string, reason: string): Promise<DbResult<{ id: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+  if (!reason.trim()) return failed("a reason is required");
+
+  const res = await boundedWrite(
+    db.from("rift_leads")
+      .update({ archived_at: new Date().toISOString(), archived_reason: reason.trim() })
+      .eq("id", leadId).eq("agent_id", agent_id).select("id").single(),
+    "archiving them",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<{ id: string }>;
+  await addNote(leadId, "note", `Archived — ${reason.trim()}`);
+  return done({ id: leadId });
+}
+
+export async function readLead(
+  leadId: string,
+  now = new Date(),
+): Promise<DbResult<{ lead: ManagedLead; notes: LeadNote[] }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const leadRes = await boundedRead(
+    db.from("rift_leads").select(SELECT).eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
+    "reading the record",
+  );
+  if (!leadRes.ok || !("data" in leadRes)) {
+    return leadRes as DbResult<{ lead: ManagedLead; notes: LeadNote[] }>;
+  }
+  const row = leadRes.data as Record<string, unknown> | null;
+  if (!row) return failed("no such person");
+
+  const notesRes = await boundedRead(
+    db.from("rift_lead_notes")
+      .select("id,kind,body,from_stage,to_stage,at")
+      .eq("lead_id", leadId).eq("agent_id", agent_id)
+      .order("at", { ascending: false }).limit(200),
+    "reading the history",
+  );
+
+  /* The person renders even if their history does not. Losing the notes panel
+     is a degraded page; losing the whole record because a second query was
+     slow is an agent who cannot find his client. */
+  const notes = notesRes.ok && "data" in notesRes
+    ? (notesRes.data as Record<string, unknown>[]).map((n) => ({
+        id: n.id as string,
+        kind: n.kind as NoteKind,
+        body: n.body as string,
+        fromStage: (n.from_stage as string | null) ?? null,
+        toStage: (n.to_stage as string | null) ?? null,
+        at: n.at as string,
+      }))
+    : [];
+
+  return done({ lead: shape(row, now), notes });
+}
+
+/**
+ * Everybody being worked, oldest movement first.
+ *
+ * Sorted by how long they have been sitting rather than when they arrived,
+ * because the question this list answers is "who have I left alone too long".
+ */
+export async function board(now = new Date()): Promise<DbResult<ManagedLead[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const res = await boundedRead(
+    db.from("rift_leads").select(SELECT)
+      .eq("agent_id", agent_id)
+      .is("archived_at", null)
+      .not("stage", "is", null)
+      .order("stage_since", { ascending: true })
+      .limit(200),
+    "reading the board",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<ManagedLead[]>;
+  return done((res.data as Record<string, unknown>[]).map((r) => shape(r, now)));
+}
