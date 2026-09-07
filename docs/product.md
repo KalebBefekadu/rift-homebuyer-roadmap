@@ -167,7 +167,10 @@ The same is true of the seller-side exemption, appeal-window, and cost data. Bot
 
 - Every program carries a **last-verified date**, the source consulted, and the person who verified it.
 - Every program shown to a customer displays *verified as of* that date.
-- A program not verified within 90 days is automatically suppressed from customer-facing matching and raised to the agent as a task. Suppression is silent to the customer; a stale program simply does not appear.
+- A program not re-verified within the configured window is automatically suppressed from
+  customer-facing matching and raised to the agent as a task. The window is a business rule
+  (`registryDays`, default **90 days**), not a constant — read it, do not hard-code it.
+  Suppression is silent to the customer; a stale program simply does not appear.
 - Amounts are shown as ranges with their eligibility conditions attached, never as a single figure and never as an approval.
 - Income limits, purchase-price caps, first-time-buyer definitions, occupancy requirements, and repayment or forgiveness terms are part of the record, not footnotes.
 - Every match states plainly that eligibility is determined by the program administrator and the lender, not by Rift.
@@ -223,7 +226,10 @@ Most people who start an assessment will not finish it in one sitting, and that 
 - Returning to the same device resumes at the last unanswered question with prior answers intact.
 - Once an email address has been provided and the visitor has explicitly agreed to be contacted about their assessment, an abandoned assessment becomes a resumable link Rift can send once, plus one follow-up if unopened. Rift never emails someone who did not provide an address for this purpose.
 - Abandoned assessments are visible to the agent as partial relationships showing progress reached, last topic, source, and any contact information given, so the agent can decide whether a personal touch is worthwhile.
-- An abandoned assessment older than 90 days with no contact information is discarded.
+- An abandoned assessment with no contact information is discarded after **30 days** — long
+  enough to resume on the same device, short enough that Rift is not holding a collection of
+  strangers' finances. The full retention schedule is `RETENTION` in `lib/prototype/privacy.ts`
+  and is shown to the customer rather than buried in a policy page.
 
 ## Lead sources and attribution
 

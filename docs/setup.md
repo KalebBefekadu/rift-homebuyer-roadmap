@@ -30,11 +30,36 @@ Entry points:
 
 ```bash
 npx tsc --noEmit    # must be clean
-npm test            # 14 tests, must pass
+npm test            # 20 tests plus the docs drift guard, must pass
 npm run build       # must compile
 ```
 
 If any of these fail on a fresh clone, fix that before starting work. All three pass today.
+
+`npm test` includes `lib/prototype/docs.test.ts`, which fails when this documentation drifts
+from the code it describes. If it fails, one of the two is wrong — and unless the code is
+actually broken, it is the documentation.
+
+## 2b. One trap, and it will cost you an afternoon
+
+`npm run dev` uses **turbopack**; `npm run build` uses **webpack**. They share `.next`, and
+running one after the other leaves it in a state that fails in ways that do not look like a
+build problem:
+
+- sometimes a 500 with `Cannot find module '../chunks/ssr/[turbopack]_runtime.js'`, which at
+  least names itself;
+- sometimes — and this is the expensive one — **the page renders perfectly and nothing on it
+  responds to a click.** React hydrates the layout and stops. No console error, no failed
+  request, no clue. It looks exactly like a bug in your own component.
+
+If interactivity disappears for no reason, this is why. Run:
+
+```bash
+npm run dev:clean
+```
+
+It was diagnosed once, from scratch, by bisecting a component that turned out to be fine.
+Do not repeat that.
 
 ## 3. Configure the services
 

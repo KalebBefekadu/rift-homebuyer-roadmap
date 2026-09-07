@@ -54,7 +54,7 @@ the cheapest defect-detection available.
    before deciding: several of those are business decisions that are not the engineer's to
    make, and two are not even the agent's.
 
-4. **Anything you would push back on.** Each opinion in the specification has a reason
+4. **Anything you would push back on.** This and item 3 are the ones I will read first. Each opinion in the specification has a reason
    written next to it — immutable snapshots, a first-touch trigger, telemetry in a separate
    table from answers, no LLM anywhere in the value path. If a reason does not hold up, I
    would rather hear it now than discover the workaround in review.

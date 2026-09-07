@@ -31,7 +31,7 @@
  *      the trust ladder must not move by itself here.
  */
 
-import type { TrustState } from "@/components/rift/Trust";
+import type { TrustState } from "./review";
 
 export type Carry = "snapshot" | "recompute" | "context" | "drop";
 

@@ -28,7 +28,22 @@
  *   the exact false confidence this whole ladder exists to prevent.
  */
 
-import type { TrustState } from "@/components/rift/Trust";
+/**
+ * The four rungs.
+ *
+ * This type lives here, in the domain layer, rather than in the component that
+ * draws it. It used to live in `components/rift/Trust.tsx`, which meant this
+ * module and `seam.ts` both reached up into a React component for a piece of
+ * product vocabulary — and once `Trust.tsx` needed `askReview()` from here,
+ * that became an import cycle that silently stopped the entire readout page
+ * from hydrating. No error, no failed request: the page rendered perfectly and
+ * nothing on it responded to a click.
+ *
+ * The rule it broke is already written down — the domain layer does not depend
+ * on the framework. Keep the dependency pointing one way: components import
+ * from `lib/prototype`, never the reverse.
+ */
+export type TrustState = "preliminary" | "pending-review" | "reviewed" | "verified";
 
 export type ReviewKind = "figure" | "document" | "program" | "plan";
 

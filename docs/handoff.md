@@ -17,9 +17,10 @@ fresh clone to a running environment.
 
 Two things that did not exist at the first handoff, both of which change where you start:
 
-- **A test harness that runs.** `lib/prototype/compute.test.ts` — 14 tests pinning the compute
-  contract, including the reference case and the rules that fail as wrong numbers rather than
-  errors. `npm test`. The rest of §6 is written against this harness, not from scratch.
+- **A test harness that runs.** `npm test` — 20 tests in `lib/prototype/compute.test.ts`
+  pinning the compute contract and the readout's timing rule, plus a drift guard in
+  `lib/prototype/docs.test.ts` that fails when this documentation disagrees with the code.
+  The rest of §7 is written against that harness, not from scratch.
 - **Working plumbing.** Supabase auth with a localStorage fallback, Sentry with a tunnel
   route, and a Brevo client that degrades honestly. It came from the portal MVP that Rift
   replaced; that MVP's product surface has been deleted and its schema is documented as
@@ -108,7 +109,7 @@ Phases 1–3 are the MVP. Phase 4 begins only after the gate above.
 
 | Phase | Ship | Why here | Done when |
 | --- | --- | --- | --- |
-| **1** | Schema + compute engine + program registry + telemetry | Nothing downstream is real without these. Telemetry belongs in phase one because the event you forgot to emit cannot be recovered retrospectively. | `calculations.md` reference case passes (it already does); every table has an RLS policy; registry admin can add and verify a programme; events land |
+| **1** | Schema + compute engine + program registry + telemetry | Nothing downstream is real without these. Telemetry belongs in phase one because the event you forgot to emit cannot be recovered retrospectively. | `calculations.md` reference case passes (it already does); every table has an RLS policy; a programme can be inserted with a verification date and a stale one is suppressed from matching; events land. **No admin UI** — that arrives with Studio in phase 5, and the migration must not wait on a screen |
 | **2** | Buyer product end to end — landing, assessment, readout | The revenue path. One product fully working beats two half working. | A stranger can go from ad click to a shareable readout without an account |
 | **3** | Capture, consent, and booking | Turns a readout into a relationship. Consent is a phase-3 gate, not a later fix. | Email capture, TCPA-compliant phone consent, and a real calendar booking |
 | **4** | Seller product | Same engine, different questions and outputs. Cheap once phase 2 exists. | Seller parity with buyer |
@@ -140,7 +141,10 @@ lender named as the decider. **Violating this tells someone they are ready to bu
 are not.** There is a test case for it in §6.
 
 ### 4.4 Stale programme data is suppressed, silently
-`isStale()` removes anything unverified for more than 90 days from customer-facing matching.
+`isStale()` removes anything unverified for longer than the configured window from
+customer-facing matching. **The window is a business rule** — `registryDays`, default 90 days
+— not a constant. `STALE_AFTER_DAYS` reads it, and so should anything else; hard-coding 90
+means the setting exists and changes nothing, which is worse than not having it.
 `matchPrograms()` returns suppressed items separately so the agent is told and the customer
 is not. The registry ships with one deliberately stale fixture so the rule stays demonstrable.
 
@@ -297,6 +301,11 @@ pipeline
   a stage with fewer than 4 outcomes reports basis "assumed"
   a stage with 12+ outcomes reports basis "observed"
   the blended weight always sits between the assumption and the observed rate
+
+docs
+  every retention period in schema.md matches RETENTION in privacy.ts
+  the registry window is documented as a setting, never as a bare 90 days
+  the stated test count is not smaller than the suite
 
 seam
   a figure that moved 3% or more blocks publishing until disclosed         [rule 4.14]

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Ico } from "./icons";
-import { askReview } from "@/lib/prototype/review";
+import { askReview, type TrustState } from "@/lib/prototype/review";
 
 /**
  * The trust ladder, rendered.
@@ -19,7 +19,9 @@ import { askReview } from "@/lib/prototype/review";
  * phone screen in sunlight.
  */
 
-export type TrustState = "preliminary" | "pending-review" | "reviewed" | "verified";
+/* Re-exported so existing component imports keep working; the type is owned
+   by lib/prototype/review.ts. See the note there. */
+export type { TrustState };
 
 const S: Record<TrustState, {
   label: string; short: string; chip: string;

@@ -163,12 +163,17 @@ one is either wide open or unreadable, and both are discovered in production.
 Mirrors `lib/prototype/privacy.ts`, which is displayed to the customer. The database is where
 it becomes true.
 
+**This table must match `RETENTION` in `lib/prototype/privacy.ts` exactly**, because that array
+is what is rendered to the customer at the bottom of every readout. It is a promise, not a
+configuration value. `lib/prototype/docs.test.ts` fails if the two drift apart.
+
 | Data | Kept | Why |
 | --- | --- | --- |
-| Unconverted assessment | 18 months | A buyer who answered "9 to 18 months" is still inside their own stated timeline |
-| Telemetry events | 13 months | A year of seasonality plus one month to compare |
-| Client records | Per `business_rules.clientRetentionYears` | **Has a legal floor.** Confirm with the broker before anything deletes |
-| Consent records | Life of the relationship + 5 years | It is the evidence that the contact was lawful |
+| Unconverted assessment | 18 months | A buyer on a "9 to 18 months" answer is still inside their own stated timeline |
+| Part-finished assessment, no contact details | 30 days | Long enough to resume on the same device, short enough that it is not a collection of strangers' finances |
+| Client record | Per `business_rules.clientRetentionYears` | **Has a legal floor.** Confirm with the broker before anything deletes |
+| Funnel telemetry | 24 months | Question ids and dwell only, never answers. Aggregated counts survive; individual event rows do not |
+| Consent record | The relationship, then five years | The only evidence the contact was lawful. Stores the exact wording, not a reference to it |
 
 **"Delete all of it" must actually delete.** Not a soft-delete flag, not an anonymised row.
 A scheduled job enforces the windows above; write it in phase 1 alongside the tables, because

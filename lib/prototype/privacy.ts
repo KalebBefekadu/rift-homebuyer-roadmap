@@ -58,6 +58,17 @@ export const RETENTION: RetentionRule[] = [
     why: "Carries the question id and the time spent, never the answer. We know someone stopped on the savings question; we do not know what they typed.",
     thenWhat: "Aggregated counts survive, individual event rows do not.",
   },
+  {
+    /* Added because the panel was silent about it, and a retention list that
+       omits one category is not a retention list — it is a selection. This
+       record is also the only thing that can later prove the contact was
+       lawful, which is why it outlives the relationship it came from. */
+    id: "consent",
+    what: "A record of what you agreed to, and the exact wording you agreed to",
+    keptFor: "The relationship, then five years",
+    why: "It is the evidence that we were allowed to contact you at all. Keeping the wording rather than a reference to it means we cannot quietly change what you agreed to after the fact.",
+    thenWhat: "Deleted with the rest of the record.",
+  },
 ];
 
 /* ------------------------------------------------------------------ *

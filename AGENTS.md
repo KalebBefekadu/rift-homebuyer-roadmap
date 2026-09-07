@@ -20,6 +20,28 @@ Everything else exists to make that promise survivable at scale for one person.
 
 **The production product is not built yet.** Building it is the job.
 
+## Before you write any code — the review gate
+
+**Your first deliverable is findings, not a migration.**
+
+Read the documents, run the prototype, then report: the phase-1 plan, the first migration as
+SQL, **everything you found ambiguous or contradictory, and anything you would push back on.**
+Then stop. Do not apply a migration and do not start product routes until those findings have
+been accepted, rejected, or parked in `docs/handoff.md` §8.
+
+This exists because the failure mode is not refusing to report problems — it is reporting them
+and starting to code in the same breath, so nobody reads them until the decision is already
+cast in a schema. A review pass that arrives alongside the thing it was supposed to review is
+not a review.
+
+Six documentation defects were found this way and fixed before the first migration, including
+a retention period stated as 13 months in `docs/schema.md` and 24 months in the code rendered
+to the customer. An engineer building the deletion job from the document would have shipped a
+product that breaks a promise made on screen, and nothing would have failed.
+
+`npm test` now includes `lib/prototype/docs.test.ts`, which fails when the docs and the code
+disagree about a number that matters. It does not check prose. Keep finding the rest.
+
 ## Read in this order
 
 1. **[docs/handoff.md](docs/handoff.md)** — **§2 is what ships first**, then the build order,
@@ -66,11 +88,13 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 - **The domain layer is I/O-free.** No fetch, no client, no `process.env` under
   `lib/prototype/`. It is why the contracts are testable.
 - **Write the acceptance test before the feature.** The list is in handoff.md §7. The harness
-  runs: `npm test`.
+  runs: `npm test` — 20 contract tests plus the documentation drift guard.
 - **A missing integration degrades visibly and says so.** Never a silent success, never a
   crash. `lib/brevo/sync.ts` is the reference.
 - **Every table ships with its RLS policy in the same migration.**
-- **Change the contract doc and its test in the same commit** as the code.
+- **Change the contract doc and its test in the same commit** as the code. If
+  `docs.test.ts` fails, the code is the source of truth and the document is what needs
+  changing — unless the code is genuinely wrong, in which case fix both.
 
 ## What not to do
 
@@ -81,6 +105,9 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 - Do not repurpose the retired MVP's `roadmaps` table for Rift plans.
 - Do not delete a prototype screen until its production replacement is live and checked
   against it.
+- If a page renders but nothing responds to a click, it is almost certainly a stale `.next`
+  from mixing `next build` with `next dev --turbopack`. Run `npm run dev:clean` **before**
+  suspecting your own code. See docs/setup.md §2b.
 - Do not "fix" a deliberate degraded state. A text step that downgraded to email because
   there is no phone consent is working correctly.
 
@@ -88,6 +115,7 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 
 ```bash
 npm run dev      # prototype at /prototype — needs no configuration at all
+npm run dev:clean # use after any `npm run build` — see docs/setup.md §2b
 npm test         # vitest
 npm run build    # must pass before any handoff
 npx tsc --noEmit # must be clean
