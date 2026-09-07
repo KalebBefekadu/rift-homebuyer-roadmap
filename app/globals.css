@@ -1,16 +1,25 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  --brand: #1f3d2b;
-  --accent: #b8862f;
-  --ink: #20241f;
-  --muted: #5b6158;
-  --line: #e4e0d5;
-  --paper: #faf7f0;
-  --panel: #f1eee4;
-  --app-bg: #2a2f28;
-  --app-panel: #f7f5ef;
+  --brand: #0c4239;
+  --brand-2: #146257;
+  --accent: #b9f7bd;
+  --accent-2: #d8fbd8;
+  --signal: #f5ae73;
+  --sky: #78dce5;
+  --ink: #15201c;
+  --muted: #63716c;
+  --line: #d8ded5;
+  --paper: #f8faf6;
+  --panel: #eef3ec;
+  --app-bg: #101914;
+  --app-bg-2: #18251f;
+  --app-panel: #f7faf5;
+  --danger: #bf4b3c;
+  --success: #3c8b62;
+  --focus: #8de5e7;
+  --shadow: 0 18px 45px rgba(7, 29, 23, 0.13);
 }
 
 * {
@@ -25,13 +34,13 @@ body {
 }
 
 body {
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Manrope", system-ui, sans-serif;
   background: var(--app-bg);
   color: var(--ink);
 }
 
 .font-display {
-  font-family: "Fraunces", Georgia, serif;
+  font-family: "DM Serif Display", Georgia, serif;
 }
 
 input,
@@ -41,24 +50,90 @@ select {
   font-family: inherit;
   font-size: 13.5px;
   color: var(--ink);
-  background: #fff;
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 9px 11px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid var(--brand);
-  outline-offset: -1px;
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
   border-color: var(--brand);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(120, 220, 229, 0.2);
 }
 
 textarea {
   resize: vertical;
   min-height: 58px;
   line-height: 1.45;
+}
+
+button,
+a,
+select,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: var(--app-bg);
+}
+
+.app-card {
+  border: 1px solid rgba(15, 41, 33, 0.1);
+  background: var(--app-panel);
+  box-shadow: var(--shadow);
+}
+
+.app-glass {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #17241e;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.17);
+}
+
+.metric-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #18271f;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  padding: 0.3rem 0.65rem;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #dce2d7;
+}
+
+.focus-ring {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    filter 140ms ease;
+}
+
+.focus-ring:hover {
+  transform: translateY(-1px);
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .inline-suffix input {
