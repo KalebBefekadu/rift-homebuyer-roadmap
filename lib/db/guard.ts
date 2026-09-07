@@ -1,6 +1,9 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { check, LIMITS, type Limit } from "@/lib/core/ratelimit";
+import { MAX_BODY_BYTES } from "@/lib/core/limits";
+
+export { MAX_BODY_BYTES };
 
 /**
  * The gate on the public write endpoints.
@@ -20,19 +23,6 @@ export function ipOf(req: Request): string {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-/**
- * The largest body a public endpoint will read.
- *
- * The readout endpoint stores whatever `inputs` and `figures` it is given, as
- * jsonb, with no shape. Rate limiting caps requests per minute; it does nothing
- * about the size of each one, and ten megabytes ten times a minute fills a
- * database quickly and quietly.
- *
- * 64KB is far more than any real payload here — the largest is a readout with
- * three tracked figures and a matched programme list, well under 8KB — and far
- * less than anything worth storing by accident.
- */
-export const MAX_BODY_BYTES = 64 * 1024;
 
 /**
  * Reads a JSON body, refusing anything oversized.
