@@ -10,7 +10,8 @@ import { abandoned } from "@/lib/db/recovery";
 import { REVIEW_SLA_HOURS } from "@/lib/core/review";
 import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { ReviewRow } from "./ReviewRow";
-import { BAND_LABEL, BAND_TONE, sla, type Band } from "@/lib/core/lead";
+import { LeadRow } from "./LeadRow";
+import { sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
 import { Ico, Mark } from "@/components/rift/icons";
 
@@ -205,24 +206,11 @@ export default async function StudioToday() {
           ) : (
             <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
               {leads.map((l, i) => (
-                <div key={l.id} style={{ padding: "13px 15px", borderBottom: i === leads.length - 1 ? undefined : "1px solid var(--line-3)" }}>
-                  <div className="between wrap gap-2">
-                    <div className="row wrap gap-2">
-                      <span className="t-sm w6">{l.name || l.email || "Anonymous"}</span>
-                      <span className={`chip ${BAND_TONE[l.band as Band] ?? "chip"}`}>{BAND_LABEL[l.band as Band] ?? l.band}</span>
-                      <span className="chip">{l.side === "buy" ? "Buyer" : "Seller"}</span>
-                    </div>
-                    <span className="num t-sm">{l.score}</span>
-                  </div>
-                  {/* The arithmetic, not a tooltip. */}
-                  <div className="row wrap gap-2" style={{ marginTop: 7 }}>
-                    {(l.signals as { label: string; points: number; note: string }[]).map((s) => (
-                      <span key={s.label} className="chip t-2xs" title={s.note}>
-                        {s.label} {s.points > 0 ? "+" : ""}{s.points}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <LeadRow
+                  key={l.id}
+                  lead={{ ...l, signals: l.signals as { label: string; points: number; note: string }[] }}
+                  last={i === leads.length - 1}
+                />
               ))}
             </div>
           )}

@@ -119,6 +119,8 @@ export interface RankedLead {
   signals: unknown[];
   createdAt: string;
   humanRepliedAt: string | null;
+  /** Why the cadence stopped, or null while it is still running. */
+  stopped: string | null;
 }
 
 /** Ranked by what the answers say, never by when they arrived. */
@@ -131,7 +133,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,side,score,band,signals,created_at,human_replied_at")
+      .select("id,name,email,side,score,band,signals,created_at,human_replied_at,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
       .order("score", { ascending: false })
       .limit(limit);
@@ -146,6 +148,8 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       signals: (r.signals as unknown[]) ?? [],
       createdAt: r.created_at as string,
       humanRepliedAt: r.human_replied_at as string | null,
+      stopped: (r as unknown as { rift_enrolments?: { stop_reason: string | null }[] })
+        .rift_enrolments?.[0]?.stop_reason ?? null,
     })));
   } catch (e) {
     return failed(e);
