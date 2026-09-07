@@ -1,6 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { boundedWrite, boundedRead } from "./bounded";
 import { type Touch } from "@/lib/core/attribution";
 
 export { stripToHost, touchFromRequest, describeTouch, type Touch } from "@/lib/core/attribution";
@@ -30,15 +31,18 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
   if (!agent_id) return skipped("no agent row exists yet");
 
   try {
-    const { data: existing, error: readErr } = await db
-      .from("rift_attributions")
-      .select("session_id,visits")
-      .eq("session_id", sessionId)
-      .maybeSingle();
-    if (readErr) return failed(readErr.message);
+    /* Bounded. A read in front of a write is still a read, and an unbounded
+       one means a hung database holds the request open just as surely as the
+       write would. */
+    const read = await boundedRead(
+      db.from("rift_attributions").select("session_id,visits").eq("session_id", sessionId).maybeSingle(),
+      "the attribution lookup",
+    );
+    if (!read.ok) return read;
+    const existing = "data" in read ? read.data : null;
 
     if (!existing) {
-      const { error } = await db.from("rift_attributions").insert({
+      const inserted = await boundedWrite(db.from("rift_attributions").insert({
         session_id: sessionId,
         agent_id,
         first_source: touch.source ?? null,
@@ -52,15 +56,15 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
         last_referrer: touch.referrer ?? null,
         last_landing: touch.landing ?? null,
         visits: 1,
-      });
-      if (error) return failed(error.message);
+      }), "attribution");
+      if (!inserted.ok) return inserted;
       return done({ first: true, visits: 1 });
     }
 
     /* Only last_* and the visit count. Sending first_* here would be rejected
        by the trigger, which is the intended safety net rather than the plan. */
     const visits = (existing.visits as number) + 1;
-    const { error } = await db
+    const updated = await boundedWrite(db
       .from("rift_attributions")
       .update({
         last_source: touch.source ?? null,
@@ -71,8 +75,8 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
         last_at: new Date().toISOString(),
         visits,
       })
-      .eq("session_id", sessionId);
-    if (error) return failed(error.message);
+      .eq("session_id", sessionId), "attribution");
+    if (!updated.ok) return updated;
     return done({ first: false, visits });
   } catch (e) {
     return failed(e);

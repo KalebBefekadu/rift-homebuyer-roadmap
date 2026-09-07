@@ -1,6 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { boundedWrite } from "./bounded";
 import { sequenceFor, resolveChannel, type Enrolment, type StopId } from "@/lib/core/nurture";
 import { BUY_FUNNEL } from "@/lib/core/funnel";
 import type { Band } from "@/lib/core/lead";
@@ -46,12 +47,17 @@ export async function stop(leadId: string, reason: StopId): Promise<DbResult<{ s
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   try {
-    const { error } = await db
-      .from("rift_enrolments")
-      .update({ stopped_at: new Date().toISOString(), stop_reason: reason })
-      .eq("lead_id", leadId)
-      .is("stopped_at", null);
-    if (error) return failed(error.message);
+    /* The agent is watching this button, and it is the action behind contract
+       4.11 — a sequence that keeps sending because a stop hung is exactly the
+       failure the contract exists to prevent. */
+    const stopped = await boundedWrite(
+      db.from("rift_enrolments")
+        .update({ stopped_at: new Date().toISOString(), stop_reason: reason })
+        .eq("lead_id", leadId)
+        .is("stopped_at", null),
+      "the stop",
+    );
+    if (!stopped.ok) return stopped;
     return done({ stopped: true as const });
   } catch (e) {
     return failed(e);

@@ -1,6 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { boundedWrite, boundedRead } from "./bounded";
 import { nextRung, ceilingNote, type ReviewItem, type TrustState, type ReviewKind } from "@/lib/core/review";
 
 /**
@@ -52,19 +53,18 @@ export async function figureFor(shareToken: string, label: string): Promise<stri
   const db = serviceClient();
   if (!db) return null;
   try {
-    const { data } = await db
-      .from("rift_readouts")
-      .select("id")
-      .eq("share_token", shareToken)
-      .maybeSingle();
-    if (!data) return null;
+    const read = await boundedRead(
+      db.from("rift_readouts").select("id").eq("share_token", shareToken).maybeSingle(),
+      "the readout lookup",
+    );
+    const readout = read.ok && "data" in read ? read.data : null;
+    if (!readout) return null;
 
-    const { data: fig } = await db
-      .from("rift_figures")
-      .select("id")
-      .eq("readout_id", data.id)
-      .eq("label", label)
-      .maybeSingle();
+    const figRead = await boundedRead(
+      db.from("rift_figures").select("id").eq("readout_id", readout.id).eq("label", label).maybeSingle(),
+      "the figure lookup",
+    );
+    const fig = figRead.ok && "data" in figRead ? figRead.data : null;
     return (fig?.id as string) ?? null;
   } catch {
     return null;
@@ -78,8 +78,8 @@ export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
   if (!agent_id) return skipped("no agent row exists yet");
 
   try {
-    const { data, error } = await db
-      .from("rift_review_items")
+    const created = await boundedWrite(
+      db.from("rift_review_items")
       .insert({
         agent_id,
         readout_id: input.readoutId ?? null,
@@ -93,9 +93,12 @@ export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
         to_advance: TO_ADVANCE[input.kind],
       })
       .select("id")
-      .single();
-    if (error) return failed(error.message);
-    return done({ id: data.id as string });
+      .single(),
+      "the review request",
+    );
+    if (!created.ok) return created;
+    const row = "data" in created ? created.data : null;
+    return row ? done({ id: row.id as string }) : failed("the review was not returned after insert");
   } catch (e) {
     return failed(e);
   }
@@ -191,8 +194,9 @@ export async function promoteItem(id: string, confirmedBy?: string): Promise<DbR
     if (confirmedBy) patch.confirmed_by = confirmedBy.slice(0, 200);
     if (to === "verified") patch.resolved_at = new Date().toISOString();
 
-    const { error: upErr } = await db.from("rift_review_items").update(patch).eq("id", id);
-    if (upErr) return failed(upErr.message);
+    const advanced = await boundedWrite(
+      db.from("rift_review_items").update(patch).eq("id", id), "the review");
+    if (!advanced.ok) return advanced;
 
     /* And the figure itself, which is the whole point.
        

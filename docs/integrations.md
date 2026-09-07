@@ -296,12 +296,26 @@ leaves the browser with nothing either way.
 A write that misses its deadline reports **failure**. Never success: the one thing worse than
 a slow write is a fast lie about one.
 
-Frozen database, with a warm agent cache so the bounded lookup is skipped:
+Applied through `lib/db/bounded.ts` rather than by hand at each call site. Hand-rolled
+deadlines drift: one gets the wrong constant, one forgets `Promise.resolve` on a thenable
+builder, one reports success on timeout — and the last of those is the failure the whole idea
+exists to prevent.
+
+Every endpoint, against a completely frozen database:
 
 ```
-POST /api/events    200 in 6.0s   {"ok":false,"error":"the events did not write in time"}
-POST /api/capture   200 in 8.0s   {"ok":false,"error":"we could not save that just now"}
+POST /api/events            200 in 6.0s   ok:false  "the events did not write in time"
+POST /api/attribution       200 in 2.0s
+POST /api/assessment/start  200 in 2.0s
+POST /api/capture           200 in 8.0s   ok:false  "we could not save that just now"
+POST /api/readout           200 in 6.0s
+POST /api/review            200 in 6.0s
+POST /api/forget            200 in 2.0s
 ```
+
+Nothing hangs. A read in front of a write is still a read and gets the shorter deadline —
+those were the last three to hang, and each one held a request open just as effectively as the
+write behind it would have.
 
 Both return 200 because instrumentation must never break a funnel and a capture failure is
 not the visitor's problem — but the body says plainly that nothing was stored, and Sentry

@@ -4,6 +4,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { scoreLead, type LeadInput, type LeadScore } from "@/lib/core/lead";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
+import { boundedWrite } from "./bounded";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
 import { currentVersionId } from "./funnel";
@@ -110,10 +111,10 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       });
     }
     if (consents.length) {
-      const { error: cErr } = await db.from("rift_consents").insert(consents as never[]);
+      const cErr = await boundedWrite(db.from("rift_consents").insert(consents as never[]), "the consent record");
       /* A lead saved without its consent record is a lead nobody may contact.
          Fail loudly rather than keep a row that cannot lawfully be used. */
-      if (cErr) return failed(`lead stored but consent was not: ${cErr.message}`);
+      if (!cErr.ok) return failed(`lead stored but consent was not: ${cErr.error}`);
     }
 
     /* Enrolled the moment they are captured. A lead that is scored, stored and
@@ -213,14 +214,19 @@ export async function markReplied(leadId: string, at = new Date()): Promise<DbRe
   if (!db) return skipped("no database configured");
 
   try {
-    const { data, error } = await db
-      .from("rift_leads")
-      .update({ human_replied_at: at.toISOString() })
-      .eq("id", leadId)
-      .is("human_replied_at", null)
-      .select("human_replied_at")
-      .maybeSingle();
-    if (error) return failed(error.message);
+    const marked = await boundedWrite(
+      db.from("rift_leads")
+        .update({ human_replied_at: at.toISOString() })
+        .eq("id", leadId)
+        .is("human_replied_at", null)
+        .select("human_replied_at")
+        .maybeSingle(),
+      "the reply",
+    );
+    if (!marked.ok) return marked;
+    /* boundedWrite never skips — a skip means the product chose not to act, and
+       this one always acts or fails — but the DbResult union includes it. */
+    const data = "data" in marked ? marked.data : null;
 
     if (data?.human_replied_at) return done({ repliedAt: data.human_replied_at as string });
 

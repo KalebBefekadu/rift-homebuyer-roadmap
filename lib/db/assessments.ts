@@ -5,6 +5,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
+import { boundedWrite, boundedRead } from "./bounded";
 import { currentVersionId } from "./funnel";
 
 /**
@@ -37,13 +38,17 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
     /* One assessment per session per side. A visitor who reloads is the same
        attempt, not a new one — counting reloads as starts would inflate every
        completion rate in the funnel report by an unknowable amount. */
-    const { data: existing } = await db
-      .from("rift_assessments")
-      .select("id")
-      .eq("session_id", input.sessionId)
-      .eq("side", input.side)
-      .is("completed_at", null)
-      .maybeSingle();
+    const read = await boundedRead(
+      db.from("rift_assessments")
+        .select("id")
+        .eq("session_id", input.sessionId)
+        .eq("side", input.side)
+        .is("completed_at", null)
+        .maybeSingle(),
+      "the assessment lookup",
+    );
+    if (!read.ok) return read;
+    const existing = "data" in read ? read.data : null;
     if (existing) return done({ id: existing.id as string });
 
     /* Pinned to the version they are about to be asked. Contract 4.6 — and it
@@ -51,19 +56,23 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
        wording somebody actually saw. */
     const funnel_version_id = await currentVersionId(input.side);
 
-    const { data, error } = await db
-      .from("rift_assessments")
-      .insert({
-        agent_id,
-        session_id: input.sessionId,
-        side: input.side,
-        county: input.county ?? null,
-        funnel_version_id,
-      })
-      .select("id")
-      .single();
-    if (error) return failed(error.message);
-    return done({ id: data.id as string });
+    const created = await boundedWrite(
+      db.from("rift_assessments")
+        .insert({
+          agent_id,
+          session_id: input.sessionId,
+          side: input.side,
+          county: input.county ?? null,
+          funnel_version_id,
+        })
+        .select("id")
+        .single(),
+      "the assessment",
+    );
+    if (!created.ok) return created;
+    const row = "data" in created ? created.data : null;
+    if (!row) return failed("the assessment was not returned after insert");
+    return done({ id: row.id as string });
   } catch (e) {
     return failed(e);
   }
@@ -78,13 +87,13 @@ export async function saveAnswer(
   if (!db) return skipped("no database configured");
 
   try {
-    const { error } = await db
+    const saved = await boundedWrite(db
       .from("rift_answers")
       .upsert(
         { assessment_id: assessmentId, question_key: questionKey, value: value as never, answered_at: new Date().toISOString() },
         { onConflict: "assessment_id,question_key" },
-      );
-    if (error) return failed(error.message);
+      ), "the answer");
+    if (!saved.ok) return saved;
     return done({ saved: true as const });
   } catch (e) {
     return failed(e);
@@ -95,11 +104,13 @@ export async function completeAssessment(assessmentId: string): Promise<DbResult
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   try {
-    const { error } = await db
-      .from("rift_assessments")
-      .update({ completed_at: new Date().toISOString(), abandoned_at: null })
-      .eq("id", assessmentId);
-    if (error) return failed(error.message);
+    const done_ = await boundedWrite(
+      db.from("rift_assessments")
+        .update({ completed_at: new Date().toISOString(), abandoned_at: null })
+        .eq("id", assessmentId),
+      "the completion",
+    );
+    if (!done_.ok) return done_;
     return done({ completed: true as const });
   } catch (e) {
     return failed(e);
@@ -163,22 +174,26 @@ export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: 
     /* A second readout for the same assessment is a NEW row, never an update.
        Overwriting would destroy the thing this table exists to preserve. */
     const shareToken = newShareToken();
-    const { data, error } = await db
-      .from("rift_readouts")
-      .insert({
-        agent_id,
-        assessment_id: input.assessmentId,
-        side: input.side,
-        share_token: shareToken,
-        inputs: input.inputs as never,
-        figures: input.figures as never,
-        matched: (input.matched ?? []) as never,
-      })
-      .select("id")
-      .single();
-    if (error) return failed(error.message);
+    const saved = await boundedWrite(
+      db.from("rift_readouts")
+        .insert({
+          agent_id,
+          assessment_id: input.assessmentId,
+          side: input.side,
+          share_token: shareToken,
+          inputs: input.inputs as never,
+          figures: input.figures as never,
+          matched: (input.matched ?? []) as never,
+        })
+        .select("id")
+        .single(),
+      "the readout",
+    );
+    if (!saved.ok) return saved;
+    const savedRow = "data" in saved ? saved.data : null;
+    if (!savedRow) return failed("the readout was not returned after insert");
 
-    const readoutId = data.id as string;
+    const readoutId = savedRow.id as string;
 
     /* Written after the snapshot and reported if they fail, but never allowed
        to fail the snapshot itself. The readout is the promise; the tracked
@@ -194,12 +209,9 @@ export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: 
         assumptions: f.assumptions as never,
         could_be_wrong: f.couldBeWrong,
       }));
-      const { error: figErr } = await db.from("rift_figures").insert(rows as never[]);
-      if (figErr) {
-        captureOpError(new Error(figErr.message), {
-          op: "readout.figures",
-          extra: { count: rows.length },
-        });
+      const figs = await boundedWrite(db.from("rift_figures").insert(rows as never[]), "the figures");
+      if (!figs.ok) {
+        captureOpError(new Error(figs.error), { op: "readout.figures", extra: { count: rows.length } });
       }
     }
 

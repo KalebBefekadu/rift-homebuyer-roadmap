@@ -3,6 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { RETENTION } from "@/lib/core/privacy";
 import { markAbandoned } from "./recovery";
+import { boundedWrite, boundedRead } from "./bounded";
 
 /**
  * Enforcing the retention schedule.
@@ -174,16 +175,25 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
   if (!agent_id) return skipped("no agent row exists yet");
 
   try {
-    const { data } = await db
-      .from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId);
-    const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+    /* Bounded, because a person waiting on "delete all of it" is entitled to
+       an answer. A hang here reads as the request being ignored, which is the
+       worst possible impression to leave on this particular button. */
+    const read = await boundedRead(
+      db.from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
+      "the deletion lookup",
+    );
+    if (!read.ok) return read;
+    const ids = (("data" in read ? read.data : []) as { id: string }[]).map((r) => r.id);
 
     if (ids.length) {
-      const { error } = await db.from("rift_assessments").delete().in("id", ids);
-      if (error) return failed(error.message);
+      const deleted = await boundedWrite(
+        db.from("rift_assessments").delete().in("id", ids), "the deletion");
+      if (!deleted.ok) return deleted;
     }
-    await db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId);
-    await db.from("rift_attributions").delete().eq("session_id", sessionId);
+    await boundedWrite(
+      db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId), "the events");
+    await boundedWrite(
+      db.from("rift_attributions").delete().eq("session_id", sessionId), "the attribution");
 
     /* The retention promise names four categories; three are cleared here and
        the fourth is stated rather than silently skipped. */
