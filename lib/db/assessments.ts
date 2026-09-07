@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
+import { currentVersionId } from "./funnel";
 
 /**
  * Assessments, answers, and the readout snapshot.
@@ -43,6 +44,11 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
       .maybeSingle();
     if (existing) return done({ id: existing.id as string });
 
+    /* Pinned to the version they are about to be asked. Contract 4.6 — and it
+       has to be recorded now, because no later migration can recover which
+       wording somebody actually saw. */
+    const funnel_version_id = await currentVersionId(input.side);
+
     const { data, error } = await db
       .from("rift_assessments")
       .insert({
@@ -50,6 +56,7 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
         session_id: input.sessionId,
         side: input.side,
         county: input.county ?? null,
+        funnel_version_id,
       })
       .select("id")
       .single();

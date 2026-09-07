@@ -5,6 +5,7 @@ import { scoreLead, type LeadInput, type LeadScore } from "@/lib/core/lead";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
+import { currentVersionId } from "./funnel";
 
 /**
  * Capture, consent, and lead scoring.
@@ -70,6 +71,9 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
         score: score.score,
         band: score.band,
         signals: score.signals as never,
+        /* The same pin as the assessment. A lead outlives the assessment row
+           under some retention rules, so it carries its own. */
+        funnel_version_id: await currentVersionId(input.side),
         /* Kept so the score can be recomputed as recency decays. Without it a
            three-week-old lead keeps the urgency it earned on the day. */
         lead_input: input.lead as never,

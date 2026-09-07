@@ -95,6 +95,10 @@ await check("currentRate", () => db.from("rift_rate_snapshots")
 await check("readByToken", () => db.from("rift_readouts")
   .select("assessment_id,side,inputs,figures,matched,created_at").eq("share_token", "none").maybeSingle());
 
+await check("published questions", () => db.from("rift_questions")
+  .select("*", { count: "exact", head: true })
+  .eq("funnel_version_id", "00000000-0000-4000-8000-000000000000"));
+
 await check("currentAgent", () => db.from("rift_agents")
   .select("id,name,email").eq("auth_user_id", "00000000-0000-4000-8000-000000000000").maybeSingle());
 
