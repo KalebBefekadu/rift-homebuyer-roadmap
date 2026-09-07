@@ -16,6 +16,7 @@ import { signOut } from "./actions";
 import { sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
 import { Ico, Mark } from "@/components/rift/icons";
+import { captureOpError } from "@/lib/monitoring/capture";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -78,10 +79,19 @@ export default async function StudioToday() {
   const pending = review.filter((r) => r.state === "pending-review");
   const overdue = pending.filter((r) => r.waitingHours > REVIEW_SLA_HOURS);
 
-  /* Nothing is being recorded is a different state from nobody has arrived,
-     and an agent who cannot tell them apart will draw the wrong conclusion
-     from an empty screen. */
-  const notRecording = ("skipped" in leadsRead) || ("skipped" in reportRead);
+  /* Three states, not two.
+     
+     "Nobody has arrived" and "nothing is being recorded" were already held
+     apart. A query that FAILED was falling into neither — it produced an empty
+     list, so a database error rendered "No leads yet" alongside copy assuring
+     the agent that the readout is live and instrumented. That is the product
+     telling him a comforting thing it cannot know. */
+  const reads = [leadsRead, reportRead, staleRead, reviewRead, dueRead, abandonedRead];
+  const notRecording = reads.some((r) => "skipped" in r);
+  const failures = reads.filter((r) => !r.ok).map((r) => (r as { error: string }).error);
+  /* Shown to the agent AND reported. He can see something is wrong; only the
+     capture says what, and only somebody looking at Sentry will fix it. */
+  for (const error of failures) captureOpError(new Error(error), { op: "studio.today" });
 
   /* No cast. The previous version fabricated the input and cast it to `never`,
      which hid a missing `contactable` and made every lead report as unbreached
@@ -122,7 +132,21 @@ export default async function StudioToday() {
       <main className="shell-w sec">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Today</h1>
 
-        {notRecording ? (
+        {failures.length ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
+            <div className="row gap-2">
+              <Ico.alert size={15} className="c-neg" />
+              <span className="t-sm w6">
+                {failures.length} of this page&apos;s {reads.length} queries failed.
+              </span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              What is missing below is missing because a query broke, not because it is not
+              there. Treat every empty section on this screen as unknown rather than as zero —
+              it has been reported, and the first one said: {failures[0]}
+            </p>
+          </div>
+        ) : notRecording ? (
           <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--warn, #b8791f)" }}>
             <div className="row gap-2">
               <Ico.alert size={15} className="c-warn" />
@@ -248,9 +272,11 @@ export default async function StudioToday() {
               <Ico.users size={20} className="c-4" />
               <span className="t-sm w55">No leads yet.</span>
               <span className="t-xs c-4" style={{ maxWidth: 380, textAlign: "center", lineHeight: 1.55 }}>
-                {notRecording
-                  ? "And none would be recorded if there were. See the notice above."
-                  : "The readout is live and instrumented. The first 200 completed assessments are what turns every assumption in this product into a measurement."}
+                {failures.length
+                  ? "Or a query failed and this is unknown rather than empty. See the notice above."
+                  : notRecording
+                    ? "And none would be recorded if there were. See the notice above."
+                    : "The readout is live and instrumented. The first 200 completed assessments are what turns every assumption in this product into a measurement."}
               </span>
             </div>
           ) : (
