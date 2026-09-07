@@ -1,10 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+/* Server-side, so SUPABASE_URL wins over the build-time-inlined public one.
+   See the note in lib/supabase/server.ts. */
+const serverUrl = () => process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serverKey = () => process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 function isConfigured() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return Boolean(url && key && !url.includes("your-project"));
+  const url = serverUrl();
+  return Boolean(url && serverKey() && !url.includes("your-project"));
 }
 
 /** Refresh Supabase auth cookies on each request when configured. */
@@ -15,8 +19,8 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const url = serverUrl()!;
+  const key = serverKey()!;
 
   const supabase = createServerClient(url, key, {
     cookies: {

@@ -370,9 +370,10 @@ running, not in pieces.
 
 - **No traffic.** Every number the instrumentation reports is zero. The score in
   [benchmark.md](benchmark.md) remains provisional under its own rule.
-- **Studio's authenticated view has never been seen with real data.** The local stack has no
-  GoTrue, so sign-in cannot be exercised locally. Everything behind it is unit- and
-  query-tested; the rendering with a live session is not.
+- **Sign-in itself has never been exercised.** Studio's authenticated view *has* now been
+  rendered against real data — ranked leads with their figures, the review queue, the
+  follow-up queue, the stale-rate and stale-programme tasks — using a session cookie minted
+  locally. What is untested is the magic-link round trip, which needs a real GoTrue.
 - **Email has never actually sent.** The path is exercised and degrades honestly; no message
   has left the building. `BREVO_FROM_EMAIL` must be a verified sender.
 - **The calendar has never returned a real slot.** Same shape: adapter built, credentials

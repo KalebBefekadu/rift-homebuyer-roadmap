@@ -153,7 +153,21 @@ database immediately found three defects none of those could have:
 - The nurture runner reported touches it could not send as "held for the agent", sending
   somebody to look for a task that did not exist.
 
-No auth, no RLS enforcement, no TLS. Local development only.
+To see Studio, which is behind a login, mint a session cookie for the local user:
+
+```bash
+node -e '
+const c=require("crypto"),S="rift-local-test-secret-at-least-32-chars-long",U="cccc0000-0000-4000-8000-000000000001",n=Math.floor(Date.now()/1e3);
+const b=o=>Buffer.from(JSON.stringify(o)).toString("base64url");
+const h=b({alg:"HS256",typ:"JWT"}),p=b({sub:U,aud:"authenticated",role:"authenticated",email:"kaleb@example.com",iat:n,exp:n+86400});
+const jwt=h+"."+p+"."+c.createHmac("sha256",S).update(h+"."+p).digest("base64url");
+console.log("sb-localhost-auth-token=base64-"+Buffer.from(JSON.stringify({access_token:jwt,token_type:"bearer",expires_in:86400,expires_at:n+86400,refresh_token:"local",user:{id:U,aud:"authenticated",role:"authenticated",email:"kaleb@example.com",app_metadata:{},user_metadata:{},created_at:new Date(0).toISOString()}})).toString("base64url"));'
+```
+
+Set that as a cookie for localhost. It renders Studio with real data; it does not exercise the
+magic-link round trip, which needs a real GoTrue.
+
+No auth verification, no RLS enforcement, no TLS. Local development only.
 
 ## 9. Verifying the query syntax
 
