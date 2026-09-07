@@ -1,5 +1,5 @@
 {
-  "name": "rift-roadmap",
+  "name": "value-first-realestate",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,13 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "brevo:ensure-attributes": "node --env-file=.env.local scripts/ensure-brevo-attributes.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.66.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
-    "html2pdf.js": "^0.10.3",
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

@@ -1,5 +1,18 @@
 import { captureOpError } from "@/lib/monitoring/capture";
-import type { TimeToBuy, ClientStage } from "@/lib/roadmap/types";
+
+/**
+ * These were imported from the retired portal MVP's domain types. They are
+ * inlined rather than re-pointed at `lib/prototype` on purpose: the values a
+ * CRM stores are a wire contract with Brevo, and coupling them to whatever the
+ * product currently calls a stage means a rename in the product silently
+ * orphans every contact attribute already sitting in Brevo.
+ *
+ * Widen these deliberately when the real funnel lands, and migrate the existing
+ * contacts in the same change. See docs/integrations.md.
+ */
+export type TimeToBuy = "0-3" | "3-6" | "6-12" | "12+";
+export type ClientStage =
+  | "lead" | "assessed" | "readiness" | "shopping" | "under_contract" | "closed";
 
 export type BrevoSyncPayload = {
   email: string;
