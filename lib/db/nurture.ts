@@ -2,6 +2,7 @@ import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { sequenceFor, resolveChannel, type Enrolment, type StopId } from "@/lib/core/nurture";
+import { BUY_FUNNEL } from "@/lib/core/funnel";
 import type { Band } from "@/lib/core/lead";
 
 /**
@@ -82,6 +83,10 @@ export interface DueTouch {
   figures: Record<string, string | number> | null;
   shareToken: string | null;
   county: string | null;
+  /** How far they got, for the recovery touch. */
+  answered: number;
+  of: number;
+  side: "buy" | "sell";
 }
 
 /**
@@ -100,14 +105,14 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
   try {
     const { data, error } = await db
       .from("rift_enrolments")
-      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id),rift_touches(step_id)")
+      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side),rift_touches(step_id)")
       .eq("agent_id", agent_id)
       .is("stopped_at", null);
     if (error) return failed(error.message);
 
     const rows = (data ?? []) as unknown as {
       id: string; lead_id: string; band: Band; entered_at: string; phone_consent: boolean;
-      rift_leads: { name: string | null; email: string | null; assessment_id: string | null } | null;
+      rift_leads: { name: string | null; email: string | null; assessment_id: string | null; side: "buy" | "sell" } | null;
       rift_touches: { step_id: string }[];
     }[];
 
@@ -115,6 +120,20 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
     const assessmentIds = rows
       .map((r) => r.rift_leads?.assessment_id)
       .filter((x): x is string => Boolean(x));
+
+    /* How many questions each person actually answered. The recovery touch is
+       the only one that needs it, and it is the only touch that can reach the
+       largest population in the funnel — so it is worth the query. */
+    const progress = new Map<string, number>();
+    if (assessmentIds.length) {
+      const { data: ans } = await db
+        .from("rift_answers")
+        .select("assessment_id")
+        .in("assessment_id", assessmentIds);
+      for (const a of (ans ?? []) as { assessment_id: string }[]) {
+        progress.set(a.assessment_id, (progress.get(a.assessment_id) ?? 0) + 1);
+      }
+    }
 
     const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null }>();
     if (assessmentIds.length) {
@@ -176,6 +195,11 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         figures: s?.figures ?? null,
         shareToken: s?.token ?? null,
         county: s?.county ?? null,
+        answered: row.rift_leads?.assessment_id ? progress.get(row.rift_leads.assessment_id) ?? 0 : 0,
+        /* The buyer funnel's length. Read from the definition rather than
+           hard-coded, so editing the funnel cannot make this sentence lie. */
+        of: BUY_FUNNEL.questions.filter((q) => q.enabled).length,
+        side: row.rift_leads?.side ?? "buy",
       });
     }
 

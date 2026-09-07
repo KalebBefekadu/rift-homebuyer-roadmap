@@ -174,6 +174,64 @@ export async function sendTouch(t: TouchEmail): Promise<SendResult> {
   }, "email.touch");
 }
 
+export interface ResumeEmail {
+  to: string;
+  name?: string;
+  says: string;
+  gives: string;
+  resumeUrl: string;
+  answered: number;
+  of: number;
+  /** True for the closing touch of the dormant sequence. */
+  last?: boolean;
+}
+
+/**
+ * Recovery, for somebody who started and stopped.
+ *
+ * A separate email because these people have NO readout — that is the whole
+ * reason they are in this sequence — so the ordinary touch, which leads with
+ * their figures, refuses to send and would silently never reach the largest
+ * population in the funnel.
+ *
+ * Recovery, not pursuit. It carries how far they got and a link back, says
+ * nothing about what they might be missing, and the closing touch says outright
+ * that it is the last one. A list you cannot stop sending to is not a list, it
+ * is a liability — and saying so is the only version of this email that earns
+ * being sent at all.
+ */
+export async function sendResume(r: ResumeEmail): Promise<SendResult> {
+  const progress = r.of > 0 ? `${r.answered} of ${r.of} questions` : "part of the way";
+
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">${r.name ? `${escapeHtml(r.name)},` : "Hello,"}</p>
+  <p style="font-size:15px">${escapeHtml(r.gives)}</p>
+  <p style="font-size:15px">
+    You answered ${progress} and stopped. Nothing was lost —
+    <a href="${r.resumeUrl}" style="color:#e8442a">pick it up where you left off</a>, or don't.
+    It takes about two minutes from here.
+  </p>
+  ${r.last ? `<p style="font-size:15px">
+    This is the last email we will send about it. If it becomes useful later, the questions are
+    where they were.
+  </p>` : ""}
+  <p style="font-size:12px;color:#888">
+    You started an assessment at Rift and gave us this address for it. We do not run a
+    newsletter and we do not sell anything on.
+    <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a> — one click, and it stops
+    everything.
+  </p>
+</div>`.trim();
+
+  return send({
+    to: [{ email: r.to, ...(r.name ? { name: r.name } : {}) }],
+    subject: r.says,
+    htmlContent: html,
+    tags: ["recovery"],
+  }, "email.resume");
+}
+
 /** Minimal escaping. Names come from a public form and end up in markup. */
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) =>

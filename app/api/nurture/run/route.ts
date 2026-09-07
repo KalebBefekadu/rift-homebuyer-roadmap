@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { due, claimStep, markTouch } from "@/lib/db/nurture";
-import { sendTouch } from "@/lib/db/email";
+import { sendTouch, sendResume } from "@/lib/db/email";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -53,18 +53,38 @@ export async function POST(req: Request) {
     const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
     if (!claim.ok || "skipped" in claim || !claim.data.claimed) { notConfigured++; continue; }
 
-    /* The step's own words, and this person's own figures. A touch with
-       neither is not worth sending, and sendTouch refuses it. */
     const origin = new URL(req.url).origin;
-    const res = await sendTouch({
-      to: t.email,
-      name: t.name,
-      says: t.says,
-      gives: t.gives,
-      shareUrl: t.shareToken ? `${origin}/r/${t.shareToken}` : `${origin}/buy`,
-      county: t.county,
-      figures: t.figures,
-    });
+
+    /* Two kinds of touch, because two kinds of person.
+       
+       Somebody who finished has a readout, and the email leads with their
+       figures. Somebody who stopped has none — that is why they are in the
+       dormant sequence at all — so leading with figures would refuse to send
+       and the largest population in the funnel would never hear from us. They
+       get a resume link and how far they got, and nothing about what they
+       might be missing. Recovery, not pursuit. */
+    const res = t.figures
+      ? await sendTouch({
+          to: t.email,
+          name: t.name,
+          says: t.says,
+          gives: t.gives,
+          shareUrl: t.shareToken ? `${origin}/r/${t.shareToken}` : `${origin}/buy`,
+          county: t.county,
+          figures: t.figures,
+        })
+      : await sendResume({
+          to: t.email,
+          name: t.name,
+          says: t.says,
+          gives: t.gives,
+          resumeUrl: `${origin}/${t.side}/start`,
+          answered: t.answered,
+          of: t.of,
+          /* The dormant sequence's closing touch says outright that it is the
+             last one. A list you cannot stop sending to is a liability. */
+          last: t.stepId === "d2",
+        });
 
     if (res.ok && !("skipped" in res)) { sent++; continue; }
     if (res.ok) {
