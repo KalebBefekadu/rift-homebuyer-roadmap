@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
-import { STOPS } from "@/lib/core/nurture";
+import { STOPS, type StopId } from "@/lib/core/nurture";
 import { money } from "@/lib/core/compute";
 import { stopSequence } from "./actions";
 
@@ -35,9 +35,13 @@ export function LeadRow({ lead, last }: {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const halt = (reason: string) =>
+  /* Typed rather than cast. The last `as never` in this codebase hid a missing
+     field and left an indicator permanently unable to fire, so a cast on a
+     value flowing into a function that validates it is worth removing on
+     sight. STOPS is the source of the ids, so this cannot drift. */
+  const halt = (reason: StopId) =>
     startTransition(async () => {
-      const r = await stopSequence(lead.id, reason as never);
+      const r = await stopSequence(lead.id, reason);
       if (!r.ok) { setError(r.error); return; }
       setError(null);
       setOpen(false);

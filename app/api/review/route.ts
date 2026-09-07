@@ -36,9 +36,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
   }
 
-  const kind = (["figure", "document", "program", "plan"] as const).includes(b.kind as never)
-    ? (b.kind as keyof typeof CEILINGS)
-    : "figure";
+  /* A real narrowing rather than a cast through `never`. The list of kinds is
+     the keys of CEILINGS, so an unknown kind falls back rather than reaching
+     the database as something the constraint will reject. */
+  const isKind = (v: unknown): v is keyof typeof CEILINGS =>
+    typeof v === "string" && Object.prototype.hasOwnProperty.call(CEILINGS, v);
+  const kind = isKind(b.kind) ? b.kind : "figure";
   const what = typeof b.what === "string" ? b.what : "";
   const claim = typeof b.claim === "string" ? b.claim : "";
   if (!what || !claim) {
