@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { currentAgent } from "@/lib/db/session";
 import { promoteItem } from "@/lib/db/review";
 import { stop } from "@/lib/db/nurture";
+import { markReplied } from "@/lib/db/leads";
 import type { StopId } from "@/lib/core/nurture";
 
 /**
@@ -27,6 +28,27 @@ export async function advanceReview(id: string, confirmedBy?: string) {
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const, state: r.data.state };
+}
+
+/**
+ * "I have replied to this."
+ *
+ * Stops the clock and stops the sequence in one action, because they are the
+ * same event from the agent's side — and asking him to do two things after one
+ * conversation is how the second one stops happening.
+ */
+export async function markRepliedTo(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const replied = await markReplied(leadId);
+  /* A reply stops the sequence. Contract 4.11, and it is the same fact. */
+  await stop(leadId, "replied");
+  revalidatePath("/studio");
+
+  if (!replied.ok) return { ok: false as const, error: replied.error };
+  if ("skipped" in replied) return { ok: false as const, error: replied.reason };
+  return { ok: true as const, repliedAt: replied.data.repliedAt };
 }
 
 export async function stopSequence(leadId: string, reason: StopId) {

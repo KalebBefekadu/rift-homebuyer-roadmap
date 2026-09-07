@@ -5,7 +5,7 @@ import { Ico } from "@/components/rift/icons";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { STOPS, type StopId } from "@/lib/core/nurture";
 import { money } from "@/lib/core/compute";
-import { stopSequence } from "./actions";
+import { stopSequence, markRepliedTo } from "./actions";
 
 /**
  * One lead, with its arithmetic and the control that stops its sequence.
@@ -28,6 +28,10 @@ export function LeadRow({ lead, last }: {
     figures?: Record<string, string | number> | null;
     shareToken?: string | null;
     capturedScore?: number;
+    humanRepliedAt?: string | null;
+    /** How the speed-to-lead clock currently reads for this lead. */
+    slaLabel?: string;
+    breached?: boolean;
   };
   last: boolean;
 }) {
@@ -39,6 +43,13 @@ export function LeadRow({ lead, last }: {
      field and left an indicator permanently unable to fire, so a cast on a
      value flowing into a function that validates it is worth removing on
      sight. STOPS is the source of the ids, so this cannot drift. */
+  const replied = () =>
+    startTransition(async () => {
+      const r = await markRepliedTo(lead.id);
+      if (!r.ok) { setError(r.error); return; }
+      setError(null);
+    });
+
   const halt = (reason: StopId) =>
     startTransition(async () => {
       const r = await stopSequence(lead.id, reason);
@@ -56,6 +67,13 @@ export function LeadRow({ lead, last }: {
             {BAND_LABEL[lead.band as Band] ?? lead.band}
           </span>
           <span className="chip">{lead.side === "buy" ? "Buyer" : "Seller"}</span>
+          {lead.humanRepliedAt
+            ? <span className="chip chip-pos"><Ico.check size={10} />Replied</span>
+            : lead.breached
+              ? <span className="chip chip-neg"><Ico.clock size={10} />{lead.slaLabel}</span>
+              : lead.slaLabel
+                ? <span className="chip"><Ico.clock size={10} />{lead.slaLabel}</span>
+                : null}
           {lead.stopped ? <span className="chip"><Ico.pause size={10} />Sequence stopped</span> : null}
         </div>
         <span className="row gap-2">
@@ -117,6 +135,15 @@ export function LeadRow({ lead, last }: {
         <p className="t-xs c-neg row gap-2" style={{ marginTop: 8 }}>
           <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{error}
         </p>
+      ) : null}
+
+      {/* One action, because it is one event from his side. Asking him to
+          record a reply AND stop the sequence after a single conversation is
+          how the second one stops happening. */}
+      {!lead.humanRepliedAt ? (
+        <button className="btn btn-p btn-sm" style={{ marginTop: 9, marginRight: 8 }} disabled={pending} onClick={replied}>
+          <Ico.check size={12} />I have replied
+        </button>
       ) : null}
 
       {lead.stopped ? null : open ? (

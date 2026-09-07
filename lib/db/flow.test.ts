@@ -338,3 +338,29 @@ describe("what a nurture touch is allowed to say", () => {
     expect(rows[0].county).toBe("DeKalb");
   });
 });
+
+describe("the human reply", () => {
+  test("the first reply is the one the clock measures", async (c) => {
+    /* `human_replied_at` was read in three places and written in none, so
+       every lead stayed "waiting" forever and the breach count could only
+       grow. An agent who replied within a minute watched the product tell him
+       he was late, which is the fastest way to make him stop looking at it. */
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'srep','buy') returning id", [AGENT]);
+    const { rows: [l] } = await c.query(
+      `insert into rift_leads (agent_id, assessment_id, side, email, score, band)
+       values ($1,$2,'buy','rep@example.com',80,'now') returning id`, [AGENT, a.id]);
+
+    await c.query(
+      "update rift_leads set human_replied_at = now() - interval '10 minutes' where id=$1 and human_replied_at is null", [l.id]);
+    const { rows: first } = await c.query("select human_replied_at from rift_leads where id=$1", [l.id]);
+
+    /* A second attempt must not move it. Speed to lead is about the FIRST
+       response, and a metric you can retroactively flatter is not a metric. */
+    await c.query(
+      "update rift_leads set human_replied_at = now() where id=$1 and human_replied_at is null", [l.id]);
+    const { rows: second } = await c.query("select human_replied_at from rift_leads where id=$1", [l.id]);
+
+    expect(second[0].human_replied_at.getTime()).toBe(first[0].human_replied_at.getTime());
+  });
+});

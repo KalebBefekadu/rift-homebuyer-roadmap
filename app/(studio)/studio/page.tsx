@@ -86,7 +86,7 @@ export default async function StudioToday() {
   /* No cast. The previous version fabricated the input and cast it to `never`,
      which hid a missing `contactable` and made every lead report as unbreached
      — an indicator that read as "doing well" because it could not fire. */
-  const breached = leads.filter((l) =>
+  const slaOf = (l: (typeof leads)[number]) =>
     sla(
       {
         completion: l.completion,
@@ -97,8 +97,9 @@ export default async function StudioToday() {
           : null,
       },
       l.band as Band,
-    ).breached,
-  ).length;
+    );
+
+  const breached = leads.filter((l) => slaOf(l).breached).length;
 
   return (
     <>
@@ -260,6 +261,8 @@ export default async function StudioToday() {
                   lead={{
                     ...l,
                     signals: l.signals as { label: string; points: number; note: string }[],
+                    slaLabel: slaOf(l).humanLabel,
+                    breached: slaOf(l).breached,
                   }}
                   last={i === leads.length - 1}
                 />

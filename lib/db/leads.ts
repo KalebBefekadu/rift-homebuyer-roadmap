@@ -182,6 +182,47 @@ export interface RankedLead {
   shareToken: string | null;
 }
 
+/**
+ * Records that a person has replied to this lead.
+ *
+ * `human_replied_at` was read by the speed-to-lead clock in three places and
+ * written in none, so every lead stayed "waiting" forever and the breach count
+ * could only ever grow. An agent who replied within a minute watched the
+ * product tell him he was late, which is the fastest way to make him stop
+ * looking at it.
+ *
+ * Idempotent by design: the FIRST reply is the one the clock measures, so a
+ * second click cannot quietly improve the number. Speed to lead is about the
+ * first response, and a metric you can retroactively flatter is not a metric.
+ */
+export async function markReplied(leadId: string, at = new Date()): Promise<DbResult<{ repliedAt: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+
+  try {
+    const { data, error } = await db
+      .from("rift_leads")
+      .update({ human_replied_at: at.toISOString() })
+      .eq("id", leadId)
+      .is("human_replied_at", null)
+      .select("human_replied_at")
+      .maybeSingle();
+    if (error) return failed(error.message);
+
+    if (data?.human_replied_at) return done({ repliedAt: data.human_replied_at as string });
+
+    /* Already recorded. Report the original rather than pretending nothing
+       happened — the caller wants to know when, not whether it just changed. */
+    const { data: existing } = await db
+      .from("rift_leads").select("human_replied_at").eq("id", leadId).maybeSingle();
+    return existing?.human_replied_at
+      ? done({ repliedAt: existing.human_replied_at as string })
+      : failed("no such lead");
+  } catch (e) {
+    return failed(e);
+  }
+}
+
 /** Ranked by what the answers say, never by when they arrived. */
 export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   const db = serviceClient();
