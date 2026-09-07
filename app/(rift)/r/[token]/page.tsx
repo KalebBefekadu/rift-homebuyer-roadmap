@@ -31,6 +31,28 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
   const read = await readByToken(token);
   const snap = read.ok && "data" in read ? read.data : null;
 
+  /* A broken query is not an expired link.
+     
+     Telling the recipient "this never existed" when the database hiccupped
+     says something false about somebody else's document — and the recipient
+     is often a lender or a parent, so the person who shared it is the one who
+     looks unreliable. They cannot tell the difference and neither could the
+     page, until now. */
+  if (!snap && !read.ok) {
+    return (
+      <main className="shell-w sec buy">
+        <h1 className="serif" style={{ fontSize: 28 }}>We cannot open this right now.</h1>
+        <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
+          The link is fine — something on our side is not. Try again in a few minutes; nothing
+          about it has changed or been deleted.
+        </p>
+        <Link href="/buy/start" className="btn btn-g" style={{ marginTop: 16 }}>
+          Work out your own in the meantime<Ico.arrowR size={14} />
+        </Link>
+      </main>
+    );
+  }
+
   if (!snap) {
     return (
       <main className="shell-w sec buy">
