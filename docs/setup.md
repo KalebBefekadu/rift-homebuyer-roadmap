@@ -217,6 +217,33 @@ Non-negotiable, and each one is cheap now and expensive later:
       are documented as the complete list, with no proxy for a protected class. Confirm that
       is still true of whatever ships.
 
+## 11b. Is it working?
+
+```bash
+curl -s https://<host>/api/health | jq
+```
+
+Reports **readiness**, not just liveness. A process that is running but cannot reach its
+database, or has no agent row, is up and useless — and every write degrades silently and
+honestly in that state, which is correct behaviour and also means nobody finds out. This is
+where somebody finds out.
+
+```json
+{ "ok": true, "checks": {
+  "database": "configured", "agent": "ready",
+  "email": "no verified sender", "calendar": "missing",
+  "scheduler": "configured", "monitoring": "configured",
+  "rate": "stale (never recorded)" } }
+```
+
+503 only when the database or the agent row is missing, because those stop the product doing
+its job. Everything else degrades honestly and says so on screen — paging somebody at 3am
+because SMS is not wired yet is how alerts get muted.
+
+It names what is **missing**, never what is configured: no URLs, no key fragments, no
+versions. A health endpoint that describes the stack is a reconnaissance endpoint, and this
+one is public because a monitor needs it to be.
+
 ## 12. Deployment
 
 Vercel, project `rift-homebuyer-roadmap`. Set the same variables in the Vercel dashboard;

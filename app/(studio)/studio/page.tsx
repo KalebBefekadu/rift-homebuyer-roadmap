@@ -52,14 +52,22 @@ export default async function StudioToday() {
     );
   }
 
-  const [leadsRead, reportRead, staleRead, reviewRead, dueRead] = await Promise.all([
-    rankedLeads(50),
-    funnelReport("buy"),
-    readStale(new Date()),
-    openItems(),
-    due(new Date()),
-  ]);
-  const [abandonedRead, rate] = await Promise.all([abandoned(), currentRate()]);
+  /* One round, not two. None of these depends on another, and splitting them
+     made the page wait for the slowest of the first five before starting the
+     last two — for no reason beyond the order they were written in. Studio is
+     the screen the agent opens first thing, so its latency is the product's
+     felt speed. */
+  const [leadsRead, reportRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
+    await Promise.all([
+      rankedLeads(50),
+      funnelReport("buy"),
+      readStale(new Date()),
+      openItems(),
+      due(new Date()),
+      abandoned(),
+      currentRate(),
+    ]);
+
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
 
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
