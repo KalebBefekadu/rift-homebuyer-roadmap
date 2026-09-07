@@ -10,7 +10,8 @@ import { FUNDING_LABEL, TYPE_LABEL } from "@/lib/core/registry";
 import { OWN_LABEL, type Ownership } from "@/lib/core/funnel";
 import { RETENTION } from "@/lib/core/privacy";
 import { useTrack, track } from "@/lib/rift/track";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { sessionId } from "@/lib/rift/session";
 
 /**
  * The payoff.
@@ -266,6 +267,23 @@ export function Readout(p: Props) {
           </Sec>
         </div>
 
+        <div className="shell-w">
+          <Keep
+            side="buy"
+            inputs={inputs}
+            figures={{
+              verdict: r.verdict,
+              cashToClose: cash.total,
+              monthly: p.band[1].monthly,
+              gap: gap.gap,
+              assistance: match.matched.length ? range(match.usableMin, match.usableMax) : "None matched",
+              status: r.status,
+            }}
+            matched={match.matched.map((m) => ({ id: m.id, name: m.name, min: m.min, max: m.max }))}
+            bookHref={bookHref}
+          />
+        </div>
+
         <footer style={{ borderTop: "1px solid var(--line-2)", marginTop: 40 }}>
           <div className="shell-w" style={{ padding: "26px 0 60px" }}>
             <div className="split-w" style={{ marginBottom: 24 }}>
@@ -340,5 +358,139 @@ function Assumptions({ items, caveat }: { items: { label: string; value: string 
         <span className="w6">Where this could be wrong: </span>{caveat}
       </p>
     </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ *
+ * Keep and share
+ * ------------------------------------------------------------------ */
+
+/**
+ * The three rungs of the conversion ladder, at three commitment levels.
+ *
+ * Keeping the readout is deliberately the EASIEST of the three and asks for
+ * nothing. The product's promise is that a stranger keeps what they were given;
+ * charging an email for it would make the promise conditional, and a
+ * conditional gift is a trade somebody can decline.
+ *
+ * The share link is the referral loop's first turn. Somebody sending their
+ * numbers to a partner or a parent is doing the most valuable thing that can
+ * happen on this page, and it costs them one tap.
+ */
+function Keep({ side, inputs, figures, matched, bookHref }: {
+  side: "buy" | "sell";
+  inputs: BuyerInputs;
+  figures: Record<string, string | number>;
+  matched: { id: string; name: string; min: number; max: number }[];
+  bookHref: string;
+}) {
+  const [link, setLink] = useState<string | null>(null);
+  const [state, setState] = useState<"idle" | "working" | "unavailable">("idle");
+  const [copied, setCopied] = useState(false);
+  const assessmentId = useRef<string | null>(null);
+
+  const makeLink = async () => {
+    if (link) return;
+    setState("working");
+    try {
+      /* The assessment id is not held on this page — it belongs to the run that
+         produced these numbers. Reattaching by session keeps the snapshot tied
+         to the right attempt without putting an id in a shareable URL. */
+      const started = await fetch("/api/assessment/start", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: sessionId(), side, county: inputs.county }),
+      }).then((x) => x.json());
+      assessmentId.current = started?.id ?? null;
+
+      const res = await fetch("/api/readout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ assessmentId: assessmentId.current ?? "", side, inputs, figures, matched }),
+      }).then((x) => x.json());
+
+      if (res?.shareToken) {
+        const url = `${window.location.origin}/r/${res.shareToken}`;
+        setLink(url);
+        setState("idle");
+        track({ name: "share_sent", side, meta: { via: "link" } });
+        return;
+      }
+      /* No token means the snapshot was not stored. Say so rather than hand
+         over a link that will 404 for whoever it is sent to. */
+      setState("unavailable");
+    } catch {
+      setState("unavailable");
+    }
+  };
+
+  const copy = async () => {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {
+      /* Clipboard blocked. The input below is selectable, which is the fallback. */
+    }
+  };
+
+  return (
+    <section className="sec">
+      <h2 className="serif" style={{ fontSize: "clamp(20px,2.6vw,30px)", letterSpacing: "-0.02em" }}>
+        Keep this
+      </h2>
+      <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 620, lineHeight: 1.6 }}>
+        It is yours either way. Nothing below signs you up to anything.
+      </p>
+
+      <div className="g3 gap-3" style={{ marginTop: 18 }}>
+        <div className="card p-4">
+          <div className="t-sm w6">Send it to someone</div>
+          <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+            A partner, a parent helping with the deposit, or a lender. They see the numbers, not
+            your contact details.
+          </p>
+          {link ? (
+            <div style={{ marginTop: 12 }}>
+              <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
+              <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={copy}>
+                <Ico.share size={13} />{copied ? "Copied" : "Copy link"}
+              </button>
+            </div>
+          ) : state === "unavailable" ? (
+            <p className="t-xs c-3 row gap-2" style={{ marginTop: 12 }}>
+              <Ico.alert size={12} className="c-warn" style={{ flex: "none", marginTop: 2 }} />
+              Sharing is briefly unavailable. Your readout still works — this page stays at the
+              same address.
+            </p>
+          ) : (
+            <button className="btn btn-g" style={{ marginTop: 12 }} onClick={makeLink} disabled={state === "working"}>
+              {state === "working" ? "Making a link…" : "Make a share link"}
+            </button>
+          )}
+        </div>
+
+        <div className="card p-4">
+          <div className="t-sm w6">Come back to it</div>
+          <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+            Your answers are already saved on this device. Open this address again and it is
+            here, with no account and nothing to remember.
+          </p>
+        </div>
+
+        <div className="card p-4" style={{ background: "var(--sunk)" }}>
+          <div className="t-sm w6">Talk it through</div>
+          <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+            Twenty minutes about the one thing in the way. No obligation, and nothing to cancel.
+          </p>
+          <Link href={bookHref} className="btn btn-p" style={{ marginTop: 12 }}
+            onClick={() => track({ name: "booking_start", side, meta: { from: "keep" } })}>
+            Find a time<Ico.arrowR size={14} />
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }

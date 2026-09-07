@@ -418,3 +418,10 @@
   .rift .opt { padding: 14px 13px; }
   .rift .opt input { width: 18px; height: 18px; }
 }
+
+/* Prose blocks on the explanatory pages. Kept small and local rather than a
+   global typography reset, so it cannot leak into the product surfaces. */
+.rift .how-body p { margin: 0 0 12px; }
+.rift .how-body p:last-child { margin-bottom: 0; }
+.rift .how-body ul { margin: 0 0 12px; padding-left: 20px; }
+.rift .how-body li { margin-bottom: 7px; }
