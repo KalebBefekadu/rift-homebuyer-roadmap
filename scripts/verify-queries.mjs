@@ -80,9 +80,13 @@ await check("abandoned (embedded answers + leads)", () => db.from("rift_assessme
   .select("id,session_id,side,county,started_at,rift_answers(question_key),rift_leads(email)")
   .is("completed_at", null).order("started_at", { ascending: false }));
 
-await check("funnelReport", () => db.from("rift_events")
-  .select("session_id,name,question_key,dwell_ms").eq("side", "buy")
-  .in("name", ["assessment_start", "question_view", "question_answer"]));
+await check("funnelReport (rpc)", () => db.rpc("rift_funnel_report", {
+  p_agent: "00000000-0000-4000-8000-000000000000", p_side: "buy", p_days: 90,
+}));
+
+await check("funnelStarts (rpc)", () => db.rpc("rift_funnel_starts", {
+  p_agent: "00000000-0000-4000-8000-000000000000", p_side: "buy", p_days: 90,
+}));
 
 await check("openItems", () => db.from("rift_review_items")
   .select("id,who,kind,what,claim,state,ceiling,raised_by,to_advance,confirmed_by,raised_at,figure_id,rift_figures(label,value_cents,trust_state,assumptions,could_be_wrong)")

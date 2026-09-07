@@ -339,8 +339,10 @@ export default async function StudioToday() {
             Where people stop
           </h2>
           <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-            Counted in distinct sessions, never in page views. A person who backs up and re-reads
-            a question is one person.
+            The last {report?.days ?? 90} days, counted in distinct sessions rather than page
+            views — a person who backs up and re-reads a question is one person. Bounded in time
+            on purpose: the point of measuring drop-off is to change a question and see whether it
+            helped, and averaged against a year of the old wording it never would.
           </p>
 
           {!report || report.starts < 20 ? (

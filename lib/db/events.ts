@@ -1,6 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { boundedRead } from "./bounded";
 import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { sanitise, type EventInput } from "@/lib/core/telemetry";
 
@@ -78,49 +79,64 @@ export interface StepStat {
  * prototype had this bug, de-duplicating on millisecond timestamps, and it
  * quietly overstated reach.
  */
-export async function funnelReport(side: "buy" | "sell"): Promise<DbResult<{ starts: number; steps: StepStat[] }>> {
+/**
+ * Per-question drop-off, aggregated in the database.
+ *
+ * It used to fetch every matching event and count distinct sessions in
+ * JavaScript — 45,000 rows over the wire to produce seven numbers, on every
+ * Studio load. At five years of traffic that is a page that times out, and the
+ * failure would arrive exactly when the data finally meant something.
+ *
+ * The window matters more than the speed. There was no time bound, so the
+ * report mixed last year's funnel with this week's — and the point of measuring
+ * drop-off is to change a question and see whether it helped. Averaged against
+ * twelve months of the old wording, it never would.
+ */
+export async function funnelReport(
+  side: "buy" | "sell",
+  days = 90,
+): Promise<DbResult<{ starts: number; steps: StepStat[]; days: number }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
 
   try {
-    const { data, error } = await db
-      .from("rift_events")
-      .select("session_id,name,question_key,dwell_ms")
-      .eq("side", side)
-      .in("name", ["assessment_start", "question_view", "question_answer"]);
+    const [report, starts] = await Promise.all([
+      boundedRead(
+        db.rpc("rift_funnel_report", { p_agent: agent_id, p_side: side, p_days: days }),
+        "the funnel report",
+      ),
+      boundedRead(
+        db.rpc("rift_funnel_starts", { p_agent: agent_id, p_side: side, p_days: days }),
+        "the assessment starts",
+      ),
+    ]);
 
-    if (error) return failed(error.message);
+    if (!report.ok) return report;
+    if (!starts.ok) return starts;
 
-    const rows = (data ?? []) as { session_id: string; name: string; question_key: string | null; dwell_ms: number | null }[];
-    const starts = new Set(rows.filter((r) => r.name === "assessment_start").map((r) => r.session_id)).size;
+    const rows = (("data" in report ? report.data : []) ?? []) as {
+      question_key: string; reached: number; answered: number; median_dwell_ms: number;
+    }[];
 
-    const byKey = new Map<string, { seen: Set<string>; answered: Set<string>; dwells: number[] }>();
-    for (const r of rows) {
-      if (!r.question_key) continue;
-      let e = byKey.get(r.question_key);
-      if (!e) { e = { seen: new Set(), answered: new Set(), dwells: [] }; byKey.set(r.question_key, e); }
-      if (r.name === "question_view") e.seen.add(r.session_id);
-      if (r.name === "question_answer") {
-        e.answered.add(r.session_id);
-        if (typeof r.dwell_ms === "number") e.dwells.push(r.dwell_ms);
-      }
-    }
+    const steps: StepStat[] = rows.map((r) => ({
+      questionKey: r.question_key,
+      reached: r.reached,
+      answered: r.answered,
+      /* Floored at zero. More answers than views is possible in the data —
+         a resumed session answers a question it never viewed in this window —
+         and a negative drop-off rendered as "-3%" reads as a bug rather than
+         as the edge case it is. */
+      dropPct: r.reached ? Math.max(0, Math.round(((r.reached - r.answered) / r.reached) * 100)) : 0,
+      medianSec: Math.round((r.median_dwell_ms / 1000) * 10) / 10,
+    }));
 
-    const steps: StepStat[] = [...byKey.entries()].map(([questionKey, e]) => {
-      const reached = e.seen.size;
-      const answered = e.answered.size;
-      const sorted = e.dwells.slice().sort((a, b) => a - b);
-      const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
-      return {
-        questionKey,
-        reached,
-        answered,
-        dropPct: reached ? Math.round(((reached - answered) / reached) * 100) : 0,
-        medianSec: Math.round((median / 1000) * 10) / 10,
-      };
+    return done({
+      starts: (("data" in starts ? starts.data : 0) as number) ?? 0,
+      steps,
+      days,
     });
-
-    return done({ starts, steps });
   } catch (e) {
     return failed(e);
   }
