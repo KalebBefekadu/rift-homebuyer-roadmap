@@ -207,6 +207,20 @@ export function firstTimeFrom(o: Ownership) {
   return o !== "primary";
 }
 
+/**
+ * How an ownership answer reads back to the person who gave it.
+ *
+ * Lives here rather than inline in a page because two surfaces render it and a
+ * third will: the readout, the share link, and eventually the email. Three
+ * copies of the same phrasing is three chances for one of them to describe
+ * somebody's situation slightly wrong.
+ */
+export const OWN_LABEL: Record<Ownership, string> = {
+  none: "no home owned in three years",
+  primary: "owned a home you lived in",
+  investment: "owned an investment property only",
+};
+
 export const OWNERSHIP_CAVEAT: Record<Ownership, string | null> = {
   none: null,
   primary: null,

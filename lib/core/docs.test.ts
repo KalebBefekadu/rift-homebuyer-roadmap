@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { RETENTION } from "@/lib/prototype/privacy";
+import { RETENTION } from "./privacy";
 import { STALE_AFTER_DAYS } from "./registry";
 import { DEFAULT_RULES } from "./settings";
 import { DRIFT_PCT, CROSSINGS } from "./seam";

@@ -227,7 +227,7 @@ Do not port any of this. It exists to make the interaction model reviewable.
 
 1. **TCPA.** Prior express *written* consent before any autodialled or prerecorded marketing
    call or text. Unticked, specific, separate from all other agreements, and the exact wording
-   stored with the record and versioned. `lib/prototype/privacy.ts` holds the wording.
+   stored with the record and versioned. `lib/core/privacy.ts` holds the wording.
    **It has not been reviewed by counsel. Do that before it collects a real number.**
 2. **Retention.** Four rules, stated in `privacy.ts` and shown to the customer at the bottom
    of every readout. A deletion request must actually delete, not soft-delete.

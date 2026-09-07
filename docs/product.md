@@ -228,7 +228,7 @@ Most people who start an assessment will not finish it in one sitting, and that 
 - Abandoned assessments are visible to the agent as partial relationships showing progress reached, last topic, source, and any contact information given, so the agent can decide whether a personal touch is worthwhile.
 - An abandoned assessment with no contact information is discarded after **30 days** — long
   enough to resume on the same device, short enough that Rift is not holding a collection of
-  strangers' finances. The full retention schedule is `RETENTION` in `lib/prototype/privacy.ts`
+  strangers' finances. The full retention schedule is `RETENTION` in `lib/core/privacy.ts`
   and is shown to the customer rather than buried in a policy page.
 
 ## Lead sources and attribution

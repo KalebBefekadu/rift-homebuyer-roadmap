@@ -100,7 +100,7 @@ Still to open, with lead times worth knowing now:
 
 Non-negotiable, and each one is cheap now and expensive later:
 
-- [ ] **A Georgia attorney has read the TCPA consent wording** in `lib/prototype/privacy.ts`.
+- [ ] **A Georgia attorney has read the TCPA consent wording** in `lib/core/privacy.ts`.
       It is written, unticked by default, specific, separate, and versioned — and it is
       marked in-product as not reviewed by counsel.
 - [ ] **The broker has confirmed the client-record retention period.** It is the one business

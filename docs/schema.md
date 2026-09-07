@@ -164,10 +164,10 @@ one is either wide open or unreadable, and both are discovered in production.
 
 ## Retention
 
-Mirrors `lib/prototype/privacy.ts`, which is displayed to the customer. The database is where
+Mirrors `lib/core/privacy.ts`, which is displayed to the customer. The database is where
 it becomes true.
 
-**This table must match `RETENTION` in `lib/prototype/privacy.ts` exactly**, because that array
+**This table must match `RETENTION` in `lib/core/privacy.ts` exactly**, because that array
 is what is rendered to the customer at the bottom of every readout. It is a promise, not a
 configuration value. `lib/core/docs.test.ts` fails if the two drift apart.
 

@@ -229,6 +229,19 @@ export function isStale(p: AssistanceProgram, today = PROTO_TODAY) {
 export interface MatchInput {
   county: string;
   firstTimeBuyer: boolean;
+  /**
+   * The programmes to match against. Defaults to the built-in registry, which
+   * is what the specification runs on; production passes the rows read from
+   * the database.
+   *
+   * Injected rather than imported so there is exactly ONE matcher. A separate
+   * production copy would be the same twenty lines maintained twice, and the
+   * first divergence would show up as two different assistance figures for the
+   * same person depending on which surface they were looking at.
+   */
+  programs?: AssistanceProgram[];
+  /** Defaults to the prototype's fixed date so the specification stays deterministic. */
+  today?: Date;
 }
 
 export interface MatchResult {
@@ -246,13 +259,13 @@ export interface MatchResult {
  * Closed and waitlisted programs are shown WITH their state, never hidden —
  * "funding exhaustion is a first-class state".
  */
-export function matchPrograms({ county, firstTimeBuyer }: MatchInput): MatchResult {
+export function matchPrograms({ county, firstTimeBuyer, programs = PROGRAMS, today = PROTO_TODAY }: MatchInput): MatchResult {
   const geoFit = (p: AssistanceProgram) => p.county === null || p.county === county;
   const statusFit = (p: AssistanceProgram) => (p.firstTimeOnly ? firstTimeBuyer : true);
 
-  const eligible = PROGRAMS.filter((p) => geoFit(p) && statusFit(p));
-  const matched = eligible.filter((p) => !isStale(p));
-  const suppressed = eligible.filter((p) => isStale(p));
+  const eligible = programs.filter((p) => geoFit(p) && statusFit(p));
+  const matched = eligible.filter((p) => !isStale(p, today));
+  const suppressed = eligible.filter((p) => isStale(p, today));
   const open = matched.filter((p) => p.funding === "open");
 
   return {

@@ -9,6 +9,7 @@ import { Trust } from "@/components/rift/Trust";
 import { Verdict, Sec, Reframe, BlockerCard, Steps, Questions, Ladder, ActionBar, Keep, ReadoutShell } from "@/components/rift/Readout";
 import { matchPrograms, FUNDING_LABEL, TYPE_LABEL } from "@/lib/core/registry";
 import { buyerReadout } from "@/lib/core/results";
+import { OWN_LABEL, type Ownership } from "@/lib/core/funnel";
 import {
   BUYER_DEFAULTS, cashGap, cashToClose, gapLevers, money, monthlyComputed, range, type BuyerInputs,
 } from "@/lib/core/compute";
@@ -20,12 +21,7 @@ function Results() {
 
   const county = q.get("c") || "DeKalb";
   const first = q.get("f") !== "0";
-  const own = q.get("o") || (first ? "none" : "primary");
-  const OWN_LABEL: Record<string, string> = {
-    none: "no home owned in three years",
-    primary: "owned a home you lived in",
-    investment: "owned an investment property only",
-  };
+  const own = (q.get("o") || (first ? "none" : "primary")) as Ownership;
   const price = Number(q.get("p")) || 325_000;
   const savings = Number(q.get("s")) || 14_000;
   const monthlySaving = Number(q.get("r")) || 700;
