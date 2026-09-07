@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { ask } from "@/lib/db/review";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -25,6 +26,9 @@ const CEILINGS = {
 } as const;
 
 export async function POST(req: Request) {
+  const refused = limited(req, "review");
+  if (refused) return refused;
+
   let b: Record<string, unknown>;
   try {
     b = (await req.json()) as Record<string, unknown>;

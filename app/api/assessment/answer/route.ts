@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { saveAnswer } from "@/lib/db/assessments";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -14,6 +15,9 @@ export const dynamic = "force-dynamic";
  * what they said, and the two have different retention and different deletion.
  */
 export async function POST(req: Request) {
+  const refused = limited(req, "assessment");
+  if (refused) return refused;
+
   try {
     const b = (await req.json()) as { assessmentId?: unknown; questionKey?: unknown; value?: unknown };
     const assessmentId = typeof b.assessmentId === "string" ? b.assessmentId : "";

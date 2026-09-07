@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { captureTouch, touchFromRequest } from "@/lib/db/attribution";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -15,6 +16,9 @@ export const dynamic = "force-dynamic";
  * about which channel is worth money.
  */
 export async function POST(req: Request) {
+  const refused = limited(req, "attribution");
+  if (refused) return refused;
+
   let sessionId = "";
   let landingUrl = "";
   try {

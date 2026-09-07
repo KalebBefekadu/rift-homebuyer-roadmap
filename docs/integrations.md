@@ -232,6 +232,27 @@ a licensed feed; everything else stays.
 
 ---
 
+## 7b. Rate limiting
+
+The public endpoints write to the database without an account, which is the product's central
+promise and also its most obvious abuse surface. Somebody with curl and a loop can fill
+`rift_events` in an afternoon, and the damage is not the storage bill — it is that the funnel
+report becomes fiction and the agent makes decisions from it without knowing.
+
+`lib/core/ratelimit.ts` is a fixed-window limiter keyed on client IP. Two honest limitations,
+stated rather than discovered:
+
+- **In-memory**, so each serverless instance keeps its own count and the real limit is the
+  configured one times the number of instances. Enough to stop a script, useless against a
+  distributed attacker — the correct trade at this scale, since a Redis dependency to defend
+  against an adversary nobody has is a worse deal.
+- **Fixed window**, so a burst straddling a boundary gets double the allowance.
+
+When either stops being acceptable, swap the map for a shared store and keep the interface.
+
+A refusal returns 429 with `Retry-After` and does **not** name the threshold. An error message
+that states the limit is a tuning guide for whoever is trying to get around it.
+
 ## 8. What NOT to add
 
 Stated so nobody spends a sprint on it:

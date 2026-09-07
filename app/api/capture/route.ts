@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -24,6 +25,9 @@ export const dynamic = "force-dynamic";
  * disclosed, secured and deleted. It is cost with no upside.
  */
 export async function POST(req: Request) {
+  const refused = limited(req, "capture");
+  if (refused) return refused;
+
   let b: Record<string, unknown>;
   try {
     b = (await req.json()) as Record<string, unknown>;

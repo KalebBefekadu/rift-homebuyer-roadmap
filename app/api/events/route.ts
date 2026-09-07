@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { recordEvents, isEventName, type EventInput } from "@/lib/db/events";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -24,6 +25,9 @@ export const dynamic = "force-dynamic";
 const MAX_BATCH = 40;
 
 export async function POST(req: Request) {
+  const refused = limited(req, "events");
+  if (refused) return refused;
+
   let body: unknown;
   try {
     body = await req.json();

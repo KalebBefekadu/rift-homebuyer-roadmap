@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { forget } from "@/lib/db/retention";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -19,6 +20,9 @@ export const dynamic = "force-dynamic";
  * the person's behalf, which is what the endpoint is for.
  */
 export async function POST(req: Request) {
+  const refused = limited(req, "forget");
+  if (refused) return refused;
+
   let sessionId = "";
   try {
     const b = (await req.json()) as { sessionId?: unknown };

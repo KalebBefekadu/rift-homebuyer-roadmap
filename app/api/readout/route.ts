@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { limited } from "@/lib/db/guard";
 import { saveReadout } from "@/lib/db/assessments";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -19,6 +20,9 @@ export const dynamic = "force-dynamic";
  * is evidence of a promise, not an input to one.
  */
 export async function POST(req: Request) {
+  const refused = limited(req, "readout");
+  if (refused) return refused;
+
   let b: Record<string, unknown>;
   try {
     b = (await req.json()) as Record<string, unknown>;
