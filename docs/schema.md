@@ -181,6 +181,21 @@ now, while they are simple.
 Every table gets its policy in the same migration that creates it. A table shipped without
 one is either wide open or unreadable, and both are discovered in production.
 
+**Exercised, not assumed.** `lib/db/rls.test.ts` runs as a real authenticated role with a JWT
+claim — not as the table owner, who bypasses RLS entirely. A first version of that test passed
+for exactly that reason while proving nothing.
+
+Two agents, and the assertions that matter: one cannot read the other's leads, cannot update
+or delete their rows, and **cannot insert a row on their behalf** — the dangerous direction,
+because scoping reads without scoping writes lets somebody plant a row they are then allowed
+to read. An anonymous visitor reads nothing belonging to anybody, and *can* read the programme
+registry, which is public by design: if that policy ever failed, the landing page would
+silently tell every visitor there is no help available.
+
+Until this existed, every policy in the product had been written, shipped, and never once
+enforced against a request — the application uses the service role, which bypasses them, and
+the local harness disables RLS so the query tests can focus on syntax.
+
 ---
 
 ## Retention
