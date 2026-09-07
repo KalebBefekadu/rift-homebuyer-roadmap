@@ -176,6 +176,11 @@ export function Landing({
 
         <footer style={{ borderTop: "1px solid var(--line-2)", marginTop: 40 }}>
           <div className="shell-w" style={{ padding: "26px 0 60px" }}>
+            <div className="row gap-3 wrap" style={{ marginBottom: 16 }}>
+              <Link href="/buy/how" className="t-sm c-3">How it works</Link>
+              <Link href="/buy/programs" className="t-sm c-3">Georgia programs</Link>
+              <Link href="/sell" className="t-sm c-3">Selling instead?</Link>
+            </div>
             <p className="t-xs c-4" style={{ lineHeight: 1.6, maxWidth: 620 }}>
               Prepared by Rift, guided by Kaleb Befekadu, Peachtree Cardinal, Georgia. Every
               figure is a planning estimate, not a lending commitment, approval, or valuation.

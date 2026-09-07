@@ -16,11 +16,12 @@ const BUILT = [
   { href: "/buy", name: "Rift for buyers", note: "Answer-first landing, assessment, and the full computed readout. Live." },
   { href: "/buy/programs", name: "Georgia programs", note: "Every assistance program tracked, including closed and stale ones." },
   { href: "/buy/how", name: "How this works", note: "Where the numbers come from, and how Kaleb is paid." },
+  { href: "/sell", name: "Rift for sellers", note: "Net proceeds, unclaimed value, and repair triage. Live." },
+  { href: "/sell/unclaimed", name: "Unclaimed value", note: "Exemptions, appeals and the gains exclusion. Standalone, asks for nothing." },
   { href: "/studio", name: "Studio", note: "The agent surface. Ranked leads, review queue, follow-up, drop-off." },
 ];
 
 const SPEC = [
-  { href: "/prototype/sell", name: "Rift for sellers", note: "Phase 4 — behind the traffic gate in handoff.md §2." },
   { href: "/prototype/app", name: "Client portal", note: "Phase 6. Specified, not built." },
   { href: "/prototype/studio", name: "Studio, in full", note: "Board, offers, calendar, client records — phase 5." },
 ];
@@ -53,7 +54,7 @@ export default function Home() {
         marginTop: 28, padding: "14px 16px", borderRadius: 10,
         background: "#fff8e6", border: "1px solid #f0dfae", fontSize: 14.5,
       }}>
-        <strong>The MVP is buyers only</strong> — phases 1&ndash;3 of{" "}
+        <strong>Buyers and sellers are live</strong> — phases 1&ndash;3 of{" "}
         <code style={{ background: "#00000010", padding: "1px 5px", borderRadius: 4 }}>docs/handoff.md</code>.
         Seller, portal and referral are specified and deliberately deferred behind a traffic
         gate: 200 completed assessments or 60 days, whichever comes first.
