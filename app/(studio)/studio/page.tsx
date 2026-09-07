@@ -7,6 +7,7 @@ import { readStale } from "@/lib/db/programs";
 import { openItems } from "@/lib/db/review";
 import { due } from "@/lib/db/nurture";
 import { abandoned } from "@/lib/db/recovery";
+import { currentRate } from "@/lib/db/rates";
 import { REVIEW_SLA_HOURS } from "@/lib/core/review";
 import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { ReviewRow } from "./ReviewRow";
@@ -58,7 +59,7 @@ export default async function StudioToday() {
     openItems(),
     due(new Date()),
   ]);
-  const abandonedRead = await abandoned();
+  const [abandonedRead, rate] = await Promise.all([abandoned(), currentRate()]);
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
 
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
@@ -113,6 +114,30 @@ export default async function StudioToday() {
               The database is not reachable, so this screen is empty because nothing is being
               stored — not because nobody has arrived. Those are different problems and this one
               is yours to fix.
+            </p>
+          </div>
+        ) : null}
+
+        {/* The rate is the assumption the most figures depend on and the only
+            one that moves weekly. Recording it is a manual habit, so the one
+            thing that must not happen is nobody noticing it has lapsed —
+            every monthly figure in the product quietly drifts with it. */}
+        {rate.freshness !== "fresh" ? (
+          <div className="card p-4" style={{ marginTop: 16 }}>
+            <div className="between wrap gap-2">
+              <div className="row gap-2">
+                <Ico.chart size={15} className="c-3" />
+                <span className="t-sm w6">
+                  The rate everyone is being shown is {rate.pct.toFixed(2)}%
+                </span>
+              </div>
+              <span className={`chip ${rate.freshness === "stale" ? "chip-neg" : "chip-warn"}`}>
+                {rate.asOf ? `${rate.ageDays} days old` : "Never recorded"}
+              </span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {rate.note} Record this week&apos;s with{" "}
+              <span className="mono t-xs">npm run rift:rate -- 6.72</span>.
             </p>
           </div>
         ) : null}
