@@ -40,7 +40,7 @@ If any of these fail on a fresh clone, fix that before starting work. All three 
 from the code it describes. If it fails, one of the two is wrong — and unless the code is
 actually broken, it is the documentation.
 
-## 2b. One trap, and it will cost you an afternoon
+## 3. One trap, and it will cost you an afternoon
 
 `npm run dev` uses **turbopack**; `npm run build` uses **webpack**. They share `.next`, and
 running one after the other leaves it in a state that fails in ways that do not look like a
@@ -61,7 +61,7 @@ npm run dev:clean
 It was diagnosed once, from scratch, by bisecting a component that turned out to be fine.
 Do not repeat that.
 
-## 2c. Bring up a database
+## 4. Bring up a database
 
 The schema and its constraints are validated against a real Postgres, not by
 eye. To run those suites locally:
@@ -75,7 +75,7 @@ rather than fail — a contributor with no Docker still gets a meaningful signal
 A migration that fails to apply is a real failure and says so; only an
 unreachable database is a skip.
 
-## 2d. Bootstrap the agent
+## 5. Bootstrap the agent
 
 Nothing is recorded until an agent row exists. Every write reports
 "no agent row exists yet" and skips — honestly, but completely.
@@ -94,7 +94,7 @@ Link it to a real login once the Supabase auth user exists:
 node --env-file=.env.local scripts/bootstrap-rift.mjs --auth-user-id <uuid>
 ```
 
-## 3. Configure the services
+## 6. Configure the services
 
 ```bash
 cp .env.example .env.local
@@ -115,7 +115,7 @@ that record should hold.
 
 Details, costs, and degradation behaviour: [integrations.md](integrations.md).
 
-## 4. Accounts to create
+## 7. Accounts to create
 
 Existing: **Supabase** (`uxcflubscmkbibepjmqj`), **Sentry**
 (`ziid-development/value-first-realestate`), **Brevo** (free), **Vercel**
@@ -129,7 +129,61 @@ Still to open, with lead times worth knowing now:
 - **A mortgage-rate source.** Not an account so much as a decision. Every monthly figure in
   the product currently rests on a hard-coded 6.5%. See [integrations.md](integrations.md) §7.
 
-## 5. Before the first customer-facing deploy
+## 8. Running the whole thing locally
+
+```bash
+scripts/local/up.sh                       # Postgres + PostgREST + a /rest/v1 proxy
+eval "$(scripts/local/env.sh)" && npx next start
+npm run verify:queries
+scripts/local/down.sh
+```
+
+A local stand-in for Supabase: it applies every migration, seeds the registry, creates the
+agent row, and prints the environment to run the app against it.
+
+It exists because everything had been verified in pieces — SQL against Postgres, query syntax
+against PostgREST, the UI against fixtures — and running the **actual application** against a
+database immediately found three defects none of those could have:
+
+- `NEXT_PUBLIC_` variables are inlined at build time, so server code reading
+  `NEXT_PUBLIC_SUPABASE_URL` talks to whatever project the bundle was compiled against,
+  whatever the runtime environment says.
+- `currentAgentId()` cached a null result permanently, so an instance that started before the
+  bootstrap answered "no agent row exists yet" until it was restarted.
+- The nurture runner reported touches it could not send as "held for the agent", sending
+  somebody to look for a task that did not exist.
+
+No auth, no RLS enforcement, no TLS. Local development only.
+
+## 9. Verifying the query syntax
+
+The riskiest code in the data layer is the part TypeScript cannot see. Embedded selects like
+`rift_leads(name,email)` and `rift_touches(step_id)` are **strings** — the compiler does not
+check them, the build does not check them, and a broken one fails at runtime with a message
+about a schema cache, taking a page down rather than a query.
+
+```bash
+npm run verify:queries
+```
+
+Runs every query the data layer uses against a real PostgREST, through the real supabase-js
+query builder. Setup instructions are at the top of `scripts/verify-queries.mjs`; it needs the
+Postgres from §4 plus a PostgREST container.
+
+This found a live defect on its first run: the test setup was applying two of three
+migrations, so a table existed in the repository and not in the database under test.
+
+## 10. Continuous integration
+
+`.github/workflows/ci.yml` runs typecheck, lint, tests and build on every push and pull
+request, against a **real Postgres 16 service**.
+
+The last step is the one worth keeping: it fails the run if any test skipped. The database
+suites skip rather than fail when no Postgres is reachable — correct locally, catastrophic in
+CI, where a skip means the constraints were never exercised and the suite passed while
+proving nothing. That has already happened once in this repository.
+
+## 11. Before the first customer-facing deploy
 
 Non-negotiable, and each one is cheap now and expensive later:
 
@@ -149,35 +203,7 @@ Non-negotiable, and each one is cheap now and expensive later:
       are documented as the complete list, with no proxy for a protected class. Confirm that
       is still true of whatever ships.
 
-## 5a. Verifying the query syntax
-
-The riskiest code in the data layer is the part TypeScript cannot see. Embedded selects like
-`rift_leads(name,email)` and `rift_touches(step_id)` are **strings** — the compiler does not
-check them, the build does not check them, and a broken one fails at runtime with a message
-about a schema cache, taking a page down rather than a query.
-
-```bash
-npm run verify:queries
-```
-
-Runs every query the data layer uses against a real PostgREST, through the real supabase-js
-query builder. Setup instructions are at the top of `scripts/verify-queries.mjs`; it needs the
-Postgres from §2c plus a PostgREST container.
-
-This found a live defect on its first run: the test setup was applying two of three
-migrations, so a table existed in the repository and not in the database under test.
-
-## 5b. Continuous integration
-
-`.github/workflows/ci.yml` runs typecheck, lint, tests and build on every push and pull
-request, against a **real Postgres 16 service**.
-
-The last step is the one worth keeping: it fails the run if any test skipped. The database
-suites skip rather than fail when no Postgres is reachable — correct locally, catastrophic in
-CI, where a skip means the constraints were never exercised and the suite passed while
-proving nothing. That has already happened once in this repository.
-
-## 6. Deployment
+## 12. Deployment
 
 Vercel, project `rift-homebuyer-roadmap`. Set the same variables in the Vercel dashboard;
 `SENTRY_AUTH_TOKEN` there enables source-map upload, and without it `next.config.ts` disables
@@ -187,7 +213,7 @@ Supabase migrations apply with `scripts/apply-sql-migration.sh`. `scripts/bootst
 provisions a project from scratch — useful for a staging environment, and worth having one
 before there is real client data in production.
 
-## 7. Repository map
+## 13. Repository map
 
 ```
 app/

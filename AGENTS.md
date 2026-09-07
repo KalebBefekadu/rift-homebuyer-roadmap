@@ -107,7 +107,7 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
   against it.
 - If a page renders but nothing responds to a click, it is almost certainly a stale `.next`
   from mixing `next build` with `next dev --turbopack`. Run `npm run dev:clean` **before**
-  suspecting your own code. See docs/setup.md §2b.
+  suspecting your own code. See docs/setup.md §3.
 - Do not "fix" a deliberate degraded state. A text step that downgraded to email because
   there is no phone consent is working correctly.
 
@@ -115,7 +115,7 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 
 ```bash
 npm run dev      # prototype at /prototype — needs no configuration at all
-npm run dev:clean # use after any `npm run build` — see docs/setup.md §2b
+npm run dev:clean # use after any `npm run build` — see docs/setup.md §3
 npm test         # vitest
 npm run build    # must pass before any handoff
 npx tsc --noEmit # must be clean
