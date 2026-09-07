@@ -12,15 +12,21 @@ import Link from "next/link";
  * Replace this whole file when the real landing ships.
  */
 
-const PRODUCTS = [
-  { href: "/prototype/buy", name: "Rift for buyers", note: "Answer-first landing, seven-question assessment, and the full computed readout." },
-  { href: "/prototype/sell", name: "Rift for sellers", note: "Net proceeds before any scroll, repair triage, and unclaimed value." },
-  { href: "/prototype/studio", name: "Studio", note: "The agent surface — ranked leads, the board, the follow-up and review queues." },
-  { href: "/prototype/app", name: "Client portal", note: "The five questions a client needs answered, on one screen." },
+const BUILT = [
+  { href: "/buy", name: "Rift for buyers", note: "Answer-first landing, assessment, and the full computed readout. Live." },
+  { href: "/buy/programs", name: "Georgia programs", note: "Every assistance program tracked, including closed and stale ones." },
+  { href: "/buy/how", name: "How this works", note: "Where the numbers come from, and how Kaleb is paid." },
+  { href: "/studio", name: "Studio", note: "The agent surface. Ranked leads, review queue, follow-up, drop-off." },
+];
+
+const SPEC = [
+  { href: "/prototype/sell", name: "Rift for sellers", note: "Phase 4 — behind the traffic gate in handoff.md §2." },
+  { href: "/prototype/app", name: "Client portal", note: "Phase 6. Specified, not built." },
+  { href: "/prototype/studio", name: "Studio, in full", note: "Board, offers, calendar, client records — phase 5." },
 ];
 
 const DOCS = [
-  ["docs/handoff.md", "Build order, the contracts that must not drift, acceptance tests to write first"],
+  ["docs/handoff.md", "What ships first, build order, the contracts that must not drift"],
   ["docs/integrations.md", "Every external service, what it is for, and what is not wired yet"],
   ["docs/schema.md", "The data model the build targets"],
   ["docs/vision.md", "Why Rift exists and what it refuses to do"],
@@ -47,20 +53,39 @@ export default function Home() {
         marginTop: 28, padding: "14px 16px", borderRadius: 10,
         background: "#fff8e6", border: "1px solid #f0dfae", fontSize: 14.5,
       }}>
-        <strong>Nothing below is production.</strong> The prototype is the specification —
-        it has no accounts, no database, and no integrations, and it is complete and reviewed.
-        Building the real product against it is the work. Start at{" "}
+        <strong>The MVP is buyers only</strong> — phases 1&ndash;3 of{" "}
         <code style={{ background: "#00000010", padding: "1px 5px", borderRadius: 4 }}>docs/handoff.md</code>.
+        Seller, portal and referral are specified and deliberately deferred behind a traffic
+        gate: 200 completed assessments or 60 days, whichever comes first.
       </div>
 
       <h2 style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginTop: 40 }}>
-        The specification, running
+        Built
       </h2>
       <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
-        {PRODUCTS.map((p) => (
+        {BUILT.map((p) => (
           <Link key={p.href} href={p.href} style={{
             display: "block", padding: "14px 16px", borderRadius: 10,
             border: "1px solid #e3e3e0", textDecoration: "none", color: "inherit",
+          }}>
+            <div style={{ fontWeight: 600, fontSize: 15.5 }}>{p.name}</div>
+            <div style={{ fontSize: 14, color: "#666", marginTop: 2 }}>{p.note}</div>
+          </Link>
+        ))}
+      </div>
+
+      <h2 style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginTop: 36 }}>
+        Specified, not built
+      </h2>
+      <p style={{ fontSize: 14, color: "#666", marginTop: 6 }}>
+        Still running as the specification under <code>/prototype</code>. A screen leaves there
+        when its production replacement is live and has been checked against it.
+      </p>
+      <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+        {SPEC.map((p) => (
+          <Link key={p.href} href={p.href} style={{
+            display: "block", padding: "14px 16px", borderRadius: 10,
+            border: "1px dashed #d8d8d4", textDecoration: "none", color: "inherit",
           }}>
             <div style={{ fontWeight: 600, fontSize: 15.5 }}>{p.name}</div>
             <div style={{ fontSize: 14, color: "#666", marginTop: 2 }}>{p.note}</div>
