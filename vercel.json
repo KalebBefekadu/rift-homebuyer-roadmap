@@ -4,6 +4,10 @@
     {
       "path": "/api/nurture/run",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/retention/sweep",
+      "schedule": "0 3 * * *"
     }
   ]
 }

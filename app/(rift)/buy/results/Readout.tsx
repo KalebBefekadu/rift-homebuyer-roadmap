@@ -299,6 +299,7 @@ export function Readout(p: Props) {
                 </button>
                 {privacyOpen ? (
                   <div style={{ padding: "0 16px 16px" }} className="col gap-2">
+                    <ForgetMe />
                     {RETENTION.map((rule) => (
                       <div key={rule.id} className="card p-3">
                         <div className="between wrap gap-2">
@@ -655,6 +656,81 @@ function AskReview({ what, claim }: { what: string; claim: string }) {
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+
+/**
+ * "Delete all of it."
+ *
+ * At the top of the retention panel rather than buried under it. A deletion
+ * control that is harder to find than the policy explaining it is a policy
+ * pretending to be a control — and this product's whole argument is that it
+ * shows people the truth before asking them for anything.
+ *
+ * It clears the browser first and the server second, in that order, so that a
+ * failed request still leaves nothing on the device the person is holding.
+ */
+function ForgetMe() {
+  const [state, setState] = useState<"idle" | "working" | "done" | "partial">("idle");
+
+  const forget = async () => {
+    setState("working");
+    const sid = sessionId();
+    try {
+      window.localStorage.removeItem("rift.buy.draft");
+      window.sessionStorage.removeItem("rift.sid");
+    } catch { /* storage already unavailable — nothing to clear */ }
+
+    try {
+      const r = await fetch("/api/forget", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: sid }),
+      }).then((x) => x.json());
+      track({ name: "data_deleted", side: "buy" });
+      setState(r?.ok && !r?.skipped ? "done" : "partial");
+    } catch {
+      setState("partial");
+    }
+  };
+
+  if (state === "done") {
+    return (
+      <div className="card p-3" style={{ borderColor: "var(--pos, #2f7a52)" }}>
+        <div className="row gap-2">
+          <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
+          <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
+            Deleted. Nothing about this visit is left on this device or on our side. The numbers
+            on this page are still on screen and will disappear when you close it.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === "partial") {
+    return (
+      <div className="card p-3">
+        <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
+          Cleared from this device. Nothing was stored on our side to remove — or the request did
+          not reach us, in which case the retention schedule below removes it on its own.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card p-3" style={{ background: "var(--paper)" }}>
+      <div className="between wrap gap-2">
+        <p className="t-xs c-3" style={{ lineHeight: 1.55, maxWidth: 360 }}>
+          Changed your mind? Remove everything now rather than waiting for the schedule.
+        </p>
+        <button className="btn btn-g btn-sm" onClick={forget} disabled={state === "working"}>
+          <Ico.x size={12} />{state === "working" ? "Deleting…" : "Delete all of it"}
+        </button>
       </div>
     </div>
   );

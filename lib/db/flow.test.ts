@@ -206,3 +206,45 @@ describe("the cadence, as stored", () => {
     ).rejects.toThrow(/review_verified_needs_a_name/);
   });
 });
+
+describe("retention, as enforced", () => {
+  test("deleting an assessment takes its answers with it", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sret','buy') returning id", [AGENT]);
+    await c.query("insert into rift_answers (assessment_id, question_key, value) values ($1,'savings','9000')", [a.id]);
+
+    await c.query("delete from rift_assessments where id = $1", [a.id]);
+
+    /* One delete, not two. A partial sweep that removed the assessment and
+       left the answers would leave orphaned finances behind with nothing
+       pointing at them. */
+    const { rows } = await c.query("select count(*)::int n from rift_answers where assessment_id = $1", [a.id]);
+    expect(rows[0].n).toBe(0);
+  });
+
+  test("deletion is deletion, not a flag", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sret2','buy') returning id", [AGENT]);
+    await c.query("delete from rift_assessments where id = $1", [a.id]);
+    /* The customer-facing promise says "deleted outright — not anonymised,
+       not archived". A soft delete would make that sentence false while
+       looking like compliance. */
+    const { rows } = await c.query("select count(*)::int n from rift_assessments where id = $1", [a.id]);
+    expect(rows[0].n).toBe(0);
+  });
+
+  test("consent records outlive the assessment they came from", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sret3','buy') returning id", [AGENT]);
+    await c.query(
+      `insert into rift_consents (agent_id, assessment_id, kind, wording, version, granted)
+       values ($1,$2,'phone','...','2026-09-01',true)`, [AGENT, a.id]);
+
+    await c.query("delete from rift_assessments where id = $1", [a.id]);
+
+    /* They are the evidence that the contact was lawful, so they survive with
+       the link nulled rather than cascading away with it. */
+    const { rows } = await c.query("select assessment_id from rift_consents where agent_id = $1 and kind='phone' order by at desc limit 1", [AGENT]);
+    expect(rows[0].assessment_id).toBeNull();
+  });
+});

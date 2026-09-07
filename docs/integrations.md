@@ -136,6 +136,17 @@ it was a bug rather than a company that does not pay attention. The claim is a
 unique constraint on (enrolment, step), which is the only thing that survives two
 workers racing.
 
+### Retention
+
+`/api/retention/sweep` enforces the schedule in `lib/core/privacy.ts`, daily at 03:00 UTC.
+It reports exactly what it removed, because a deletion job that runs silently is one nobody
+notices has stopped — and the failure mode of a stopped retention job is a growing pile of
+strangers' finances that the readout promises has already been deleted.
+
+Two things it deliberately does not touch, and says so in its own output: client records,
+whose period has a legal floor and is the broker's to set; and consent records, which outlive
+the relationship because they are what proves the contact was lawful.
+
 ## 6. Calendar — phase 3
 
 You have an account. Wire it against this interface, not against the vendor:

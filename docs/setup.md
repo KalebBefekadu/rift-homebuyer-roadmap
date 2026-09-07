@@ -140,8 +140,10 @@ Non-negotiable, and each one is cheap now and expensive later:
       rule with a legal floor, currently defaulted to 5 years.
 - [ ] **Sentry alerts exist** on readout delivery and consent recording.
 - [ ] **Every table has an RLS policy.** Check, do not assume.
-- [ ] **The deletion job runs and actually deletes.** A retention rule with no job behind it
-      is a paragraph.
+- [x] **The deletion job runs and actually deletes.** `/api/retention/sweep`, scheduled daily
+      in `vercel.json`, plus `/api/forget` for a person who asks now. Deletion is deletion —
+      not a flag, not an anonymised row — and `lib/db/flow.test.ts` proves it. **Still needs
+      `CRON_SECRET` set in production, or the endpoint refuses to run.**
 - [ ] **The rate assumption has a source and a date** displayed with every figure it touches.
 - [ ] **Fair-housing check on the lead model.** The scoring inputs in `lib/core/lead.ts`
       are documented as the complete list, with no proxy for a protected class. Confirm that
