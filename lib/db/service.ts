@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 
 /**
  * The service-role client.
@@ -81,7 +82,22 @@ export async function currentAgentId(): Promise<string | null> {
   const db = serviceClient();
   if (!db) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
-  const { data, error } = await db.from("rift_agents").select("id").limit(1).maybeSingle();
+  /* On a deadline, because this read gates EVERY write.
+     
+     It is not the write itself — a deadline on a write that then reported
+     success would be worse than waiting — it is the lookup in front of one. An
+     unbounded lookup means a hung database holds every request open until the
+     platform kills it, which on a serverless runtime exhausts concurrency and
+     is billed the whole time.
+     
+     A timeout returns null, so the caller reports `skipped` with its own
+     reason rather than pretending the write happened. */
+  const query = Promise.resolve(db.from("rift_agents").select("id").limit(1).maybeSingle());
+  const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+
+  if (timedOut || !result) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
+
+  const { data, error } = result;
   if (error || !data) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
   agentId = data.id as string;

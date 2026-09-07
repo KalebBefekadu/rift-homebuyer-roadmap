@@ -288,9 +288,29 @@ The shared readout is the exception with no fallback: there is no built-in versi
 somebody's own numbers. Its deadline converts a hang into the honest "we cannot open this
 right now" the page already knew how to show.
 
-Deliberately **not** applied to writes. A deadline only helps where there is something
-sensible to do when it expires, and giving up on a write early to report success would be
-worse than waiting.
+Writes have their own deadline of **6 seconds**, and a different rule. There is no fallback
+worth rushing to, but an unbounded write is not a patient one — it holds a serverless function
+open until the platform kills it, which exhausts concurrency, is billed the whole time, and
+leaves the browser with nothing either way.
+
+A write that misses its deadline reports **failure**. Never success: the one thing worse than
+a slow write is a fast lie about one.
+
+Frozen database, with a warm agent cache so the bounded lookup is skipped:
+
+```
+POST /api/events    200 in 6.0s   {"ok":false,"error":"the events did not write in time"}
+POST /api/capture   200 in 8.0s   {"ok":false,"error":"we could not save that just now"}
+```
+
+Both return 200 because instrumentation must never break a funnel and a capture failure is
+not the visitor's problem — but the body says plainly that nothing was stored, and Sentry
+carries the reason.
+
+The lookup that gates every write is bounded too. It is a read, not a write, and an unbounded
+one in front of a write means a hung database holds every request open — which was exactly the
+state before this: `/studio` and both write endpoints hung for the full 25-second client
+timeout while every public page survived.
 
 ### Request size
 

@@ -3,6 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { scoreLead, type LeadInput, type LeadScore } from "@/lib/core/lead";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
 import { currentVersionId } from "./funnel";
@@ -59,7 +60,11 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
   const phone = input.phone && input.phoneConsent?.granted ? input.phone : null;
 
   try {
-    const { data, error } = await db
+    /* Bounded: the visitor is watching a button spin. A capture that cannot
+       finish in six seconds will not finish, and telling them so is better
+       than holding the page — the readout they came for is already theirs. */
+    const insert = Promise.resolve(
+      db
       .from("rift_leads")
       .insert({
         agent_id,
@@ -79,7 +84,11 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
         lead_input: input.lead as never,
       })
       .select("id")
-      .single();
+      .single(),
+    );
+    const { value: created, timedOut } = await withTimeout(insert, WRITE_DEADLINE_MS, null);
+    if (timedOut) return failed("the lead did not save in time");
+    const { data, error } = created!;
     if (error) return failed(error.message);
 
     const consents: Record<string, unknown>[] = [];

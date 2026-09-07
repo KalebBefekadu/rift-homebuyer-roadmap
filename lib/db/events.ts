@@ -1,6 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
+import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { sanitise, type EventInput } from "@/lib/core/telemetry";
 
 export { EVENT_NAMES, isEventName, sanitise, type EventName, type EventInput } from "@/lib/core/telemetry";
@@ -41,8 +42,16 @@ export async function recordEvents(events: EventInput[]): Promise<DbResult<{ wri
       payload: sanitise(e.meta),
     }));
 
-    const { error } = await db.from("rift_events").insert(rows);
-    if (error) return failed(error.message);
+    /* Bounded. Telemetry must never break a funnel, and an unbounded insert
+       against a hung database holds the visitor's request open until the
+       platform kills it — which is a worse outcome than losing the events. */
+    const { value: result, timedOut } = await withTimeout(
+      Promise.resolve(db.from("rift_events").insert(rows)),
+      WRITE_DEADLINE_MS,
+      null,
+    );
+    if (timedOut) return failed("the events did not write in time");
+    if (result?.error) return failed(result.error.message);
     return done({ written: rows.length });
   } catch (e) {
     return failed(e);

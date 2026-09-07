@@ -54,3 +54,13 @@ export async function withTimeout<T>(
  * certainty for a possibility.
  */
 export const READ_DEADLINE_MS = 2_000;
+
+/**
+ * Longer than a read, because there is no fallback worth rushing to and the
+ * work may genuinely be slow — but bounded, because an unbounded write is a
+ * held-open function rather than a patient one.
+ *
+ * A miss is reported as a failure, so the caller can surface it and Sentry can
+ * carry it. What it must never do is return success.
+ */
+export const WRITE_DEADLINE_MS = 6_000;
