@@ -269,3 +269,29 @@ describe("retention, as enforced", () => {
     expect(rows[0].assessment_id).toBeNull();
   });
 });
+
+describe("a lead without an assessment", () => {
+  test("stores rather than failing the whole capture", async (c) => {
+    /* Two real paths produce one: somebody asking for a readout they were sent
+       a link to, and somebody booking straight from the landing page. The
+       column was NOT NULL, so an empty string reached Postgres as an invalid
+       uuid and the capture failed outright — losing the lead at the single
+       most valuable moment in the funnel, a stranger volunteering an address. */
+    await c.query(
+      `insert into rift_leads (agent_id, assessment_id, side, email, score, band)
+       values ($1, null, 'buy', 'unlinked@example.com', 88, 'now')`, [AGENT]);
+    const { rows } = await c.query(
+      "select assessment_id, score from rift_leads where email='unlinked@example.com'");
+    expect(rows[0].assessment_id).toBeNull();
+    expect(rows[0].score).toBe(88);
+  });
+
+  test("its consent record stores too", async (c) => {
+    await c.query(
+      `insert into rift_consents (agent_id, assessment_id, kind, wording, version, granted)
+       values ($1, null, 'email', 'We email you your readout.', '2026-09-01', true)`, [AGENT]);
+    const { rows } = await c.query(
+      "select count(*)::int n from rift_consents where assessment_id is null and kind='email'");
+    expect(rows[0].n).toBeGreaterThan(0);
+  });
+});

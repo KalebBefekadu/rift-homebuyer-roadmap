@@ -31,7 +31,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
   }
 
-  const assessmentId = typeof b.assessmentId === "string" ? b.assessmentId : "";
+  /* Empty means "no assessment behind this lead", which is a real case rather
+     than a mistake — a share-link visitor, or somebody booking from the
+     landing page. It must not reach the database as an empty uuid. */
+  const assessmentId = typeof b.assessmentId === "string" && b.assessmentId.trim()
+    ? b.assessmentId.trim()
+    : null;
   const email = typeof b.email === "string" ? b.email.trim().slice(0, 200) : "";
   const phone = typeof b.phone === "string" ? b.phone.trim().slice(0, 40) : "";
   const name = typeof b.name === "string" ? b.name.trim().slice(0, 120) : "";

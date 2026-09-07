@@ -518,6 +518,11 @@ function Keep({ side, inputs, figures, matched, bookHref, lead }: {
             ensureLink={makeLink}
             link={link}
             lead={lead}
+            /* A ref rather than state: it is filled in by makeLink, and the
+               capture reads whatever is there at the moment it runs. Empty is
+               a legitimate answer — a share-link visitor has no assessment of
+               their own. */
+            assessmentRef={assessmentId}
           />
         </div>
 
@@ -548,7 +553,7 @@ function Keep({ side, inputs, figures, matched, bookHref, lead }: {
  * The consent note is shown before the field, not after the button. Consent
  * that appears once you have already typed is a formality.
  */
-function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead }: {
+function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, assessmentRef }: {
   side: "buy" | "sell";
   county: string;
   cashToClose: number;
@@ -556,6 +561,7 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead }: {
   ensureLink: () => Promise<string | null>;
   link: string | null;
   lead: { timing: string; monthsToReady: number | null; value: number; coBuyer: boolean };
+  assessmentRef: { current: string | null };
 }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "unavailable" | "error">("idle");
@@ -569,7 +575,9 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead }: {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          assessmentId: "",
+          /* Linked when there is an assessment to link to, and honestly
+             unlinked when there is not. */
+          assessmentId: assessmentRef.current ?? "",
           email: email.trim(),
           lead: { side, completion: 1, source: "readout", ...lead },
           deliver: { shareUrl: url, cashToClose, gap, county },

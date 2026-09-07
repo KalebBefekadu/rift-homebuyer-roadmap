@@ -22,7 +22,14 @@ import { enrol } from "./nurture";
  */
 
 export interface CaptureInput {
-  assessmentId: string;
+  /**
+   * Null when the lead did not come from an assessment — somebody asking for
+   * a readout they were sent, or booking straight from the landing page. An
+   * empty string here used to reach Postgres as an invalid uuid and fail the
+   * whole capture, losing the lead at the single most valuable moment in the
+   * funnel: a stranger volunteering their address.
+   */
+  assessmentId: string | null;
   side: "buy" | "sell";
   name?: string;
   email?: string;
@@ -55,7 +62,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       .from("rift_leads")
       .insert({
         agent_id,
-        assessment_id: input.assessmentId,
+        assessment_id: input.assessmentId || null,
         side: input.side,
         name: input.name ?? null,
         email: input.email ?? null,
@@ -71,7 +78,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
     const consents: Record<string, unknown>[] = [];
     if (input.email && input.emailConsentWording) {
       consents.push({
-        agent_id, assessment_id: input.assessmentId, kind: "email",
+        agent_id, assessment_id: input.assessmentId || null, kind: "email",
         wording: input.emailConsentWording, version: CONSENT_VERSION, granted: true,
         ip: input.ip ?? null, user_agent: input.userAgent ?? null,
       });
@@ -80,7 +87,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       /* Recorded whether granted or refused. A refusal is evidence too — it is
          what proves the number was never called. */
       consents.push({
-        agent_id, assessment_id: input.assessmentId, kind: "phone",
+        agent_id, assessment_id: input.assessmentId || null, kind: "phone",
         wording: input.phoneConsent.wording, version: CONSENT_VERSION,
         granted: input.phoneConsent.granted,
         ip: input.ip ?? null, user_agent: input.userAgent ?? null,
