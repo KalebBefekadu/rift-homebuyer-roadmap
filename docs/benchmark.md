@@ -339,6 +339,23 @@ None of these three can be raised by building. 2.5 needs a failure drill, 5.3 ne
 to not answer, and 1.5 should be left alone. **That is the signal that the prototype is
 finished and the next move is traffic, not features.**
 
+## Pass five — not yet run
+
+The MVP is built. It has not been graded, deliberately.
+
+Passes one to four scored plans and then a specification. Grading a built product against the
+same instrument before it has met a single visitor would produce a fifth number with the same
+problem as the fourth: **every field metric is still zero**, and the benchmark's own rule says
+nothing above 84 is validated without them.
+
+What has changed is that the rule can now be satisfied. The instrumentation is not a design —
+it is running, it has been verified writing real rows, and it counts distinct sessions rather
+than page views. The next grade should be paired with the first 200 completed assessments,
+and it will be the first one in this document that is worth more than the argument behind it.
+
+`docs/handoff.md` §9 records what the built MVP is and what is not yet true about it, which is
+more useful in the meantime than a score.
+
 ## How to run this benchmark
 
 1. Score each criterion 0 to 4 against the ladder, citing the document section or prototype screen that earns the score.

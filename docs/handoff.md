@@ -346,7 +346,53 @@ not yet load-bearing — wire them as their features land.
 
 ---
 
-## 9. Known gaps, honestly
+## 9. What the built MVP actually is
+
+Verified against a real Postgres and a real PostgREST, with the application
+running, not in pieces.
+
+**Works end to end**
+
+| | |
+| --- | --- |
+| Landing → assessment → readout | Server-computed figures, ungated, URL-addressable |
+| Attribution | First touch immutable by trigger; referring host only, landing path without its query |
+| Telemetry | Question ids and dwell; answer values stripped before the write and rejected by a constraint if they get through |
+| Capture | Scored with the full six signals, both consent records stored with their exact wording |
+| Consent gate | A phone number without the box ticked is refused outright |
+| Enrolment | Automatic on capture, carrying phone consent |
+| Snapshot + share link | Rendered as saved, never recomputed |
+| Scheduled jobs | Both reject an unauthenticated call and report honestly |
+| Retention | Deletion is deletion; "delete all of it" reachable from the readout |
+| Studio | Ranked leads with their arithmetic and their figures, review queue, follow-up, abandoned, drop-off, stale programmes, stale rate |
+
+**Not yet true**
+
+- **No traffic.** Every number the instrumentation reports is zero. The score in
+  [benchmark.md](benchmark.md) remains provisional under its own rule.
+- **Studio's authenticated view has never been seen with real data.** The local stack has no
+  GoTrue, so sign-in cannot be exercised locally. Everything behind it is unit- and
+  query-tested; the rendering with a live session is not.
+- **Email has never actually sent.** The path is exercised and degrades honestly; no message
+  has left the building. `BREVO_FROM_EMAIL` must be a verified sender.
+- **The calendar has never returned a real slot.** Same shape: adapter built, credentials
+  absent, and the UI says so rather than inventing times.
+- **SMS does not exist**, so every text step permanently downgrades to email. The consent
+  machinery that makes texting lawful is built and currently protects nothing.
+- **The rate is a manual weekly habit.** Studio nags when it lapses, which is the best that
+  can be done without a licensed feed.
+
+**Six defects that only running it could have found**, each of which produced a plausible
+result rather than an error — recorded because the pattern matters more than the list:
+
+1. `NEXT_PUBLIC_` variables are inlined at build time, so server code read a stale URL.
+2. A null agent lookup was cached permanently, surviving the bootstrap that fixed it.
+3. The readout sent half the lead signals — the same person scored 100 or 46.
+4. Email capture from the readout failed on every submission.
+5. Abandonment fired once per tab switch rather than once per session.
+6. The nurture runner reported unsendable touches as agent tasks.
+
+## 9b. Known gaps, honestly
 
 Scored against [benchmark.md](benchmark.md); nothing below is a surprise.
 
