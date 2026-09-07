@@ -54,6 +54,76 @@ const TONE: Record<string, string> = {
 export function Readout(p: Props) {
   const { readout: r, cash, gap, match, inputs } = p;
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  /* Lifted out of Keep so the ask control can reference the same stored
+     readout. Two components each creating their own would produce two
+     snapshots of one visit, and a review queued against whichever won. */
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const assessmentId = useRef<string | null>(null);
+  const inFlight = useRef<Promise<string | null> | null>(null);
+
+  const tracked = [
+    { label: "Cash to close", valueCents: Math.round(cash.total * 100), assumptions: cash.assumptions, couldBeWrong: cash.couldBeWrong },
+    { label: "All-in monthly", valueCents: Math.round(p.monthly.value * 100), assumptions: p.monthly.assumptions, couldBeWrong: p.monthly.couldBeWrong },
+    { label: gap.gap > 0 ? "Still to find" : "Covered", valueCents: Math.round(gap.gap * 100), assumptions: gap.assumptions, couldBeWrong: gap.couldBeWrong },
+  ];
+
+  /**
+   * Stores the readout once, and hands back its share token.
+   *
+   * Owned by the page because three things need it — the share link, the email,
+   * and the review request — and each creating its own would produce several
+   * snapshots of a single visit. The in-flight promise is what makes it once
+   * rather than once per rapid click.
+   */
+  const ensureReadout = async (): Promise<string | null> => {
+    if (shareLink) return shareLink.split("/r/")[1] ?? null;
+    if (inFlight.current) return inFlight.current;
+
+    inFlight.current = (async () => {
+      try {
+        /* The assessment id is not held on this page — it belongs to the run
+           that produced these numbers. Reattaching by session keeps the
+           snapshot tied to the right attempt without putting an id in a
+           shareable URL. */
+        const started = await fetch("/api/assessment/start", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ sessionId: sessionId(), side: "buy", county: inputs.county }),
+        }).then((x) => x.json());
+        assessmentId.current = started?.id ?? null;
+
+        const res = await fetch("/api/readout", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            assessmentId: assessmentId.current ?? "",
+            side: "buy",
+            inputs,
+            figures: {
+              verdict: r.verdict,
+              cashToClose: cash.total,
+              monthly: p.band[1].monthly,
+              gap: gap.gap,
+              assistance: match.matched.length ? range(match.usableMin, match.usableMax) : "None matched",
+              status: r.status,
+            },
+            matched: match.matched.map((m) => ({ id: m.id, name: m.name, min: m.min, max: m.max })),
+            trackedFigures: tracked,
+          }),
+        }).then((x) => x.json());
+
+        if (!res?.shareToken) return null;
+        setShareLink(`${window.location.origin}/r/${res.shareToken}`);
+        return res.shareToken as string;
+      } catch {
+        return null;
+      } finally {
+        inFlight.current = null;
+      }
+    })();
+
+    return inFlight.current;
+  };
 
   useTrack({ name: "readout_view", side: "buy", meta: { status: r.status, matched: match.matched.length } });
 
@@ -290,41 +360,17 @@ export function Readout(p: Props) {
         <div className="shell-w">
           <Keep
             side="buy"
-            inputs={inputs}
-            figures={{
-              verdict: r.verdict,
-              cashToClose: cash.total,
-              monthly: p.band[1].monthly,
-              gap: gap.gap,
-              assistance: match.matched.length ? range(match.usableMin, match.usableMax) : "None matched",
-              status: r.status,
-            }}
-            matched={match.matched.map((m) => ({ id: m.id, name: m.name, min: m.min, max: m.max }))}
+            county={inputs.county}
+            cashToClose={cash.total}
+            gapAmount={gap.gap}
             bookHref={bookHref}
             /* Each figure with what it assumes and where it could be wrong.
                The database rejects a figure that cannot state both — contract
                4.2, finally enforced on rows that exist rather than on a table
                nothing ever wrote to. */
-            tracked={[
-              {
-                label: "Cash to close",
-                valueCents: Math.round(cash.total * 100),
-                assumptions: cash.assumptions,
-                couldBeWrong: cash.couldBeWrong,
-              },
-              {
-                label: "All-in monthly",
-                valueCents: Math.round(p.monthly.value * 100),
-                assumptions: p.monthly.assumptions,
-                couldBeWrong: p.monthly.couldBeWrong,
-              },
-              {
-                label: gap.gap > 0 ? "Still to find" : "Covered",
-                valueCents: Math.round(gap.gap * 100),
-                assumptions: gap.assumptions,
-                couldBeWrong: gap.couldBeWrong,
-              },
-            ]}
+            link={shareLink}
+            ensureReadout={ensureReadout}
+            assessmentRef={assessmentId}
             lead={{
               timing: p.timing,
               /* Months on savings alone — the same figure the readout leads
@@ -342,7 +388,13 @@ export function Readout(p: Props) {
         <footer style={{ borderTop: "1px solid var(--line-2)", marginTop: 40 }}>
           <div className="shell-w" style={{ padding: "26px 0 60px" }}>
             <div className="split-w" style={{ marginBottom: 24 }}>
-              <AskReview what="Cash to close, and the gap it leaves" claim={money(cash.total)} />
+              <AskReview
+                what="Cash to close, and the gap it leaves"
+                claim={money(cash.total)}
+                figureLabel="Cash to close"
+                shareToken={shareLink ? shareLink.split("/r/")[1] ?? null : null}
+                ensureReadout={ensureReadout}
+              />
               <div className="card" style={{ overflow: "hidden" }}>
                 <button className="between" style={{ width: "100%", padding: "13px 16px", background: "transparent", border: 0, textAlign: "left" }}
                   onClick={() => setPrivacyOpen(!privacyOpen)}>
@@ -431,26 +483,25 @@ function Assumptions({ items, caveat }: { items: { label: string; value: string 
  * numbers to a partner or a parent is doing the most valuable thing that can
  * happen on this page, and it costs them one tap.
  */
-function Keep({ side, inputs, figures, matched, bookHref, lead, tracked }: {
+function Keep({ side, county, cashToClose, gapAmount, bookHref, lead, link, ensureReadout, assessmentRef }: {
   side: "buy" | "sell";
-  inputs: BuyerInputs;
-  figures: Record<string, string | number>;
-  matched: { id: string; name: string; min: number; max: number }[];
+  county: string;
+  cashToClose: number;
+  gapAmount: number;
   bookHref: string;
+  /** Owned by the page, so the ask control can reference the same readout. */
+  link: string | null;
+  /** The page owns storing the readout, so every consumer shares one snapshot. */
+  ensureReadout: () => Promise<string | null>;
   /**
-   * Each figure with what it assumes and where it could be wrong.
+   * The page's assessment ref, filled by ensureReadout.
    *
-   * Stored as constrained rows rather than folded into the display blob,
-   * because contract 4.2 is enforced by CHECK constraints on `rift_figures` —
-   * and those constraints sat on a table nothing wrote to while every real
-   * number went into an unconstrained jsonb column beside it. A guarantee that
-   * protects no data is a decoration.
+   * Passed down rather than re-declared here. Keep had its own, left behind by
+   * the refactor that moved readout creation to the page — so it stayed null
+   * forever and every lead captured from the readout email would have been
+   * stored unlinked again, silently, because the column is nullable.
    */
-  tracked: {
-    label: string; valueCents: number;
-    assumptions: { label: string; value: string }[];
-    couldBeWrong: string; ceiling?: "reviewed" | "verified";
-  }[];
+  assessmentRef: { current: string | null };
   /**
    * Everything the score needs, from the readout that already computed it.
    *
@@ -462,53 +513,22 @@ function Keep({ side, inputs, figures, matched, bookHref, lead, tracked }: {
    */
   lead: { timing: string; monthsToReady: number | null; value: number; coBuyer: boolean };
 }) {
-  const [link, setLink] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "working" | "unavailable">("idle");
   const [copied, setCopied] = useState(false);
-  const assessmentId = useRef<string | null>(null);
 
   const makeLink = async (): Promise<string | null> => {
     if (link) return link;
     setState("working");
-    try {
-      /* The assessment id is not held on this page — it belongs to the run that
-         produced these numbers. Reattaching by session keeps the snapshot tied
-         to the right attempt without putting an id in a shareable URL. */
-      const started = await fetch("/api/assessment/start", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: sessionId(), side, county: inputs.county }),
-      }).then((x) => x.json());
-      assessmentId.current = started?.id ?? null;
-
-      const res = await fetch("/api/readout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          assessmentId: assessmentId.current ?? "", side, inputs, figures, matched,
-          /* Each figure with what it assumes and where it could be wrong.
-             The database rejects a figure that cannot state both — which is
-             contract 4.2, finally enforced on the rows that actually exist
-             rather than on a table nothing wrote to. */
-          trackedFigures: tracked,
-        }),
-      }).then((x) => x.json());
-
-      if (res?.shareToken) {
-        const url = `${window.location.origin}/r/${res.shareToken}`;
-        setLink(url);
-        setState("idle");
-        track({ name: "share_sent", side, meta: { via: "link" } });
-        return url;
-      }
+    const token = await ensureReadout();
+    if (!token) {
       /* No token means the snapshot was not stored. Say so rather than hand
          over a link that will 404 for whoever it is sent to. */
       setState("unavailable");
       return null;
-    } catch {
-      setState("unavailable");
-      return null;
     }
+    setState("idle");
+    track({ name: "share_sent", side, meta: { via: "link" } });
+    return `${window.location.origin}/r/${token}`;
   };
 
   const copy = async () => {
@@ -572,9 +592,9 @@ function Keep({ side, inputs, figures, matched, bookHref, lead, tracked }: {
           </p>
           <EmailIt
             side={side}
-            county={inputs.county}
-            cashToClose={Number(figures.cashToClose) || 0}
-            gap={Number(figures.gap) || 0}
+            county={county}
+            cashToClose={cashToClose}
+            gap={gapAmount}
             ensureLink={makeLink}
             link={link}
             lead={lead}
@@ -582,7 +602,7 @@ function Keep({ side, inputs, figures, matched, bookHref, lead, tracked }: {
                capture reads whatever is there at the moment it runs. Empty is
                a legitimate answer — a share-link visitor has no assessment of
                their own. */
-            assessmentRef={assessmentId}
+            assessmentRef={assessmentRef}
           />
         </div>
 
@@ -716,16 +736,31 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
  * one. Without it `pending-review` was a state the product explained and could
  * never enter, which is a path drawn on a wall.
  */
-function AskReview({ what, claim }: { what: string; claim: string }) {
+function AskReview({ what, claim, figureLabel, shareToken, ensureReadout }: {
+  what: string;
+  claim: string;
+  /** Which figure this sits beside. The server resolves it to an id. */
+  figureLabel: string;
+  /** Present once a share link exists, which is what identifies the readout. */
+  shareToken: string | null;
+  /** Creates the readout if there is not one yet, and returns its token. */
+  ensureReadout: () => Promise<string | null>;
+}) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "unavailable">("idle");
 
   const ask = async () => {
     setState("sending");
     try {
+      /* Without a stored readout there is no figure to attach the request to,
+         so the review would arrive as free text and could never advance the
+         number the person is looking at. Making the link first is what turns
+         "check this" into a request about something specific. */
+      const token = shareToken ?? (await ensureReadout());
+
       const r = await fetch("/api/review", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "figure", what, claim }),
+        body: JSON.stringify({ kind: "figure", what, claim, figureLabel, shareToken: token }),
       }).then((x) => x.json());
       track({ name: "review_requested", side: "buy" });
       setState(r?.ok && !r?.skipped ? "sent" : "unavailable");

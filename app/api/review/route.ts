@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { limited } from "@/lib/db/guard";
-import { ask } from "@/lib/db/review";
+import { ask, figureFor } from "@/lib/db/review";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -48,6 +48,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "what and claim are required" }, { status: 400 });
   }
 
+  /* Resolved on the server from the share token and the label, never accepted
+     from the client. A client that can name an arbitrary figure id can queue a
+     review against a stranger's numbers. */
+  const shareToken = typeof b.shareToken === "string" ? b.shareToken.slice(0, 64) : "";
+  const figureLabel = typeof b.figureLabel === "string" ? b.figureLabel.slice(0, 120) : "";
+  const figureId = shareToken && figureLabel ? await figureFor(shareToken, figureLabel) : null;
+
   const r = await ask({
     who: typeof b.who === "string" && b.who.trim() ? b.who : "Someone on the site",
     kind,
@@ -55,6 +62,7 @@ export async function POST(req: Request) {
     claim,
     ceiling: CEILINGS[kind],
     readoutId: typeof b.readoutId === "string" ? b.readoutId : undefined,
+    figureId: figureId ?? undefined,
   });
 
   if (!r.ok) {

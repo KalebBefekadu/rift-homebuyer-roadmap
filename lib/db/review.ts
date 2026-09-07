@@ -40,6 +40,37 @@ const TO_ADVANCE: Record<ReviewKind, string> = {
   plan: "Read it end to end before it goes out.",
 };
 
+/**
+ * The figure a share token's readout holds under a given label.
+ *
+ * The ask control knows which figure it sits beside; it does not know that
+ * figure's id, and it must not be trusted to send one — a client that can name
+ * an arbitrary figure id can queue a review against somebody else's numbers.
+ * So the server resolves it from the token and the label instead.
+ */
+export async function figureFor(shareToken: string, label: string): Promise<string | null> {
+  const db = serviceClient();
+  if (!db) return null;
+  try {
+    const { data } = await db
+      .from("rift_readouts")
+      .select("id")
+      .eq("share_token", shareToken)
+      .maybeSingle();
+    if (!data) return null;
+
+    const { data: fig } = await db
+      .from("rift_figures")
+      .select("id")
+      .eq("readout_id", data.id)
+      .eq("label", label)
+      .maybeSingle();
+    return (fig?.id as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured — the request was not queued");
