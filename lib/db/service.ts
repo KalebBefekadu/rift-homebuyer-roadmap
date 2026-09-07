@@ -24,7 +24,20 @@ let cached: SupabaseClient | null | undefined;
 export function serviceClient(): SupabaseClient | null {
   if (cached !== undefined) return cached;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  /**
+   * `SUPABASE_URL` first, `NEXT_PUBLIC_SUPABASE_URL` only as a fallback.
+   *
+   * NEXT_PUBLIC_ variables are inlined into the bundle at BUILD time. Server
+   * code that reads one is therefore pinned to whatever value was set when the
+   * bundle was compiled, and changing the runtime environment does nothing —
+   * the process keeps talking to the old project while every environment
+   * variable on the machine says otherwise.
+   *
+   * That is not a hypothetical: it is exactly what happened the first time this
+   * was pointed at a local database, and the symptom was a server that
+   * reported "no agent row exists yet" while never opening a connection.
+   */
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key || url.includes("your-project")) {
@@ -46,19 +59,37 @@ export const dbConfigured = () => serviceClient() !== null;
  * The single-agent id.
  *
  * Rift serves one agent today. Every table already carries `agent_id` so that
- * multi-tenancy is a query change rather than a migration, but resolving it
- * per request would be four round trips to learn something that cannot vary.
- * When a second agent exists, this becomes a lookup and nothing else moves.
+ * multi-tenancy is a query change rather than a migration, but resolving it on
+ * every request would be a round trip to learn something that cannot vary.
+ *
+ * Only a SUCCESSFUL lookup is cached forever. An absent agent is cached for a
+ * few seconds and then retried, because "there is no agent row" is a temporary
+ * truth: the bootstrap is a manual step that runs after the first deploy, and
+ * caching its absence permanently meant a long-lived instance answered "no
+ * agent row exists yet" to every request until somebody restarted it.
+ *
+ * That is not hypothetical — it happened the first time this was run against a
+ * real database, and the symptom was every write skipping while the row was
+ * plainly there in the table.
  */
-let agentId: string | null | undefined;
+let agentId: string | null = null;
+let missingUntil = 0;
+
+const MISSING_RETRY_MS = 10_000;
 
 export async function currentAgentId(): Promise<string | null> {
-  if (agentId !== undefined) return agentId;
+  if (agentId) return agentId;
+  if (Date.now() < missingUntil) return null;
+
   const db = serviceClient();
-  if (!db) { agentId = null; return null; }
+  if (!db) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
   const { data, error } = await db.from("rift_agents").select("id").limit(1).maybeSingle();
-  if (error || !data) { agentId = null; return null; }
+  if (error || !data) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
+
   agentId = data.id as string;
   return agentId;
 }
+
+/** For tests and for the bootstrap, which creates the row this caches. */
+export function resetAgentCache() { agentId = null; missingUntil = 0; }

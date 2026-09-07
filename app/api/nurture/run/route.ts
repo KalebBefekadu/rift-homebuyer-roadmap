@@ -41,14 +41,17 @@ export async function POST(req: Request) {
   }
   if ("skipped" in queue) return NextResponse.json({ ok: true, skipped: true, reason: queue.reason });
 
-  let sent = 0, held = 0, failedCount = 0;
+  /* Four counts, not two. "Held for the agent" and "we could not send it" are
+     different facts and lumping them together sends somebody looking for a task
+     that does not exist — which is exactly what the first live run did. */
+  let sent = 0, held = 0, notConfigured = 0, failedCount = 0;
 
   for (const t of queue.data) {
     if (!t.auto) { held++; continue; }
     if (t.channel !== "email" || !t.email) { held++; continue; }
 
     const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
-    if (!claim.ok || "skipped" in claim || !claim.data.claimed) { held++; continue; }
+    if (!claim.ok || "skipped" in claim || !claim.data.claimed) { notConfigured++; continue; }
 
     const res = await sendReadout({
       to: t.email,
@@ -61,7 +64,11 @@ export async function POST(req: Request) {
     });
 
     if (res.ok && !("skipped" in res)) { sent++; continue; }
-    if (res.ok) { await markTouch(t.enrolmentId, t.stepId, "skipped", "reason" in res ? res.reason : undefined); held++; continue; }
+    if (res.ok) {
+      await markTouch(t.enrolmentId, t.stepId, "skipped", "reason" in res ? res.reason : undefined);
+      notConfigured++;
+      continue;
+    }
 
     /* A failed send becomes a task rather than a log line. A bounced touch
        looks exactly like disinterest from the outside, and an agent who writes
@@ -78,6 +85,10 @@ export async function POST(req: Request) {
     /* Steps waiting on the agent are reported, never hidden. A queue that only
        counts what it did makes the human half invisible. */
     heldForAgent: held,
+    /* Wanted to send and could not, because email is not switched on. Not the
+       agent's task and not an error — a configuration gap, and it should read
+       as one. */
+    notConfigured,
     failed: failedCount,
   });
 }
