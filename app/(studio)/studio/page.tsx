@@ -6,9 +6,10 @@ import { funnelReport } from "@/lib/db/events";
 import { readStale } from "@/lib/db/programs";
 import { openItems } from "@/lib/db/review";
 import { due } from "@/lib/db/nurture";
-import { Trust } from "@/components/rift/Trust";
+import { abandoned } from "@/lib/db/recovery";
 import { REVIEW_SLA_HOURS } from "@/lib/core/review";
 import { CHANNEL_LABEL } from "@/lib/core/nurture";
+import { ReviewRow } from "./ReviewRow";
 import { BAND_LABEL, BAND_TONE, sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
 import { Ico, Mark } from "@/components/rift/icons";
@@ -54,6 +55,8 @@ export default async function StudioToday() {
     openItems(),
     due(new Date()),
   ]);
+  const abandonedRead = await abandoned();
+  const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
 
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
   const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
@@ -141,20 +144,7 @@ export default async function StudioToday() {
                     : <span className="chip chip-pos">All inside {REVIEW_SLA_HOURS}h</span>}
                 </div>
                 {pending.map((r, i) => (
-                  <div key={r.id} style={{ padding: "12px 15px", borderBottom: i === pending.length - 1 ? undefined : "1px solid var(--line-3)" }}>
-                    <div className="between wrap gap-2">
-                      <div className="row wrap gap-2">
-                        <span className="t-sm w6">{r.who}</span>
-                        <Trust state={r.state} short />
-                        <span className={`chip ${r.waitingHours > REVIEW_SLA_HOURS ? "chip-neg" : ""}`}>{r.waitingHours}h waiting</span>
-                      </div>
-                      <span className="mono t-sm w6">{r.claim}</span>
-                    </div>
-                    <p className="t-sm" style={{ marginTop: 4 }}>{r.what}</p>
-                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}>
-                      <span className="w6">To advance: </span>{r.toAdvance}
-                    </p>
-                  </div>
+                  <ReviewRow key={r.id} item={r} last={i === pending.length - 1} />
                 ))}
               </div>
             ) : null}
@@ -237,6 +227,42 @@ export default async function StudioToday() {
             </div>
           )}
         </section>
+
+        {/* Abandoned */}
+        {partial.length ? (
+          <section style={{ marginTop: 32 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Started, not finished
+            </h2>
+            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+              The largest source of lost leads in this product, and a normal state rather than a
+              failure. Most of these people have given no way to reach them, which is the correct
+              outcome — a resumable link goes only to somebody who gave an address for that
+              purpose.
+            </p>
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {partial.slice(0, 12).map((a, i) => (
+                <div key={a.assessmentId} className="between wrap gap-2" style={{
+                  padding: "11px 15px", borderBottom: i === Math.min(partial.length, 12) - 1 ? undefined : "1px solid var(--line-3)",
+                }}>
+                  <div>
+                    <div className="row wrap gap-2">
+                      <span className="t-sm w55">{a.email ?? "No contact details"}</span>
+                      <span className="chip">{a.side === "buy" ? "Buyer" : "Seller"}</span>
+                      {a.county ? <span className="chip">{a.county}</span> : null}
+                    </div>
+                    <div className="t-xs c-4" style={{ marginTop: 3 }}>
+                      {a.answered} question{a.answered === 1 ? "" : "s"} answered · quiet for {a.hoursSince}h
+                    </div>
+                  </div>
+                  {a.email
+                    ? <span className="chip chip-acc">Can be sent a resume link</span>
+                    : <span className="chip">Nothing to send</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Funnel */}
         <section style={{ marginTop: 32 }}>
