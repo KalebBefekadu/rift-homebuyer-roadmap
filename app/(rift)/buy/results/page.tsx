@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { matchForVisitor } from "@/lib/db/match";
+import { currentRate } from "@/lib/db/rates";
 import { BUYER_DEFAULTS, cashToClose, cashGap, gapLevers, monthlyComputed, type BuyerInputs } from "@/lib/core/compute";
 import { buyerReadout } from "@/lib/core/results";
 import { firstTimeFrom, type Ownership } from "@/lib/core/funnel";
@@ -55,7 +56,16 @@ export default async function ResultsPage({
     assistance: 0,
   };
 
-  const { match, source, windowDays } = await matchForVisitor(county, firstTimeFrom(ownership));
+  const [{ match, source, windowDays }, rate] = await Promise.all([
+    matchForVisitor(county, firstTimeFrom(ownership)),
+    currentRate(),
+  ]);
+
+  /* The rate is applied to the inputs rather than left at the engine default,
+     so the monthly figures and the assumption printed beside them are the same
+     number. Showing one rate and computing with another is the exact class of
+     defect this product cannot survive. */
+  i.ratePct = rate.pct;
 
   const cash = cashToClose(i);
   const gap = cashGap(i);
@@ -84,6 +94,7 @@ export default async function ResultsPage({
       match={match}
       registrySource={source}
       windowDays={windowDays}
+      rate={rate}
     />
   );
 }

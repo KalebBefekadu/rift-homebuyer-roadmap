@@ -206,15 +206,29 @@ agreements. The product already treats representation as a lifecycle gate with f
 (`None / Prepared / Sent / Signed / Expired`) — that vocabulary maps cleanly onto any
 provider's webhooks, so build to the five states and let the vendor fill them.
 
-### Mortgage rates
-**The largest unstated assumption in the product.** `BUYER_DEFAULTS.ratePct` is 6.5% and
-every monthly figure, every gap, and every timeline depends on it. It is currently a literal
-with no source and no date.
+### Mortgage rates — built, needs a weekly habit
 
-Minimum acceptable answer for launch: a **weekly** rate, stored with its date and source, and
-displayed as an assumption on every figure it touches — which `Computed.assumptions` already
-supports. A rate that is silently four months old is exactly the "wrong number rather than an
-error" failure this codebase is built to prevent.
+Was the largest unstated assumption in the product: `ratePct` was a literal with no source and
+no date, and every monthly figure, gap and timeline depends on it.
+
+`rift_rate_snapshots` stores the rate with its source and the date it was true. The readout
+applies the stored rate and prints it beside the figures it produced, labelled **Current**,
+**Ageing** (over 7 days) or **Not recent** (over 21 days). With nothing recorded it falls back
+to the same 6.5% the engine always used — but says so, as "a starting assumption at no
+recorded date" rather than dressing it up as an observation.
+
+Snapshots rather than one mutable row, because a readout is an immutable record of what
+somebody was told. When a plan later disagrees with their readout, "the rate moved from 6.5%
+on 19 Aug to 6.75% on 6 Sep" is the explanation — and it only exists if the old value was kept.
+
+```bash
+npm run rift:rate -- 6.72 --source "Freddie Mac PMMS" --as-of 2026-09-04
+```
+
+**Deliberately a weekly command, not a scraper.** Free rate APIs are unreliable and their
+terms change, and a wrong rate pulled automatically is worse than a right one typed weekly
+because nobody is watching the automatic one. Replace the argument with a fetch when there is
+a licensed feed; everything else stays.
 
 ---
 

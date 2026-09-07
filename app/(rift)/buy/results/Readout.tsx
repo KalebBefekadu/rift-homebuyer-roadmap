@@ -9,6 +9,7 @@ import type { MatchResult } from "@/lib/core/registry";
 import { FUNDING_LABEL, TYPE_LABEL } from "@/lib/core/registry";
 import { OWN_LABEL, type Ownership } from "@/lib/core/funnel";
 import { RETENTION } from "@/lib/core/privacy";
+import type { RateAssumption } from "@/lib/core/rate";
 import { useTrack, track } from "@/lib/rift/track";
 import { useState, useRef } from "react";
 import { sessionId } from "@/lib/rift/session";
@@ -39,6 +40,7 @@ interface Props {
   match: MatchResult;
   registrySource: "database" | "seed";
   windowDays: number;
+  rate: RateAssumption;
 }
 
 const TONE: Record<string, string> = {
@@ -160,6 +162,7 @@ export function Readout(p: Props) {
               </div>
             </div>
             <Assumptions items={cash.assumptions} caveat={cash.couldBeWrong} />
+            <RateNote rate={p.rate} />
           </Sec>
 
           {/* 2 — programmes */}
@@ -743,6 +746,36 @@ function ForgetMe() {
           <Ico.x size={12} />{state === "working" ? "Deleting…" : "Delete all of it"}
         </button>
       </div>
+    </div>
+  );
+}
+
+
+/**
+ * The rate, with its date.
+ *
+ * Every monthly figure on this page depends on it and it is the only
+ * assumption here that moves weekly. Shown beside the figures rather than in a
+ * footnote, and stated as stale when it is — a rate that is quietly four
+ * months old produces arithmetic that is correct and an answer that is wrong,
+ * which is the one failure this product is built to prevent.
+ */
+function RateNote({ rate }: { rate: RateAssumption }) {
+  const tone = rate.freshness === "fresh" ? "chip-pos" : rate.freshness === "ageing" ? "chip" : "chip-warn";
+  return (
+    <div className="card p-4" style={{ marginTop: 12 }}>
+      <div className="between wrap gap-2">
+        <div className="row gap-2">
+          <Ico.chart size={14} className="c-3" />
+          <span className="t-sm w6">Interest rate used: {rate.pct.toFixed(2)}%</span>
+        </div>
+        <span className={`chip ${tone}`}>
+          {rate.freshness === "fresh" ? "Current" : rate.freshness === "ageing" ? "Ageing" : "Not recent"}
+        </span>
+      </div>
+      <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.55 }}>
+        {rate.asOf ? `${rate.source}, as of ${rate.asOf}. ` : `${rate.source}. `}{rate.note}
+      </p>
     </div>
   );
 }
