@@ -22,7 +22,12 @@ import { track, useTrack, flush } from "@/lib/rift/track";
  *      else, and blocks submission while a phone number is present. Consent
  *      bundled into a "by continuing you agree" line is not consent.
  */
-export function Booking({ phoneConsent, emailNote }: { phoneConsent: string; emailNote: string }) {
+export function Booking({ phoneConsent, emailNote, slots, source }: {
+  phoneConsent: string;
+  emailNote: string;
+  slots: { start: string; label: string }[];
+  source: "calendar" | "unconfigured" | "error";
+}) {
   const q = useSearchParams();
   const topic = q.get("topic") ?? "your numbers";
   const side = q.get("v") === "sell" ? "sell" : "buy";
@@ -37,16 +42,14 @@ export function Booking({ phoneConsent, emailNote }: { phoneConsent: string; ema
 
   useTrack({ name: "booking_start", side, meta: { hasTopic: topic !== "your numbers" } });
 
-  /* Placeholder times until the calendar integration lands in this phase's
-     remaining work. They are labelled as indicative rather than presented as
-     confirmed availability — offering a slot that may not exist is a promise
-     the product cannot keep. */
-  const slots = [
-    "Tomorrow, 6:00pm", "Thursday, 12:30pm", "Thursday, 7:00pm", "Saturday, 10:00am",
-  ];
+  /* When there is no real availability we ask for a preference rather than
+     offering invented times. A person choosing "whenever suits" and being
+     called back is a slightly worse experience; a person choosing 6pm Thursday
+     and finding it never existed is a broken promise. */
+  const live = source === "calendar" && slots.length > 0;
 
   const blocked = Boolean(phone) && !consent;
-  const ready = (email || phone) && slot && !blocked;
+  const ready = (email || phone) && (live ? slot : true) && !blocked;
 
   const submit = async () => {
     if (!ready) return;
@@ -61,11 +64,12 @@ export function Booking({ phoneConsent, emailNote }: { phoneConsent: string; ema
           name, email, phone,
           phoneConsent: consent,
           lead: { side, timing: q.get("t") ?? "", completion: 1, source: "booking" },
+          ...(live ? { slotStart: slot, topic } : {}),
         }),
       });
       const d = await res.json();
       if (!d.ok && d.error) { setState("error"); setError(d.error); return; }
-      track({ name: "booking_complete", side, meta: { slot: slots.indexOf(slot) } });
+      track({ name: "booking_complete", side, meta: { live } });
       flush();
       setState("done");
     } catch {
@@ -80,12 +84,16 @@ export function Booking({ phoneConsent, emailNote }: { phoneConsent: string; ema
         <div className="card p-5" style={{ maxWidth: 560 }}>
           <div className="row gap-2">
             <Ico.checkCircle size={18} className="c-pos" />
-            <span className="t-md w6">Asked for {slot.toLowerCase()}.</span>
+            <span className="t-md w6">
+              {live
+                ? `Held — ${slots.find((s) => s.start === slot)?.label ?? "your slot"}.`
+                : "Got it."}
+            </span>
           </div>
           <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
             Kaleb confirms by {email ? "email" : "phone"} — usually within a few hours, and
-            always the same day. If that time stops working, say so and it moves; there is
-            nothing to cancel and no deposit.
+            always the same day. If it stops working, say so and it moves; there is nothing to
+            cancel and no deposit.
           </p>
           <Link href="/buy/results" className="btn btn-g" style={{ marginTop: 16 }}>
             <Ico.chevL size={14} />Back to my readout
@@ -132,17 +140,37 @@ export function Booking({ phoneConsent, emailNote }: { phoneConsent: string; ema
         <div className="card p-5" style={{ marginTop: 20, maxWidth: 560 }}>
           <div className="field">
             <span className="label">When suits you?</span>
-            <div className="col gap-2" style={{ marginTop: 6 }}>
-              {slots.map((s) => (
-                <label key={s} className="opt" data-on={slot === s}>
-                  <input type="radio" name="slot" checked={slot === s} onChange={() => setSlot(s)} />
-                  <span className="t-sm">{s}</span>
-                </label>
-              ))}
-            </div>
-            <p className="t-2xs c-4" style={{ marginTop: 8 }}>
-              Indicative times — Kaleb confirms the exact slot when he replies.
-            </p>
+            {live ? (
+              <>
+                <div className="col gap-2" style={{ marginTop: 6 }}>
+                  {slots.map((s) => (
+                    <label key={s.start} className="opt" data-on={slot === s.start}>
+                      <input type="radio" name="slot" checked={slot === s.start} onChange={() => setSlot(s.start)} />
+                      <span className="t-sm">{s.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="t-2xs c-4" style={{ marginTop: 8 }}>
+                  Real openings in Kaleb&apos;s calendar. Taking one holds it.
+                </p>
+              </>
+            ) : (
+              <>
+                <textarea
+                  className="input"
+                  rows={2}
+                  style={{ marginTop: 6, resize: "vertical" }}
+                  placeholder="Evenings after 6, or weekends — whatever works"
+                  value={slot}
+                  onChange={(e) => setSlot(e.target.value)}
+                />
+                <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
+                  {source === "error"
+                    ? "The calendar is not responding, so we are not going to show you times that might not exist. Tell us roughly when suits and Kaleb comes back with a slot."
+                    : "Live booking is not switched on yet. Tell us roughly when suits and Kaleb comes back with a time — usually the same day."}
+                </p>
+              </>
+            )}
           </div>
 
           <label className="field" style={{ marginTop: 16 }}>

@@ -3,6 +3,7 @@ import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { sendReadout } from "@/lib/db/email";
+import { book } from "@/lib/db/calendar";
 import type { LeadInput } from "@/lib/core/lead";
 
 export const runtime = "nodejs";
@@ -87,6 +88,25 @@ export async function POST(req: Request) {
      reported separately. Failing the whole capture because an email bounced
      would lose the relationship over the least important part of it — the
      readout is already on their screen and already has a URL. */
+  /* Holding the slot happens after the lead is stored and is reported
+     separately. A calendar outage must not lose the relationship — the readout
+     and the contact details are the durable part; a time can be rearranged. */
+  let booking: string | undefined;
+  const slotStart = typeof b.slotStart === "string" ? b.slotStart : "";
+  if (slotStart && email) {
+    const held = await book({
+      start: slotStart,
+      name: name || "Rift visitor",
+      email,
+      phone: phone && phoneTicked ? phone : undefined,
+      topic: typeof b.topic === "string" ? b.topic : "your numbers",
+    });
+    booking = held.ok ? ("skipped" in held ? "not configured" : "held") : "failed";
+    if (!held.ok) {
+      captureOpError(new Error(held.error), { op: "calendar.book", extra: { hasEmail: true } });
+    }
+  }
+
   let delivery: string | undefined;
   const wants = (b.deliver ?? null) as Record<string, unknown> | null;
   if (email && wants && typeof wants.shareUrl === "string") {
@@ -102,7 +122,7 @@ export async function POST(req: Request) {
     delivery = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
   }
 
-  if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason, delivery });
+  if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason, delivery, booking });
 
-  return NextResponse.json({ ok: true, band: r.data.score.band, delivery });
+  return NextResponse.json({ ok: true, band: r.data.score.band, delivery, booking });
 }

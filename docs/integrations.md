@@ -147,27 +147,38 @@ Two things it deliberately does not touch, and says so in its own output: client
 whose period has a legal floor and is the broker's to set; and consent records, which outlive
 the relationship because they are what proves the contact was lawful.
 
-## 6. Calendar — phase 3
+## 6. Calendar — built, pending credentials
 
-You have an account. Wire it against this interface, not against the vendor:
+`lib/db/calendar.ts`, written against an interface rather than a vendor because the vendor is
+the least durable thing here. Cal.com is the implementation; swapping it should touch that one
+file. Set `CAL_API_KEY`, `CAL_EVENT_TYPE_ID` and optionally `RIFT_TIMEZONE`.
 
-```ts
-interface Booking {
-  slots(topic: string, within: Days): Promise<Slot[]>;
-  hold(slot: Slot, who: Contact): Promise<HoldId>;   // never book without a hold
-  confirm(id: HoldId): Promise<Confirmed>;
-  cancel(id: HoldId, reason: string): Promise<void>;
-}
-```
+**The rule that survives any provider: never offer a slot that is not real.** With no
+credentials the booking screen asks for a rough preference instead of showing times, and says
+which state it is in. Three states, three screens:
 
-Two requirements the prototype already assumes, both easy to lose:
+| State | What the visitor sees |
+| --- | --- |
+| `calendar` | Real openings. Taking one holds it |
+| `unconfigured` | "Live booking is not switched on yet — tell us roughly when suits" |
+| `error` | "The calendar is not responding, so we are not going to show you times that might not exist" |
 
-- **The call is about their blocker, not a generic slot.** `/prototype/book` passes
-  `?topic=` from the readout's computed blocker. Keep it — it is why the booking screen
-  converts, and it is one query parameter.
+Inventing four plausible times to paper over either of the last two is a promise the product
+cannot keep, and the person discovers it only after choosing one — at the exact moment they
+had decided to trust it.
+
+Two requirements that survived the integration and are easy to lose in a refactor:
+
+- **The call is about their blocker.** `?topic=` carries the readout's computed blocker into
+  the booking title. It is one query parameter and it is why the screen converts.
 - **Consent is captured at booking, not after.** The TCPA checkbox blocks submission when a
-  phone number is present. That gate must survive the integration; a vendor's own booking
-  widget will not carry it, which is an argument for the API over the embed.
+  phone number is present, and the phone is only passed to the calendar when it is ticked. A
+  vendor's own booking widget would not carry that gate, which is the argument for the API
+  over the embed.
+
+Holding the slot happens after the lead is stored and is reported separately. A calendar
+outage must not lose the relationship — the contact details are the durable part; a time can
+be rearranged.
 
 ---
 
