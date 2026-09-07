@@ -2,6 +2,7 @@ import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { RETENTION } from "@/lib/core/privacy";
+import { markAbandoned } from "./recovery";
 
 /**
  * Enforcing the retention schedule.
@@ -36,6 +37,8 @@ export interface SweepResult {
   answers: number;
   events: number;
   attributions: number;
+  /** Marked abandoned rather than deleted — still recoverable. */
+  marked: number;
   /** Anything the job deliberately did not touch, and why. */
   held: string[];
 }
@@ -50,6 +53,27 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
   const held: string[] = [];
 
   try {
+    /* Mark, before deleting anything.
+       
+       An assessment quiet for a day is abandoned; one quiet for a month with no
+       contact details is deleted. Marking is not deletion and must not become
+       it — an abandonment deleted immediately destroys the recovery
+       opportunity, and one never marked leaves the agent staring at a queue
+       that never empties. */
+    const { data: quiet } = await db
+      .from("rift_assessments")
+      .select("id")
+      .eq("agent_id", agent_id)
+      .is("completed_at", null)
+      .is("abandoned_at", null)
+      .lte("started_at", ago(1));
+
+    let marked = 0;
+    for (const q of ((quiet ?? []) as { id: string }[])) {
+      const r = await markAbandoned(q.id);
+      if (r.ok && !("skipped" in r)) marked += 1;
+    }
+
     /* Abandoned, no contact details. The strictest window, and deliberately so:
        this is the most sensitive data in the product — a stranger's finances,
        with no relationship attached and no way to ask them about it. */
@@ -129,6 +153,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       answers,
       events: evCount ?? 0,
       attributions: atCount ?? 0,
+      marked,
       held,
     });
   } catch (e) {

@@ -52,9 +52,6 @@ export function serviceClient(): SupabaseClient | null {
   return cached;
 }
 
-/** Whether the database is reachable at all. Callers report this, never hide it. */
-export const dbConfigured = () => serviceClient() !== null;
-
 /**
  * The single-agent id.
  *
@@ -91,5 +88,3 @@ export async function currentAgentId(): Promise<string | null> {
   return agentId;
 }
 
-/** For tests and for the bootstrap, which creates the row this caches. */
-export function resetAgentCache() { agentId = null; missingUntil = 0; }

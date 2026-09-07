@@ -24,7 +24,11 @@ export const failed = (error: unknown) => ({
   error: error instanceof Error ? error.message : String(error),
 });
 
-/** True only when real data came back — `skipped` is not success with data. */
-export function hasData<T>(r: DbResult<T>): r is { ok: true; data: T } {
-  return r.ok === true && !("skipped" in r);
-}
+/*
+ * There is deliberately no `hasData` helper.
+ *
+ * One existed and nothing used it: every caller narrows inline with
+ * `r.ok && "data" in r`, which reads clearly at the call site and needs no
+ * import. A helper nobody reaches for is a second way to do the same thing,
+ * and the second way is the one that drifts.
+ */
