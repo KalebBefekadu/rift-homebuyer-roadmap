@@ -14,7 +14,8 @@
     "rift:bootstrap": "node --env-file=.env.local scripts/bootstrap-rift.mjs",
     "rift:seed-programs": "node scripts/generate-program-seed.mjs",
     "rift:rate": "node --env-file=.env.local scripts/record-rate.mjs",
-    "verify:queries": "node scripts/verify-queries.mjs"
+    "verify:queries": "node scripts/verify-queries.mjs",
+    "verify": "tsc --noEmit && next lint && vitest run && next build"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.66.0",

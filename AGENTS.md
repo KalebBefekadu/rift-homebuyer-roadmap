@@ -114,6 +114,7 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 ## Commands
 
 ```bash
+npm run verify   # typecheck, lint, test, build — run this before every commit
 npm run dev      # prototype at /prototype — needs no configuration at all
 npm run dev:clean # use after any `npm run build` — see docs/setup.md §3
 npm test         # vitest
