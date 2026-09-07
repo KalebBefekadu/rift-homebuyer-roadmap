@@ -29,9 +29,16 @@ beforeAll(async () => {
     await c.query(readFileSync("supabase/migrations/20260907000000_rift_core.sql", "utf8"));
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
     db = c;
-  } catch {
+  } catch (e) {
+    /* Only an unreachable database is a skip. A migration that fails to apply
+       is a real failure and must say so — swallowing it here would turn the
+       suite that proves the constraints bite into a suite that quietly proves
+       nothing. */
+    const msg = e instanceof Error ? e.message : String(e);
+    const unreachable = /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|timeout expired/i.test(msg);
     db = null;
     try { await c.end(); } catch { /* never connected */ }
+    if (!unreachable) throw new Error(`database setup failed (not a connection problem): ${msg}`);
   }
 }, 60_000);
 

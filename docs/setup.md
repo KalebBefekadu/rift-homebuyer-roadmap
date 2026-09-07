@@ -61,6 +61,39 @@ npm run dev:clean
 It was diagnosed once, from scratch, by bisecting a component that turned out to be fine.
 Do not repeat that.
 
+## 2c. Bring up a database
+
+The schema and its constraints are validated against a real Postgres, not by
+eye. To run those suites locally:
+
+```bash
+docker run -d --name rift-pg -e POSTGRES_PASSWORD=pw -p 55432:5432 postgres:16-alpine
+```
+
+`npm test` picks it up automatically. Without it the database suites **skip**
+rather than fail — a contributor with no Docker still gets a meaningful signal.
+A migration that fails to apply is a real failure and says so; only an
+unreachable database is a skip.
+
+## 2d. Bootstrap the agent
+
+Nothing is recorded until an agent row exists. Every write reports
+"no agent row exists yet" and skips — honestly, but completely.
+
+```bash
+npm run rift:bootstrap
+```
+
+It is deliberately manual and not triggered by signup. Provisioning an agent
+because somebody registered would hand the book of business to whoever got
+there first, and in a single-agent product that mistake has no recovery.
+
+Link it to a real login once the Supabase auth user exists:
+
+```bash
+node --env-file=.env.local scripts/bootstrap-rift.mjs --auth-user-id <uuid>
+```
+
 ## 3. Configure the services
 
 ```bash

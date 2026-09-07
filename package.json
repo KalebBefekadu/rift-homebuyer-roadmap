@@ -10,7 +10,9 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "brevo:ensure-attributes": "node --env-file=.env.local scripts/ensure-brevo-attributes.mjs"
+    "brevo:ensure-attributes": "node --env-file=.env.local scripts/ensure-brevo-attributes.mjs",
+    "rift:bootstrap": "node --env-file=.env.local scripts/bootstrap-rift.mjs",
+    "rift:seed-programs": "node scripts/generate-program-seed.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.66.0",
