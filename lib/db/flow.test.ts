@@ -26,6 +26,7 @@ beforeAll(async () => {
     await c.query("drop schema if exists public cascade; create schema public;");
     await c.query(readFileSync("supabase/test/shim.sql", "utf8"));
     await c.query(readFileSync("supabase/migrations/20260907000000_rift_core.sql", "utf8"));
+    await c.query(readFileSync("supabase/migrations/20260907120000_rift_nurture_review.sql", "utf8"));
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
     /* auth.users lives outside the `public` schema, so it survives the reset
        above and a second run would collide on its primary key. */
@@ -145,5 +146,63 @@ describe("a visitor's journey, as stored", () => {
       "select count(*)::int n from rift_programs where verified_on <  (date '2026-09-07' - interval '90 days')");
     expect(fresh.rows[0].n).toBeGreaterThan(0);
     expect(stale.rows[0].n).toBeGreaterThan(0);
+  });
+});
+
+describe("the cadence, as stored", () => {
+  test("a step cannot be sent twice, however many workers try", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sn','buy') returning id", [AGENT]);
+    const { rows: [l] } = await c.query(
+      "insert into rift_leads (agent_id, assessment_id, side, email, score, band) values ($1,$2,'buy','n@b.com',80,'now') returning id",
+      [AGENT, a.id]);
+    const { rows: [e] } = await c.query(
+      "insert into rift_enrolments (agent_id, lead_id, band) values ($1,$2,'now') returning id", [AGENT, l.id]);
+
+    await c.query("insert into rift_touches (enrolment_id, step_id, channel) values ($1,'n1','email')", [e.id]);
+    /* The only guarantee that survives a retry, a double cron fire, or two
+       workers racing. No amount of application-level care can promise it. */
+    await expect(
+      c.query("insert into rift_touches (enrolment_id, step_id, channel) values ($1,'n1','email')", [e.id]),
+    ).rejects.toThrow(/duplicate key|unique/i);
+  });
+
+  test("one live enrolment per lead", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sn2','buy') returning id", [AGENT]);
+    const { rows: [l] } = await c.query(
+      "insert into rift_leads (agent_id, assessment_id, side, email, score, band) values ($1,$2,'buy','n2@b.com',80,'now') returning id",
+      [AGENT, a.id]);
+    await c.query("insert into rift_enrolments (agent_id, lead_id, band) values ($1,$2,'now')", [AGENT, l.id]);
+    /* Two enrolments would send the whole sequence twice. */
+    await expect(
+      c.query("insert into rift_enrolments (agent_id, lead_id, band) values ($1,$2,'soon')", [AGENT, l.id]),
+    ).rejects.toThrow(/duplicate key|unique/i);
+  });
+
+  test("a stop must name its reason", async (c) => {
+    const { rows: [a] } = await c.query(
+      "insert into rift_assessments (agent_id, session_id, side) values ($1,'sn3','buy') returning id", [AGENT]);
+    const { rows: [l] } = await c.query(
+      "insert into rift_leads (agent_id, assessment_id, side, email, score, band) values ($1,$2,'buy','n3@b.com',80,'now') returning id",
+      [AGENT, a.id]);
+    const { rows: [e] } = await c.query(
+      "insert into rift_enrolments (agent_id, lead_id, band) values ($1,$2,'now') returning id", [AGENT, l.id]);
+    /* "Stopped, and nobody recorded why" is how a cadence quietly dies. */
+    await expect(
+      c.query("update rift_enrolments set stopped_at = now() where id = $1", [e.id]),
+    ).rejects.toThrow(/stop_needs_a_reason/);
+
+    await c.query("update rift_enrolments set stopped_at = now(), stop_reason = 'replied' where id = $1", [e.id]);
+    const { rows } = await c.query("select stop_reason from rift_enrolments where id = $1", [e.id]);
+    expect(rows[0].stop_reason).toBe("replied");
+  });
+
+  test("a review item cannot be verified without a named party", async (c) => {
+    await expect(
+      c.query(
+        `insert into rift_review_items (agent_id, who, kind, what, claim, state, raised_by, to_advance)
+         values ($1,'Maya','figure','Cash to close','$31,190','verified','client','...')`, [AGENT]),
+    ).rejects.toThrow(/review_verified_needs_a_name/);
   });
 });

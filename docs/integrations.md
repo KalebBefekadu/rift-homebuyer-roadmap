@@ -115,6 +115,27 @@ Widen them on purpose, and migrate existing contacts in the same change.
 
 ---
 
+## 5b. The scheduler
+
+`/api/nurture/run` sends what the cadence owes. Vercel Cron calls it daily at
+14:00 UTC — `vercel.json`. Once a day is deliberate: the sequences are defined
+in days, so a more frequent run would add chances to send something twice
+without making any touch arrive sooner.
+
+It refuses to run without `CRON_SECRET`. An unauthenticated endpoint that sends
+email on demand is a way to have your sending reputation destroyed by a stranger
+with curl.
+
+Only **automatic** steps are sent. Calls and steps marked "needs him" stay in
+the queue for the agent — a product that auto-dials on somebody's behalf has
+decided something that was not its to decide.
+
+The order is claim, send, record. A crash between sending and recording would
+otherwise resend on the next run, and the person receiving it has no way to know
+it was a bug rather than a company that does not pay attention. The claim is a
+unique constraint on (enrolment, step), which is the only thing that survives two
+workers racing.
+
 ## 6. Calendar — phase 3
 
 You have an account. Wire it against this interface, not against the vendor:

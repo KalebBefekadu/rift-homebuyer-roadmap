@@ -2,7 +2,9 @@ import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { scoreLead, type LeadInput, type LeadScore } from "@/lib/core/lead";
+import { captureOpError } from "@/lib/monitoring/capture";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
+import { enrol } from "./nurture";
 
 /**
  * Capture, consent, and lead scoring.
@@ -89,6 +91,16 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       /* A lead saved without its consent record is a lead nobody may contact.
          Fail loudly rather than keep a row that cannot lawfully be used. */
       if (cErr) return failed(`lead stored but consent was not: ${cErr.message}`);
+    }
+
+    /* Enrolled the moment they are captured. A lead that is scored, stored and
+       then never followed up is the failure this whole cadence exists to
+       prevent, and leaving enrolment to a separate step means it is the step
+       that gets forgotten. Failure to enrol does not fail the capture — the
+       relationship is more important than the sequence. */
+    const enrolled = await enrol(data.id as string, score.band, Boolean(phone));
+    if (!enrolled.ok) {
+      captureOpError(new Error(enrolled.error), { op: "lead.enrol", extra: { band: score.band } });
     }
 
     return done({ id: data.id as string, score });

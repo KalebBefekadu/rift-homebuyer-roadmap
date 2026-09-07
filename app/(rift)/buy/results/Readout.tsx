@@ -287,10 +287,7 @@ export function Readout(p: Props) {
         <footer style={{ borderTop: "1px solid var(--line-2)", marginTop: 40 }}>
           <div className="shell-w" style={{ padding: "26px 0 60px" }}>
             <div className="split-w" style={{ marginBottom: 24 }}>
-              <TrustLadder
-                at="preliminary"
-                ask={{ what: "Cash to close, and the gap it leaves", claim: money(cash.total) }}
-              />
+              <AskReview what="Cash to close, and the gap it leaves" claim={money(cash.total)} />
               <div className="card" style={{ overflow: "hidden" }}>
                 <button className="between" style={{ width: "100%", padding: "13px 16px", background: "transparent", border: 0, textAlign: "left" }}
                   onClick={() => setPrivacyOpen(!privacyOpen)}>
@@ -599,6 +596,66 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link }: {
           is the same document.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+
+/**
+ * The trust ladder, with the door on it.
+ *
+ * The ladder describes four rungs; this is what lets somebody reach the second
+ * one. Without it `pending-review` was a state the product explained and could
+ * never enter, which is a path drawn on a wall.
+ */
+function AskReview({ what, claim }: { what: string; claim: string }) {
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "unavailable">("idle");
+
+  const ask = async () => {
+    setState("sending");
+    try {
+      const r = await fetch("/api/review", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind: "figure", what, claim }),
+      }).then((x) => x.json());
+      track({ name: "review_requested", side: "buy" });
+      setState(r?.ok && !r?.skipped ? "sent" : "unavailable");
+    } catch {
+      setState("unavailable");
+    }
+  };
+
+  return (
+    <div className="col gap-3">
+      <TrustLadder at="preliminary" />
+      <div className="card p-4" style={{ background: "var(--sunk)" }}>
+        {state === "sent" ? (
+          <div className="row gap-2">
+            <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
+            <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
+              It is with Kaleb. He aims to come back inside a day. Until he does, the number on
+              this page is still an estimate — asking does not make it truer, it just gets a
+              person looking at it.
+            </p>
+          </div>
+        ) : state === "unavailable" ? (
+          <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
+            Requests are briefly unavailable, so nothing has been queued. Your readout is
+            unaffected.
+          </p>
+        ) : (
+          <div className="between wrap gap-2">
+            <p className="t-xs c-3" style={{ lineHeight: 1.55, maxWidth: 380 }}>
+              Want a person to go through it? No account, no obligation, and your answer comes
+              back whether or not you ever work with him.
+            </p>
+            <button className="btn btn-g btn-sm" onClick={ask} disabled={state === "sending"}>
+              <Ico.shield size={13} />{state === "sending" ? "Sending…" : "Ask Kaleb to check this"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,11 @@ import { currentAgent } from "@/lib/db/session";
 import { rankedLeads } from "@/lib/db/leads";
 import { funnelReport } from "@/lib/db/events";
 import { readStale } from "@/lib/db/programs";
+import { openItems } from "@/lib/db/review";
+import { due } from "@/lib/db/nurture";
+import { Trust } from "@/components/rift/Trust";
+import { REVIEW_SLA_HOURS } from "@/lib/core/review";
+import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { BAND_LABEL, BAND_TONE, sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
 import { Ico, Mark } from "@/components/rift/icons";
@@ -42,15 +47,21 @@ export default async function StudioToday() {
     );
   }
 
-  const [leadsRead, reportRead, staleRead] = await Promise.all([
+  const [leadsRead, reportRead, staleRead, reviewRead, dueRead] = await Promise.all([
     rankedLeads(50),
     funnelReport("buy"),
     readStale(new Date()),
+    openItems(),
+    due(new Date()),
   ]);
 
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
   const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
   const stale = staleRead.ok && "data" in staleRead ? staleRead.data : [];
+  const review = reviewRead.ok && "data" in reviewRead ? reviewRead.data : [];
+  const touches = dueRead.ok && "data" in dueRead ? dueRead.data : [];
+  const pending = review.filter((r) => r.state === "pending-review");
+  const overdue = pending.filter((r) => r.waitingHours > REVIEW_SLA_HOURS);
 
   /* Nothing is being recorded is a different state from nobody has arrived,
      and an agent who cannot tell them apart will draw the wrong conclusion
@@ -112,6 +123,70 @@ export default async function StudioToday() {
               silent to the customer and loud here, which is the right way round.
             </p>
           </div>
+        ) : null}
+
+        {/* Waiting on a person */}
+        {pending.length || touches.length ? (
+          <section style={{ marginTop: 28 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Waiting on you
+            </h2>
+
+            {pending.length ? (
+              <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+                <div className="between wrap gap-2" style={{ padding: "11px 15px", borderBottom: "1px solid var(--line-2)" }}>
+                  <span className="t-sm w6">Asked you to check a figure</span>
+                  {overdue.length
+                    ? <span className="chip chip-neg"><Ico.clock size={11} />{overdue.length} past {REVIEW_SLA_HOURS}h</span>
+                    : <span className="chip chip-pos">All inside {REVIEW_SLA_HOURS}h</span>}
+                </div>
+                {pending.map((r, i) => (
+                  <div key={r.id} style={{ padding: "12px 15px", borderBottom: i === pending.length - 1 ? undefined : "1px solid var(--line-3)" }}>
+                    <div className="between wrap gap-2">
+                      <div className="row wrap gap-2">
+                        <span className="t-sm w6">{r.who}</span>
+                        <Trust state={r.state} short />
+                        <span className={`chip ${r.waitingHours > REVIEW_SLA_HOURS ? "chip-neg" : ""}`}>{r.waitingHours}h waiting</span>
+                      </div>
+                      <span className="mono t-sm w6">{r.claim}</span>
+                    </div>
+                    <p className="t-sm" style={{ marginTop: 4 }}>{r.what}</p>
+                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}>
+                      <span className="w6">To advance: </span>{r.toAdvance}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {touches.length ? (
+              <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+                <div className="between wrap gap-2" style={{ padding: "11px 15px", borderBottom: "1px solid var(--line-2)" }}>
+                  <span className="t-sm w6">Follow-up due today</span>
+                  <span className="chip">{touches.filter((t) => t.auto).length} of {touches.length} go out on their own</span>
+                </div>
+                {touches.map((t, i) => (
+                  <div key={t.enrolmentId + t.stepId} style={{ padding: "12px 15px", borderBottom: i === touches.length - 1 ? undefined : "1px solid var(--line-3)" }}>
+                    <div className="row wrap gap-2">
+                      <span className="t-sm w6">{t.name}</span>
+                      <span className="chip">{CHANNEL_LABEL[t.channel]}</span>
+                      {t.auto ? <span className="chip chip-pos"><Ico.bolt size={10} />Automatic</span> : <span className="chip chip-warn">Needs you</span>}
+                      {t.daysLate > 0 ? <span className="chip chip-neg">{t.daysLate}d late</span> : null}
+                    </div>
+                    <p className="t-sm" style={{ marginTop: 4 }}>{t.says}</p>
+                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}>
+                      <span className="w6">Gives them: </span>{t.gives}
+                    </p>
+                    {t.downgraded ? (
+                      <p className="t-xs c-4 row gap-2" style={{ marginTop: 5 }}>
+                        <Ico.lock size={11} style={{ flex: "none", marginTop: 2 }} />{t.downgraded}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
         ) : null}
 
         {/* Leads */}

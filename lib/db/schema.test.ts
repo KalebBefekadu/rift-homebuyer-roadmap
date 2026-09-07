@@ -27,6 +27,7 @@ beforeAll(async () => {
     await c.query("drop schema if exists public cascade; create schema public;");
     await c.query(readFileSync("supabase/test/shim.sql", "utf8"));
     await c.query(readFileSync("supabase/migrations/20260907000000_rift_core.sql", "utf8"));
+    await c.query(readFileSync("supabase/migrations/20260907120000_rift_nurture_review.sql", "utf8"));
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
     db = c;
   } catch (e) {
