@@ -1,0 +1,23 @@
+---
+description: After finishing work, always recommend the single next best task
+alwaysApply: true
+---
+
+# Recommend the next best task
+
+Whenever you finish a task or a meaningful chunk of work in this project, end your response with **one** concrete next step.
+
+## Requirements
+
+- Recommend the **single** highest-leverage task to move the project forward — not a list.
+- Make it specific and actionable (what to do next, not a vague theme).
+- Prefer the unfinished seam of what just shipped, then the next phase in `docs/handoff.md` §2 (compute + telemetry → buyer product → capture and consent → seller → Studio → client portal → referral and funnel editor).
+- Format: `Next: <one clear action>` plus 1–2 sentences on why it matters now.
+- Optional: one short alternative only if two options are a close call.
+
+## Example
+
+```
+Next: Write the phase-1 Supabase migration for `assessments`, `answers`, and `events`.
+Why: Telemetry belongs in phase 1 because the event you forgot to emit cannot be recovered retrospectively, and nothing downstream is real without somewhere to put it.
+```
