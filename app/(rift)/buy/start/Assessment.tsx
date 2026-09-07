@@ -42,6 +42,8 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   const [ready, setReady] = useState(false);
   const assessmentId = useRef<string | null>(null);
   const shownAt = useRef<number>(Date.now());
+  /* Abandonment is reported once per session. See the effect below. */
+  const abandonSent = useRef(false);
 
   useCaptureTouch();
 
@@ -164,6 +166,9 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   };
 
   const finish = () => {
+    /* Somebody who backgrounded the tab mid-way and came back to finish is not
+       an abandonment. Without this the same person is counted in both. */
+    abandonSent.current = true;
     flush();
     if (assessmentId.current) {
       fetch("/api/assessment/complete", {
@@ -188,11 +193,20 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   };
 
   /* Leaving without finishing is the most common outcome and the most valuable
-     event in the funnel. It is recorded on the way out, not inferred later. */
+     event in the funnel. It is recorded on the way out, not inferred later.
+     
+     Once per session, not once per visibility change. Abandonment is a STATE,
+     not a repeated occurrence — and a phone user who switches apps four times
+     while thinking about a question was emitting four abandonments, which
+     would have made the single most important metric in the product read
+     several times worse than reality. Found by looking at what a real run
+     actually wrote to the database. */
   useEffect(() => {
     const onHide = () => {
       if (document.visibilityState !== "hidden") return;
+      if (abandonSent.current) return;
       if (answeredCount >= questions.length) return;
+      abandonSent.current = true;
       track({ name: "assessment_abandon", side: "buy", questionKey: current?.id, meta: { answered: answeredCount, of: questions.length } });
       flush();
     };
