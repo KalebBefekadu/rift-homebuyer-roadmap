@@ -35,13 +35,17 @@ editing the public questions cannot break the calculations behind them.
 **The plumbing** — `lib/supabase`, `lib/auth`, `lib/brevo`, `lib/monitoring`, and the applied
 Supabase migrations. Real, deployed, and reusable.
 
-**The production product is not built yet.** Closing that distance is the work.
+**The MVP is built.** `/buy` → `/buy/start` → `/buy/results` → `/book`, with a real schema,
+telemetry from the first visitor, first-touch attribution, TCPA-gated capture, a nurture
+cadence on a schedule, an enforced retention job, and the minimum of Studio needed to answer
+the people it produces.
 
-The first release is deliberately narrow: **buyer landing → assessment → readout → capture,
-consent and booking**, with instrumentation from day one and the minimum of Studio needed to
-answer the people it produces. Seller, portal, referral, and offers are specified and
-deferred. [docs/handoff.md](docs/handoff.md) §2 defines the cut and the traffic gate that
-opens the next phase.
+What it still needs before real traffic: Supabase credentials, `npm run rift:bootstrap`,
+`CRON_SECRET`, a verified Brevo sender, and calendar credentials. Each degrades honestly
+without them rather than pretending — see [docs/setup.md](docs/setup.md).
+
+Seller, client portal, referral and offers are specified and deliberately deferred behind a
+traffic gate: 200 completed assessments or 60 days. [docs/handoff.md](docs/handoff.md) §2.
 
 ## Documentation
 

@@ -1,6 +1,10 @@
 # Rift Prototype Blueprint
 
 **Status:** Built and reviewed — 30 routes live under `/prototype`
+**Superseded so far:** the buyer landing, assessment, readout, booking and the agent's lead
+list now have production equivalents under `/buy`, `/book` and `/studio`. The prototype
+screens stay until each replacement has been checked against them — one at a time, never as
+a tree.
 **Graded by:** [benchmark.md](benchmark.md) — built prototype scores 93, provisional
 **Engineering handoff:** [handoff.md](handoff.md) — build order, contracts, acceptance tests
 **Implementation notes:** [architecture.md](architecture.md#design-prototypes)

@@ -454,7 +454,13 @@ function Keep({ side, inputs, figures, matched, bookHref }: {
           </p>
           {link ? (
             <div style={{ marginTop: 12 }}>
-              <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
+              <input
+        className="input"
+        readOnly
+        value={link}
+        aria-label="Your share link"
+        onFocus={(e) => e.currentTarget.select()}
+      />
               <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={copy}>
                 <Ico.share size={13} />{copied ? "Copied" : "Copy link"}
               </button>
@@ -583,8 +589,13 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link }: {
       <input
         className="input"
         type="email"
-        value={email}
         placeholder="you@example.com"
+        /* The visible copy above explains what the field is for but is not a
+           <label>, so a screen reader would announce this as an unlabelled
+           text box. */
+        aria-label="Your email address, to receive this readout"
+        autoComplete="email"
+        value={email}
         onChange={(e) => setEmail(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
       />

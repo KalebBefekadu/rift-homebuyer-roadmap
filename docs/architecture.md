@@ -65,11 +65,33 @@ imports a Supabase client, the contracts in handoff.md stop being testable.
 
 Rift owns pipeline state. Brevo owns messaging. Do not create a second place to edit a stage.
 
+## Production routes
+
+Built and live. These are the product; `/prototype` is the specification they were
+built against.
+
+| Route | What |
+| --- | --- |
+| `/buy` | Landing. Two questions, matched assistance computed on the server before any scroll |
+| `/buy/start` | The assessment. One question per screen, live value panel, resumable |
+| `/buy/results` | The readout. Every figure computed server-side |
+| `/buy/programs` | The whole registry, including closed and stale entries |
+| `/buy/how` | Where the numbers come from and how the agent is paid |
+| `/book` | Consultation booking with the TCPA gate |
+| `/r/[token]` | A shared readout, rendered exactly as it was saved |
+| `/studio` | The agent surface, behind a server-checked session |
+| `/api/events`, `/api/attribution` | Telemetry and attribution intake |
+| `/api/assessment/*`, `/api/capture`, `/api/readout`, `/api/review` | The capture path |
+| `/api/nurture/run`, `/api/retention/sweep` | Scheduled jobs, secret-protected |
+| `/api/forget` | "Delete all of it" |
+
 ## Application areas
 
 | Area | Location | Responsibility |
 | --- | --- | --- |
-| Development index | `app/page.tsx` | Placeholder root. Replaced by the real landing in phase 2 |
+| Development index | `app/page.tsx` | What is built, what is specified, and the gate between them |
+| Public product | `app/(rift)` | The buyer surfaces |
+| Agent surface | `app/(studio)` | Studio |
 | Specification prototype | `app/prototype`, `components/rift`, `lib/prototype` | The agreed product, running |
 | Auth | `lib/auth`, `lib/supabase`, `app/auth/callback` | Supabase Auth with a localStorage fallback |
 | Messaging | `lib/brevo/sync.ts`, `app/actions/brevo.ts` | Contact upsert and event projection |

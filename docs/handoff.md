@@ -1,6 +1,6 @@
 # Rift — Engineering Handoff
 
-**Status:** MVP under construction. Phases 1–3 are built; see §3 for what remains.
+**Status:** MVP built. Phases 1–3 complete. Phase 4 is behind the traffic gate in §2.
 **Date:** 6 September 2026
 **Prototype:** `/prototype` — 30 routes, no accounts, no database, no configuration.
 **Grades against:** [benchmark.md](benchmark.md) — built prototype scores **93** after gap remediation, provisional.
@@ -112,7 +112,7 @@ Phases 1–3 are the MVP. Phase 4 begins only after the gate above.
 | --- | --- | --- | --- |
 | **1** ✅ | Schema + compute engine + program registry + telemetry | Nothing downstream is real without these. Telemetry belongs in phase one because the event you forgot to emit cannot be recovered retrospectively. | `calculations.md` reference case passes (it already does); every table has an RLS policy; a programme can be inserted with a verification date and a stale one is suppressed from matching; events land. **No admin UI** — that arrives with Studio in phase 5, and the migration must not wait on a screen |
 | **2** ✅ | Buyer product end to end — landing, assessment, readout | The revenue path. One product fully working beats two half working. | A stranger can go from ad click to a shareable readout without an account |
-| **3** ◐ | Capture, consent, and booking — built except real calendar availability | Turns a readout into a relationship. Consent is a phase-3 gate, not a later fix. | Email capture, TCPA-compliant phone consent, and a real calendar booking |
+| **3** ✅ | Capture, consent, and booking — calendar adapter built, awaiting credentials | Turns a readout into a relationship. Consent is a phase-3 gate, not a later fix. | Email capture, TCPA-compliant phone consent, and a real calendar booking |
 | **4** | Seller product | Same engine, different questions and outputs. Cheap once phase 2 exists. | Seller parity with buyer |
 | **5** | Studio — the rest of it: clients, offers, calendar | The ranked lead list and review queue already shipped with the MVP. This is the depth. | Agent can run a week from Studio alone |
 | **6** | Client portal | Post-conversion experience. | Client can answer the five questions on one screen |

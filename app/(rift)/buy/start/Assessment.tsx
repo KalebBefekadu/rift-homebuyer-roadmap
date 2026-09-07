@@ -332,7 +332,11 @@ function Field({ q, value, onChange, onAdvance }: {
     <input
       className="input"
       value={String(value ?? "")}
-      placeholder={q.fieldLabel ?? "Type your answer"}
+      placeholder={q.placeholder ?? q.fieldLabel ?? "Type your answer"}
+      /* The question is an <h1> above rather than a <label>, so without this a
+         screen reader announces an unlabelled text box and the person has to
+         infer what it wants from what was said before it. */
+      aria-label={q.title}
       onChange={(e) => onChange(e.target.value)}
     />
   );
