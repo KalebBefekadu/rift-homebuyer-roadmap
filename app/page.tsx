@@ -39,11 +39,17 @@ const DOCS = [
 
 export default function Home() {
   return (
+    /* Paints its own ground. `body` carries --app-bg (#101914), a dark green
+       left behind by the retired portal, so a page that sets dark text and no
+       background renders dark-on-dark — which is exactly what this one did:
+       every card title was invisible. The product routes escape it because
+       .rift sets its own background; this one has to do the same. */
     <main style={{
-      maxWidth: 760, margin: "0 auto", padding: "64px 24px 96px",
+      minHeight: "100vh", background: "#fdfdfc",
       fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
       color: "#1a1a1a", lineHeight: 1.6,
     }}>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "64px 24px 96px" }}>
       <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.02em", margin: 0 }}>Rift</h1>
       <p style={{ fontSize: 17, color: "#555", marginTop: 10 }}>
         A client-experience and agent-operating platform for the residential real-estate
@@ -54,10 +60,11 @@ export default function Home() {
         marginTop: 28, padding: "14px 16px", borderRadius: 10,
         background: "#fff8e6", border: "1px solid #f0dfae", fontSize: 14.5,
       }}>
-        <strong>Buyers and sellers are live</strong> — phases 1&ndash;3 of{" "}
+        <strong>Buyers and sellers are live</strong>, and so is lead management &mdash; see{" "}
         <code style={{ background: "#00000010", padding: "1px 5px", borderRadius: 4 }}>docs/handoff.md</code>.
-        Seller, portal and referral are specified and deliberately deferred behind a traffic
-        gate: 200 completed assessments or 60 days, whichever comes first.
+        The client portal and the referral engine are specified and not built. The traffic gate
+        that deferred them no longer governs the build order: the goal is running real
+        relationships through Studio, not volume.
       </div>
 
       <h2 style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#888", marginTop: 40 }}>
@@ -105,6 +112,7 @@ export default function Home() {
           </li>
         ))}
       </ul>
+    </div>
     </main>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import type { Funnel, Question } from "@/lib/core/funnel";
-import { OWNERSHIP_CAVEAT, type Ownership } from "@/lib/core/funnel";
+import { OWNERSHIP_CAVEAT, type Ownership, optionsFor } from "@/lib/core/funnel";
 import { BUYER_DEFAULTS, SELLER_DEFAULTS, cashToClose, cashGap, netProceeds, unclaimedValue, money } from "@/lib/core/compute";
 import { track, flush, useCaptureTouch } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
@@ -25,7 +25,13 @@ import { sessionId } from "@/lib/rift/session";
  *   * Questions already answered on the landing page are not asked again.
  */
 
-const DRAFT = "rift.buy.draft";
+/* Scoped by side. This was the single key "rift.buy.draft" — named for the
+   only funnel that existed when it was written — and it kept serving both once
+   this component was generalised. A visitor who looked at the seller
+   assessment and later opened the buyer one had the seller's county, price and
+   payoff restored into it, and reached a buyer readout computed from a
+   stranger's numbers. Their own. Which is worse: it looked personal. */
+const draftKey = (side: "buy" | "sell") => `rift.${side}.draft`;
 
 type Answers = Record<string, string | number>;
 
@@ -54,7 +60,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   useEffect(() => {
     let restored: Answers = {};
     try {
-      const raw = window.localStorage.getItem(DRAFT);
+      const raw = window.localStorage.getItem(draftKey(funnel.side));
       if (raw) restored = JSON.parse(raw) as Answers;
     } catch { /* storage unavailable — start clean */ }
 
@@ -71,10 +77,17 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
        not see and had never given. Somebody who pressed Next without touching
        the slider would then get a readout built on $325,000 having been shown
        $0. Shown and used must be the same number; that is the whole product. */
+    /* Per side. Seeding the seller funnel from BUYER_DEFAULTS put $325,000 in
+       the price slider — the buyer default — while the panel beside it computed
+       from the seller ones, and left `payoff` and `yearsOwned` unseeded
+       entirely because no such buyer default exists. That is the same
+       shown-vs-used split described above, reintroduced on the other side the
+       day this component was made to serve both. */
+    const DEFAULTS = funnel.side === "sell" ? SELLER_DEFAULTS : BUYER_DEFAULTS;
     const seeded: Answers = {};
     for (const question of questions) {
       if (question.type !== "slider" || !question.bound) continue;
-      const d = (BUYER_DEFAULTS as unknown as Record<string, unknown>)[question.bound];
+      const d = (DEFAULTS as unknown as Record<string, unknown>)[question.bound];
       if (typeof d === "number") { seeded[question.id] = d; seeded[question.bound] = d; }
     }
 
@@ -106,7 +119,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
 
   useEffect(() => {
     if (!ready) return;
-    try { window.localStorage.setItem(DRAFT, JSON.stringify(answers)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(draftKey(funnel.side), JSON.stringify(answers)); } catch { /* ignore */ }
   }, [answers, ready]);
 
   const current = questions[i];
@@ -356,16 +369,28 @@ function Field({ q, value, onChange, onAdvance }: {
   onChange: (v: string | number) => void;
   onAdvance: () => void;
 }) {
+  /* Some questions carry their own options and some are bound to a list the
+     product owns. County is the second kind: the funnel definition names the
+     binding and the registry supplies the values, so that adding a county is
+     one edit rather than an edit per funnel.
+
+     Resolving it here was missing entirely. The county question rendered a
+     select containing nothing but "Choose one", and county is question two of
+     both funnels and required — so NOBODY could complete an assessment on
+     either side. It failed the way the worst bugs in this product fail: the
+     page rendered, nothing errored, and the control was simply empty. */
+  const options = optionsFor(q);
+
   if (q.type === "choice" || q.type === "select") {
     return (
       <div className={q.type === "select" ? "" : "col gap-2"}>
         {q.type === "select" ? (
           <select className="input" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>
             <option value="">Choose one</option>
-            {(q.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         ) : (
-          (q.options ?? []).map((o) => (
+          options.map((o) => (
             <button
               key={o.value}
               className="opt"

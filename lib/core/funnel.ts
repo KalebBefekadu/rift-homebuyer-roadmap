@@ -1,3 +1,4 @@
+import { GA_COUNTIES } from "./registry";
 /**
  * Rift prototype — editable funnels.
  *
@@ -253,3 +254,34 @@ export function move(qs: Question[], id: string, dir: -1 | 1): Question[] {
   [out[i], out[j]] = [out[j], out[i]];
   return out;
 }
+
+/* ------------------------------------------------------------------ *
+ * Resolving a question's answerable options
+ * ------------------------------------------------------------------ */
+
+/**
+ * The options a question can actually be answered with.
+ *
+ * Some questions carry their own list. Others are BOUND to a list the product
+ * owns — county is the only one today — so that adding a county is one edit to
+ * the registry rather than an edit per funnel.
+ *
+ * This lived in the assessment component and did not handle the bound case at
+ * all, so the county question rendered a select containing nothing but its
+ * placeholder. County is question two of both funnels and required, which made
+ * every assessment impossible to complete on either side. It failed the way
+ * the worst defects in this product fail: the page rendered, nothing threw,
+ * and the control was simply empty.
+ *
+ * It is here rather than in the component so `everyRequiredQuestionIsAnswerable`
+ * can assert the invariant against the real funnels.
+ */
+export function optionsFor(q: Question): Option[] {
+  if (q.options?.length) return q.options;
+  if (q.bound === "county") return GA_COUNTIES.map((c) => ({ label: c, value: c }));
+  return [];
+}
+
+/** A question a person must answer to move on, and that needs a list to do it. */
+export const needsOptions = (q: Question) =>
+  q.enabled && q.required && (q.type === "choice" || q.type === "select");

@@ -254,6 +254,15 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       .from("rift_leads")
       .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
+      /* Inbound only. "Who to call" answers one question — who volunteered
+         their details and has not been answered yet — and a person the agent
+         typed in himself has, by definition, already been spoken to. Showing
+         them here put an existing client under a speed-to-lead countdown with
+         an "I have replied" button, in a list whose whole claim is that
+         everything on it is waiting on him. They belong on the board, and
+         they were appearing in both. */
+      .eq("source", "funnel")
+      .is("archived_at", null)
       /* Ordered by the stored score only to bound the query. The list is
          re-sorted below on the recomputed score, because that is the one the
          agent acts on and the two diverge as leads age. */
