@@ -7,7 +7,7 @@ import { currentAgent } from "@/lib/db/session";
 import { promoteItem } from "@/lib/db/review";
 import { stop } from "@/lib/db/nurture";
 import { markReplied } from "@/lib/db/leads";
-import { addLead, addNote, setStage, archiveLead, type NewLead, type NoteKind, type Stage } from "@/lib/db/clients";
+import { addLead, addNote, setStage, archiveLead, setNextAction, type NewLead, type NoteKind, type Stage } from "@/lib/db/clients";
 import type { StopId } from "@/lib/core/nurture";
 
 /**
@@ -138,4 +138,17 @@ export async function archive(leadId: string, reason: string) {
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };
+}
+
+export async function planNextAction(leadId: string, action: string | null, due: string | null, completedNote?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setNextAction(leadId, action, due, completedNote);
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath("/studio");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, cleared: r.data.cleared };
 }

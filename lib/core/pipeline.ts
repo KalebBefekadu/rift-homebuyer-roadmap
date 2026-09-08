@@ -288,5 +288,8 @@ export interface ManagedLead {
   createdAt: string;
   archivedAt: string | null;
   archivedReason: string | null;
+  /** The one thing owed next, and the day it is owed. Both or neither. */
+  nextAction: string | null;
+  nextDue: string | null;
   stall: Stall | null;
 }

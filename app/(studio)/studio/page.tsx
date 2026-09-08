@@ -3,7 +3,7 @@ import Link from "next/link";
 import { currentAgent } from "@/lib/db/session";
 import { rankedLeads } from "@/lib/db/leads";
 import { funnelReport } from "@/lib/db/events";
-import { board } from "@/lib/db/clients";
+import { board, dueActions } from "@/lib/db/clients";
 import { STALL_CHIP } from "@/lib/core/pipeline";
 import { readStale } from "@/lib/db/programs";
 import { openItems } from "@/lib/db/review";
@@ -60,12 +60,13 @@ export default async function StudioToday() {
      last two — for no reason beyond the order they were written in. Studio is
      the screen the agent opens first thing, so its latency is the product's
      felt speed. */
-  const [leadsRead, reportRead, sellReportRead, boardRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
       funnelReport("sell"),
       board(),
+      dueActions(),
       readStale(new Date()),
       openItems(),
       due(new Date()),
@@ -79,6 +80,7 @@ export default async function StudioToday() {
   const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
   const sellReport = sellReportRead.ok && "data" in sellReportRead ? sellReportRead.data : null;
   const working = boardRead.ok && "data" in boardRead ? boardRead.data : [];
+  const owed = owedRead.ok && "data" in owedRead ? owedRead.data : [];
   const stale = staleRead.ok && "data" in staleRead ? staleRead.data : [];
   const review = reviewRead.ok && "data" in reviewRead ? reviewRead.data : [];
   const touches = dueRead.ok && "data" in dueRead ? dueRead.data : [];
@@ -92,7 +94,7 @@ export default async function StudioToday() {
      list, so a database error rendered "No leads yet" alongside copy assuring
      the agent that the readout is live and instrumented. That is the product
      telling him a comforting thing it cannot know. */
-  const reads = [leadsRead, reportRead, sellReportRead, boardRead, staleRead, reviewRead, dueRead, abandonedRead];
+  const reads = [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead];
   const notRecording = reads.some((r) => "skipped" in r);
   const failures = reads.filter((r) => !r.ok).map((r) => (r as { error: string }).error);
   /* Shown to the agent AND reported. He can see something is wrong; only the
@@ -339,6 +341,57 @@ export default async function StudioToday() {
             </div>
           </section>
         ) : null}
+
+        {/* What is owed, before anything else on the page */}
+        <section style={{ marginTop: 28 }}>
+          <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+            What you owe this week
+          </h2>
+          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+            Overdue first, then the next seven days. An action that came due on Tuesday does not
+            stop being owed on Wednesday, so nothing drops off this list by getting old.
+          </p>
+
+          {owed.length === 0 ? (
+            <div className="card p-4" style={{ marginTop: 14, background: "var(--sunk)" }}>
+              <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+                Nothing scheduled. Open anyone below and set the one thing you owe them next.
+              </p>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {owed.map((p, i) => {
+                const today = new Date().toISOString().slice(0, 10);
+                const late = Boolean(p.nextDue && p.nextDue < today);
+                const label = p.nextDue === today
+                  ? "today"
+                  : late
+                    ? "overdue"
+                    : new Date(p.nextDue + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/studio/lead/${p.id}`}
+                    className="between wrap gap-2"
+                    style={{
+                      padding: "13px 16px", textDecoration: "none",
+                      borderBottom: i === owed.length - 1 ? undefined : "1px solid var(--line-3)",
+                    }}
+                  >
+                    <div>
+                      <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
+                      <div className="t-sm c-2" style={{ marginTop: 3 }}>{p.nextAction}</div>
+                      <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                        {p.stage} · {p.side === "buy" ? "buyer" : "seller"}
+                      </div>
+                    </div>
+                    <span className={`chip ${late ? "chip-neg" : p.nextDue === today ? "chip-warn" : ""}`}>{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {/* The people being worked */}
         <section style={{ marginTop: 32 }}>

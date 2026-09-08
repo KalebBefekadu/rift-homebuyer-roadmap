@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { STAGE_NAMES, STALL_CHIP, type LeadNote, type ManagedLead, type NoteKind, type Stage } from "@/lib/core/pipeline";
-import { logContact, moveStage, archive } from "../../actions";
+import { logContact, moveStage, archive, planNextAction } from "../../actions";
 
 const KINDS: { id: NoteKind; label: string }[] = [
   { id: "call", label: "Call" },
@@ -30,6 +30,26 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
   const [error, setError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [reason, setReason] = useState("");
+  const [action, setAction] = useState("");
+  const [due, setDue] = useState("");
+
+  const plan = () => {
+    if (!action.trim() || !due) return;
+    setError(null);
+    start(async () => {
+      const r = await planNextAction(lead.id, action, due);
+      if (!r.ok) { setError(r.error); return; }
+      setAction(""); setDue("");
+    });
+  };
+
+  const done = () => {
+    setError(null);
+    start(async () => {
+      const r = await planNextAction(lead.id, null, null, `Done: ${lead.nextAction}`);
+      if (!r.ok) setError(r.error);
+    });
+  };
 
   const save = () => {
     if (!body.trim()) return;
@@ -61,6 +81,18 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
   };
 
   const inStage = daysSince(lead.stageSince);
+
+  /* Compared as dates, not timestamps. An action due today is not overdue at
+     nine in the morning because the row was written at five last night. */
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = Boolean(lead.nextDue && lead.nextDue < today);
+  const dueLabel = !lead.nextDue
+    ? ""
+    : lead.nextDue === today
+      ? "today"
+      : overdue
+        ? `overdue since ${new Date(lead.nextDue + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+        : new Date(lead.nextDue + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
   return (
     <main className="shell-w" style={{ paddingTop: 26, paddingBottom: 80 }}>
@@ -163,8 +195,56 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
           </section>
         </div>
 
-        {/* Right: record something */}
+        {/* Right: what is owed, then record something */}
         <div>
+          <section className="card p-5" style={{ marginBottom: 18 }}>
+            <div className="t-md w6">What you owe them next</div>
+            {lead.nextAction ? (
+              <div style={{ marginTop: 10 }}>
+                <div className="between wrap gap-2">
+                  <span className="t-sm w6 grow" style={{ minWidth: 180 }}>{lead.nextAction}</span>
+                  <span className={`chip ${overdue ? "chip-neg" : "chip-pos"}`} style={{ flex: "none" }}>
+                    {dueLabel}
+                  </span>
+                </div>
+                <button className="btn btn-p btn-sm" style={{ marginTop: 12 }} disabled={pending} onClick={done}>
+                  {pending ? "Saving…" : "Done"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+                  Nothing scheduled. One thing at a time — a queue of six things owed to the same
+                  person is a queue nobody works.
+                </p>
+                <input
+                  className="input"
+                  style={{ marginTop: 12 }}
+                  placeholder="Call about the Oakhurst listing"
+                  value={action}
+                  onChange={(e) => setAction(e.target.value)}
+                  disabled={pending || Boolean(lead.archivedAt)}
+                />
+                <input
+                  className="input"
+                  type="date"
+                  style={{ marginTop: 10 }}
+                  value={due}
+                  onChange={(e) => setDue(e.target.value)}
+                  disabled={pending || Boolean(lead.archivedAt)}
+                />
+                <button
+                  className="btn btn-p"
+                  style={{ width: "100%", marginTop: 10 }}
+                  disabled={pending || !action.trim() || !due || Boolean(lead.archivedAt)}
+                  onClick={plan}
+                >
+                  Schedule it
+                </button>
+              </>
+            )}
+          </section>
+
           <section className="card p-5">
             <div className="t-md w6">Record what happened</div>
             <div className="row gap-2 wrap" style={{ marginTop: 12 }}>

@@ -67,6 +67,8 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
     createdAt: r.created_at as string,
     archivedAt: (r.archived_at as string | null) ?? null,
     archivedReason: (r.archived_reason as string | null) ?? null,
+    nextAction: (r.next_action as string | null) ?? null,
+    nextDue: (r.next_due as string | null) ?? null,
     /* Only meaningful once somebody has been placed on the board. A lead with
        no stage is not "moving slowly", it is simply not being worked yet. */
     stall: stage && !r.archived_at ? stallOf(stage, daysSince(stageSince, now)) : null,
@@ -74,7 +76,7 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
 }
 
 const SELECT =
-  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason";
+  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason,next_action,next_due";
 
 /**
  * Put somebody in by hand.
@@ -286,6 +288,77 @@ export async function board(now = new Date()): Promise<DbResult<ManagedLead[]>> 
       .order("stage_since", { ascending: true })
       .limit(200),
     "reading the board",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<ManagedLead[]>;
+  return done((res.data as Record<string, unknown>[]).map((r) => shape(r, now)));
+}
+
+/* ------------------------------------------------------------------ *
+ * What you owe them next
+ * ------------------------------------------------------------------ */
+
+/**
+ * Set, replace, or clear the one thing owed to this person.
+ *
+ * Passing null for the action clears it and records the completion, because
+ * "done" is a fact worth keeping: an agent looking at a record six weeks later
+ * needs to know the call was made, not merely that nothing is outstanding.
+ */
+export async function setNextAction(
+  leadId: string,
+  action: string | null,
+  due: string | null,
+  completedNote?: string,
+): Promise<DbResult<{ cleared: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const clearing = !action?.trim();
+  if (!clearing && !due) return failed("a date is required — an action with no date is a wish");
+
+  const res = await boundedWrite(
+    db.from("rift_leads")
+      .update({
+        next_action: clearing ? null : action!.trim(),
+        next_due: clearing ? null : due,
+      })
+      .eq("id", leadId).eq("agent_id", agent_id).select("id").single(),
+    clearing ? "clearing the action" : "setting the action",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<{ cleared: boolean }>;
+
+  if (clearing && completedNote?.trim()) await addNote(leadId, "note", completedNote.trim());
+  return done({ cleared: clearing });
+}
+
+/**
+ * Everything owed, soonest first, overdue included.
+ *
+ * Not limited to today. An action that came due on Tuesday does not stop being
+ * owed on Wednesday, and a list that silently drops it is worse than no list —
+ * it reads as "nothing outstanding" to somebody who is in fact late.
+ */
+export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  /* A week ahead: far enough to plan the week, near enough that the list is
+     still a list of things to do rather than a calendar. */
+  const horizon = new Date(now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+
+  const res = await boundedRead(
+    db.from("rift_leads").select(SELECT)
+      .eq("agent_id", agent_id)
+      .is("archived_at", null)
+      .not("next_due", "is", null)
+      .lte("next_due", horizon)
+      .order("next_due", { ascending: true })
+      .limit(100),
+    "reading what is due",
   );
   if (!res.ok || !("data" in res)) return res as DbResult<ManagedLead[]>;
   return done((res.data as Record<string, unknown>[]).map((r) => shape(r, now)));
