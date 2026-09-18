@@ -75,8 +75,55 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
   };
 }
 
-const SELECT =
-  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason,next_action,next_due";
+const SELECT_BASE =
+  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason";
+
+/**
+ * Whether the follow-up columns exist yet.
+ *
+ * Schema and code ship separately here — the migration is applied by hand in
+ * the Supabase dashboard, and a deploy that lands first would otherwise select
+ * columns that do not exist and fail EVERY read on this module, taking the
+ * board and the client record down with it over a feature nobody had used yet.
+ *
+ * So the first read asks for them, and a "column does not exist" answer is
+ * treated as information rather than an error: remember it, drop the columns,
+ * carry on. The next deploy after the migration picks them up on its own.
+ * null means not yet determined.
+ */
+let hasFollowUp: boolean | null = null;
+
+const selectFor = () => (hasFollowUp === false ? SELECT_BASE : `${SELECT_BASE},next_action,next_due`);
+
+/* PostgREST surfaces a missing column as Postgres 42703. Matched on the text
+   because the error shape reaching us here is just a message. */
+const isMissingColumn = (e: unknown) =>
+  typeof e === "string" && /column .* does not exist|42703/i.test(e);
+
+/**
+ * Run a read that may or may not be allowed to ask for the follow-up columns.
+ *
+ * `build` is handed the select string so the same query can be reissued
+ * against the narrower one. A missing column costs one extra round trip, once
+ * per process, and never after that.
+ */
+type LeadQuery = PromiseLike<{ data: unknown; error: { message: string } | null }>;
+
+async function readLeads(
+  build: (select: string) => LeadQuery,
+  what: string,
+): Promise<DbResult<unknown>> {
+  const first = await boundedRead(build(selectFor()) as never, what);
+  if (first.ok) {
+    if (hasFollowUp === null) hasFollowUp = true;
+    return first;
+  }
+  if (hasFollowUp !== false && isMissingColumn(first.error)) {
+    hasFollowUp = false;
+    return boundedRead(build(SELECT_BASE) as never, what);
+  }
+  return first;
+}
 
 /**
  * Put somebody in by hand.
@@ -233,8 +280,8 @@ export async function readLead(
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const leadRes = await boundedRead(
-    db.from("rift_leads").select(SELECT).eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
+  const leadRes = await readLeads(
+    (sel) => db.from("rift_leads").select(sel).eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
     "reading the record",
   );
   if (!leadRes.ok || !("data" in leadRes)) {
@@ -280,8 +327,8 @@ export async function board(now = new Date()): Promise<DbResult<ManagedLead[]>> 
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const res = await boundedRead(
-    db.from("rift_leads").select(SELECT)
+  const res = await readLeads(
+    (sel) => db.from("rift_leads").select(sel)
       .eq("agent_id", agent_id)
       .is("archived_at", null)
       .not("stage", "is", null)
@@ -350,8 +397,17 @@ export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead
      still a list of things to do rather than a calendar. */
   const horizon = new Date(now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
 
+  /* Nothing is due when the feature has not been migrated yet. Reported as
+     skipped rather than failed: the agent sees an empty list, not an error
+     about a column he has never heard of. */
+  if (hasFollowUp === false) return done([]);
+
+  /* No readLeads retry here: this query FILTERS on next_due, not merely
+     selects it, so a narrower select cannot rescue it. A missing column means
+     the feature is not migrated, which means nothing can be due — an empty
+     list is the truthful answer, not an error. */
   const res = await boundedRead(
-    db.from("rift_leads").select(SELECT)
+    db.from("rift_leads").select(selectFor())
       .eq("agent_id", agent_id)
       .is("archived_at", null)
       .not("next_due", "is", null)
@@ -360,6 +416,12 @@ export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead
       .limit(100),
     "reading what is due",
   );
-  if (!res.ok || !("data" in res)) return res as DbResult<ManagedLead[]>;
-  return done((res.data as Record<string, unknown>[]).map((r) => shape(r, now)));
+
+  if (!res.ok) {
+    if (isMissingColumn(res.error)) { hasFollowUp = false; return done([]); }
+    return res as DbResult<ManagedLead[]>;
+  }
+  if (!("data" in res)) return res as DbResult<ManagedLead[]>;
+  hasFollowUp = true;
+  return done(((res.data ?? []) as unknown as Record<string, unknown>[]).map((r) => shape(r, now)));
 }

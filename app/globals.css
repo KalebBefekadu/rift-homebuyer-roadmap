@@ -13,8 +13,13 @@
   --line: #d8ded5;
   --paper: #f8faf6;
   --panel: #eef3ec;
-  --app-bg: #101914;
-  --app-bg-2: #18251f;
+  /* The dark ground belonged to the retired portal MVP, which is deleted. It
+     survived as the body background, so every Rift page — which paints its own
+     light canvas inside .rift — flashed dark green on overscroll, and any page
+     that set text colour without a background rendered dark-on-dark. Matched
+     to .rift's --canvas so there is one ground colour in the product. */
+  --app-bg: #fbfaf8;
+  --app-bg-2: #ffffff;
   --app-panel: #f7faf5;
   --danger: #bf4b3c;
   --success: #3c8b62;
