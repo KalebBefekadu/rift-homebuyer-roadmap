@@ -1,6 +1,6 @@
 import "server-only";
 import { readRegistry } from "./programs";
-import { matchPrograms, type MatchResult } from "@/lib/core/registry";
+import { matchPrograms, PROGRAMS, type AssistanceProgram, type MatchResult } from "@/lib/core/registry";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -18,6 +18,15 @@ export interface MatchRead {
   windowDays: number;
   /** True when the registry read ran out of time and the built-in list was used. */
   timedOut: boolean;
+  /* The programmes the match was computed from, and the instant it was computed
+     against. A landing page that lets the visitor change county has to re-match
+     as they type, and it cannot do that with only the answer to one question.
+     Handing the client the same inputs the server used means the two cannot
+     disagree — and passing `today` explicitly rather than letting the browser
+     call `new Date()` keeps the first client render identical to the server's,
+     which is the difference between a re-match and a hydration mismatch. */
+  programs: AssistanceProgram[];
+  todayISO: string;
 }
 
 export async function matchForVisitor(
@@ -58,5 +67,12 @@ export async function matchForVisitor(
     ? matchPrograms({ county, firstTimeBuyer, programs, today })
     : matchPrograms({ county, firstTimeBuyer, today });
 
-  return { match, source, windowDays, timedOut };
+  return {
+    match,
+    source,
+    windowDays,
+    timedOut,
+    programs: programs.length ? programs : PROGRAMS,
+    todayISO: today.toISOString(),
+  };
 }

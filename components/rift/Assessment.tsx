@@ -64,10 +64,24 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
       if (raw) restored = JSON.parse(raw) as Answers;
     } catch { /* storage unavailable — start clean */ }
 
+    /* Every question the hero can ask, by the short key it travels under.
+       The hero is not decoration — it is the first two or three questions of
+       this same funnel, answered somewhere else. Anything it collects and this
+       does not read is a question the visitor gets asked twice, which is the
+       clearest signal a form is not listening. */
     const fromLanding: Answers = {};
-    const c = q.get("c"); const t = q.get("t");
-    if (c) fromLanding.county = c;
-    if (t) fromLanding.timing = t;
+    const text: [string, string][] = [["c", "county"], ["t", "timing"], ["o", funnel.side === "sell" ? "" : "ownership"]];
+    for (const [key, bound] of text) {
+      const v = bound ? q.get(key) : null;
+      if (v) fromLanding[bound] = v;
+    }
+    /* Numbers travel as digits and must arrive as numbers: a price that stays
+       a string sorts and sums as text, and the sliders would not move to it. */
+    const numeric: [string, string][] = funnel.side === "sell" ? [["p", "price"], ["o", "payoff"]] : [];
+    for (const [key, bound] of numeric) {
+      const n = Number(q.get(key));
+      if (Number.isFinite(n) && n > 0) fromLanding[bound] = n;
+    }
 
     /* Seed every numeric question from the same defaults the live panel
        computes with.
@@ -89,6 +103,17 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
       if (question.type !== "slider" || !question.bound) continue;
       const d = (DEFAULTS as unknown as Record<string, unknown>)[question.bound];
       if (typeof d === "number") { seeded[question.id] = d; seeded[question.bound] = d; }
+    }
+
+    /* An answer is stored under two keys: the question's own id, which the
+       controls read, and the bound name, which the engine reads. The hero only
+       knows the bound name, so without this the seller's price arrived in the
+       computation while the slider beside it still showed the default — the
+       shown-vs-used split again, entering by the one door still open to it. */
+    for (const question of questions) {
+      if (question.bound && question.bound in fromLanding) {
+        fromLanding[question.id] = fromLanding[question.bound];
+      }
     }
 
     const merged = { ...seeded, ...restored, ...fromLanding };

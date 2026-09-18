@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { money, netProceeds, SELLER_DEFAULTS } from "@/lib/core/compute";
 import { GA_COUNTIES } from "@/lib/core/registry";
 import { Landing } from "./Landing";
 
@@ -26,14 +25,5 @@ export const revalidate = 86400;
  * later.
  */
 export default function SellLandingPage() {
-  const example = netProceeds(SELLER_DEFAULTS);
-
-  return (
-    <Landing
-      counties={GA_COUNTIES}
-      examplePrice={money(SELLER_DEFAULTS.price)}
-      exampleNet={money(example.net)}
-      exampleCosts={money(example.totalCosts - SELLER_DEFAULTS.payoff)}
-    />
-  );
+  return <Landing counties={GA_COUNTIES} />;
 }

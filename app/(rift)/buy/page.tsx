@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { matchForVisitor } from "@/lib/db/match";
-import { money, range } from "@/lib/core/compute";
 import { GA_COUNTIES } from "@/lib/core/registry";
 import { Landing } from "./Landing";
 
@@ -32,16 +31,15 @@ export const revalidate = 3600;
 export default async function BuyLanding() {
   /* DeKalb is the agent's largest county and the honest default for a visitor
      who has not told us anything yet. The hero asks immediately. */
-  const { match, source } = await matchForVisitor("DeKalb", true);
+  const { match, source, programs, todayISO } = await matchForVisitor("DeKalb", true);
 
   return (
     <Landing
       counties={GA_COUNTIES}
-      openRange={match.openMin > 0 ? range(match.openMin, match.openMax) : null}
+      programs={programs}
+      todayISO={todayISO}
       matchedCount={match.matched.length}
       suppressedCount={match.suppressed.length}
-      exampleCash={money(26_188)}
-      exampleDown={money(11_375)}
       registrySource={source}
     />
   );
