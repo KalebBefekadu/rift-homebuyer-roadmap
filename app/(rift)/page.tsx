@@ -102,6 +102,23 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* A fourth door, for people who are not in Georgia at all. They arrive
+          believing they need a visa to own here, so the door says otherwise
+          rather than describing a product. */}
+      <section className="shell-w sec">
+        <div className="card p-5 between wrap gap-3">
+          <div style={{ maxWidth: 560 }}>
+            <div className="t-lg w6 serif">Living outside the United States?</div>
+            <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              You don&apos;t need citizenship, a green card, or a visa to own property in
+              Georgia, and you don&apos;t need to come here to close. See what you would
+              actually have to send, and what it would rent for.
+            </p>
+          </div>
+          <Link href="/abroad" className="btn btn-p">Buying from abroad</Link>
+        </div>
+      </section>
+
       <section className="shell-w sec">
         <div className="grid-3 gap-3">
           {[

@@ -17,7 +17,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/buy", "/buy/programs", "/buy/how", "/sell", "/sell/how", "/sell/unclaimed"],
+        allow: ["/", "/abroad", "/buy", "/buy/programs", "/buy/how", "/sell", "/sell/how", "/sell/unclaimed"],
         /* /dev is the development index. It is not secret, but it describes what
            is built and what is only specified, and it is not the product. */
         disallow: [
