@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const alt = "Own property in Georgia from anywhere";
@@ -13,6 +15,15 @@ export const contentType = "image/png";
  * forwarding it is usually vouching for it to someone who reads one of them.
  */
 export default async function Image() {
+  /* The image renderer ships no Ethiopic face, so Amharic arrives as tofu —
+     empty boxes, in a card whose whole job is to say this page speaks your
+     language. Bundled rather than fetched: this runs on every unfurl, and a
+     card that depends on a third-party font request is a card that sometimes
+     renders wrong in someone's group chat. */
+  const ethiopic = await readFile(
+    join(process.cwd(), "assets/fonts/NotoSansEthiopic-SemiBold.ttf"),
+  );
+
   return new ImageResponse(
     (
       <div style={{
@@ -28,9 +39,12 @@ export default async function Image() {
           }}>R</div>
           <div style={{ fontSize: 27, fontWeight: 600, color: "#111" }}>Rift</div>
           <div style={{
-            marginLeft: 8, fontSize: 17, color: "#b4402a",
+            marginLeft: 8, fontSize: 17, color: "#b4402a", display: "flex", gap: 6,
             border: "1px solid #e8d9d4", borderRadius: 999, padding: "4px 14px",
-          }}>From abroad · ከውጭ አገር</div>
+          }}>
+            <span>From abroad ·</span>
+            <span style={{ fontFamily: "Noto Sans Ethiopic" }}>ከውጭ አገር</span>
+          </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -43,13 +57,17 @@ export default async function Image() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div style={{ fontSize: 22, color: "#7a756e" }}>
-            Free · no account · English &amp; አማርኛ
+          <div style={{ fontSize: 22, color: "#7a756e", display: "flex", gap: 6 }}>
+            <span>Free · no account · English &amp;</span>
+            <span style={{ fontFamily: "Noto Sans Ethiopic" }}>አማርኛ</span>
           </div>
           <div style={{ fontSize: 22, color: "#7a756e" }}>Kaleb Befekadu · Georgia</div>
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      fonts: [{ name: "Noto Sans Ethiopic", data: ethiopic, style: "normal", weight: 600 }],
+    },
   );
 }
