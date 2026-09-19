@@ -80,6 +80,32 @@ export const STATUSES: Status[] = [
   },
 ];
 
+/**
+ * Turning a URL into abroad inputs.
+ *
+ * Same trust boundary as lib/core/params.ts and for the same reason: the
+ * readout is URL-addressable and ungated, so every figure on it comes from a
+ * query string a stranger can edit. Anything unrecognised falls back to the
+ * strictest honest default rather than being passed through — a made-up status
+ * would quote a down payment no lender offers.
+ */
+export function parseAbroadParams(
+  get: (k: string) => string | undefined,
+  counties: readonly string[],
+): AbroadInputs & { downPct: number } {
+  const num = (k: string, lo: number, hi: number, fallback: number) => {
+    const n = Number(get(k));
+    return Number.isFinite(n) ? Math.min(Math.max(n, lo), hi) : fallback;
+  };
+  const status = STATUSES.find((x) => x.id === get("s"))?.id ?? ABROAD_DEFAULTS.status;
+  const use: Use = get("u") === "live" ? "live" : "rent";
+  const countyRaw = get("c");
+  const county = countyRaw && counties.includes(countyRaw) ? countyRaw : ABROAD_DEFAULTS.county;
+  const price = num("p", 60_000, 3_000_000, ABROAD_DEFAULTS.price);
+  const floor = statusById(status).down[use];
+  return { price, county, status, use, downPct: num("d", floor, 100, floor) };
+}
+
 export const statusById = (id: StatusId) => STATUSES.find((s) => s.id === id) ?? STATUSES[3];
 
 /* -------------------------------------------------------------------- rent */
@@ -127,6 +153,12 @@ export const ABROAD_DEFAULTS: AbroadInputs = {
 
 /** Assumptions held in one place so every figure on the page shares them. */
 export const ASSUMPTIONS = {
+  /* A starting assumption, overridden by the recorded rate wherever one is
+     available. It is the same 6.5% the buyer engine starts from and it is here
+     only so that pure code stays pure — every surface that can reach the
+     database passes the real one in. Leaving it to stand on its own was a
+     drift waiting to happen: record a rate, and this page alone keeps quoting
+     a number the rest of the product has moved off. */
   baseRatePct: 6.5,
   termYears: 30,
   taxPct: 1.0,

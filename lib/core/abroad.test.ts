@@ -65,3 +65,27 @@ describe("the down payment lever", () => {
     expect(breakEvenDownPct({ ...ABROAD_DEFAULTS, use: "live" })).toBeNull();
   });
 });
+
+describe("parsing an abroad link", () => {
+  it("falls back to the strictest status for an unknown one", async () => {
+    const { parseAbroadParams } = await import("./abroad");
+    const r = parseAbroadParams((k) => ({ s: "citizen-ish" }[k]), ["DeKalb"]);
+    expect(r.status).toBe("foreign");
+  });
+
+  it("refuses a county we do not serve", async () => {
+    const { parseAbroadParams } = await import("./abroad");
+    expect(parseAbroadParams((k) => ({ c: "Maricopa" }[k]), ["DeKalb"]).county).toBe("DeKalb");
+  });
+
+  it("clamps a down payment below the lender's floor", async () => {
+    const { parseAbroadParams } = await import("./abroad");
+    const r = parseAbroadParams((k) => ({ s: "foreign", u: "rent", d: "3" }[k]), ["DeKalb"]);
+    expect(r.downPct).toBe(30);
+  });
+
+  it("clamps an absurd price instead of rendering it", async () => {
+    const { parseAbroadParams } = await import("./abroad");
+    expect(parseAbroadParams((k) => ({ p: "-9999" }[k]), ["DeKalb"]).price).toBe(60_000);
+  });
+});

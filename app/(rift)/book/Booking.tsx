@@ -30,7 +30,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
 }) {
   const q = useSearchParams();
   const topic = q.get("topic") ?? "your numbers";
-  const side = q.get("v") === "sell" ? "sell" : "buy";
+  const v = q.get("v");
+  const side = v === "sell" ? "sell" : "buy";
+  /* Three visitors reach this page, and two of them arrived without a readout.
+     Sending them "back" to one they never had is a link to a stranger's page. */
+  const abroad = v === "abroad";
+  const home = abroad ? "/abroad" : side === "sell" ? "/sell" : "/buy";
+  const backLabel = abroad ? "Back to my numbers" : "Back to my readout";
+  const backHref = abroad ? "/abroad" : side === "sell" ? "/sell/results" : "/buy/results";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -95,8 +102,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             always the same day. If it stops working, say so and it moves; there is nothing to
             cancel and no deposit.
           </p>
-          <Link href="/buy/results" className="btn btn-g" style={{ marginTop: 16 }}>
-            <Ico.chevL size={14} />Back to my readout
+          <Link href={backHref} className="btn btn-g" style={{ marginTop: 16 }}>
+            <Ico.chevL size={14} />{backLabel}
           </Link>
         </div>
       </main>
@@ -107,15 +114,21 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
     <div className={side}>
       <header style={{ borderBottom: "1px solid var(--line-2)" }}>
         <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/buy" className="row gap-2"><Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span></Link>
-          <Link href="/buy/results" className="t-xs c-3">Back to my readout</Link>
+          <Link href={home} className="row gap-2"><Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span></Link>
+          <Link href={backHref} className="t-xs c-3">{backLabel}</Link>
         </div>
       </header>
 
       <main className="shell-w sec">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3.4vw,38px)", lineHeight: 1.14, letterSpacing: "-0.02em", maxWidth: 620 }}>
-          Twenty minutes about {topic.toLowerCase()}
+          {abroad ? "Fifteen minutes, at a time that works where you are" : `Twenty minutes about ${topic.toLowerCase()}`}
         </h1>
+        {abroad ? (
+          <p className="t-sm c-3" style={{ marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
+            Times below are Atlanta time (Eastern). Tell us your city and Kaleb will work
+            around it — he speaks English and Amharic.
+          </p>
+        ) : null}
         <p className="lede" style={{ marginTop: 14, maxWidth: 560 }}>
           Not a pitch, not a tour of houses, and not a credit check. One conversation about the
           thing standing between you and a date.

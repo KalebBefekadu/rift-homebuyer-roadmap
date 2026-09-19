@@ -6,8 +6,8 @@ import { Ico, Mark } from "@/components/rift/icons";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
 import {
-  abroadReturns, breakEvenDownPct, statusById, STATUSES, ASSUMPTIONS, ABROAD_DEFAULTS,
-  type StatusId, type Use,
+  abroadReturns, breakEvenDownPct, statusById, STATUSES, ASSUMPTIONS,
+  type AbroadInputs, type StatusId, type Use,
 } from "@/lib/core/abroad";
 
 /**
@@ -33,17 +33,22 @@ const USES: { id: Use; label: string; note: string }[] = [
   { id: "live", label: "Live in it later", note: "A place to return to, or for family here now" },
 ];
 
-export function Landing({ counties }: { counties: string[] }) {
-  const [price, setPrice] = useState(ABROAD_DEFAULTS.price);
-  const [county, setCounty] = useState(ABROAD_DEFAULTS.county);
-  const [status, setStatus] = useState<StatusId>(ABROAD_DEFAULTS.status);
-  const [use, setUse] = useState<Use>(ABROAD_DEFAULTS.use);
+export function Landing({ counties, initial }: {
+  counties: string[];
+  initial: AbroadInputs & { downPct: number };
+}) {
+  const [price, setPrice] = useState(initial.price);
+  const [county, setCounty] = useState(initial.county);
+  const [status, setStatus] = useState<StatusId>(initial.status);
+  const [use, setUse] = useState<Use>(initial.use);
   /* Null means "the minimum for my situation", so changing status moves the
      slider with it instead of stranding a number that no longer applies. */
-  const [extraDown, setExtraDown] = useState<number | null>(null);
+  const [extraDown, setExtraDown] = useState<number | null>(
+    initial.downPct > statusById(initial.status).down[initial.use] ? initial.downPct : null,
+  );
 
   useCaptureTouch();
-  useTrack({ name: "landing_view", side: "buy", meta: { page: "abroad" } });
+  useTrack({ name: "landing_view", side: "buy", meta: { page: "abroad", status, use } });
 
   const s = statusById(status);
   const minDown = s.down[use];
@@ -53,7 +58,12 @@ export function Landing({ counties }: { counties: string[] }) {
   const breakEven = useMemo(() => breakEvenDownPct(input), [price, county, status, use]);
   const answered = (qid: string) => track({ name: "hero_answer", side: "buy", meta: { qid, page: "abroad" } });
 
-  const go = `/buy/start?c=${encodeURIComponent(county)}&o=none&from=abroad`;
+  /* Straight to the readout, not into the buyer funnel. That funnel asks what
+     you have saved and what you put away each month — a first-time buyer
+     closing a cash gap — and its readout names Georgia Dream throughout, which
+     requires the buyer to live in the house. Every answer this page needs has
+     already been given above, so there is nothing left to ask. */
+  const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}`;
 
   return (
     <div className="buy">
@@ -130,6 +140,7 @@ export function Landing({ counties }: { counties: string[] }) {
                     <span className="num t-sm">{money(price)}</span>
                   </div>
                   <input className="rng" type="range" min={120_000} max={750_000} step={5_000}
+                    aria-label="Purchase price" aria-valuetext={money(price)}
                     value={price} onChange={(e) => { setPrice(Number(e.target.value)); answered("price"); }} />
                 </label>
                 <label className="field">
@@ -149,6 +160,7 @@ export function Landing({ counties }: { counties: string[] }) {
                   </span>
                 </div>
                 <input className="rng" type="range" min={minDown} max={60} step={1}
+                  aria-label="Down payment percentage" aria-valuetext={`${downPct} percent, ${money(r.down)}`}
                   value={downPct} onChange={(e) => { setExtraDown(Number(e.target.value)); answered("down"); }} />
                 <span className="t-xs c-4" style={{ marginTop: 6, display: "block", lineHeight: 1.5 }}>
                   {minDown}% is the least a lender will take in your situation.
@@ -304,7 +316,7 @@ export function Landing({ counties }: { counties: string[] }) {
             </p>
             <div className="g3 gap-3" style={{ marginTop: 26 }}>
               {[
-                { t: "Work out my numbers", b: "The full readout — cash needed, monthly cost, and what it would rent for.", cta: "Start", href: go, primary: true },
+                { t: "See the whole thing", b: "The full readout — every cost, the first year broken down, and the one thing in your way. No more questions.", cta: "Show me", href: go, primary: true },
                 { t: "Talk to someone who's done it", b: "Fifteen minutes with Kaleb, in English or Amharic, at a time that works where you are.", cta: "See open times", href: "/book?v=abroad", primary: false },
                 { t: "I might live here instead", b: "If you'll be living in the house, the Georgia assistance programs may apply to you.", cta: "Buying to live here", href: "/buy", primary: false },
               ].map((d) => (
@@ -342,7 +354,7 @@ export function Landing({ counties }: { counties: string[] }) {
               <div className="row gap-4" style={{ alignItems: "flex-start" }}>
                 <div className="col gap-2">
                   <div className="kicker c-4">This product</div>
-                  <Link href="/buy/start" className="t-sm c-3">Start</Link>
+                  <Link href={go} className="t-sm c-3">My readout</Link>
                   <Link href="/buy/how" className="t-sm c-3">How it works</Link>
                   <Link href="/buy" className="t-sm c-3">Buying to live here</Link>
                 </div>
