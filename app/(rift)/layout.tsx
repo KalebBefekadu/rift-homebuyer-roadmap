@@ -23,6 +23,13 @@ export default function RiftLayout({ children }: { children: React.ReactNode }) 
         rel="stylesheet"
         href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@400,500,600,700&f%5B%5D=zodiak@300,400,500&display=swap"
       />
+      {/* Ethiopic. Without a face that carries the glyphs the Amharic pages
+          render as boxes on most machines, which is worse than English. */}
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap"
+      />
       {children}
     </div>
   );

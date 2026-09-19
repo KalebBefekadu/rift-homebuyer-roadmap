@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
+import { Tibeb, Distance, ReturnBars } from "@/components/rift/art";
+import { LocaleToggle } from "@/components/rift/LocaleToggle";
+import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
 import {
@@ -47,6 +50,30 @@ export function Landing({ counties, initial }: {
     initial.downPct > statusById(initial.status).down[initial.use] ? initial.downPct : null,
   );
 
+  /* Remembered per visitor, and reflected onto <html lang> so a screen reader
+     switches voice with the page and the browser stops offering to translate
+     something already in the reader's language. */
+  const [locale, setLocale] = useState<Locale>("en");
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("rift.locale");
+      const fromUrl = new URLSearchParams(window.location.search).get("lang");
+      const pick = isLocale(fromUrl) ? fromUrl : isLocale(saved) ? saved : null;
+      if (pick) setLocale(pick);
+      else if (navigator.language?.toLowerCase().startsWith("am")) setLocale("am");
+    } catch { /* storage unavailable — English is a safe default */ }
+  }, []);
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    try { window.localStorage.setItem("rift.locale", locale); } catch { /* ignore */ }
+  }, [locale]);
+
+  const t = translator(locale);
+  const am = locale === "am";
+  /* Ethiopic on the Amharic pass only. Switching language must not switch the
+     design, so Latin keeps the product's own face. */
+  const script: React.CSSProperties = am ? { fontFamily: ETHIOPIC_STACK } : {};
+
   useCaptureTouch();
   useTrack({ name: "landing_view", side: "buy", meta: { page: "abroad", status, use } });
 
@@ -63,7 +90,7 @@ export function Landing({ counties, initial }: {
      closing a cash gap — and its readout names Georgia Dream throughout, which
      requires the buyer to live in the house. Every answer this page needs has
      already been given above, so there is nothing left to ask. */
-  const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}`;
+  const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}&lang=${locale}`;
 
   return (
     <div className="buy">
@@ -75,42 +102,49 @@ export function Landing({ counties, initial }: {
           <Link href="/abroad" className="row gap-2">
             <Mark size={20} />
             <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
-            <span className="chip chip-brand hide-sm">From abroad</span>
+            <span className="chip chip-brand hide-sm" style={script}>{t("nav.abroad")}</span>
           </Link>
-          <div className="row gap-3">
-            <Link href="/buy" className="t-sm c-2 hide-sm">Buying to live here</Link>
-            <Link href="/book?v=abroad" className="btn btn-p btn-sm">Talk to Kaleb</Link>
+          <div className="row gap-2">
+            <LocaleToggle locale={locale} onChange={setLocale} />
+            <Link href="/buy" className="t-sm c-2 hide-sm" style={script}>{t("nav.domestic")}</Link>
+            <Link href="/book?v=abroad" className="btn btn-p btn-sm" style={script}>{t("nav.talk")}</Link>
           </div>
         </div>
+        <Tibeb className="c-brand" height={8} style={{ opacity: 0.5 }} />
       </header>
 
       <main>
         {/* The permission, then the number. In that order, because most readers
             do not yet believe the first one. */}
         <section className="shell-w">
-          <div style={{ paddingTop: "clamp(34px,5vw,64px)", maxWidth: 780 }}>
-            <h1 className="serif" style={{ fontSize: "clamp(32px,4.6vw,56px)", lineHeight: 1.06, letterSpacing: "-0.028em" }}>
-              You don&apos;t need a green card to own property in Georgia.
-            </h1>
-            <p className="lede" style={{ marginTop: 16, maxWidth: 560 }}>
-              No citizenship, no visa, no U.S. address, and no requirement to have set foot
-              here. What you do need is a real number before you send anyone a document —
-              and the honest one depends on which of these you are.
-            </p>
+          <div className="split-w" style={{ paddingTop: "clamp(34px,5vw,64px)", alignItems: "center" }}>
+            <div style={{ maxWidth: 640 }}>
+              <h1 className={am ? "" : "serif"} style={{
+                fontSize: am ? "clamp(27px,3.8vw,44px)" : "clamp(32px,4.6vw,56px)",
+                lineHeight: am ? 1.35 : 1.06,
+                letterSpacing: am ? "0" : "-0.028em", ...script,
+              }}>
+                {t("hero.h1")}
+              </h1>
+              <p className="lede" style={{ marginTop: 16, maxWidth: 560, ...script, lineHeight: am ? 1.85 : undefined }}>
+                {t("hero.lede")}
+              </p>
+            </div>
+            <Distance className="c-brand" style={{ maxWidth: 340, opacity: 0.9 }} />
           </div>
 
           <div className="ans" style={{ marginTop: 28, maxWidth: 940 }}>
             <div className="ans-in">
               <div className="field" style={{ marginBottom: 18 }}>
-                <span className="label">Where you stand today</span>
+                <span className="label" style={script}>{t("ask.status")}</span>
                 <div className="col gap-2" style={{ marginTop: 8 }}>
                   {STATUSES.map((x) => (
                     <label key={x.id} className="opt" data-on={status === x.id}>
                       <input type="radio" name="status" checked={status === x.id}
                         onChange={() => { setStatus(x.id); answered("status"); }} />
-                      <span>
-                        <span className="t-sm w55">{x.label}</span>
-                        <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: 1.5 }}>{x.note}</span>
+                      <span style={script}>
+                        <span className="t-sm w55">{t(`status.${x.id}`)}</span>
+                        <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: am ? 1.8 : 1.5 }}>{t(`status.${x.id}.note`)}</span>
                       </span>
                     </label>
                   ))}
@@ -118,15 +152,15 @@ export function Landing({ counties, initial }: {
               </div>
 
               <div className="field" style={{ marginBottom: 18 }}>
-                <span className="label">What you&apos;d do with it</span>
+                <span className="label" style={script}>{t("ask.use")}</span>
                 <div className="g2 gap-2" style={{ marginTop: 8 }}>
                   {USES.map((u) => (
                     <label key={u.id} className="opt" data-on={use === u.id}>
                       <input type="radio" name="use" checked={use === u.id}
                         onChange={() => { setUse(u.id); answered("use"); }} />
-                      <span>
-                        <span className="t-sm w55">{u.label}</span>
-                        <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: 1.5 }}>{u.note}</span>
+                      <span style={script}>
+                        <span className="t-sm w55">{t(`use.${u.id}`)}</span>
+                        <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: 1.5 }}>{t(`use.${u.id}.note`)}</span>
                       </span>
                     </label>
                   ))}
@@ -136,7 +170,7 @@ export function Landing({ counties, initial }: {
               <div className="g2 gap-4" style={{ alignItems: "end" }}>
                 <label className="field">
                   <div className="between" style={{ marginBottom: 5 }}>
-                    <span className="label" style={{ margin: 0 }}>Purchase price</span>
+                    <span className="label" style={{ margin: 0, ...script }}>{t("ask.price")}</span>
                     <span className="num t-sm">{money(price)}</span>
                   </div>
                   <input className="rng" type="range" min={120_000} max={750_000} step={5_000}
@@ -144,7 +178,7 @@ export function Landing({ counties, initial }: {
                     value={price} onChange={(e) => { setPrice(Number(e.target.value)); answered("price"); }} />
                 </label>
                 <label className="field">
-                  <span className="label">County</span>
+                  <span className="label" style={script}>{t("ask.county")}</span>
                   <select className="select" value={county}
                     onChange={(e) => { setCounty(e.target.value); answered("county"); }}>
                     {counties.map((c) => <option key={c}>{c}</option>)}
@@ -154,7 +188,7 @@ export function Landing({ counties, initial }: {
 
               <label className="field" style={{ marginTop: 16 }}>
                 <div className="between" style={{ marginBottom: 5 }}>
-                  <span className="label" style={{ margin: 0 }}>Down payment</span>
+                  <span className="label" style={{ margin: 0, ...script }}>{t("ask.down")}</span>
                   <span className="num t-sm">
                     {downPct}% · {money(r.down)}
                   </span>
@@ -162,13 +196,11 @@ export function Landing({ counties, initial }: {
                 <input className="rng" type="range" min={minDown} max={60} step={1}
                   aria-label="Down payment percentage" aria-valuetext={`${downPct} percent, ${money(r.down)}`}
                   value={downPct} onChange={(e) => { setExtraDown(Number(e.target.value)); answered("down"); }} />
-                <span className="t-xs c-4" style={{ marginTop: 6, display: "block", lineHeight: 1.5 }}>
-                  {minDown}% is the least a lender will take in your situation.
+                <span className="t-xs c-4" style={{ marginTop: 6, display: "block", lineHeight: am ? 1.8 : 1.5, ...script }}>
+                  {minDown}% {t("down.floor")}
                   {breakEven !== null
-                    ? ` At ${breakEven}% the rent covers everything and the house pays for itself.`
-                    : use === "rent"
-                      ? " At this price no down payment makes the rent cover the costs — a cheaper house or a different county will."
-                      : ""}
+                    ? ` ${breakEven}% — ${t("down.breakEven")}`
+                    : use === "rent" ? ` ${t("down.never")}` : ""}
                 </span>
               </label>
             </div>
@@ -177,31 +209,31 @@ export function Landing({ counties, initial }: {
               <div className="between wrap gap-4" style={{ alignItems: "flex-end" }}>
                 <div>
                   <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>
-                    What you&apos;d have to send, all in
+                    {t("out.cashIn")}
                   </div>
                   <div className="ans-num" style={{ marginTop: 8 }}>{money(r.cashIn)}</div>
                   <div className="t-sm" style={{ marginTop: 12, color: "rgba(255,255,255,.6)" }}>
-                    {r.downPct}% down · {money(r.closing)} closing · about {r.ratePct.toFixed(2)}% on {money(r.loan)}
+                    {r.downPct}% {t("out.down")} · {money(r.closing)} {t("out.closing")} · {r.ratePct.toFixed(2)}% {t("out.on")} {money(r.loan)}
                   </div>
                 </div>
                 <Link href={go} className="btn btn-lg" style={{ background: "#fff", color: "var(--ink)" }}>
-                  Work this out properly <Ico.arrowR size={16} />
+                  <span style={script}>{t("out.cta")}</span> <Ico.arrowR size={16} />
                 </Link>
               </div>
 
               {use === "rent" ? (
                 <div className="g3 gap-3" style={{ marginTop: 26, borderTop: "1px solid rgba(255,255,255,.14)", paddingTop: 20 }}>
                   {[
-                    ["Rent, estimated", money(r.rent), `${county} County, at this price`],
+                    [t("out.rent"), money(r.rent), `${county} ${t("out.rentNote")}`],
                     [
-                      r.cashFlow >= 0 ? "Left over each month" : "Short each month",
+                      r.cashFlow >= 0 ? t("out.left") : t("out.short"),
                       `${r.cashFlow < 0 ? "−" : ""}${money(Math.abs(r.cashFlow))}`,
-                      "After the loan, tax, insurance, management and vacancy",
+                      t("out.flowNote"),
                     ],
-                    ["Year one, all in", money(r.year1.total), `${r.returnPct.toFixed(1)}% of what you sent`],
+                    [t("out.year1"), money(r.year1.total), `${r.returnPct.toFixed(1)}% ${t("out.ofSent")}`],
                   ].map(([t, v, n]) => (
                     <div key={t}>
-                      <div className="t-xs" style={{ color: "rgba(255,255,255,.5)" }}>{t}</div>
+                      <div className="t-xs" style={{ color: "rgba(255,255,255,.5)", ...script }}>{t}</div>
                       <div className="num" style={{ fontSize: 24, color: "#fff", marginTop: 5 }}>{v}</div>
                       <div className="t-xs" style={{ color: "rgba(255,255,255,.45)", marginTop: 4, lineHeight: 1.5 }}>{n}</div>
                     </div>
@@ -223,17 +255,14 @@ export function Landing({ counties, initial }: {
             <div className="row gap-2" style={{ alignItems: "flex-start" }}>
               <Ico.alert size={15} className="c-brand" style={{ flex: "none", marginTop: 2 }} />
               <div>
-                <div className="t-sm w6">What a lender will ask you for</div>
-                <p className="t-sm c-3" style={{ marginTop: 4, lineHeight: 1.6 }}>{s.asks}</p>
+                <div className="t-sm w6" style={script}>{t("lender.title")}</div>
+                <p className="t-sm c-3" style={{ marginTop: 4, lineHeight: am ? 1.85 : 1.6, ...script }}>{t(`status.${s.id}.asks`)}</p>
               </div>
             </div>
           </div>
 
-          <p className="t-xs c-4" style={{ marginTop: 14, maxWidth: 700, lineHeight: 1.6 }}>
-            Planning estimates, not a loan approval or a rent guarantee. Down payments and
-            rates come from what lenders in this market publish for each situation — your own
-            lender&apos;s terms decide. Rent is estimated from county averages, not from a
-            specific property.
+          <p className="t-xs c-4" style={{ marginTop: 14, maxWidth: 700, lineHeight: am ? 1.85 : 1.6, ...script }}>
+            {t("disc.hero")}
           </p>
         </section>
 
@@ -241,26 +270,32 @@ export function Landing({ counties, initial }: {
         <section className="shell-w sec">
           <div className="split-w">
             <div>
-              <div className="kicker c-brand">Why Georgia, and why now</div>
-              <h2 className="serif" style={{ fontSize: "clamp(24px,2.8vw,36px)", letterSpacing: "-0.02em", maxWidth: 420, lineHeight: 1.14, marginTop: 12 }}>
-                One asset, priced in dollars, that four things pay you at once.
+              <div className="kicker c-brand" style={script}>{t("why.kicker")}</div>
+              <h2 className={am ? "" : "serif"} style={{
+                fontSize: am ? "clamp(21px,2.4vw,29px)" : "clamp(24px,2.8vw,36px)",
+                letterSpacing: am ? "0" : "-0.02em", maxWidth: 440,
+                lineHeight: am ? 1.45 : 1.14, marginTop: 12, ...script,
+              }}>
+                {t("why.h2")}
               </h2>
-              <p className="t-md c-3" style={{ marginTop: 14, lineHeight: 1.65, maxWidth: 400 }}>
-                Most people abroad hold everything in one currency and one country. A house in
-                Georgia is neither — and unlike money moved into a foreign account, it works
-                while it sits.
+              <p className="t-md c-3" style={{ marginTop: 14, lineHeight: am ? 1.9 : 1.65, maxWidth: 420, ...script }}>
+                {t("why.lede")}
               </p>
+              <div className="card p-4" style={{ marginTop: 20, background: "var(--sunk)" }}>
+                <ReturnBars cashFlow={r.year1.cashFlow} principal={r.year1.principal}
+                  appreciation={r.year1.appreciation} lang={locale}
+                  labels={[t("bar.rent"), t("bar.principal"), t("bar.appreciation")]} />
+              </div>
             </div>
             <div className="card" style={{ overflow: "hidden" }}>
               {([
-                [Ico.wallet, "A tenant pays the loan down",
-                  `About ${money(r.year1.principal)} of the first year's payments is principal. You didn't pay it — the rent did — and it's yours.`],
-                [Ico.chart, "Appreciation on the whole house, not your share",
-                  `At ${ASSUMPTIONS.appreciationPct}% the house gains about ${money(r.year1.appreciation)} a year. You put in ${money(r.cashIn)}. The gain is on ${money(price)}.`],
-                [Ico.spark, "Income in the currency you want to be paid in",
-                  "Rent arrives monthly in dollars, into a U.S. account, whatever is happening to the currency where you live."],
-                [Ico.doc, "A title that doesn't depend on who you know",
-                  "Georgia deeds are public record and searchable. Ownership is a document, not a relationship you have to maintain from abroad."],
+                [Ico.wallet, t("why.1"), t("why.1.body", { principal: money(r.year1.principal) })],
+                [Ico.chart, t("why.2"), t("why.2.body", {
+                  rate: `${ASSUMPTIONS.appreciationPct}%`, gain: money(r.year1.appreciation),
+                  cash: money(r.cashIn), price: money(price),
+                })],
+                [Ico.spark, t("why.3"), t("why.3.body")],
+                [Ico.doc, t("why.4"), t("why.4.body")],
               ] as const).map(([Icon, t, b], i, arr) => (
                 <div key={t} className="row gap-3" style={{
                   padding: "14px 18px", alignItems: "flex-start",
@@ -268,8 +303,8 @@ export function Landing({ counties, initial }: {
                 }}>
                   <Icon size={16} className="c-brand" style={{ marginTop: 2, flex: "none" }} />
                   <div>
-                    <div className="t-md w55">{t}</div>
-                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}>{b}</p>
+                    <div className="t-md w55" style={script}>{t}</div>
+                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: am ? 1.8 : 1.55, ...script }}>{b}</p>
                   </div>
                 </div>
               ))}
@@ -279,27 +314,25 @@ export function Landing({ counties, initial }: {
 
         {/* The objections, answered before they're raised. */}
         <section className="shell-w sec">
-          <h2 className="serif" style={{ fontSize: "clamp(24px,2.8vw,34px)", letterSpacing: "-0.02em", maxWidth: 560 }}>
-            The questions everyone asks, answered before you have to ask them.
+          <h2 className={am ? "" : "serif"} style={{
+            fontSize: am ? "clamp(21px,2.4vw,28px)" : "clamp(24px,2.8vw,34px)",
+            letterSpacing: am ? "0" : "-0.02em", maxWidth: 620,
+            lineHeight: am ? 1.45 : undefined, ...script,
+          }}>
+            {t("faq.h2")}
           </h2>
           <div className="g2 gap-3" style={{ marginTop: 24 }}>
             {[
-              ["Do I have to come to America to close?",
-                "No. Closings are done remotely through a Georgia closing attorney, with documents notarised at a U.S. embassy or consulate, or by an approved remote notary. Plenty of owners have never seen the house."],
-              ["Who looks after it when I'm 8,000 miles away?",
-                `A licensed property manager, at about ${ASSUMPTIONS.managementPct}% of rent — already taken out of the figure above. They screen the tenant, collect the rent, and handle the 2 a.m. call.`],
-              ["What about U.S. tax?",
-                "You file a U.S. return on the rental income, and depreciation usually shelters most of it in the early years. When you sell, a withholding rule called FIRPTA applies. Neither is a reason not to do this, and both need a cross-border accountant, not an agent."],
-              ["Can I get the money out again?",
-                "Yes. There is no restriction on a foreign owner selling and repatriating the proceeds. The constraint is the market, the same as it is for anyone."],
-              ["Is this the right time to buy?",
-                "Sometimes the answer is no. Rates are high and the cash-flow maths is tighter than it was three years ago, which is exactly why the panel above shows you a negative number when it is one."],
-              ["Why you?",
-                "Kaleb is a licensed Georgia agent who works with buyers abroad and speaks Amharic. Everything on this page is free and yours whether or not you ever call."],
+              [t("faq.q1"), t("faq.a1")],
+              [t("faq.q2"), t("faq.a2", { pct: `${ASSUMPTIONS.managementPct}%` })],
+              [t("faq.q3"), t("faq.a3")],
+              [t("faq.q4"), t("faq.a4")],
+              [t("faq.q5"), t("faq.a5")],
+              [t("faq.q6"), t("faq.a6")],
             ].map(([q, a]) => (
               <div key={q} className="card p-4">
-                <div className="t-md w6">{q}</div>
-                <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: 1.65 }}>{a}</p>
+                <div className="t-md w6" style={script}>{q}</div>
+                <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: am ? 1.9 : 1.65, ...script }}>{a}</p>
               </div>
             ))}
           </div>
@@ -308,28 +341,31 @@ export function Landing({ counties, initial }: {
         {/* Three doors at three commitment levels. */}
         <section className="shell-w sec">
           <div className="card" style={{ padding: "clamp(26px,3.4vw,44px)", background: "var(--ink)", borderColor: "var(--ink)" }}>
-            <h3 className="serif" style={{ fontSize: "clamp(23px,2.8vw,34px)", color: "#fff", letterSpacing: "-0.02em", lineHeight: 1.15, maxWidth: 560 }}>
-              Nothing here is held back until you sign up.
+            <h3 className={am ? "" : "serif"} style={{
+              fontSize: am ? "clamp(20px,2.4vw,28px)" : "clamp(23px,2.8vw,34px)", color: "#fff",
+              letterSpacing: am ? "0" : "-0.02em", lineHeight: am ? 1.45 : 1.15, maxWidth: 620, ...script,
+            }}>
+              {t("doors.h3")}
             </h3>
-            <p style={{ marginTop: 12, color: "rgba(255,255,255,.62)", fontSize: 15, lineHeight: 1.6, maxWidth: 520 }}>
-              No account, no passport scan, and nothing sent to a lender until you decide to.
+            <p style={{ marginTop: 12, color: "rgba(255,255,255,.62)", fontSize: 15, lineHeight: am ? 1.9 : 1.6, maxWidth: 560, ...script }}>
+              {t("doors.lede")}
             </p>
             <div className="g3 gap-3" style={{ marginTop: 26 }}>
               {[
-                { t: "See the whole thing", b: "The full readout — every cost, the first year broken down, and the one thing in your way. No more questions.", cta: "Show me", href: go, primary: true },
-                { t: "Talk to someone who's done it", b: "Fifteen minutes with Kaleb, in English or Amharic, at a time that works where you are.", cta: "See open times", href: "/book?v=abroad", primary: false },
-                { t: "I might live here instead", b: "If you'll be living in the house, the Georgia assistance programs may apply to you.", cta: "Buying to live here", href: "/buy", primary: false },
+                { t: t("doors.1"), b: t("doors.1.body"), cta: t("doors.1.cta"), href: go, primary: true },
+                { t: t("doors.2"), b: t("doors.2.body"), cta: t("doors.2.cta"), href: "/book?v=abroad", primary: false },
+                { t: t("doors.3"), b: t("doors.3.body"), cta: t("doors.3.cta"), href: "/buy", primary: false },
               ].map((d) => (
                 <div key={d.t} className="col" style={{ justifyContent: "space-between", gap: 16 }}>
                   <div>
-                    <div className="t-lg w6" style={{ color: "#fff" }}>{d.t}</div>
-                    <p style={{ marginTop: 7, color: "rgba(255,255,255,.62)", fontSize: 14, lineHeight: 1.55 }}>{d.b}</p>
+                    <div className="t-lg w6" style={{ color: "#fff", ...script }}>{d.t}</div>
+                    <p style={{ marginTop: 7, color: "rgba(255,255,255,.62)", fontSize: 14, lineHeight: am ? 1.8 : 1.55, ...script }}>{d.b}</p>
                   </div>
                   <Link href={d.href} className="btn" style={
                     d.primary
                       ? { background: "#fff", color: "var(--ink)", width: "100%" }
                       : { background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.24)", width: "100%" }
-                  }>{d.cta} <Ico.arrowR size={15} /></Link>
+                  }><span style={script}>{d.cta}</span> <Ico.arrowR size={15} /></Link>
                 </div>
               ))}
             </div>
@@ -344,11 +380,11 @@ export function Landing({ counties, initial }: {
                   <Mark size={18} />
                   <span className="mark-name" style={{ fontSize: 17 }}>Rift</span>
                 </Link>
-                <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6 }}>
-                  Rift for buyers abroad. Guided by Kaleb Befekadu, a licensed agent in Georgia.
-                  Every figure is a planning estimate, not a lending commitment, approval, or
-                  valuation. We are not tax advisors or immigration attorneys, and we tell you
-                  when a question belongs to one.
+                <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: am ? 1.85 : 1.6, ...script }}>
+                  {t("foot.note")}
+                </p>
+                <p className="t-xs c-4" style={{ marginTop: 10, lineHeight: am ? 1.85 : 1.6, ...script }}>
+                  {t("foot.fair")}
                 </p>
               </div>
               <div className="row gap-4" style={{ alignItems: "flex-start" }}>
