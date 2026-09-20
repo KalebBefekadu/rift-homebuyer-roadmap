@@ -67,8 +67,28 @@ jobs:
           fi
 
       - name: Build
-        run: npx next build
+        run: npx next build 2>&1 | tee /tmp/build.log
         env:
           # Sourcemap upload needs a token that a fork's PR will not have.
           # Building without it is the documented behaviour, not a workaround.
           SENTRY_AUTH_TOKEN: ""
+
+      # A budget, not a target. Every route in the public funnel pays this
+      # before it pays for anything of its own, and the audience includes
+      # people opening /abroad on a phone from another continent. It went from
+      # 229 kB to 189 kB when Session Replay came out; the ceiling is set just
+      # above that so the next thing to add forty kilobytes has to argue for it
+      # here rather than arrive unnoticed.
+      - name: First Load JS budget
+        run: |
+          KB=$(grep -oE "First Load JS shared by all +([0-9.]+) kB" /tmp/build.log \
+               | grep -oE "[0-9.]+ kB$" | grep -oE "^[0-9.]+")
+          if [ -z "$KB" ]; then
+            echo "::error::Could not read First Load JS from the build output."
+            exit 1
+          fi
+          echo "First Load JS shared by all: ${KB} kB (budget 200)"
+          awk -v kb="$KB" 'BEGIN { exit (kb > 200) ? 1 : 0 }' || {
+            echo "::error::Shared First Load JS is ${KB} kB, over the 200 kB budget."
+            exit 1
+          }

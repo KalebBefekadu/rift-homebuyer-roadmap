@@ -81,6 +81,21 @@ silently eat the envelope — which is the whole failure mode of client-side err
 failure rather than `console.error`, because benchmark 2.5 requires that **nothing fails
 silently**, and an operator cannot act on a log line nobody reads.
 
+### Session Replay is off, deliberately
+
+`instrumentation-client.ts` does not load `replayIntegration()`. It recorded one session
+in ten on pages where somebody types their savings, their payoff and their income, on a
+product that asks for no account and says so — and `lib/core/privacy.ts` lists every
+category of data this product keeps, with session recordings sent to a third party absent
+from that list. The panel also tells a visitor "we do not know what they typed", which was
+true only because of a library default nothing in this repo had written down.
+
+It was also the heaviest thing shipped to a browser: removing it took First Load JS shared
+by every route from 229 kB to 189 kB, and `/buy` from 242 kB to 207 kB.
+
+Errors and traces are unaffected. If replay is ever wanted back, it goes in `RETENTION`
+first, and `maskAllText` / `maskAllInputs` get set explicitly rather than inherited.
+
 ### What to add during the build
 - A tag for the build phase, so an error in a half-built surface is triageable.
 - Alerts on the two operations where a silent failure costs a client rather than a page
