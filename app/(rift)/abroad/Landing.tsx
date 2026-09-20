@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import { Tibeb, Distance, ReturnBars } from "@/components/rift/art";
 import { LocaleToggle } from "@/components/rift/LocaleToggle";
+import { Announce } from "@/components/rift/Live";
 import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
@@ -263,6 +264,16 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                   <span style={script}>{t("out.cta")}</span> <Ico.arrowR size={16} />
                 </Link>
               </div>
+
+              {/* Composed from the labels already on the panel rather than from
+                  a new sentence, so the Amharic reader hears Amharic without
+                  anybody inventing a string for them to hear. */}
+              <Announce>
+                {`${t("out.cashIn")}: ${money(r.cashIn)}. ${r.downPct}% ${t("out.down")}, ${money(r.closing)} ${t("out.closing")}, ${r.ratePct.toFixed(2)}% ${t("out.on")} ${money(r.loan)}.`}
+                {use === "rent"
+                  ? ` ${r.cashFlow >= 0 ? t("out.left") : t("out.short")}: ${money(Math.abs(r.cashFlow))}.`
+                  : ""}
+              </Announce>
 
               {use === "rent" ? (
                 <div className="g3 gap-3" style={{ marginTop: 26, borderTop: "1px solid rgba(255,255,255,.14)", paddingTop: 20 }}>

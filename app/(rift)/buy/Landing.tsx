@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
+import { Announce } from "@/components/rift/Live";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { matchPrograms, FUNDING_LABEL, type AssistanceProgram } from "@/lib/core/registry";
 import { money, cashToClose, BUYER_DEFAULTS } from "@/lib/core/compute";
@@ -144,6 +145,11 @@ export function Landing({
                   </Link>
                 </div>
               )}
+              <Announce>
+                {m.matched.length === 0
+                  ? `Nothing verified matches ${county} County with those answers today. Your cash-to-close figure still applies.`
+                  : `You may qualify for ${money(m.usableMin)} to ${money(m.usableMax)} in ${county} County, across ${m.matched.length} ${m.matched.length === 1 ? "program" : "programs"}.`}
+              </Announce>
             </div>
           </div>
 

@@ -45,6 +45,11 @@ export function Readout({
   const payback = repairs.filter((x) => x.verdict === "pays-back");
   const paybackCost = payback.reduce((a, x) => a + x.cost, 0);
   const equityPct = inputs.price > 0 ? Math.round((proceeds.net / inputs.price) * 100) : 0;
+  /* Checked in four places on this page. The glance tile and the reframe card
+     were corrected; the section heading and the last row of the proceeds table
+     were not, and between them they told somebody $113,575 short that they
+     were reading "What actually reaches you" and that the figure was "Yours". */
+  const underwater = proceeds.net < 0;
 
   /* Persisted so the emailed link survives this tab. Best effort: the readout
      is already on screen and complete, so a failure here costs the share link,
@@ -102,7 +107,7 @@ export function Readout({
   };
 
   return (
-    <ReadoutShell v="sell" ask={{ what: "Net proceeds at this price", claim: money(proceeds.net) }}>
+    <ReadoutShell v="sell" ask={{ what: underwater ? "Shortfall at this price" : "Net proceeds at this price", claim: money(proceeds.net) }}>
       <Verdict
         r={r}
         used={`Built from ${money(inputs.price)} likely price · ${money(inputs.payoff)} still owed · ${inputs.county} County · about ${inputs.yearsOwned} years owned`}
@@ -110,7 +115,7 @@ export function Readout({
           /* "You keep -$73,575" is not a thing anybody keeps. Below water the
              number is money you have to find, and the tile has to say which
              of the two it is. */
-          proceeds.net < 0
+          underwater
             ? {
                 label: "You would need to bring",
                 value: money(Math.abs(proceeds.net)),
@@ -137,7 +142,15 @@ export function Readout({
       ) : null}
 
       <div className="shell-w">
-        <Sec n={1} title="What actually reaches you" sub="Every valuation you have been given is a list price. This is the other end of it.">
+        <Sec
+          n={1}
+          title={underwater ? "What this sale does not cover" : "What actually reaches you"}
+          sub={
+            underwater
+              ? "Every valuation you have been given is a list price. This is what is on the other side of it."
+              : "Every valuation you have been given is a list price. This is the other end of it."
+          }
+        >
           <Reframe r={r} />
           <div className="card" style={{ marginTop: 16, overflow: "hidden" }}>
             <div className="between" style={{ padding: "13px 18px", borderBottom: "1px solid var(--line-2)" }}>
@@ -154,13 +167,13 @@ export function Readout({
               </div>
             ))}
             <div className="between" style={{ padding: "16px 18px", background: "var(--brand-wash)" }}>
-              <span className="t-md w6">Yours</span>
-              <span className="num" style={{ fontSize: 25, color: proceeds.net < 0 ? "var(--neg)" : "var(--brand-2)" }}>
-                {money(proceeds.net)}
+              <span className="t-md w6">{underwater ? "Still owed" : "Yours"}</span>
+              <span className="num" style={{ fontSize: 25, color: underwater ? "var(--neg)" : "var(--brand-2)" }}>
+                {underwater ? money(Math.abs(proceeds.net)) : money(proceeds.net)}
               </span>
             </div>
           </div>
-          {proceeds.net < 0 ? (
+          {underwater ? (
             <div className="card p-4" style={{ marginTop: 12, borderColor: "var(--neg)" }}>
               <div className="t-sm w6">At this price, selling costs you money.</div>
               <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>

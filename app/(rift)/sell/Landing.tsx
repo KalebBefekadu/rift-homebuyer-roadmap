@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
+import { Announce } from "@/components/rift/Live";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money, netProceeds, SELLER_DEFAULTS, type SellerInputs } from "@/lib/core/compute";
 
@@ -31,6 +32,15 @@ export function Landing({ counties }: { counties: string[] }) {
 
   const r = useMemo(() => netProceeds(s), [s]);
   const pct = Math.round((r.net / s.price) * 100);
+  /* The payoff slider reaches $700,000 and the price slider starts at
+     $150,000, so this panel can be — and was — asked to describe a sale that
+     does not cover the loan. It answered "What you'd actually walk away with:
+     -$566,000", at -377% of the price. The readout was rewritten for this case
+     last week; the front door, which is where a seller meets the product, was
+     not. Same defect, one page earlier: the arithmetic is right and every word
+     around it is written for somebody in the opposite situation. */
+  const underwater = r.net < 0;
+  const short = money(Math.abs(r.net));
   const go = `/sell/start?p=${s.price}&o=${s.payoff}&c=${encodeURIComponent(s.county)}`;
 
   return (
@@ -99,17 +109,28 @@ export function Landing({ counties }: { counties: string[] }) {
               <div className="between wrap gap-4" style={{ alignItems: "flex-end" }}>
                 <div>
                   <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>
-                    What you&apos;d actually walk away with
+                    {underwater
+                      ? "What you\u2019d have to bring to the closing table"
+                      : "What you\u2019d actually walk away with"}
                   </div>
-                  <div className="ans-num" style={{ marginTop: 8 }}>{money(r.net)}</div>
+                  <div className="ans-num" style={{ marginTop: 8 }}>
+                    {underwater ? short : money(r.net)}
+                  </div>
                   <div className="t-sm" style={{ marginTop: 12, color: "rgba(255,255,255,.6)" }}>
-                    {pct}% of the sale price · {money(r.totalCosts)} goes to payoff and costs
+                    {underwater
+                      ? `This sale doesn\u2019t cover the ${money(s.payoff)} you still owe · ${money(r.totalCosts - s.payoff)} of that is the cost of selling`
+                      : `${pct}% of the sale price · ${money(r.totalCosts)} goes to payoff and costs`}
                   </div>
                 </div>
                 <Link href={go} className="btn btn-lg" style={{ background: "#fff", color: "var(--ink)" }}>
                   Break this down for my home <Ico.arrowR size={16} />
                 </Link>
               </div>
+              <Announce>
+                {underwater
+                  ? `On a ${money(s.price)} sale against ${money(s.payoff)} still owed, you would need to bring about ${short} to the closing table.`
+                  : `On a ${money(s.price)} sale with ${money(s.payoff)} still owed, you would walk away with about ${money(r.net)}, ${pct} percent of the price.`}
+              </Announce>
             </div>
           </div>
 
@@ -138,8 +159,10 @@ export function Landing({ counties }: { counties: string[] }) {
                 </div>
               ))}
               <div className="between" style={{ padding: "15px 18px", background: "var(--brand-wash)" }}>
-                <span className="t-md w6">Yours</span>
-                <span className="num" style={{ fontSize: 22, color: "var(--brand-2)" }}>{money(r.net)}</span>
+                <span className="t-md w6">{underwater ? "Still owed" : "Yours"}</span>
+                <span className="num" style={{ fontSize: 22, color: underwater ? "var(--neg)" : "var(--brand-2)" }}>
+                  {underwater ? short : money(r.net)}
+                </span>
               </div>
             </div>
 
