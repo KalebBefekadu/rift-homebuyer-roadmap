@@ -29,7 +29,11 @@ export default async function Image() {
       <Card
         chip={
           <>
-            <span>From abroad ·</span>
+            {/* The space is inside the string, as a non-breaking space. The
+                two scripts need separate spans for the font switch, and
+                satori does not apply `gap` between them — so relying on the
+                layout to separate them renders "From abroad ·ከውጭ አገር". */}
+            <span>{"From abroad ·\u00A0"}</span>
             <span style={{ fontFamily: "Noto Sans Ethiopic" }}>ከውጭ አገር</span>
           </>
         }
@@ -37,7 +41,7 @@ export default async function Image() {
         sub="See what you would have to send, what it would rent for, and what comes back."
         foot={
           <>
-            <span>Free · no account · English &amp;</span>
+            <span>{"Free · no account · English &\u00A0"}</span>
             <span style={{ fontFamily: "Noto Sans Ethiopic" }}>አማርኛ</span>
           </>
         }
