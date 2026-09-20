@@ -321,20 +321,54 @@ export function sellerReadout(
 ): Readout {
   const r = netProceeds(s);
   const equityPct = Math.round((r.net / s.price) * 100);
-  const thin = equityPct < 12;
 
-  /* An unstated timeline is "exploring", not whatever the default happens to
-     spell. The status chip is the first thing the agent sorts by, and a seller
-     who said nothing should not be ranked above one who said "9 to 18". */
+  /**
+   * Owing more than the sale would produce.
+   *
+   * `parseSellerParams` deliberately lets a payoff exceed the price — its own
+   * comment says being underwater "is exactly the situation somebody most
+   * needs an honest number for", and clamping it "would replace their reality
+   * with a cheerful fiction". The arithmetic duly returned a negative number.
+   * Every sentence wrapped around it was then written for a positive one.
+   *
+   * What somebody $73,575 short actually saw: a status chip reading "Ready
+   * now", a verdict saying they would "walk away with about -$73,575", a rider
+   * calling that "thin" equity, a figure labelled "You keep", and a plan whose
+   * third step was which repairs pay back. The one fact that decides their
+   * year — that this sale cannot close unless they bring the difference in
+   * cash or their lender agrees to a short sale — appeared nowhere.
+   *
+   * The product's whole claim is that it shows the unflattering number. It
+   * showed it and then described it in the vocabulary of good news.
+   */
+  const underwater = r.net < 0;
+  const thin = !underwater && equityPct < 12;
+
+  /* Underwater outranks the timeline. Status is what the agent sorts the lead
+     list by, and somebody who cannot close without finding cash is not "Ready
+     now" however soon they said they wanted to move — they are the person on
+     the list who most needs a call and least needs a listing appointment.
+     
+     Otherwise: an unstated timeline is "exploring", not whatever the default
+     happens to spell, so a seller who said nothing does not rank above one who
+     said "9 to 18 months". */
   const status: Status =
-    !timingStated ? "exploring"
+    underwater ? "building"
+    : !timingStated ? "exploring"
     : timing.startsWith("In the next") ? "ready"
     : timing.startsWith("3 to") ? "close"
     : timing.startsWith("9 to") ? "building"
     : "exploring";
 
-  const verdict = `On a ${money(s.price)} sale you would walk away with about ${money(r.net)}.`;
-  const rider = thin
+  const short = money(Math.abs(r.net));
+
+  const verdict = underwater
+    ? `At ${money(s.price)} this sale does not cover what you owe — you would need to bring about ${short} to the closing table.`
+    : `On a ${money(s.price)} sale you would walk away with about ${money(r.net)}.`;
+
+  const rider = underwater
+    ? `${money(s.payoff)} of payoff and ${money(r.totalCosts - s.payoff)} of selling costs against a ${money(s.price)} price. That is not a pricing problem and no listing strategy closes it: the two things that do are cash at closing or your lender agreeing to take less, and the second is a conversation you start, not one that happens to you.`
+    : thin
     ? `That is ${equityPct}% of the price — thin enough that the order you do things in matters more than the price you list at.`
     : `${money(r.totalCosts)} goes to your payoff and the cost of selling. What reaches you is ${equityPct}% of the price.`;
 
@@ -345,7 +379,13 @@ export function sellerReadout(
     body: `Every valuation you have been given is a list price. The figure that decides what you can afford next is what survives the payoff, the commission, the concessions, the repairs and the prorations — ${money(r.net)}. Sellers who plan against the list price are the ones who find out too late that the move does not work.`,
   };
 
-  const blocker: Blocker = !s.homesteadFiled
+  const blocker: Blocker = underwater
+    ? {
+        title: `This sale is about ${short} short of your payoff`,
+        body: `A sale only closes if the lender is paid or agrees not to be. So there are two routes and they are decided by different people: bring about ${short} at closing, or ask your lender to approve a short sale. Both take weeks, both are ordinary, and both start with the same written payoff statement. Waiting is the only option that costs you something.`,
+        who: "Your lender — the payoff department, not the branch",
+      }
+    : !s.homesteadFiled
     ? {
         title: "Value you may be losing every year you still own this",
         body: "Our records question suggests no homestead exemption on this parcel. If this is your primary residence, that is money going out annually whether or not you sell — and it is worth fixing before anything else on this page.",
@@ -364,6 +404,12 @@ export function sellerReadout(
       };
 
   const steps: Step[] = [
+    underwater && {
+      label: "Ask your lender what they will accept",
+      detail: "Request the payoff statement and ask, in the same call, whether they consider short sales. The answer shapes everything else and nobody volunteers it.",
+      owner: "You" as const,
+      when: "This week",
+    },
     !s.homesteadFiled && {
       label: "Check whether homestead exemption was ever filed",
       detail: "One call to the county. It is worth doing today regardless of what you decide about selling.",

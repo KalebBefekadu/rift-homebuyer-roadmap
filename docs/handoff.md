@@ -232,6 +232,26 @@ arithmetic stays, the attribution goes. A seller who named no timeline is `explo
 than whatever the default happens to spell, because the status chip is the first thing the
 agent sorts by.
 
+### 4.16 The unflattering number gets unflattering words
+
+Showing a figure honestly and then describing it in the vocabulary of good news is not
+honesty, and the seller readout did exactly that. `parseSellerParams` deliberately lets a
+payoff exceed the price — its own comment says being underwater "is exactly the situation
+somebody most needs an honest number for" — and `netProceeds` duly returned a negative.
+Every sentence wrapped around it assumed a positive one.
+
+What somebody $73,575 short saw: a status chip reading **Ready now**, a verdict that they
+would "walk away with about -$73,575", a rider calling that **thin** equity, a glance tile
+labelled **You keep**, and a plan whose third step was which repairs pay back. The one fact
+that decides their year — this sale cannot close unless they bring the difference in cash or
+their lender approves a short sale — appeared nowhere on the page.
+
+The rule: when a figure crosses zero, every sentence that names it has to be re-read, not
+just the formatter. Underwater now outranks the stated timeline for status, because status is
+what the agent sorts the lead list by and somebody who cannot close is not ready to list; the
+shortfall is stated as an amount to **find**, not a negative amount to receive; it becomes
+the blocker ahead of homestead and assessment; and the plan leads with the lender.
+
 ---
 
 ## 5. What is deliberately fake in the prototype

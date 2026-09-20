@@ -116,14 +116,29 @@ export async function POST(req: Request) {
   let delivery: string | undefined;
   const wants = (b.deliver ?? null) as Record<string, unknown> | null;
   if (email && wants && typeof wants.shareUrl === "string") {
+    /* The seller half of this was missing. The seller readout posts
+       `netProceeds`, this read `cashToClose`, and `Number(undefined) || 0` is
+       0 — so every seller who asked for their readout by email was queued a
+       message reading "Buying in DeKalb County takes $0 at the table". Email
+       has never been switched on in production, so it was armed rather than
+       fired. The builder refuses to send without the figure now, so the
+       equivalent mistake fails loudly instead. */
+    const side = (lead.side === "sell" ? "sell" : "buy") as "buy" | "sell";
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+
     const sent = await sendReadout({
       to: email,
       name: name || undefined,
       shareUrl: wants.shareUrl,
-      cashToClose: Number(wants.cashToClose) || 0,
-      gap: Number(wants.gap) || 0,
-      monthsToClose: typeof wants.monthsToClose === "number" ? wants.monthsToClose : null,
       county: typeof wants.county === "string" ? wants.county : "your",
+      side,
+      ...(side === "sell"
+        ? { net: num(wants.netProceeds), price: num(wants.price) }
+        : {
+            cashToClose: num(wants.cashToClose),
+            gap: num(wants.gap) ?? 0,
+            monthsToClose: typeof wants.monthsToClose === "number" ? wants.monthsToClose : null,
+          }),
     });
     delivery = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
   }

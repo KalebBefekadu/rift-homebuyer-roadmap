@@ -108,6 +108,15 @@ Widen them on purpose, and migrate existing contacts in the same change.
 
 ### What the build adds
 - **Transactional templates** for the readout delivery and each automatic nurture step.
+
+**Before switching email on, look at `/api/dev/email-preview`.** `?type=readout`,
+`readout-sell`, `readout-underwater`, `touch`, `resume`. The seller readout had no template
+at all: `buildReadout` carried one body — "Buying in {county} County takes {cashToClose} at
+the table" — and the capture route read `cashToClose` from a payload the seller page never
+sent, so every seller who asked for their readout was queued *"Your numbers: $0 to close in
+DeKalb County"*. Nothing threw, and the builders lived inside a `server-only` module so no
+test could reach them. They are in `lib/core/email.ts` now, and every one returns null rather
+than send a message with a zero where somebody's figure belongs.
 - **Bounce handling.** A bounced email must become an agent task — it is a `STOPS` condition
   in `nurture.ts` (`bounced`) and it is specified as a Today-queue item. A bounce that only
   reaches a dashboard is a silent failure wearing a chart.

@@ -19,6 +19,8 @@ export const dynamic = "force-dynamic";
  *   /api/dev/email-preview?type=readout
  *   /api/dev/email-preview?type=touch
  *   /api/dev/email-preview?type=resume&last=1
+ *   /api/dev/email-preview?type=readout-sell
+ *   /api/dev/email-preview?type=readout-underwater
  */
 export async function GET(req: Request) {
   if (process.env.NODE_ENV === "production") {
@@ -52,10 +54,31 @@ export async function GET(req: Request) {
             of: 7,
             last: url.searchParams.get("last") === "1",
           })
+        : type === "readout-sell"
+        ? buildReadout({
+            to: "sam@example.com",
+            name: "Sam O'Brien",
+            shareUrl: `${url.origin}/r/sample-token`,
+            county: "DeKalb",
+            side: "sell",
+            price: 415_000,
+            net: 193_145,
+          })
+        : type === "readout-underwater"
+        ? buildReadout({
+            to: "sam@example.com",
+            name: "Sam O'Brien",
+            shareUrl: `${url.origin}/r/sample-token`,
+            county: "DeKalb",
+            side: "sell",
+            price: 300_000,
+            net: -73_575,
+          })
         : buildReadout({
             to: "maya@example.com",
             name: "Maya O'Brien",
             shareUrl: `${url.origin}/r/sample-token`,
+            side: "buy",
             cashToClose: 26187.5,
             gap: 17187.5,
             monthsToClose: 27,

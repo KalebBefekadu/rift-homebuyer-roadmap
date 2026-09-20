@@ -143,6 +143,14 @@ documentation update in the same commit.
   past a type with "no field that could hold an answer", past a sanitiser that stripped
   eleven named keys, and past a constraint that rejected three. Nothing failed.
 
+### Email
+
+Building is pure and lives in `lib/core/email.ts`; sending lives in `lib/db/email.ts`. The
+split is not tidiness — while the builders sat inside the `server-only` module, no test could
+import them, and `lib/core/email.test.ts` had resorted to re-implementing `escapeHtml` and
+asserting against its own copy. The seller's readout email was buyer copy with a zero in it
+for the life of the repository, and nothing could have caught it.
+
 ## Calculation
 
 `lib/core/compute.ts` is the source of truth for every customer-facing figure. It is

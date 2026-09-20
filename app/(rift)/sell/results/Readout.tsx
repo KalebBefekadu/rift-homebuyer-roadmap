@@ -80,7 +80,13 @@ export function Readout({
             coBuyer: coDecider,
             contactable: true,
           },
-          deliver: { shareUrl: url, county: inputs.county, netProceeds: proceeds.net },
+          /* The price travels too: the seller email contrasts what reaches
+             them against the list price, and without it there is nothing to
+             contrast. */
+          deliver: {
+            shareUrl: url, county: inputs.county,
+            netProceeds: proceeds.net, price: inputs.price,
+          },
         }),
       }).then((x) => x.json());
 
@@ -101,7 +107,16 @@ export function Readout({
         r={r}
         used={`Built from ${money(inputs.price)} likely price · ${money(inputs.payoff)} still owed · ${inputs.county} County · about ${inputs.yearsOwned} years owned`}
         glance={[
-          { label: "You keep", value: money(proceeds.net), note: `${equityPct}% of the price` },
+          /* "You keep -$73,575" is not a thing anybody keeps. Below water the
+             number is money you have to find, and the tile has to say which
+             of the two it is. */
+          proceeds.net < 0
+            ? {
+                label: "You would need to bring",
+                value: money(Math.abs(proceeds.net)),
+                note: "to the closing table",
+              }
+            : { label: "You keep", value: money(proceeds.net), note: `${equityPct}% of the price` },
           { label: "Cost of selling", value: money(proceeds.totalCosts - inputs.payoff), note: "excluding your payoff" },
           { label: "Worth fixing", value: money(paybackCost), note: `${payback.length} of ${repairs.length} items` },
           { label: "Possibly unclaimed", value: `${unclaimed.length} things`, note: "worth a phone call each" },

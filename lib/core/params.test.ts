@@ -175,3 +175,71 @@ describe("the readout does not quote a timeline nobody gave", () => {
     expect(sellerReadout(SELLER_DEFAULTS, "3 to 9 months", true).status).toBe("close");
   });
 });
+
+describe("a seller who owes more than the sale produces", () => {
+  /**
+   * `parseSellerParams` deliberately lets a payoff exceed the price — its own
+   * comment says being underwater "is exactly the situation somebody most
+   * needs an honest number for", and that clamping it "would replace their
+   * reality with a cheerful fiction". The arithmetic returned the negative
+   * number faithfully. Every sentence around it was written for a positive
+   * one, so the page showed the unflattering figure and then described it in
+   * the vocabulary of good news.
+   */
+  const underwater = { ...SELLER_DEFAULTS, price: 300_000, payoff: 340_000, yearsOwned: 2 };
+  const healthy = { ...SELLER_DEFAULTS, price: 415_000, payoff: 180_000, yearsOwned: 8 };
+
+  it("is not 'ready now' because they said they want to move soon", () => {
+    /* The status chip is what the agent sorts by. Somebody who cannot close
+       without finding cash is the person who most needs a call and least
+       needs a listing appointment. */
+    const r = sellerReadout(underwater, "In the next 3 months", true);
+    expect(r.status).not.toBe("ready");
+    expect(r.status).toBe("building");
+  });
+
+  it("says they must bring money, not that they walk away with less than none", () => {
+    const r = sellerReadout(underwater, "In the next 3 months", true);
+    expect(r.verdict).not.toMatch(/walk away/);
+    expect(r.verdict).toMatch(/bring about/);
+    /* The shortfall is stated as a positive amount to find, not a negative
+       amount to receive. */
+    expect(r.verdict).toContain("$73,575");
+    expect(r.verdict).not.toContain("-$");
+  });
+
+  it("does not call a 25% shortfall 'thin' equity", () => {
+    /* `thin` fired on equityPct < 12, which negative numbers satisfy. Being
+       underwater is not thin equity and the advice for it is different. */
+    const r = sellerReadout(underwater, "In the next 3 months", true);
+    /* Word boundaries: the honest copy contains "the two things that do", and
+       a loose /thin/ matches "things". */
+    expect(r.rider).not.toMatch(/\bthin\b/);
+    expect(r.rider).toMatch(/short sale|agreeing to take less/);
+  });
+
+  it("names the shortfall as the blocker, ahead of homestead and assessments", () => {
+    const r = sellerReadout({ ...underwater, homesteadFiled: false }, "In the next 3 months", true);
+    expect(r.blocker.title).toMatch(/short of your payoff/);
+    expect(r.blocker.who).toMatch(/lender/i);
+  });
+
+  it("leads the plan with the lender, not with which repairs pay back", () => {
+    const r = sellerReadout(underwater, "In the next 3 months", true);
+    expect(r.steps[0]?.label).toMatch(/Ask your lender/);
+  });
+
+  it("leaves a seller with equity exactly as it was", () => {
+    const r = sellerReadout(healthy, "3 to 9 months", true);
+    expect(r.status).toBe("close");
+    expect(r.verdict).toMatch(/walk away with about \$193,145/);
+    expect(r.blocker.title).not.toMatch(/short of your payoff/);
+  });
+
+  it("still treats genuinely thin equity as thin", () => {
+    /* The branch it used to share with underwater must keep working. */
+    const barely = { ...SELLER_DEFAULTS, price: 300_000, payoff: 240_000, yearsOwned: 2 };
+    const r = sellerReadout(barely, "3 to 9 months", true);
+    expect(r.rider).toMatch(/\bthin\b/);
+  });
+});
