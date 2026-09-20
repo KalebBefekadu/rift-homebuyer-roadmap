@@ -161,9 +161,13 @@ export function Reframe({ r }: { r: Readout }) {
   return (
     <div className="ans">
       <div className="ans-out">
-        <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>The figure that actually matters</div>
+        <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>
+          {r.reframe.figureLabel ?? "The figure that actually matters"}
+        </div>
         <div className="ans-num" style={{ marginTop: 8 }}>{r.reframe.figure}</div>
-        <div className="t-sm" style={{ marginTop: 6, color: "rgba(255,255,255,.55)" }}>not {r.reframe.contrast}</div>
+        <div className="t-sm" style={{ marginTop: 6, color: "rgba(255,255,255,.55)" }}>
+          {r.reframe.contrastLabel ?? "not"} {r.reframe.contrast}
+        </div>
         <p style={{ marginTop: 16, color: "rgba(255,255,255,.75)", fontSize: 15.5, lineHeight: 1.65, maxWidth: 620 }}>
           {r.reframe.body}
         </p>

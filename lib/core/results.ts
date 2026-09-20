@@ -47,7 +47,20 @@ export interface Readout {
      `headline.split(",")[0]`, which silently truncated every figure over
      $1,000 to its thousands digits — a $137,145 net proceeds rendered as
      "$137" beside a body paragraph stating the real number. */
-  reframe: { headline: string; figure: string; contrast: string; body: string };
+  reframe: {
+    headline: string;
+    figure: string;
+    contrast: string;
+    body: string;
+    /* The card around this is headed "The figure that actually matters" and
+       captions the second number "not …". Both are right for a figure that is
+       a gain and wrong for one that is a debt: "$113,575 / not $300,000" under
+       that heading reads as money arriving. A readout that has to be correct
+       about somebody being underwater has to be able to relabel its own
+       largest number. Unset means the default wording. */
+    figureLabel?: string;
+    contrastLabel?: string;
+  };
   blocker: Blocker;
   steps: Step[];
   questions: string[];
@@ -372,12 +385,28 @@ export function sellerReadout(
     ? `That is ${equityPct}% of the price — thin enough that the order you do things in matters more than the price you list at.`
     : `${money(r.totalCosts)} goes to your payoff and the cost of selling. What reaches you is ${equityPct}% of the price.`;
 
-  const reframe = {
-    headline: `${money(r.net)}, not ${money(s.price)}`,
-    figure: money(r.net),
-    contrast: money(s.price),
-    body: `Every valuation you have been given is a list price. The figure that decides what you can afford next is what survives the payoff, the commission, the concessions, the repairs and the prorations — ${money(r.net)}. Sellers who plan against the list price are the ones who find out too late that the move does not work.`,
-  };
+  /* The card this fills is headed "The figure that actually matters", and its
+     paragraph was written for a number that is positive. Rendered for somebody
+     underwater it read: "what survives the payoff, the commission, the
+     concessions, the repairs and the prorations — -$73,575". Nothing survives.
+     They owe. This is the same defect as the verdict and the status chip, in
+     the one block that was not rewritten with them: the arithmetic is right
+     and the sentence around it belongs to a different person's situation. */
+  const reframe = underwater
+    ? {
+        headline: `${short} still owed, not ${money(s.price)} received`,
+        figure: short,
+        figureLabel: "What you would still owe",
+        contrast: money(s.price),
+        contrastLabel: "on a sale at",
+        body: `Every valuation you have been given is a list price. This sale does not reach the end of your loan: after the payoff, the commission, the concessions, the repairs and the prorations, it leaves about ${short} still owed rather than anything to carry forward. That is not a reason to stop reading — it is a number with two known routes out, both below — but planning the next move against ${money(s.price)} is how sellers find out late that there was no next move to plan.`,
+      }
+    : {
+        headline: `${money(r.net)}, not ${money(s.price)}`,
+        figure: money(r.net),
+        contrast: money(s.price),
+        body: `Every valuation you have been given is a list price. The figure that decides what you can afford next is what survives the payoff, the commission, the concessions, the repairs and the prorations — ${money(r.net)}. Sellers who plan against the list price are the ones who find out too late that the move does not work.`,
+      };
 
   const blocker: Blocker = underwater
     ? {
