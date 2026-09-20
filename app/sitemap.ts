@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { siteUrl } from "@/lib/core/site";
 
 /**
  * Only the pages that are the same for everybody.
@@ -7,7 +8,11 @@ import type { MetadataRoute } from "next";
  * sitemap, and neither does anything behind a login.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL;
+  /* Derived rather than declared. This read NEXT_PUBLIC_SITE_URL directly and
+     returned an empty list when it was unset — which is what it did in
+     production, for the life of the deployment, while serving a valid document
+     and a 200. See lib/core/site.ts. */
+  const base = siteUrl();
   if (!base) return [];
 
   const now = new Date();

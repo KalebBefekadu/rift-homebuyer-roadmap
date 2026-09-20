@@ -147,6 +147,93 @@ const en: Dict = {
     "Rift for buyers abroad. Guided by Kaleb Befekadu, a licensed agent in Georgia. Every figure is a planning estimate, not a lending commitment, approval, or valuation. We are not tax advisors or immigration attorneys, and we tell you when a question belongs to one.",
   "foot.fair":
     "Equal Housing Opportunity. We work with every buyer on the same terms regardless of race, colour, religion, sex, disability, familial status, or national origin.",
+
+  /* Second person, written out rather than derived.
+
+     The readout used to turn the first-person label above into "you" with a
+     regular expression — `^I('m| have| live)` → `You$1` — which produced
+     "You'm a U.S. citizen living abroad" on the live page for a quarter of
+     readers. It could never have worked in Amharic either, where the change is
+     a verb ending rather than a prefix. Grammar is not a string operation. */
+  "status.citizen.you": "You're a U.S. citizen living abroad",
+  "status.resident.you": "You have a green card or a U.S. visa",
+  "status.itin.you": "You have an ITIN, not a Social Security number",
+  "status.foreign.you": "You live abroad with no U.S. status",
+
+  /* The readout. Same voice as the landing page, because it is the same
+     conversation — somebody switched to Amharic, tapped through, and used to
+     land on a wall of English. */
+  "res.title": "What this would take from where you are",
+  "res.change": "Change my answers",
+  "res.kicker": "{price} in {county} County · {use}",
+  "res.kicker.rent": "rented out",
+  "res.kicker.live": "kept for your own use",
+  "res.h1.covers": "It covers itself, and three other things pay you.",
+  "res.h1.short": "It runs {amount} a month short — and still returns {pct}%.",
+  "res.h1.live": "You'd send {amount} and own it outright in thirty years.",
+
+  "res.send.title": "What you'd have to send",
+  "res.send.downChip": "{pct}% down",
+  "res.send.down": "Down payment",
+  "res.send.down.note": "{pct}% — the least a lender takes in your situation",
+  "res.send.closing": "Closing costs",
+  "res.send.closing.note": "{pct}% — attorney, title, recording, lender fees",
+  "res.send.total": "Before you own it",
+
+  "res.month.title": "Every month",
+  "res.month.pi": "Loan payment",
+  "res.month.tax": "Property tax",
+  "res.month.ins": "Insurance",
+  "res.month.mgmt": "Management",
+  "res.month.mgmt.note": "{pct}% — someone local, because you are not",
+  "res.month.vac": "Vacancy set-aside",
+  "res.month.vac.note": "{pct}% — about a month a year between tenants",
+  "res.month.maint": "Maintenance set-aside",
+  "res.month.maint.note": "{pct}% — repairs and turnover",
+  "res.month.left": "Left over",
+  "res.month.short": "Short",
+  "res.month.costs": "Costs you, each month",
+
+  "res.year.h2": "Where the first year actually goes.",
+  "res.year.lede": "Cash flow is the smallest of the three, and the only one most people look at.",
+  "res.year.flow": "Rent, after everything",
+  "res.year.flow.note": "Spendable. The only part that reaches your account.",
+  "res.year.principal": "Loan paid down",
+  "res.year.principal.note": "Not spendable, but yours. The tenant paid it, not you.",
+  "res.year.appreciation": "Appreciation at {pct}%",
+  "res.year.appreciation.note": "On the whole {price}, not on what you put in.",
+  "res.year.total": "Year one, all in",
+  "res.year.total.note":
+    "On the {cash} you sent. Appreciation is an estimate and can be negative; the other two are contractual.",
+  "res.year.of": "{pct}% of what you sent",
+
+  "res.block.kicker": "The one thing in your way",
+  "res.block.live": "It earns nothing while you hold it",
+  "res.block.live.body":
+    "Held empty it costs {monthly} a month. {principal} of the first year is principal, so it is not lost — but it is not income either.",
+  "res.block.tenant": "Finding a tenant who stays",
+  "res.block.tenant.body":
+    "The figures assume about a month empty a year. Two months empty turns {flow} a month into roughly {worse}.",
+  "res.block.under": "At {pct}% down it does not cover itself",
+  "res.block.under.body":
+    "You would need {breakEven}% down — {needed} instead of {have} — for the rent to cover everything. A cheaper house in the same county gets there with less.",
+  "res.block.never": "At this price nothing covers itself",
+  "res.block.never.body":
+    "No down payment makes the rent cover the costs at {price} in {county}. A cheaper house, or a county with a better rent-to-price ratio, will.",
+
+  "res.lender.rate": "Rate shown is {rate}% plus about {premium} points for this paper. {source}.",
+  /* The only rate provenance this file can translate. A recorded source is the
+     name of an institution — "Freddie Mac PMMS" — and a proper noun stays in
+     its own script in any language. The fallback is our own sentence, so it
+     does not get to stay English on an Amharic page. */
+  "res.rate.assumption": "No rate has been recorded — this is the starting assumption",
+
+  "res.keep.h3": "This page keeps working whether or not you call.",
+  "res.keep.body":
+    "Save the link. Nothing here expires, and no one has your details unless you give them.",
+  "res.keep.cta": "Fifteen minutes with Kaleb",
+  "res.disc":
+    "Planning estimates, not a loan approval, a rent guarantee, or a valuation. Down payments and rate premiums reflect what lenders in this market publish for each situation; your own lender's terms decide. Rent is estimated from county averages, not from a specific property. U.S. tax on rental income and the FIRPTA withholding on sale are real and are questions for a cross-border accountant, not for an agent.",
 };
 
 const am: Dict = {
@@ -263,6 +350,79 @@ const am: Dict = {
     "Rift ለውጭ አገር ገዢዎች። በጆርጂያ ፈቃድ ባለው ደላላ በካሌብ በፈቃዱ የሚመራ። እያንዳንዱ ቁጥር የዕቅድ ግምት ነው፤ የብድር ቃል፣ ፈቃድ ወይም ግምገማ አይደለም። የግብር አማካሪዎች ወይም የኢሚግሬሽን ጠበቆች አይደለንም፤ ጥያቄው የእነሱ ሲሆን እንነግርዎታለን።",
   "foot.fair":
     "እኩል የቤት ዕድል። ከዘር፣ ከቀለም፣ ከሃይማኖት፣ ከፆታ፣ ከአካል ጉዳት፣ ከቤተሰብ ሁኔታ ወይም ከትውልድ አገር ነፃ በሆነ መልኩ ከሁሉም ገዢ ጋር በእኩል ሁኔታ እንሰራለን።",
+
+  "status.citizen.you": "የአሜሪካ ዜጋ ነዎት፤ ከአገር ውጭ ይኖራሉ",
+  "status.resident.you": "ግሪን ካርድ ወይም የአሜሪካ ቪዛ አለዎት",
+  "status.itin.you": "ITIN አለዎት፤ የሶሻል ሴኩሪቲ ቁጥር የለዎትም",
+  "status.foreign.you": "ከአሜሪካ ውጭ ይኖራሉ፤ ምንም የአሜሪካ ሁኔታ የለዎትም",
+
+  "res.title": "ካሉበት ሆነው ይህ ምን ያህል እንደሚጠይቅዎት",
+  "res.change": "መልሶቼን ልቀይር",
+  "res.kicker": "{price} በ{county} ካውንቲ · {use}",
+  "res.kicker.rent": "ተከራይቶ",
+  "res.kicker.live": "ለራስዎ ተይዞ",
+  "res.h1.covers": "ራሱን ይሸፍናል፤ ሌሎች ሦስት ነገሮችም ይከፍሉዎታል።",
+  "res.h1.short": "በየወሩ {amount} ይጎድላል — ቢሆንም {pct}% ይመልሳል።",
+  "res.h1.live": "{amount} ይልካሉ፤ በሠላሳ ዓመትም ሙሉ በሙሉ የእርስዎ ይሆናል።",
+
+  "res.send.title": "መላክ ያለብዎት",
+  "res.send.downChip": "{pct}% ቅድመ ክፍያ",
+  "res.send.down": "ቅድመ ክፍያ",
+  "res.send.down.note": "{pct}% — በእርስዎ ሁኔታ አበዳሪ የሚቀበለው ዝቅተኛው",
+  "res.send.closing": "የዝግጅት ወጪ",
+  "res.send.closing.note": "{pct}% — ጠበቃ፣ የባለቤትነት ማረጋገጫ፣ ምዝገባ፣ የአበዳሪ ክፍያ",
+  "res.send.total": "ባለቤት ከመሆንዎ በፊት",
+
+  "res.month.title": "በየወሩ",
+  "res.month.pi": "የብድር ክፍያ",
+  "res.month.tax": "የንብረት ግብር",
+  "res.month.ins": "ኢንሹራንስ",
+  "res.month.mgmt": "አስተዳደር",
+  "res.month.mgmt.note": "{pct}% — እርስዎ እዚያ ስለሌሉ የአካባቢው ሰው",
+  "res.month.vac": "ለክፍት ጊዜ የሚቀመጥ",
+  "res.month.vac.note": "{pct}% — በዓመት አንድ ወር ገደማ በተከራዮች መካከል",
+  "res.month.maint": "ለጥገና የሚቀመጥ",
+  "res.month.maint.note": "{pct}% — ጥገናና የተከራይ ለውጥ",
+  "res.month.left": "የሚተርፍ",
+  "res.month.short": "የሚጎድል",
+  "res.month.costs": "በየወሩ የሚያስወጣዎት",
+
+  "res.year.h2": "የመጀመሪያው ዓመት በትክክል የት እንደሚሄድ።",
+  "res.year.lede": "ከሦስቱ ትንሹ የወር ገቢ ነው፤ ብዙ ሰው የሚያየውም እሱን ብቻ ነው።",
+  "res.year.flow": "ኪራይ፣ ከሁሉም ወጪ በኋላ",
+  "res.year.flow.note": "የሚወጣ ገንዘብ። ወደ ሂሳብዎ የሚደርሰው ይህ ብቻ ነው።",
+  "res.year.principal": "የተከፈለ የብድር ዋና",
+  "res.year.principal.note": "አሁን የሚወጣ አይደለም፤ ግን የእርስዎ ነው። የከፈለው ተከራዩ ነው፣ እርስዎ አይደሉም።",
+  "res.year.appreciation": "የዋጋ ጭማሪ በ{pct}%",
+  "res.year.appreciation.note": "በሙሉ {price} ላይ እንጂ ባስገቡት ገንዘብ ላይ አይደለም።",
+  "res.year.total": "የመጀመሪያው ዓመት በጠቅላላ",
+  "res.year.total.note":
+    "በላኩት {cash} ላይ። የዋጋ ጭማሪ ግምት ነው፤ አሉታዊም ሊሆን ይችላል። ሌሎቹ ሁለቱ በውል የተያዙ ናቸው።",
+  "res.year.of": "{pct}% ከላኩት ገንዘብ",
+
+  "res.block.kicker": "መንገድዎን የሚዘጋው አንድ ነገር",
+  "res.block.live": "ይዘውት እስካሉ ድረስ ምንም አያመጣም",
+  "res.block.live.body":
+    "ባዶ ሆኖ ከቆየ በየወሩ {monthly} ያስወጣዎታል። ከመጀመሪያው ዓመት {principal} የብድር ዋና ነው፤ ስለዚህ አልጠፋም — ገቢም ግን አይደለም።",
+  "res.block.tenant": "ረጅም ጊዜ የሚቆይ ተከራይ ማግኘት",
+  "res.block.tenant.body":
+    "ቁጥሮቹ በዓመት አንድ ወር ገደማ ክፍት እንደሚሆን ይገምታሉ። ሁለት ወር ክፍት ከሆነ በየወሩ {flow} የነበረው ወደ {worse} ገደማ ይወርዳል።",
+  "res.block.under": "በ{pct}% ቅድመ ክፍያ ራሱን አይሸፍንም",
+  "res.block.under.body":
+    "ኪራዩ ሁሉንም እንዲሸፍን {breakEven}% ቅድመ ክፍያ ያስፈልጋል — ከ{have} ይልቅ {needed}። በዚያው ካውንቲ ውስጥ ርካሽ ቤት በዚህ ያነሰ ይደርሳል።",
+  "res.block.never": "በዚህ ዋጋ ምንም ራሱን አይሸፍንም",
+  "res.block.never.body":
+    "በ{county} ውስጥ በ{price} ኪራዩ ወጪውን እንዲሸፍን የሚያደርግ ምንም ቅድመ ክፍያ የለም። ርካሽ ቤት፣ ወይም የተሻለ የኪራይ-ወደ-ዋጋ ጥምርታ ያለው ካውንቲ ያደርገዋል።",
+
+  "res.lender.rate": "የሚታየው ወለድ {rate}% ሲሆን ለዚህ ዓይነት ብድር {premium} ነጥብ ገደማ ይጨመርበታል። {source}።",
+  "res.rate.assumption": "እስካሁን የተመዘገበ የወለድ መጠን የለም — ይህ የመነሻ ግምት ነው",
+
+  "res.keep.h3": "ይህ ገጽ ቢደውሉም ባይደውሉም መስራቱን ይቀጥላል።",
+  "res.keep.body":
+    "አገናኙን ያስቀምጡ። እዚህ ያለው ምንም አያልፍበትም፤ እርስዎ እስካልሰጡ ድረስም ማንም መረጃዎን አልያዘም።",
+  "res.keep.cta": "ከካሌብ ጋር አስራ አምስት ደቂቃ",
+  "res.disc":
+    "እነዚህ የዕቅድ ግምቶች ናቸው፤ የብድር ፈቃድ፣ የኪራይ ዋስትና ወይም የንብረት ግምገማ አይደሉም። የቅድመ ክፍያና የወለድ ተጨማሪዎች አበዳሪዎች ለእያንዳንዱ ሁኔታ ካወጡት መረጃ የተወሰዱ ናቸው፤ የሚወስነው የራስዎ አበዳሪ ነው። ኪራዩ ከካውንቲ አማካይ የተሰላ ነው እንጂ ከአንድ የተወሰነ ቤት አይደለም። በኪራይ ገቢ ላይ የሚከፈል የአሜሪካ ግብርና በሽያጭ ጊዜ የሚተገበረው FIRPTA ቀረጥ እውነተኛ ናቸው፤ ሁለቱም ለደላላ ሳይሆን ለድንበር ተሻጋሪ የሂሳብ ባለሙያ የሚቀርቡ ጥያቄዎች ናቸው።",
 };
 
 const DICTS: Record<Locale, Dict> = { en, am };

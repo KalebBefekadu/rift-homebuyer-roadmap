@@ -36,9 +36,15 @@ const USES: { id: Use; label: string; note: string }[] = [
   { id: "live", label: "Live in it later", note: "A place to return to, or for family here now" },
 ];
 
-export function Landing({ counties, initial }: {
+export function Landing({ counties, initial, initialLocale, localePinned }: {
   counties: string[];
   initial: AbroadInputs & { downPct: number };
+  /* Resolved on the server from ?lang, so Amharic is in the HTML a crawler
+     sees and an Amharic reader never watches the page start in English. */
+  initialLocale: Locale;
+  /* Whether that came from the URL. A shared Amharic link must stay Amharic
+     for whoever opens it, including someone whose browser says otherwise. */
+  localePinned: boolean;
 }) {
   const [price, setPrice] = useState(initial.price);
   const [county, setCounty] = useState(initial.county);
@@ -53,16 +59,19 @@ export function Landing({ counties, initial }: {
   /* Remembered per visitor, and reflected onto <html lang> so a screen reader
      switches voice with the page and the browser stops offering to translate
      something already in the reader's language. */
-  const [locale, setLocale] = useState<Locale>("en");
+  const [locale, setLocale] = useState<Locale>(initialLocale);
   useEffect(() => {
+    /* Only what the server could not have known. The URL has already decided
+       when it carried ?lang; reading localStorage over the top of that would
+       open a link somebody shared in Amharic in whatever language the last
+       visitor to this browser happened to pick. */
+    if (localePinned) return;
     try {
       const saved = window.localStorage.getItem("rift.locale");
-      const fromUrl = new URLSearchParams(window.location.search).get("lang");
-      const pick = isLocale(fromUrl) ? fromUrl : isLocale(saved) ? saved : null;
-      if (pick) setLocale(pick);
-      else if (navigator.language?.toLowerCase().startsWith("am")) setLocale("am");
-    } catch { /* storage unavailable — English is a safe default */ }
-  }, []);
+      if (isLocale(saved)) { setLocale(saved); return; }
+      if (navigator.language?.toLowerCase().startsWith("am")) setLocale("am");
+    } catch { /* storage unavailable — the server's choice stands */ }
+  }, [localePinned]);
   useEffect(() => {
     document.documentElement.lang = locale;
     try { window.localStorage.setItem("rift.locale", locale); } catch { /* ignore */ }
@@ -93,7 +102,7 @@ export function Landing({ counties, initial }: {
   const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}&lang=${locale}`;
 
   return (
-    <div className="buy">
+    <div className="buy" lang={locale}>
       <header style={{
         position: "sticky", top: 0, zIndex: 40, background: "rgba(251,250,248,.86)",
         backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-2)",
@@ -107,7 +116,7 @@ export function Landing({ counties, initial }: {
           <div className="row gap-2">
             <LocaleToggle locale={locale} onChange={setLocale} />
             <Link href="/buy" className="t-sm c-2 hide-sm" style={script}>{t("nav.domestic")}</Link>
-            <Link href="/book?v=abroad" className="btn btn-p btn-sm" style={script}>{t("nav.talk")}</Link>
+            <Link href={`/book?v=abroad&lang=${locale}`} className="btn btn-p btn-sm" style={script}>{t("nav.talk")}</Link>
           </div>
         </div>
         <Tibeb className="c-brand" height={8} style={{ opacity: 0.5 }} />
@@ -353,7 +362,7 @@ export function Landing({ counties, initial }: {
             <div className="g3 gap-3" style={{ marginTop: 26 }}>
               {[
                 { t: t("doors.1"), b: t("doors.1.body"), cta: t("doors.1.cta"), href: go, primary: true },
-                { t: t("doors.2"), b: t("doors.2.body"), cta: t("doors.2.cta"), href: "/book?v=abroad", primary: false },
+                { t: t("doors.2"), b: t("doors.2.body"), cta: t("doors.2.cta"), href: `/book?v=abroad&lang=${locale}`, primary: false },
                 { t: t("doors.3"), b: t("doors.3.body"), cta: t("doors.3.cta"), href: "/buy", primary: false },
               ].map((d) => (
                 <div key={d.t} className="col" style={{ justifyContent: "space-between", gap: 16 }}>
@@ -396,7 +405,7 @@ export function Landing({ counties, initial }: {
                 </div>
                 <div className="col gap-2">
                   <div className="kicker c-4">Rift</div>
-                  <Link href="/book?v=abroad" className="t-sm c-3">Book fifteen minutes</Link>
+                  <Link href={`/book?v=abroad&lang=${locale}`} className="t-sm c-3">Book fifteen minutes</Link>
                   <Link href="/sell" className="t-sm c-3">Selling instead?</Link>
                   <Link href="/studio" className="t-sm c-3">Sign in</Link>
                 </div>

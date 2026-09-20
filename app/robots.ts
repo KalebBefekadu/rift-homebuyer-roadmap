@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { siteUrl } from "@/lib/core/site";
 
 /**
  * What crawlers may see.
@@ -12,7 +13,7 @@ import type { MetadataRoute } from "next";
  * request costs a function invocation.
  */
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_SITE_URL;
+  const base = siteUrl();
   return {
     rules: [
       {
