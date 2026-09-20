@@ -73,6 +73,30 @@ export const DEFAULT_RULES: BusinessRules = {
 
 const KEY = "rift.rules";
 
+/**
+ * Whether a value read back out of storage is the shape this rule expects.
+ *
+ * The merge below carried a saved value straight onto the rule, with a
+ * `@ts-expect-error` explaining that the type was "checked by the setter".
+ * The setter does not check: it stores whatever it is handed. Neither does
+ * `localStorage`, which survives a schema change, a half-finished edit, and
+ * anything typed into a console.
+ *
+ * One of these settings is `commissionPct`, described in its own `affects`
+ * note as "the only number in the product that turns pipeline into money".
+ * A string where a number belongs does not throw anywhere — it multiplies
+ * into every revenue figure in the forward view and renders as NaN, or worse,
+ * concatenates.
+ */
+function usable<K extends keyof BusinessRules>(k: K, v: unknown): v is BusinessRules[K]["value"] {
+  const expected = typeof DEFAULT_RULES[k].value;
+  if (typeof v !== expected) return false;
+  /* NaN and Infinity are both `typeof "number"`, and both reach the screen. */
+  if (typeof v === "number" && !Number.isFinite(v)) return false;
+  if (typeof v === "string" && v.trim() === "") return false;
+  return true;
+}
+
 export function readRules(): BusinessRules {
   if (typeof window === "undefined") return DEFAULT_RULES;
   try {
@@ -82,12 +106,12 @@ export function readRules(): BusinessRules {
     /* Merge value-only, so the prose above stays the single source and cannot
        be overwritten by a stale saved copy of an earlier wording. */
     const out = { ...DEFAULT_RULES };
-    (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[]).forEach((k) => {
-      if (saved[k] !== undefined) {
-        // @ts-expect-error — value type is per-key and checked by the setter
-        out[k] = { ...DEFAULT_RULES[k], value: saved[k] };
-      }
-    });
+    const apply = <K extends keyof BusinessRules>(k: K) => {
+      const v = saved[k];
+      if (v === undefined || !usable(k, v)) return;
+      out[k] = { ...DEFAULT_RULES[k], value: v };
+    };
+    (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[]).forEach((k) => apply(k));
     return out;
   } catch { return DEFAULT_RULES; }
 }
