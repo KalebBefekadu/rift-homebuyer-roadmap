@@ -27,6 +27,16 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  /* Nothing to refresh without a token to refresh.
+     
+     Supabase writes its session as `sb-<ref>-auth-token` cookies. A request
+     carrying none of them belongs to somebody who is not signed in, and
+     calling getUser() for them is a round trip to the auth server to be told
+     so. Cheap to check and it is the overwhelmingly common case even inside
+     Studio, where the sign-in page itself is the first thing anybody loads. */
+  const hasSession = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
+  if (!hasSession) return supabaseResponse;
+
   const url = serverUrl()!;
   const key = serverKey()!;
 

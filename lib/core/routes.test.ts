@@ -109,3 +109,50 @@ describe("the production import graph", () => {
     ).toEqual([]);
   });
 });
+
+describe("middleware runs where sessions exist, and nowhere else", () => {
+  /* It used to run on everything except /prototype and the home page, so a
+     stranger loading /buy, /sell, /abroad, /book or a readout paid a round
+     trip to the auth server refreshing a session they could not have. The
+     product's central promise is that the funnel needs no account; that
+     should cost nothing to keep.
+     
+     The risk in the other direction is real too, which is why both halves are
+     asserted: drop /studio from the matcher and sessions stop being
+     refreshed, which shows up as an agent being logged out mid-week for no
+     visible reason. */
+  const src = readFileSync("middleware.ts", "utf8");
+  const matcher = src.slice(src.indexOf("matcher:"), src.indexOf("]", src.indexOf("matcher:")));
+  const patterns = [...matcher.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
+
+  const covers = (path: string) =>
+    patterns.some((p) => {
+      const prefix = p.replace("/:path*", "");
+      return path === prefix || path.startsWith(`${prefix}/`);
+    });
+
+  it("reads the matcher", () => {
+    expect(patterns.length).toBeGreaterThan(0);
+  });
+
+  it("covers the agent's surfaces", () => {
+    for (const p of ["/studio", "/studio/settings", "/studio/lead/abc", "/auth/callback"]) {
+      expect(covers(p), `${p} is not covered, so its session is never refreshed`).toBe(true);
+    }
+  });
+
+  it("leaves the public funnel alone", () => {
+    for (const p of ["/", "/buy", "/buy/start", "/buy/results", "/sell", "/sell/results",
+                     "/abroad", "/abroad/results", "/book", "/privacy", "/r/sometoken"]) {
+      expect(covers(p), `${p} is matched, so a stranger pays an auth round trip on it`).toBe(false);
+    }
+  });
+
+  it("skips the refresh when the request carries no session cookie", () => {
+    /* Belt and braces for the surfaces that ARE matched: /studio/sign-in is
+       the first page anybody loads there and by definition has no cookie. */
+    const mw = readFileSync("lib/supabase/middleware.ts", "utf8");
+    expect(mw).toContain('c.name.startsWith("sb-")');
+    expect(mw).toMatch(/if \(!hasSession\) return/);
+  });
+});
