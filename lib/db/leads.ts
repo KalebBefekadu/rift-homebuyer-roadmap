@@ -33,6 +33,15 @@ export interface CaptureInput {
    * funnel: a stranger volunteering their address.
    */
   assessmentId: string | null;
+  /**
+   * The browser session this capture came from.
+   *
+   * Carried so that "delete all of it" can find this row. Erasure is keyed on
+   * the session — it is the only handle an anonymous visitor has — and for a
+   * lead with no assessment behind it there was previously nothing at all
+   * joining the two. See the note on `forget` in lib/db/retention.ts.
+   */
+  sessionId?: string;
   side: "buy" | "sell";
   name?: string;
   email?: string;
@@ -61,41 +70,66 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
   const phone = input.phone && input.phoneConsent?.granted ? input.phone : null;
 
   try {
+    const row: Record<string, unknown> = {
+      agent_id,
+      assessment_id: input.assessmentId || null,
+      side: input.side,
+      name: input.name ?? null,
+      email: input.email ?? null,
+      phone,
+      score: score.score,
+      band: score.band,
+      signals: score.signals as never,
+      /* The same pin as the assessment. A lead outlives the assessment row
+         under some retention rules, so it carries its own. */
+      funnel_version_id: await currentVersionId(input.side),
+      /* Kept so the score can be recomputed as recency decays. Without it a
+         three-week-old lead keeps the urgency it earned on the day. */
+      lead_input: input.lead as never,
+      session_id: input.sessionId || null,
+    };
+
     /* Bounded: the visitor is watching a button spin. A capture that cannot
        finish in six seconds will not finish, and telling them so is better
        than holding the page — the readout they came for is already theirs. */
-    const insert = Promise.resolve(
-      db
-      .from("rift_leads")
-      .insert({
-        agent_id,
-        assessment_id: input.assessmentId || null,
-        side: input.side,
-        name: input.name ?? null,
-        email: input.email ?? null,
-        phone,
-        score: score.score,
-        band: score.band,
-        signals: score.signals as never,
-        /* The same pin as the assessment. A lead outlives the assessment row
-           under some retention rules, so it carries its own. */
-        funnel_version_id: await currentVersionId(input.side),
-        /* Kept so the score can be recomputed as recency decays. Without it a
-           three-week-old lead keeps the urgency it earned on the day. */
-        lead_input: input.lead as never,
-      })
-      .select("id")
-      .single(),
-    );
-    const { value: created, timedOut } = await withTimeout(insert, WRITE_DEADLINE_MS, null);
+    const send = (body: Record<string, unknown>) =>
+      withTimeout(
+        Promise.resolve(db.from("rift_leads").insert(body).select("id").single()),
+        WRITE_DEADLINE_MS,
+        null,
+      );
+
+    let { value: created, timedOut } = await send(row);
     if (timedOut) return failed("the lead did not save in time");
+
+    /* `session_id` arrived with 20260920020000, and migrations here are run by
+       hand against production. Deploying this file before that SQL would make
+       PostgREST reject every insert on an unknown column — turning a fix to
+       the delete button into a total outage of lead capture, which is the one
+       write in this product that cannot be retried later because the person
+       has closed the tab.
+       
+       So the column is dropped and the row is saved without it, rather than
+       lost. What is lost instead is the handle erasure uses, and that is
+       reported rather than swallowed: see forget() in lib/db/retention.ts. */
+    if (created?.error && /session_id/.test(created.error.message)) {
+      captureOpError(new Error(created.error.message), {
+        op: "lead.capture.noSessionColumn",
+        extra: { migration: "20260920020000_rift_forget_reaches_the_lead" },
+      });
+      delete row.session_id;
+      ({ value: created, timedOut } = await send(row));
+      if (timedOut) return failed("the lead did not save in time");
+    }
+
     const { data, error } = created!;
     if (error) return failed(error.message);
 
     const consents: Record<string, unknown>[] = [];
     if (input.email && input.emailConsentWording) {
       consents.push({
-        agent_id, assessment_id: input.assessmentId || null, kind: "email",
+        agent_id, assessment_id: input.assessmentId || null,
+        session_id: input.sessionId || null, kind: "email",
         wording: input.emailConsentWording, version: CONSENT_VERSION, granted: true,
         ip: input.ip ?? null, user_agent: input.userAgent ?? null,
       });
@@ -104,14 +138,23 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       /* Recorded whether granted or refused. A refusal is evidence too — it is
          what proves the number was never called. */
       consents.push({
-        agent_id, assessment_id: input.assessmentId || null, kind: "phone",
+        agent_id, assessment_id: input.assessmentId || null,
+        session_id: input.sessionId || null, kind: "phone",
         wording: input.phoneConsent.wording, version: CONSENT_VERSION,
         granted: input.phoneConsent.granted,
         ip: input.ip ?? null, user_agent: input.userAgent ?? null,
       });
     }
     if (consents.length) {
-      const cErr = await boundedWrite(db.from("rift_consents").insert(consents as never[]), "the consent record");
+      let cErr = await boundedWrite(db.from("rift_consents").insert(consents as never[]), "the consent record");
+      /* Same pre-migration retry as the lead above, and for the same reason:
+         a lead stored without its consent record is a lead nobody may
+         contact, so refusing here over a missing column would discard the
+         relationship to protect a field that only matters at deletion time. */
+      if (!cErr.ok && /session_id/.test(cErr.error)) {
+        for (const c of consents) delete c.session_id;
+        cErr = await boundedWrite(db.from("rift_consents").insert(consents as never[]), "the consent record");
+      }
       /* A lead saved without its consent record is a lead nobody may contact.
          Fail loudly rather than keep a row that cannot lawfully be used. */
       if (!cErr.ok) return failed(`lead stored but consent was not: ${cErr.error}`);

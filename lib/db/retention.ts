@@ -1,4 +1,5 @@
 import "server-only";
+import { captureOpError } from "@/lib/monitoring/capture";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { RETENTION } from "@/lib/core/privacy";
@@ -198,8 +199,37 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
 /**
  * A person asking to be forgotten, now, without waiting for a schedule.
  *
- * "Delete all of it" from the readout means this. It is the same deletion the
- * sweep performs, triggered by the person rather than by time.
+ * "Delete all of it" from the readout means this.
+ *
+ * This used to say it was "the same deletion the sweep performs, triggered by
+ * the person rather than by time", and that was true on the day it was
+ * written: rift_leads.assessment_id cascaded, so removing the assessment took
+ * the lead with it. 20260908000000 changed the cascade to SET NULL — for a
+ * good reason, because the retention sweep was destroying relationships the
+ * agent was still working — and updated the sweep to delete leads explicitly.
+ *
+ * It did not update this function, which shares the mechanism. From that
+ * migration onward, clicking "Delete all of it" removed the assessment, the
+ * events and the attribution, and left the person's NAME, EMAIL, PHONE and
+ * CONSENT RECORD in place, while the page said: "Deleted. Nothing about this
+ * visit is left on this device or on our side."
+ *
+ * Nothing threw. The endpoint returned ok. The docblock above described the
+ * behaviour the code had lost, which is the only reason it read as correct.
+ *
+ * Three rules now, and they are worth stating because they are judgement
+ * rather than mechanism:
+ *
+ *   * The LEAD goes. A person who asks to be erased is not a relationship the
+ *     agent gets to keep on the grounds that he might want it.
+ *   * The CONSENT RECORD goes with them. The sweep deliberately keeps consent
+ *     records, because they are the evidence that contact was lawful — but
+ *     that argument only holds while there is somebody for them to be evidence
+ *     about. Keeping proof of permission to email an address you have just
+ *     destroyed is retention with no purpose left in it.
+ *   * A reply or a live sequence does NOT protect a row here, unlike in the
+ *     sweep. There the question is "has this expired"; here the person has
+ *     asked, and "we were in the middle of something" is not an answer to that.
  */
 export async function forget(sessionId: string): Promise<DbResult<{ deleted: number }>> {
   const db = serviceClient();
@@ -218,20 +248,83 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
     if (!read.ok) return read;
     const ids = (("data" in read ? read.data : []) as { id: string }[]).map((r) => r.id);
 
+    /* Leads FIRST, and the order is the whole point.
+       
+       rift_leads.assessment_id is SET NULL on delete, so removing the
+       assessments before collecting the leads that point at them severs the
+       only link between the two and leaves the person permanently
+       unfindable — deleted from their own point of view, present in the
+       table. Two queries: the leads that came from these assessments, and
+       the leads that carry this session directly, which is the only handle a
+       capture with no assessment behind it has ever had. */
+    const byAssessment = ids.length
+      ? await boundedRead(
+          db.from("rift_leads").select("id").eq("agent_id", agent_id).in("assessment_id", ids),
+          "the lead lookup",
+        )
+      : null;
+    if (byAssessment && !byAssessment.ok) return byAssessment;
+
+    /* `session_id` on rift_leads arrived with 20260920020000, which is run by
+       hand. If this deploys first, asking for the column returns an error —
+       and failing the whole request would leave the person with a delete
+       button that does nothing at all, which is strictly worse than the
+       partial erasure this is fixing. So a missing column degrades to "no
+       leads found by session", the assessment-side deletion below still runs,
+       and the gap is reported rather than swallowed. */
+    const bySession = await boundedRead(
+      db.from("rift_leads").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
+      "the lead lookup",
+    );
+    if (!bySession.ok) {
+      if (!/session_id/.test(bySession.error)) return bySession;
+      captureOpError(new Error(bySession.error), {
+        op: "retention.forget.noSessionColumn",
+        extra: { migration: "20260920020000_rift_forget_reaches_the_lead" },
+      });
+    }
+
+    const rows = (r: { ok: boolean } | null) =>
+      r && "data" in r ? (((r as { data?: { id: string }[] }).data ?? [])).map((x) => x.id) : [];
+    const leadIds = [...new Set([...rows(byAssessment), ...rows(bySession)])];
+
+    if (leadIds.length) {
+      /* rift_enrolments cascades from the lead, so the sequence stops by
+         construction rather than by remembering to stop it. */
+      const gone = await boundedWrite(
+        db.from("rift_leads").delete().in("id", leadIds), "the lead deletion");
+      if (!gone.ok) return gone;
+    }
+
     if (ids.length) {
       const deleted = await boundedWrite(
         db.from("rift_assessments").delete().in("id", ids), "the deletion");
       if (!deleted.ok) return deleted;
     }
+
+    /* Consent, by both handles, for the same reason as the lead. */
+    if (ids.length) {
+      await boundedWrite(
+        db.from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids),
+        "the consent record");
+    }
+    await boundedWrite(
+      db.from("rift_consents").delete().eq("agent_id", agent_id).eq("session_id", sessionId),
+      "the consent record");
+
     await boundedWrite(
       db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId), "the events");
     await boundedWrite(
       db.from("rift_attributions").delete().eq("session_id", sessionId), "the attribution");
 
-    /* The retention promise names four categories; three are cleared here and
-       the fourth is stated rather than silently skipped. */
+    /* The retention promise names five categories. Four are cleared here; the
+       client record is the one that is not ours to discard, and the privacy
+       page says so in those words rather than quietly excluding it. */
     void RETENTION;
-    return done({ deleted: ids.length });
+    /* Counts the person, not the paperwork. "deleted: 0" on a session that
+       had a lead and no assessment was the old answer, and the route turns
+       that into "nothing was stored on our side to remove". */
+    return done({ deleted: ids.length + leadIds.length });
   } catch (e) {
     return failed(e);
   }

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Ico, Mark } from "./icons";
 import { Track } from "./Track";
 import type { Readout, Status, Tension } from "@/lib/core/results";
-import { EMAIL_NOTE, RETENTION, forgetMe, heldLocally } from "@/lib/prototype/privacy";
+import { EMAIL_NOTE, RETENTION, heldLocally } from "@/lib/prototype/privacy";
+import { ForgetMe } from "@/components/rift/Forget";
 import { track } from "@/lib/prototype/telemetry";
 import { Trust, TrustLadder } from "./Trust";
 
@@ -61,7 +62,7 @@ export function ReadoutShell({ v, children, ask }: {
         <div className="shell-w" style={{ padding: "26px 0 60px" }}>
           <div className="split-w" style={{ marginBottom: 24 }}>
             <TrustLadder at="preliminary" ask={ask} />
-            <PrivacyPanel />
+            <PrivacyPanel v={v} />
           </div>
           <p className="t-xs c-4" style={{ lineHeight: 1.6, maxWidth: 620 }}>
             Prepared by Rift, guided by Kaleb Befekadu, Peachtree Cardinal, Georgia. Every figure
@@ -354,19 +355,10 @@ export function ActionBar({ onKeep, saved, bookHref }: { onKeep: () => void; sav
  * given rather than behind a policy link, because a retention promise nobody
  * reads is not a promise.
  */
-export function PrivacyPanel() {
+export function PrivacyPanel({ v }: { v: "buy" | "sell" }) {
   const [open, setOpen] = useState(false);
-  const [gone, setGone] = useState(false);
   const held = typeof window !== "undefined" ? heldLocally().filter((h) => h.present) : [];
 
-  if (gone) return (
-    <div className="card p-4 fade-in" style={{ borderColor: "var(--pos-line)", background: "var(--pos-wash)" }}>
-      <div className="row gap-2">
-        <Ico.checkCircle size={15} className="c-pos" />
-        <span className="t-sm w55">Deleted. Nothing about this visit is left on this device.</span>
-      </div>
-    </div>
-  );
 
   return (
     <div className="card" style={{ overflow: "hidden" }}>
@@ -393,18 +385,15 @@ export function PrivacyPanel() {
             ))}
           </div>
           <div className="hr" style={{ margin: "14px 0" }} />
-          <div className="between wrap gap-3">
-            <div>
-              <div className="t-sm w55">On this device right now</div>
-              <div className="t-xs c-4" style={{ marginTop: 3 }}>
-                {held.length ? held.map((h) => h.label).join(" · ") : "Nothing"}
-              </div>
-            </div>
-            <button className="btn btn-s btn-sm" disabled={!held.length}
-              onClick={() => { track({ name: "data_deleted", side: "none" }); forgetMe(); setGone(true); }}>
-              <Ico.x size={13} />Delete all of it
-            </button>
+          <div className="t-sm w55">On this device right now</div>
+          <div className="t-xs c-4" style={{ marginTop: 3, marginBottom: 10 }}>
+            {held.length ? held.map((h) => h.label).join(" · ") : "Nothing"}
           </div>
+          {/* The real one. What stood here cleared localStorage, said
+              "Deleted", and left the server untouched — and disabled itself
+              when this device happened to be empty, which is the state of the
+              person with the most to delete. See components/rift/Forget.tsx. */}
+          <ForgetMe side={v} />
         </div>
       ) : null}
     </div>

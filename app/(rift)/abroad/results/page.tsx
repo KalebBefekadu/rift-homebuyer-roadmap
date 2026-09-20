@@ -9,6 +9,7 @@ import { money } from "@/lib/core/compute";
 import { FALLBACK_RATE } from "@/lib/core/rate";
 import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { Ico, Mark } from "@/components/rift/icons";
+import { Keep } from "./Keep";
 
 /* The title follows the page. A tab that says one thing in English above a
    page written in Amharic is the same half-translated feeling this work was
@@ -321,6 +322,33 @@ export default async function AbroadResults({
             </div>
           </div>
         </section>
+
+        {/* The two things every other readout in the product has had and this
+            one did not: a way to keep it, and a way to destroy it. The page is
+            pure arithmetic on its own query string, so the address IS the
+            durable document — there is no snapshot to take. */}
+        <Keep
+          locale={locale}
+          t={{
+            "res.email.h": t("res.email.h"),
+            "res.email.body": t("res.email.body"),
+            "res.email.field": t("res.email.field"),
+            "res.email.cta": t("res.email.cta"),
+            "res.email.sent": t("res.email.sent"),
+            "res.email.off": t("res.email.off"),
+            "res.email.bad": t("res.email.bad"),
+            "res.email.err": t("res.email.err"),
+            "res.forget.h": t("res.forget.h"),
+            "res.forget.body": t("res.forget.body"),
+            "res.forget.cta": t("res.forget.cta"),
+            "res.forget.working": t("res.forget.working"),
+            "res.forget.done": t("res.forget.done"),
+            "res.forget.partial": t("res.forget.partial"),
+          }}
+          shareUrl={`/abroad/results?${q}&lang=${locale}`}
+          county={i.county}
+          cashIn={r.cashIn}
+        />
 
         <p className="t-xs c-4 sec" style={{ maxWidth: 720, lineHeight: 1.6, paddingBottom: 60, ...body }}>
           {t("res.disc")}

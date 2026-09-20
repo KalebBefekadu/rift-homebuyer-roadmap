@@ -250,6 +250,33 @@ const en: Dict = {
   "res.keep.cta": "Fifteen minutes with Kaleb",
   "res.disc":
     "Planning estimates, not a loan approval, a rent guarantee, or a valuation. Down payments and rate premiums reflect what lenders in this market publish for each situation; your own lender's terms decide. Rent is estimated from county averages, not from a specific property. U.S. tax on rental income and the FIRPTA withholding on sale are real and are questions for a cross-border accountant, not for an agent.",
+
+  /* Capture. This page had none: every other readout in the product can send
+     itself to somebody and this one could only offer a call, so the only
+     funnel written for people who are not in the country was also the only
+     one that could not produce a lead. */
+  "res.email.h": "Have these numbers sent to you.",
+  "res.email.body":
+    "One email with the figures above and a link back to this page. No newsletter, nothing sold on, one click stops it.",
+  "res.email.field": "Email address",
+  "res.email.cta": "Send it to me",
+  "res.email.sent": "On its way. It carries the link, so it works on any device.",
+  "res.email.off":
+    "Noted — but email is not switched on yet, so nothing has been sent. Keep this page's address; it is the same document.",
+  "res.email.bad": "That email address does not look right.",
+  "res.email.err": "That did not go through. This page and its address still work.",
+
+  /* Deletion. Also absent here, on the page whose readers are most likely to
+     be weighing what a U.S. company now knows about them. */
+  "res.forget.h": "Delete everything",
+  "res.forget.body":
+    "Remove your answers and anything we hold, now, rather than waiting for the schedule.",
+  "res.forget.cta": "Delete all of it",
+  "res.forget.working": "Deleting\u2026",
+  "res.forget.done":
+    "Deleted. Nothing about this visit is left on this device or on our side.",
+  "res.forget.partial":
+    "Cleared from this device. Nothing was stored on our side to remove \u2014 or the request did not reach us, in which case the schedule removes it on its own.",
 };
 
 const am: Dict = {
@@ -442,6 +469,27 @@ const am: Dict = {
   "res.keep.cta": "ከካሌብ ጋር አስራ አምስት ደቂቃ",
   "res.disc":
     "እነዚህ የዕቅድ ግምቶች ናቸው፤ የብድር ፈቃድ፣ የኪራይ ዋስትና ወይም የንብረት ግምገማ አይደሉም። የቅድመ ክፍያና የወለድ ተጨማሪዎች አበዳሪዎች ለእያንዳንዱ ሁኔታ ካወጡት መረጃ የተወሰዱ ናቸው፤ የሚወስነው የራስዎ አበዳሪ ነው። ኪራዩ ከካውንቲ አማካይ የተሰላ ነው እንጂ ከአንድ የተወሰነ ቤት አይደለም። በኪራይ ገቢ ላይ የሚከፈል የአሜሪካ ግብርና በሽያጭ ጊዜ የሚተገበረው FIRPTA ቀረጥ እውነተኛ ናቸው፤ ሁለቱም ለደላላ ሳይሆን ለድንበር ተሻጋሪ የሂሳብ ባለሙያ የሚቀርቡ ጥያቄዎች ናቸው።",
+
+  "res.email.h": "እነዚህ ቁጥሮች በኢሜይል ይድረሱዎት።",
+  "res.email.body":
+    "ከላይ ያሉትን ቁጥሮችና ወደዚህ ገጽ የሚመልስ አገናኝ የያዘ አንድ ኢሜይል። ጋዜጣ የለም፤ መረጃዎ ለማንም አይሸጥም፤ በአንድ ጠቅታ ያቆሙታል።",
+  "res.email.field": "የኢሜይል አድራሻ",
+  "res.email.cta": "ይላኩልኝ",
+  "res.email.sent": "በመንገድ ላይ ነው። አገናኙን ስለያዘ በማንኛውም መሣሪያ ይሠራል።",
+  "res.email.off":
+    "ተመዝግቧል — ነገር ግን ኢሜይል ገና አልተከፈተም፤ ስለዚህ ምንም አልተላከም። የዚህን ገጽ አድራሻ ያስቀምጡ፤ ተመሳሳይ ሰነድ ነው።",
+  "res.email.bad": "ያ የኢሜይል አድራሻ ትክክል አይመስልም።",
+  "res.email.err": "አልተሳካም። ይህ ገጽና አድራሻው አሁንም ይሠራሉ።",
+
+  "res.forget.h": "ሁሉንም ይሰርዙ",
+  "res.forget.body":
+    "መልሶችዎንና የያዝነውን ሁሉ የጊዜ ሰሌዳውን ሳይጠብቁ አሁኑኑ ያስወግዱ።",
+  "res.forget.cta": "ሁሉንም ሰርዝ",
+  "res.forget.working": "በመሰረዝ ላይ\u2026",
+  "res.forget.done":
+    "ተሰርዟል። ስለዚህ ጉብኝት በዚህ መሣሪያም ሆነ በእኛ በኩል ምንም አልቀረም።",
+  "res.forget.partial":
+    "ከዚህ መሣሪያ ጸድቷል። በእኛ በኩል የሚወገድ ምንም አልተከማቸም ነበር \u2014 ወይም ጥያቄው አልደረሰንም፤ በዚያ ሁኔታ የጊዜ ሰሌዳው በራሱ ያስወግደዋል።",
 };
 
 const DICTS: Record<Locale, Dict> = { en, am };
@@ -462,6 +510,27 @@ export function translator(locale: Locale) {
 }
 
 export const isLocale = (v: unknown): v is Locale => v === "en" || v === "am";
+
+/**
+ * Which Amharic values a native speaker has actually confirmed.
+ *
+ * Empty, and that is the honest state: every value in `am` is a first pass by
+ * a non-native writer. The docblock at the top of this file has said so since
+ * it was written, which helps nobody decide what to do about it — a note in a
+ * comment does not produce a worklist, and "the Amharic needs reviewing" has
+ * sat on a list for weeks precisely because it has no edge.
+ *
+ * So it is a list instead. Add a key here when Kaleb has read that one value
+ * and is happy with it; `/api/health` reports the remainder as an outcome
+ * rather than as configuration, which is the only kind of check that has ever
+ * caught anything in this product.
+ */
+export const REVIEWED_AM: string[] = [];
+
+/** The keys still carrying an unreviewed translation. */
+export function unreviewedAm(): string[] {
+  return KEYS.filter((k) => !REVIEWED_AM.includes(k));
+}
 
 /** Every English key must exist in Amharic; the test enforces it. */
 export const KEYS = Object.keys(en);

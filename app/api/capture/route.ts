@@ -71,8 +71,16 @@ export async function POST(req: Request) {
     source: typeof lead.source === "string" ? lead.source : "direct",
   };
 
+  /* The session, so the person can later be erased.
+     
+     Without it a lead captured from the abroad readout or from /book has no
+     link to anything a delete request can key on, and "delete all of it"
+     silently spares exactly the row that holds their email address. */
+  const sessionId = typeof b.sessionId === "string" ? b.sessionId.trim().slice(0, 64) : "";
+
   const r = await captureLead({
     assessmentId,
+    sessionId: sessionId || undefined,
     side: scored.side,
     name: name || undefined,
     email: email || undefined,
