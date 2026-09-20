@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { internalHidden } from "@/lib/core/internal";
 
 /**
  * The development index.
@@ -38,6 +40,11 @@ const DOCS = [
 ];
 
 export default function Home() {
+  /* This page tells a reader which parts of the product are real and which are
+     specification. That is for whoever is building it. See
+     lib/core/internal.ts. */
+  if (internalHidden(process.env)) notFound();
+
   return (
     /* Paints its own ground. `body` carries --app-bg (#101914), a dark green
        left behind by the retired portal, so a page that sets dark text and no

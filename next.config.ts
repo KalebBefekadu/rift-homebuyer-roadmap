@@ -47,6 +47,11 @@ const SECURITY_HEADERS = [
 const PRIVATE_PAGES = ["/r/:token*", "/buy/results", "/sell/results", "/abroad/results", "/book"];
 
 const nextConfig: NextConfig = {
+  /* Stop naming the framework and its major version on every response. It
+     tells an attacker which advisories to try first and tells a visitor
+     nothing. */
+  poweredByHeader: false,
+
   async headers() {
     return [
       { source: "/:path*", headers: SECURITY_HEADERS },
