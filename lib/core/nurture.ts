@@ -208,3 +208,58 @@ export function autonomy(band: Band) {
   const s = sequenceFor(band).steps;
   return { auto: s.filter((x) => x.auto).length, total: s.length };
 }
+
+/* ── How much one run is allowed to do ─────────────────────────────────── */
+
+/**
+ * The ceiling on a single run.
+ *
+ * Twenty-five is not a throughput figure, it is a blast radius. The cadence
+ * accumulates a due cohort whether or not sending is switched on, so the FIRST
+ * run after an address is configured is the one run in this product's life that
+ * can reach everybody at once — through code that has never sent a real
+ * message. A cap turns that into a sample you can read before the rest goes.
+ *
+ * Nothing is lost to the cap: a step that is still due tomorrow is still due
+ * tomorrow, and the run reports what it deferred.
+ */
+export const DEFAULT_MAX_PER_RUN = 25;
+
+export interface RunOptions {
+  /** Report what would be sent, claim nothing, send nothing. */
+  dry: boolean;
+  /** Most messages this run may send. */
+  max: number;
+}
+
+/**
+ * Reads the two safety dials off the request URL.
+ *
+ * `?dry=1` and `?max=N`. Both are deliberately absent-by-default in the wrong
+ * direction only for `dry` — a scheduler that forgets the parameter sends for
+ * real, which is what a scheduler is for — while `max` defaults to the cap
+ * rather than to unlimited, because forgetting a limit must not mean not having
+ * one. A max of 0 is honoured (send nothing); a negative or unparseable one
+ * falls back to the default rather than meaning "no limit", since the most
+ * likely way to arrive at a garbage value is a typo.
+ */
+export function runOptions(url: string): RunOptions {
+  let params: URLSearchParams;
+  try {
+    params = new URL(url).searchParams;
+  } catch {
+    return { dry: false, max: DEFAULT_MAX_PER_RUN };
+  }
+
+  const raw = params.get("dry");
+  const dry = raw !== null && raw !== "0" && raw.toLowerCase() !== "false";
+
+  /* The raw string first. `Number(null)` and `Number("")` are both 0, so
+     coercing straight to a number turns "no max given" into "send nothing" —
+     a cap that reads as working and delivers a cron that never sends again. */
+  const askedRaw = params.get("max");
+  const asked = askedRaw?.trim() ? Number(askedRaw) : NaN;
+  const max = Number.isFinite(asked) && asked >= 0 ? Math.floor(asked) : DEFAULT_MAX_PER_RUN;
+
+  return { dry, max };
+}

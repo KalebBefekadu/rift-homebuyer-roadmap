@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
 import { due, claimStep, markTouch } from "@/lib/db/nurture";
 import { sendTouch, sendResume } from "@/lib/db/email";
+import { runOptions } from "@/lib/core/nurture";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -20,6 +21,17 @@ export const maxDuration = 60;
  * the queue for the agent, because a product that auto-dials on somebody's
  * behalf has decided something that was not its to decide.
  *
+ * Two dials, both off the URL — see lib/core/nurture.ts:
+ *
+ *   ?dry=1   walk the whole queue and report it, claiming nothing and sending
+ *            nothing. The one way to find out what the first real run will do
+ *            BEFORE it does it.
+ *   ?max=N   a ceiling on sends. Defaults to a cap rather than to unlimited,
+ *            because the due cohort accumulates whether or not sending is
+ *            switched on, and the first run after an address is configured
+ *            would otherwise reach everybody at once through code that has
+ *            never sent a real message.
+ *
  * Order matters and is deliberate: claim, then send, then record the outcome.
  * A crash between sending and recording would otherwise send the same message
  * again on the next run, and the person on the other end has no way to know it
@@ -28,6 +40,8 @@ export const maxDuration = 60;
 async function run(req: Request) {
   const refused = cronRefusal(req);
   if (refused) return refused;
+
+  const { dry, max } = runOptions(req.url);
 
   const queue = await due(new Date());
   if (!queue.ok) {
@@ -40,10 +54,28 @@ async function run(req: Request) {
      different facts and lumping them together sends somebody looking for a task
      that does not exist — which is exactly what the first live run did. */
   let sent = 0, held = 0, notConfigured = 0, failedCount = 0;
+  /* Fifth: still due, not attempted, because this run had used up its budget.
+     Nothing is lost — it is due again tomorrow — but a run that silently drops
+     the tail is indistinguishable from a run with nothing left to do. */
+  let deferred = 0;
+  /* A dry run's only output. Who, which step, and what would have gone — the
+     three things you need to decide whether to let it loose. */
+  const plan: { to: string; stepId: string; band: string; kind: "readout" | "resume" }[] = [];
 
   for (const t of queue.data) {
     if (!t.auto) { held++; continue; }
     if (t.channel !== "email" || !t.email) { held++; continue; }
+
+    /* The cap counts everything this run would put in front of a person,
+       including a dry run's plan. A preview that silently shows the first
+       twenty-five of two hundred is the same lie as a send that stops there
+       without saying so — both are reported, neither is hidden. */
+    if (plan.length + sent + failedCount + notConfigured >= max) { deferred++; continue; }
+
+    if (dry) {
+      plan.push({ to: t.email, stepId: t.stepId, band: t.band, kind: t.figures ? "readout" : "resume" });
+      continue;
+    }
 
     const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
     if (!claim.ok || "skipped" in claim || !claim.data.claimed) { notConfigured++; continue; }
@@ -101,6 +133,11 @@ async function run(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    /* Said outright, at the top. A dry run's body is otherwise shaped exactly
+       like a real one's, and a reader who assumes the wrong one has either
+       panicked over nothing or relaxed about something that already went. */
+    dry,
+    max,
     due: queue.data.length,
     sent,
     /* Steps waiting on the agent are reported, never hidden. A queue that only
@@ -111,6 +148,8 @@ async function run(req: Request) {
        as one. */
     notConfigured,
     failed: failedCount,
+    deferred,
+    ...(dry ? { wouldSend: plan } : {}),
   });
 }
 
