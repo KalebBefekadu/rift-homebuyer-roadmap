@@ -84,11 +84,19 @@ export function Q({ topic, q, why, children }: { topic: string; q: string; why?:
  * to land before the screen changes, or it reads as a glitch rather than an
  * answer. Continue stays available for anyone using a keyboard.
  */
-export function Choices({ opts, value, onPick, advance }: {
+export function Choices({ opts, value, onPick, advance, name, label }: {
   opts: { label: string; value: string }[] | string[];
   value: string;
   onPick: (s: string) => void;
   advance?: () => void;
+  /** Shared by the radios so they behave as one group. Without it the browser
+   *  treats each as its own group: arrow keys stop moving between options and
+   *  a screen reader announces every one as "1 of 1". */
+  name: string;
+  /** The question. It is an <h1> above rather than a <label>, so the group
+   *  needs to be told what it is asking or it is read out as four bare
+   *  options with nothing to attach them to. */
+  label: string;
 }) {
   const [flash, setFlash] = useState<string | null>(null);
   const norm = opts.map((o) => (typeof o === "string" ? { label: o, value: o } : o));
@@ -101,10 +109,10 @@ export function Choices({ opts, value, onPick, advance }: {
   };
 
   return (
-    <div className="col gap-2">
+    <div className="col gap-2" role="radiogroup" aria-label={label}>
       {norm.map((o) => (
         <label key={o.value} className="opt" data-on={value === o.value || flash === o.value}>
-          <input type="radio" checked={value === o.value} onChange={() => pick(o.value)} />
+          <input type="radio" name={name} checked={value === o.value} onChange={() => pick(o.value)} />
           <span className="t-md w5">{o.label}</span>
         </label>
       ))}
@@ -210,7 +218,8 @@ export function Field({ q, value, onChange, advance, options, extra }: {
   if (q.type === "choice") {
     return (
       <>
-        <Choices opts={q.options ?? []} value={String(value ?? "")} onPick={onChange} advance={advance} />
+        <Choices opts={q.options ?? []} value={String(value ?? "")} onPick={onChange} advance={advance}
+          name={q.id} label={q.fieldLabel ?? q.title} />
         {extra}
       </>
     );
@@ -219,6 +228,7 @@ export function Field({ q, value, onChange, advance, options, extra }: {
     return (
       <>
         <select className="select input-lg" value={String(value ?? "")}
+          aria-label={q.fieldLabel ?? q.title}
           onChange={(e) => { onChange(e.target.value); setTimeout(advance, 190); }}>
           {(options ?? []).map((o) => <option key={o}>{o}</option>)}
         </select>
@@ -238,7 +248,8 @@ export function Field({ q, value, onChange, advance, options, extra }: {
   }
   if (q.type === "boolean") {
     return <Choices opts={[{ label: "Yes", value: "yes" }, { label: "No", value: "no" }]}
-      value={String(value ?? "")} onPick={onChange} advance={advance} />;
+      value={String(value ?? "")} onPick={onChange} advance={advance}
+      name={q.id} label={q.fieldLabel ?? q.title} />;
   }
   return (
     <>

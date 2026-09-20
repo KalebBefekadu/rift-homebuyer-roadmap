@@ -126,6 +126,15 @@ It refuses to run without `CRON_SECRET`. An unauthenticated endpoint that sends
 email on demand is a way to have your sending reputation destroyed by a stranger
 with curl.
 
+**It answers GET as well as POST, and that is not a convenience.** Vercel Cron
+invokes a path with a GET request. Both scheduled routes originally exported
+`POST` only, so every scheduled run from the day the crons were added returned
+405 and did nothing — no error, no log line, and `/api/health` reporting
+`scheduler: configured` throughout, because the secret was indeed configured.
+The rule is in `lib/core/cron.ts` and `lib/core/cron.test.ts` reads
+`vercel.json` and asserts that every scheduled path exports GET, so a third job
+cannot repeat it.
+
 Only **automatic** steps are sent. Calls and steps marked "needs him" stay in
 the queue for the agent — a product that auto-dials on somebody's behalf has
 decided something that was not its to decide.

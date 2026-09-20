@@ -24,6 +24,36 @@ export const dynamic = "force-dynamic";
  * functional stays 200 with a note — paging somebody at 3am because SMS is not
  * wired yet is how alerts get muted.
  */
+/**
+ * The retention answer, cached.
+ *
+ * This endpoint is public and deliberately unauthenticated — a monitor needs
+ * it to be — and the outcome check below costs four queries. Running them on
+ * every request turns a health check into a four-times amplifier for anyone
+ * with a loop, which is a poor trade for a question whose answer changes at
+ * most once a day.
+ *
+ * Per-instance and in memory, like the rate limiter, and for the same reason:
+ * the alternative is a shared store to defend against an adversary nobody has.
+ */
+const RETENTION_TTL_MS = 5 * 60_000;
+let retentionCache: { at: number; value: string } | null = null;
+
+async function retentionCheck(): Promise<string> {
+  const now = Date.now();
+  if (retentionCache && now - retentionCache.at < RETENTION_TTL_MS) return retentionCache.value;
+
+  const late = await overdue();
+  const value = !late.ok || "skipped" in late
+    ? "unknown"
+    : late.data.overdue ? "overdue — records past their deletion date" : "clear";
+
+  /* A failed lookup is not cached. "Unknown" because the database blipped
+     should clear on the next request rather than persist for five minutes. */
+  if (value !== "unknown") retentionCache = { at: now, value };
+  return value;
+}
+
 export async function GET() {
   const db = serviceClient();
   const agent = db ? await currentAgentId() : null;
@@ -54,11 +84,7 @@ export async function GET() {
 
     /* Yes or no, never a count. This endpoint is public, and how many people
        are in the funnel is not a figure to hand to whoever asks. */
-    const late = await overdue();
-    checks.retention = !late.ok
-      ? "unknown"
-      : "skipped" in late ? "unknown"
-      : late.data.overdue ? "overdue — records past their deletion date" : "clear";
+    checks.retention = await retentionCheck();
   }
 
   /* Only the two that stop the product doing its job are fatal. The rest are

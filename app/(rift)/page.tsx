@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
+import { AgentSchema } from "@/components/rift/Agent";
 import {
   money, cashToClose, netProceeds, BUYER_DEFAULTS, SELLER_DEFAULTS,
 } from "@/lib/core/compute";
@@ -37,6 +38,7 @@ export default function HomePage() {
 
   return (
     <div className="buy">
+      <AgentSchema />
       <header style={{
         position: "sticky", top: 0, zIndex: 40, background: "rgba(251,250,248,.86)",
         backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-2)",

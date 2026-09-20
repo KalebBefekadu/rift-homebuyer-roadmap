@@ -27,8 +27,14 @@ export const LOCALES: { id: Locale; label: string; native: string }[] = [
 
 /* Ethiopic needs a face that actually has the glyphs; without one the browser
    falls back and the page renders in boxes. Latin keeps the product's own
-   type so switching language does not switch design. */
-export const ETHIOPIC_STACK = "'Noto Sans Ethiopic', 'Abyssinica SIL', sans-serif";
+   type so switching language does not switch design.
+   
+   The variable is set by next/font in app/(rift)/layout.tsx, which self-hosts
+   the face. The named fallbacks after it are what carries the page if that
+   variable is ever missing — on a surface outside the rift shell, or in a
+   preview where the build-time fetch did not happen. */
+export const ETHIOPIC_STACK =
+  "var(--font-ethiopic), 'Noto Sans Ethiopic', 'Abyssinica SIL', sans-serif";
 
 type Dict = Record<string, string>;
 
@@ -163,6 +169,16 @@ const en: Dict = {
   /* The readout. Same voice as the landing page, because it is the same
      conversation — somebody switched to Amharic, tapped through, and used to
      land on a wall of English. */
+  /* The booking page is English, and says so here rather than pretending
+     otherwise. The form is not translated on purpose: the consent wording
+     stored with a phone number is evidence of what somebody agreed to, and
+     showing one language while storing another would make that record false.
+     Translating it means translating the stored wording too, which is a legal
+     review rather than a commit. Until then, this band says what is going on
+     and promises the call itself in Amharic — which is the part that matters. */
+  "book.band.h": "ካሌብ አማርኛ ይናገራል።",
+  "book.band.b": "ንግግሩ በአማርኛ ይሆናል። ከታች ያለው ቅጽ ግን በእንግሊዝኛ ነው — ስምዎን፣ ኢሜይልዎን ወይም ስልክዎን ብቻ ነው የሚጠይቀው።",
+  "book.back": "ወደ ቁጥሮቼ ልመለስ",
   "res.title": "What this would take from where you are",
   "res.change": "Change my answers",
   "res.kicker": "{price} in {county} County · {use}",
@@ -356,6 +372,9 @@ const am: Dict = {
   "status.itin.you": "ITIN አለዎት፤ የሶሻል ሴኩሪቲ ቁጥር የለዎትም",
   "status.foreign.you": "ከአሜሪካ ውጭ ይኖራሉ፤ ምንም የአሜሪካ ሁኔታ የለዎትም",
 
+  "book.band.h": "ካሌብ አማርኛ ይናገራል።",
+  "book.band.b": "ንግግሩ በአማርኛ ይሆናል። ከታች ያለው ቅጽ ግን በእንግሊዝኛ ነው — ስምዎን፣ ኢሜይልዎን ወይም ስልክዎን ብቻ ነው የሚጠይቀው።",
+  "book.back": "ወደ ቁጥሮቼ ልመለስ",
   "res.title": "ካሉበት ሆነው ይህ ምን ያህል እንደሚጠይቅዎት",
   "res.change": "መልሶቼን ልቀይር",
   "res.kicker": "{price} በ{county} ካውንቲ · {use}",

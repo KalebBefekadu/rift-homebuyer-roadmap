@@ -89,9 +89,24 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
   const s = statusById(status);
   const minDown = s.down[use];
   const downPct = Math.max(extraDown ?? minDown, minDown);
-  const input = { price, county, status, use, downPct };
-  const r = useMemo(() => abroadReturns(input), [price, county, status, use, downPct]);
-  const breakEven = useMemo(() => breakEvenDownPct(input), [price, county, status, use]);
+  /* Memoised on the object rather than on a hand-written list of its fields.
+     The list was correct and the linter was right to complain anyway: it
+     described `input` as a dependency it did not have, so adding a sixth field
+     to AbroadInputs would have left both memos returning a stale figure with
+     nothing failing. The object is rebuilt every render and is cheap; the
+     memo exists to keep the arithmetic off the slider's drag path. */
+  const input = useMemo(
+    () => ({ price, county, status, use, downPct }),
+    [price, county, status, use, downPct],
+  );
+  const r = useMemo(() => abroadReturns(input), [input]);
+  /* The break-even sweeps every down payment, so it deliberately ignores the
+     one currently selected — dragging that slider must not recompute it. */
+  const breakEven = useMemo(
+    () => breakEvenDownPct(input),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [price, county, status, use],
+  );
   const answered = (qid: string) => track({ name: "hero_answer", side: "buy", meta: { qid, page: "abroad" } });
 
   /* Straight to the readout, not into the buyer funnel. That funnel asks what
@@ -146,7 +161,11 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
             <div className="ans-in">
               <div className="field" style={{ marginBottom: 18 }}>
                 <span className="label" style={script}>{t("ask.status")}</span>
-                <div className="col gap-2" style={{ marginTop: 8 }}>
+                {/* Named as a group. Four radios with no group name are read
+                    out as four unrelated options with nothing to attach them
+                    to, and this is the question the whole page turns on. */}
+                <div className="col gap-2" style={{ marginTop: 8 }}
+                  role="radiogroup" aria-label={t("ask.status")}>
                   {STATUSES.map((x) => (
                     <label key={x.id} className="opt" data-on={status === x.id}>
                       <input type="radio" name="status" checked={status === x.id}
@@ -162,7 +181,8 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
 
               <div className="field" style={{ marginBottom: 18 }}>
                 <span className="label" style={script}>{t("ask.use")}</span>
-                <div className="g2 gap-2" style={{ marginTop: 8 }}>
+                <div className="g2 gap-2" style={{ marginTop: 8 }}
+                  role="radiogroup" aria-label={t("ask.use")}>
                   {USES.map((u) => (
                     <label key={u.id} className="opt" data-on={use === u.id}>
                       <input type="radio" name="use" checked={use === u.id}
@@ -188,7 +208,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                 </label>
                 <label className="field">
                   <span className="label" style={script}>{t("ask.county")}</span>
-                  <select className="select" value={county}
+                  <select className="select" value={county} aria-label={t("ask.county")}
                     onChange={(e) => { setCounty(e.target.value); answered("county"); }}>
                     {counties.map((c) => <option key={c}>{c}</option>)}
                   </select>

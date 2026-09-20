@@ -77,13 +77,17 @@ export function Landing({ counties }: { counties: string[] }) {
                       <span className="label" style={{ margin: 0 }}>{label}</span>
                       <span className="num t-sm">{money(s[k])}</span>
                     </div>
+                    {/* Without valuetext a screen reader reads the raw
+                        number — "four hundred twenty thousand" as digits, with
+                        no currency. The visible label already says money. */}
                     <input className="rng" type="range" min={min} max={max} step={step} value={s[k]}
+                      aria-valuetext={money(s[k])}
                       onChange={(e) => { set(k, Number(e.target.value)); track({ name: "hero_answer", side: "sell", meta: { qid: k } }); }} />
                   </label>
                 ))}
                 <label className="field">
                   <span className="label">County</span>
-                  <select className="select" value={s.county}
+                  <select className="select" value={s.county} aria-label="County"
                     onChange={(e) => { set("county", e.target.value); track({ name: "hero_answer", side: "sell", meta: { qid: "county" } }); }}>
                     {counties.map((c) => <option key={c}>{c}</option>)}
                   </select>

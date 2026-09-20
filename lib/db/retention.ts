@@ -288,30 +288,37 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
       { id: string; rift_leads: { id: string }[] }[];
     if (rows.some((a) => !a.rift_leads?.length)) return done({ overdue: true });
 
-    const checks = [
-      boundedRead(
-        db.from("rift_events").select("id")
-          .eq("agent_id", agent_id).lte("at", ago(WINDOWS.analytics.days + grace)).limit(1),
-        "the analytics retention check",
-      ),
-      boundedRead(
-        db.from("rift_attributions").select("id")
-          .eq("agent_id", agent_id).lte("first_at", ago(WINDOWS.analytics.days + grace)).limit(1),
-        "the attribution retention check",
-      ),
-      boundedRead(
-        db.from("rift_assessments").select("id")
-          .eq("agent_id", agent_id).not("completed_at", "is", null)
-          .lte("started_at", ago(WINDOWS.unconverted.days + grace)).limit(1),
-        "the unconverted retention check",
-      ),
-    ];
+    /* Sequential with an early exit, not Promise.all. One row anywhere is the
+       whole answer, so running all three concurrently buys nothing and pays
+       for every query every time — and the last of them is the only one
+       without an index behind it. Cheapest and most likely to trip first. */
+    const events = await boundedRead(
+      db.from("rift_events").select("id")
+        .eq("agent_id", agent_id).lte("at", ago(WINDOWS.analytics.days + grace)).limit(1),
+      "the analytics retention check",
+    );
+    if (!events.ok) return events;
+    if ((("data" in events ? events.data : []) as unknown[]).length) return done({ overdue: true });
 
-    for (const c of await Promise.all(checks)) {
-      if (!c.ok) return c;
-      const rows = ("data" in c ? c.data : []) as { id: string }[];
-      if (rows.length) return done({ overdue: true });
+    const cold = await boundedRead(
+      db.from("rift_assessments").select("id")
+        .eq("agent_id", agent_id).not("completed_at", "is", null)
+        .lte("started_at", ago(WINDOWS.unconverted.days + grace)).limit(1),
+      "the unconverted retention check",
+    );
+    if (!cold.ok) return cold;
+    if ((("data" in cold ? cold.data : []) as unknown[]).length) return done({ overdue: true });
+
+    const attributions = await boundedRead(
+      db.from("rift_attributions").select("session_id")
+        .eq("agent_id", agent_id).lte("first_at", ago(WINDOWS.analytics.days + grace)).limit(1),
+      "the attribution retention check",
+    );
+    if (!attributions.ok) return attributions;
+    if ((("data" in attributions ? attributions.data : []) as unknown[]).length) {
+      return done({ overdue: true });
     }
+
     return done({ overdue: false });
   } catch (e) {
     return failed(e);

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { GA_COUNTIES } from "@/lib/core/registry";
 import { parseAbroadParams } from "@/lib/core/abroad";
 import { isLocale, type Locale } from "@/lib/core/i18n";
+import { AgentSchema } from "@/components/rift/Agent";
 import { Landing } from "./Landing";
 
 export const metadata: Metadata = {
@@ -47,6 +48,9 @@ export default async function AbroadPage({
 
   return (
     <Suspense>
+      {/* The entity, on the page most likely to be found by somebody who has
+          never heard of the agent and is searching in another language. */}
+      <AgentSchema />
       <Landing
         counties={GA_COUNTIES}
         initial={initial}

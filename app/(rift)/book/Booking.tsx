@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import { track, useTrack, flush } from "@/lib/rift/track";
+import { translator, ETHIOPIC_STACK, isLocale } from "@/lib/core/i18n";
 
 /**
  * The consultation booking.
@@ -35,9 +36,19 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   /* Three visitors reach this page, and two of them arrived without a readout.
      Sending them "back" to one they never had is a link to a stranger's page. */
   const abroad = v === "abroad";
-  const home = abroad ? "/abroad" : side === "sell" ? "/sell" : "/buy";
-  const backLabel = abroad ? "Back to my numbers" : "Back to my readout";
-  const backHref = abroad ? "/abroad" : side === "sell" ? "/sell/results" : "/buy/results";
+  /* Carried from the Amharic pages. The form stays English — see the note on
+     book.band.* in lib/core/i18n.ts — but arriving from an Amharic page and
+     being handed English with no explanation reads as the product giving up
+     on you at the last step. */
+  const langParam = q.get("lang");
+  const am = isLocale(langParam) && langParam === "am";
+  const t = translator(am ? "am" : "en");
+  const script: React.CSSProperties = am ? { fontFamily: ETHIOPIC_STACK } : {};
+  const lang = am ? "?lang=am" : "";
+
+  const home = abroad ? `/abroad${lang}` : side === "sell" ? "/sell" : "/buy";
+  const backLabel = am ? t("book.back") : abroad ? "Back to my numbers" : "Back to my readout";
+  const backHref = abroad ? `/abroad${lang}` : side === "sell" ? "/sell/results" : "/buy/results";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -103,7 +114,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             cancel and no deposit.
           </p>
           <Link href={backHref} className="btn btn-g" style={{ marginTop: 16 }}>
-            <Ico.chevL size={14} />{backLabel}
+            <Ico.chevL size={14} /><span style={script}>{backLabel}</span>
           </Link>
         </div>
       </main>
@@ -115,11 +126,19 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
       <header style={{ borderBottom: "1px solid var(--line-2)" }}>
         <div className="shell-w between" style={{ height: 56 }}>
           <Link href={home} className="row gap-2"><Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span></Link>
-          <Link href={backHref} className="t-xs c-3">{backLabel}</Link>
+          <Link href={backHref} className="t-xs c-3" style={script}>{backLabel}</Link>
         </div>
       </header>
 
       <main className="shell-w sec">
+        {am ? (
+          <div className="card p-4" style={{ maxWidth: 620, marginBottom: 22, background: "var(--brand-wash)", borderColor: "var(--line-2)" }}>
+            <div className="t-md w6" style={script}>{t("book.band.h")}</div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.85, ...script }}>
+              {t("book.band.b")}
+            </p>
+          </div>
+        ) : null}
         <h1 className="serif" style={{ fontSize: "clamp(24px,3.4vw,38px)", lineHeight: 1.14, letterSpacing: "-0.02em", maxWidth: 620 }}>
           {abroad ? "Fifteen minutes, at a time that works where you are" : `Twenty minutes about ${topic.toLowerCase()}`}
         </h1>
@@ -155,7 +174,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             <span className="label">When suits you?</span>
             {live ? (
               <>
-                <div className="col gap-2" style={{ marginTop: 6 }}>
+                <div className="col gap-2" style={{ marginTop: 6 }}
+                  role="radiogroup" aria-label="When suits you?">
                   {slots.map((s) => (
                     <label key={s.start} className="opt" data-on={slot === s.start}>
                       <input type="radio" name="slot" checked={slot === s.start} onChange={() => setSlot(s.start)} />

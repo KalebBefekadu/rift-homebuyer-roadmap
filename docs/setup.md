@@ -208,10 +208,17 @@ Non-negotiable, and each one is cheap now and expensive later:
       rule with a legal floor, currently defaulted to 5 years.
 - [ ] **Sentry alerts exist** on readout delivery and consent recording.
 - [ ] **Every table has an RLS policy.** Check, do not assume.
-- [x] **The deletion job runs and actually deletes.** `/api/retention/sweep`, scheduled daily
+- [ ] **The deletion job runs and actually deletes.** `/api/retention/sweep`, scheduled daily
       in `vercel.json`, plus `/api/forget` for a person who asks now. Deletion is deletion —
       not a flag, not an anonymised row — and `lib/db/flow.test.ts` proves it. **Still needs
       `CRON_SECRET` set in production, or the endpoint refuses to run.**
+
+      This was ticked and it was not true. The job was correct, the secret was set, the
+      tests passed, and the route exported `POST` while Vercel Cron sends GET — so it had
+      never run once. Fixed, and the health check now reports whether anything is actually
+      past its deletion date rather than whether the secret exists. **Leave this unticked
+      until `checks.retention` has read `clear` on a day when there was something to
+      delete** — the tick is for observed behaviour, not for shipped code.
 - [ ] **The rate assumption has a source and a date** displayed with every figure it touches.
 - [ ] **Fair-housing check on the lead model.** The scoring inputs in `lib/core/lead.ts`
       are documented as the complete list, with no proxy for a protected class. Confirm that
@@ -233,7 +240,8 @@ where somebody finds out.
   "database": "configured", "agent": "ready",
   "email": "no verified sender", "calendar": "missing",
   "scheduler": "configured", "monitoring": "configured",
-  "rate": "stale (never recorded)" } }
+  "rate": "stale (never recorded)",
+  "retention": "clear" } }
 ```
 
 503 only when the database or the agent row is missing, because those stop the product doing
@@ -243,6 +251,13 @@ because SMS is not wired yet is how alerts get muted.
 It names what is **missing**, never what is configured: no URLs, no key fragments, no
 versions. A health endpoint that describes the stack is a reconnaissance endpoint, and this
 one is public because a monitor needs it to be.
+
+`scheduler` reports the secret; **`retention` reports the outcome**, and it is the one to
+watch. `clear` means nothing is sitting past its deletion date. `overdue` means the sweep
+has stopped, however it stopped — which is the point, because the way it actually stopped
+was one nobody had predicted. It is yes or no and never a count: this endpoint is public,
+and how many people are in the funnel is not a figure to hand to whoever asks. The answer
+is cached for five minutes per instance so the check cannot be used as an amplifier.
 
 ## 12. Deployment
 
