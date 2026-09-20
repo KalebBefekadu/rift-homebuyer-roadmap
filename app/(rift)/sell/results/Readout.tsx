@@ -24,7 +24,7 @@ const VERDICT: Record<RepairItem["verdict"], { c: string; l: string }> = {
  * send succeeded.
  */
 export function Readout({
-  inputs, timing, readout: r, proceeds, repairs, unclaimed, coDecider, substituted,
+  inputs, timing, readout: r, proceeds, repairs, unclaimed, coDecider, substituted, assumed,
 }: {
   inputs: SellerInputs;
   timing: string;
@@ -34,6 +34,7 @@ export function Readout({
   unclaimed: UnclaimedItem[];
   coDecider: boolean;
   substituted: string[];
+  assumed: string[];
 }) {
   const [keep, setKeep] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -127,6 +128,22 @@ export function Readout({
           { label: "Possibly unclaimed", value: `${unclaimed.length} things`, note: "worth a phone call each" },
         ]}
       />
+
+      {substituted.length === 0 && assumed.length > 0 ? (
+        <div className="shell-w" style={{ marginTop: 18 }}>
+          <div className="card p-4" style={{ borderColor: "var(--line-2)" }}>
+            {/* The silence case, which had no disclosure at all. A link
+                truncated after &p= drops everything after it, and the readout
+                then printed our payoff and our timeline as if they were the
+                reader's. Nothing was wrong, so nothing was said. */}
+            <div className="t-sm w6">{`You did not tell us ${assumed.join(", ")}.`}</div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              Those figures are typical Georgia ones, not yours, and every number here follows
+              from them. Answer the questions and the whole page becomes about your home.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {substituted.length > 0 ? (
         <div className="shell-w" style={{ marginTop: 18 }}>

@@ -42,7 +42,7 @@ export default async function ResultsPage({
      failure it prevents is an arithmetically correct absurdity, which is worse
      than an error page because an error page cannot be screenshotted as
      something this product said. */
-  const { inputs: i, ownership, timing, timingStated, coBuyer, substituted } = parseReadoutParams(one);
+  const { inputs: i, ownership, timing, timingStated, coBuyer, substituted, assumed } = parseReadoutParams(one);
   const county = i.county;
 
   const [{ match, source, windowDays }, rate] = await Promise.all([
@@ -86,6 +86,7 @@ export default async function ResultsPage({
       rate={rate}
       coBuyer={coBuyer}
       substituted={substituted}
+      assumed={assumed}
     />
   );
 }

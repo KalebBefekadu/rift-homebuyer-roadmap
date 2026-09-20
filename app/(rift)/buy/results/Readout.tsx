@@ -45,6 +45,7 @@ interface Props {
   coBuyer?: boolean;
   /** Values in the link that were not usable, and were replaced. */
   substituted?: string[];
+  assumed?: string[];
 }
 
 const TONE: Record<string, string> = {
@@ -187,6 +188,22 @@ export function Readout(p: Props) {
               Part of this link was not readable, so we used our own figures for{" "}
               {p.substituted.join(", ")}. <Link href="/buy/start" className="c-brand">Answer again</Link> for
               numbers that are actually yours.
+            </p>
+          ) : null}
+
+          {p.assumed?.length ? (
+            <p className="t-xs c-3 row gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
+              <Ico.info size={12} style={{ flex: "none", marginTop: 2 }} />
+              {/* The silence case. `substituted` covers a value we could not
+                  use and says so; a value that was never sent said nothing at
+                  all, and the line below printed our figure in the same grey as
+                  the reader's own. They are entitled to know which is which. */}
+              {/* The punctuation lives inside the expression: JSX turns the
+                  line break after a `{…}` into a space, which rendered
+                  "what you set aside each month , so the figures". */}
+              {`You did not tell us ${p.assumed.join(", ")}, so the figures below are typical Georgia ones rather than yours. `}
+              <Link href="/buy/start" className="c-brand">Answer the questions</Link> and every
+              number on this page changes.
             </p>
           ) : null}
 

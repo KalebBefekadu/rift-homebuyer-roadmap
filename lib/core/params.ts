@@ -38,6 +38,26 @@ export const BOUNDS = {
   monthlySaving: { min: 0, max: 100_000 },
 } as const;
 
+/**
+ * Whether the visitor supplied this field at all.
+ *
+ * Distinct from both of the other two states, and the one that had no name.
+ * `substituted` means "you gave us something we could not use" and is shown on
+ * the page. `timingStated` means "you gave us no timeline" and changes what the
+ * readout dares to say. Everything else had only silence: a link truncated by a
+ * messaging app after `&p=350000` drops the savings and the saving rate, and
+ * because nothing was WRONG, nothing was disclosed. The page then printed
+ * "Built from … $9,000 saved · $650 a month" in the same grey as the figures
+ * the reader actually chose, with no way to tell which was which.
+ *
+ * The defaults stay — a mangled link should still produce a sensible readout,
+ * which is this file's whole premise. What changes is that the page can now
+ * say which of the numbers on it are ours.
+ */
+function given(raw: string | undefined): boolean {
+  return (raw ?? "").trim() !== "";
+}
+
 function num(raw: string | undefined, lo: number, hi: number, fallback: number): number {
   if (raw === undefined || raw.trim() === "") return fallback;
   const n = Number(raw);
@@ -67,14 +87,25 @@ export interface ReadoutParams {
    * arithmetic. What it is not is a quote.
    */
   timingStated: boolean;
+  /**
+   * Fields the visitor never supplied, where the figure shown is ours.
+   *
+   * Timing is deliberately absent from this list for the buyer: the tension
+   * block at the top of the readout already says, in the second person and at
+   * length, that no timeline was given. Saying it twice in two registers reads
+   * as a fault rather than a disclosure.
+   */
+  assumed: string[];
 }
 
 export function parseReadoutParams(get: (key: string) => string | undefined): ReadoutParams {
   const substituted: string[] = [];
+  const assumed: string[] = [];
 
   const rawCounty = (get("c") ?? "").trim();
   const county = GA_COUNTIES.includes(rawCounty) ? rawCounty : BUYER_DEFAULTS.county;
   if (rawCounty && county !== rawCounty) substituted.push("county");
+  if (!given(rawCounty)) assumed.push("the county");
 
   const rawTiming = (get("t") ?? "").trim();
   const timing = (TIMINGS as readonly string[]).includes(rawTiming) ? rawTiming : "3 to 9 months";
@@ -83,15 +114,19 @@ export function parseReadoutParams(get: (key: string) => string | undefined): Re
   const rawOwn = (get("o") ?? "").trim();
   const ownership = ((OWNERSHIPS as readonly string[]).includes(rawOwn) ? rawOwn : "none") as Ownership;
   if (rawOwn && ownership !== rawOwn) substituted.push("ownership");
+  if (!given(rawOwn)) assumed.push("whether you have owned before");
 
   const price = num(get("p"), BOUNDS.price.min, BOUNDS.price.max, BUYER_DEFAULTS.price);
   if (get("p") && price !== Number(get("p"))) substituted.push("price");
+  if (!given(get("p"))) assumed.push("the price you are aiming at");
 
   const savings = num(get("s"), BOUNDS.savings.min, BOUNDS.savings.max, BUYER_DEFAULTS.savings);
   if (get("s") && savings !== Number(get("s"))) substituted.push("savings");
+  if (!given(get("s"))) assumed.push("what you have saved");
 
   const monthlySaving = num(get("r"), BOUNDS.monthlySaving.min, BOUNDS.monthlySaving.max, BUYER_DEFAULTS.monthlySaving);
   if (get("r") && monthlySaving !== Number(get("r"))) substituted.push("monthly saving");
+  if (!given(get("r"))) assumed.push("what you set aside each month");
 
   return {
     inputs: {
@@ -111,6 +146,7 @@ export function parseReadoutParams(get: (key: string) => string | undefined): Re
        answer these questions is usually the one who stalls it. */
     coBuyer: Boolean((get("w") ?? "").trim()),
     substituted,
+    assumed,
   };
 }
 
@@ -131,6 +167,12 @@ export interface SellerReadoutParams {
   substituted: string[];
   /** See the note on ReadoutParams.timingStated. */
   timingStated: boolean;
+  /**
+   * See the note on ReadoutParams.assumed. Timing IS listed here: the seller
+   * readout has no tension block, so an unstated timeline changes the status
+   * band silently and is otherwise never mentioned.
+   */
+  assumed: string[];
 }
 
 /**
@@ -144,23 +186,29 @@ export interface SellerReadoutParams {
  */
 export function parseSellerParams(get: (key: string) => string | undefined): SellerReadoutParams {
   const substituted: string[] = [];
+  const assumed: string[] = [];
 
   const rawCounty = (get("c") ?? "").trim();
   const county = GA_COUNTIES.includes(rawCounty) ? rawCounty : SELLER_DEFAULTS.county;
   if (rawCounty && county !== rawCounty) substituted.push("county");
+  if (!given(rawCounty)) assumed.push("the county");
 
   const rawTiming = (get("t") ?? "").trim();
   const timing = (TIMINGS as readonly string[]).includes(rawTiming) ? rawTiming : "3 to 9 months";
   if (rawTiming && timing !== rawTiming) substituted.push("timing");
+  if (!given(rawTiming)) assumed.push("when you want to move");
 
   const price = num(get("p"), SELLER_BOUNDS.price.min, SELLER_BOUNDS.price.max, SELLER_DEFAULTS.price);
   if (get("p") && price !== Number(get("p"))) substituted.push("price");
+  if (!given(get("p"))) assumed.push("what you would sell for");
 
   const payoff = num(get("o"), SELLER_BOUNDS.payoff.min, SELLER_BOUNDS.payoff.max, SELLER_DEFAULTS.payoff);
   if (get("o") && payoff !== Number(get("o"))) substituted.push("payoff");
+  if (!given(get("o"))) assumed.push("what you still owe");
 
   const yearsOwned = num(get("y"), SELLER_BOUNDS.yearsOwned.min, SELLER_BOUNDS.yearsOwned.max, SELLER_DEFAULTS.yearsOwned);
   if (get("y") && yearsOwned !== Number(get("y"))) substituted.push("years owned");
+  if (!given(get("y"))) assumed.push("how long you have owned it");
 
   return {
     inputs: {
@@ -178,6 +226,7 @@ export function parseSellerParams(get: (key: string) => string | undefined): Sel
     timing,
     timingStated: TIMINGS.includes(rawTiming as (typeof TIMINGS)[number]),
     coDecider: Boolean((get("w") ?? "").trim()),
+    assumed,
     substituted,
   };
 }

@@ -243,3 +243,80 @@ describe("a seller who owes more than the sale produces", () => {
     expect(r.rider).toMatch(/\bthin\b/);
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * The third state: silence
+ * ------------------------------------------------------------------ */
+
+describe("a field nobody supplied is named, not quietly filled", () => {
+  const from = (qs: string) => {
+    const u = new URLSearchParams(qs);
+    return (k: string) => u.get(k) ?? undefined;
+  };
+
+  it("names every buyer field on a bare URL", () => {
+    const { assumed, substituted } = parseReadoutParams(from(""));
+    expect(substituted).toEqual([]);
+    expect(assumed).toEqual([
+      "the county",
+      "whether you have owned before",
+      "the price you are aiming at",
+      "what you have saved",
+      "what you set aside each month",
+    ]);
+  });
+
+  /* The realistic case this exists for: a messaging app truncates the link
+     after the price, so everything downstream of it silently becomes ours —
+     and because nothing was WRONG, `substituted` stayed empty and the page
+     disclosed nothing. */
+  it("names only what was dropped when a link is cut short", () => {
+    const { assumed, substituted } = parseReadoutParams(from("c=Fulton&o=none&p=350000"));
+    expect(substituted).toEqual([]);
+    expect(assumed).toEqual(["what you have saved", "what you set aside each month"]);
+  });
+
+  it("says nothing when the visitor answered everything", () => {
+    const { assumed } = parseReadoutParams(from("c=Fulton&o=none&p=350000&s=20000&r=800"));
+    expect(assumed).toEqual([]);
+  });
+
+  it("treats blank and whitespace-only values as silence, not as an answer", () => {
+    const { assumed } = parseReadoutParams(from("c=&o=%20&p=350000&s=1&r=1"));
+    expect(assumed).toContain("the county");
+    expect(assumed).toContain("whether you have owned before");
+    expect(assumed).not.toContain("the price you are aiming at");
+  });
+
+  /* Different states, different sentences. A value we could not use is a
+     substitution and is already disclosed; a value never sent is silence. */
+  it("keeps the two states apart", () => {
+    const { assumed, substituted } = parseReadoutParams(from("c=Atlantis&p=350000&s=1&r=1&o=none"));
+    expect(substituted).toEqual(["county"]);
+    expect(assumed).toEqual([]);
+  });
+
+  it("leaves the buyer's timing to the tension block rather than listing it twice", () => {
+    const { assumed, timingStated } = parseReadoutParams(from(""));
+    expect(timingStated).toBe(false);
+    expect(assumed.join(" ")).not.toContain("move");
+  });
+
+  it("does list the seller's timing, which nothing else on that page mentions", () => {
+    const { assumed, timingStated } = parseSellerParams(from(""));
+    expect(timingStated).toBe(false);
+    expect(assumed).toContain("when you want to move");
+    expect(assumed).toEqual([
+      "the county",
+      "when you want to move",
+      "what you would sell for",
+      "what you still owe",
+      "how long you have owned it",
+    ]);
+  });
+
+  it("says nothing to a seller who answered", () => {
+    const { assumed } = parseSellerParams(from("c=Fulton&t=3 to 9 months&p=400000&o=250000&y=5"));
+    expect(assumed).toEqual([]);
+  });
+});
