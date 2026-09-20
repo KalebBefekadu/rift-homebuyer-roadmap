@@ -207,8 +207,19 @@ export function forecast(
 ): Forecast[] {
   const buckets: Forecast[] = [];
   for (let i = 0; i < months; i++) {
-    const d = new Date(from);
-    d.setMonth(d.getMonth() + i);
+    /**
+     * Built from the year and month, anchored to the 1st.
+     *
+     * This was `new Date(from); d.setMonth(d.getMonth() + i)`, which rolls
+     * over whenever the source day does not exist in the target month. Run on
+     * 31 January the four buckets came out "Jan, Mar, Mar, May" — February and
+     * April gone, March twice. `idx` below is computed from the year and month
+     * directly and so was still correct, which made it worse: February's
+     * deals landed in the first bucket labelled "Mar" and March's in the
+     * second, and the agent saw two identical month headings holding
+     * different relationships. He plans his year on this.
+     */
+    const d = new Date(from.getFullYear(), from.getMonth() + i, 1);
     buckets.push({ month: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`, expected: 0, count: 0, value: 0, weightedValue: 0, names: [], basis: "observed" });
   }
 
@@ -230,7 +241,15 @@ export function forecast(
     if (rank[w.basis] < rank[b.basis]) b.basis = w.basis;
   }
 
-  return buckets.map((b) => ({ ...b, expected: Math.round(b.expected * 10) / 10 }));
+  return buckets.map((b) => ({
+    ...b,
+    expected: Math.round(b.expected * 10) / 10,
+    /* A bucket starts at the strongest basis and is pulled down by whatever
+       lands in it, which is right for a month that has rows and wrong for one
+       that does not: an empty month kept "observed" and rendered as "His own
+       history", a confidence claim about nothing at all. */
+    basis: b.count === 0 ? "assumed" : b.basis,
+  }));
 }
 
 /**
