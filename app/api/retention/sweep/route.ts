@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cronRefusal } from "@/lib/db/guard";
 import { sweep } from "@/lib/db/retention";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -14,14 +15,9 @@ export const maxDuration = 60;
  * failure mode of a stopped retention job is a growing pile of strangers'
  * finances that the product's own readout promises has already been deleted.
  */
-export async function POST(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    return NextResponse.json({ ok: false, error: "CRON_SECRET is not set — refusing to run" }, { status: 503 });
-  }
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
+async function run(req: Request) {
+  const refused = cronRefusal(req);
+  if (refused) return refused;
 
   const r = await sweep(new Date());
   if (!r.ok) {
@@ -31,3 +27,7 @@ export async function POST(req: Request) {
   if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason });
   return NextResponse.json({ ok: true, ...r.data });
 }
+
+/* See the note in app/api/nurture/run/route.ts. The scheduler sends GET. */
+export const GET = run;
+export const POST = run;

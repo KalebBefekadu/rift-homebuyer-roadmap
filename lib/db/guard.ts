@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { check, LIMITS, type Limit } from "@/lib/core/ratelimit";
 import { MAX_BODY_BYTES } from "@/lib/core/limits";
+import { authoriseCron } from "@/lib/core/cron";
 
 export { MAX_BODY_BYTES };
 
@@ -60,4 +61,17 @@ export function limited(req: Request, name: keyof typeof LIMITS): NextResponse |
     { ok: false, error: "too many requests" },
     { status: 429, headers: { "retry-after": String(verdict.retryAfter) } },
   );
+}
+
+/**
+ * The gate on the scheduled jobs.
+ *
+ * Returns the refusal to send back, or null to proceed. The rule itself is in
+ * lib/core/cron.ts, and the reason it is there rather than here is written at
+ * the top of that file.
+ */
+export function cronRefusal(req: Request): NextResponse | null {
+  const verdict = authoriseCron(req.headers.get("authorization"), process.env.CRON_SECRET);
+  if (verdict.ok) return null;
+  return NextResponse.json({ ok: false, error: verdict.error }, { status: verdict.status });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { serviceClient, currentAgentId } from "@/lib/db/service";
 import { currentRate } from "@/lib/db/rates";
+import { overdue } from "@/lib/db/retention";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,13 @@ export async function GET() {
       ? (process.env.BREVO_FROM_EMAIL ? "configured" : "no verified sender")
       : "missing",
     calendar: process.env.CAL_API_KEY && process.env.CAL_EVENT_TYPE_ID ? "configured" : "missing",
+    /* "Configured" is not "working", and conflating them cost this product
+       every scheduled run it ever had. The secret was set, this said
+       "configured", and both cron routes were answering the scheduler with a
+       405 because they only exported POST. See lib/core/cron.ts. What is
+       reported below is the OUTCOME — whether anything is still here that the
+       retention promise says should already be gone — which goes red however
+       the job stops, including in a way nobody predicted. */
     scheduler: process.env.CRON_SECRET ? "configured" : "missing",
     monitoring: process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN ? "configured" : "missing",
   };
@@ -43,10 +51,20 @@ export async function GET() {
     /* The rate is the assumption the most figures depend on, and letting it
        lapse produces wrong numbers rather than errors. Worth a monitor. */
     checks.rate = rate.freshness === "fresh" ? "fresh" : `${rate.freshness} (${rate.asOf || "never recorded"})`;
+
+    /* Yes or no, never a count. This endpoint is public, and how many people
+       are in the funnel is not a figure to hand to whoever asks. */
+    const late = await overdue();
+    checks.retention = !late.ok
+      ? "unknown"
+      : "skipped" in late ? "unknown"
+      : late.data.overdue ? "overdue — records past their deletion date" : "clear";
   }
 
   /* Only the two that stop the product doing its job are fatal. The rest are
-     features that degrade honestly and say so on screen. */
+     features that degrade honestly and say so on screen — including an overdue
+     sweep, which is a promise being broken rather than a service being down,
+     and belongs in somebody's morning rather than in their night. */
   const ready = Boolean(db && agent);
 
   return NextResponse.json(

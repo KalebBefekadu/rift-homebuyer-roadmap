@@ -236,3 +236,84 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
     return failed(e);
   }
 }
+
+/**
+ * Is anything still here that should already be gone?
+ *
+ * This exists because `/api/health` used to answer "is the retention job
+ * working?" with "is CRON_SECRET set?" — and those turned out to be different
+ * questions in the worst possible way. The secret was set, the check was
+ * green, and the job had never run once because the route did not accept the
+ * verb the scheduler sends.
+ *
+ * So this checks the outcome instead of the plumbing. If the sweep is running,
+ * nothing is ever meaningfully past its date; if it stops for any reason —
+ * a wrong verb, a revoked key, a scheduler someone disabled — this goes red on
+ * its own, without anybody having predicted the specific way it would break.
+ *
+ * It answers yes or no and never a count. Health is public, and "how many
+ * people are in this funnel" is not a number a public endpoint should hand to
+ * whoever asks.
+ */
+export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const ago = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
+
+  /* A day of slack on every window. A sweep that runs at 3am is briefly, and
+     correctly, behind a record that aged out at midnight, and a health check
+     that goes red every night between midnight and three is a health check
+     people learn to ignore. */
+  const grace = 1;
+
+  try {
+    /* The strictest window first, and the only one that needs a join: a
+       part-finished assessment with nobody attached to it. That is the most
+       sensitive data in the product — a stranger's finances with no
+       relationship and no way to ask them about it — and it is the window that
+       would go red soonest if the sweep stopped. Checked separately because a
+       lead attached to it means it is not an orphan and its clock is a
+       different one. */
+    const orphans = await boundedRead(
+      db.from("rift_assessments").select("id,rift_leads(id)")
+        .eq("agent_id", agent_id).is("completed_at", null)
+        .lte("started_at", ago(WINDOWS.abandoned.days + grace)).limit(20),
+      "the abandoned retention check",
+    );
+    if (!orphans.ok) return orphans;
+    const rows = ("data" in orphans ? orphans.data : []) as unknown as
+      { id: string; rift_leads: { id: string }[] }[];
+    if (rows.some((a) => !a.rift_leads?.length)) return done({ overdue: true });
+
+    const checks = [
+      boundedRead(
+        db.from("rift_events").select("id")
+          .eq("agent_id", agent_id).lte("at", ago(WINDOWS.analytics.days + grace)).limit(1),
+        "the analytics retention check",
+      ),
+      boundedRead(
+        db.from("rift_attributions").select("id")
+          .eq("agent_id", agent_id).lte("first_at", ago(WINDOWS.analytics.days + grace)).limit(1),
+        "the attribution retention check",
+      ),
+      boundedRead(
+        db.from("rift_assessments").select("id")
+          .eq("agent_id", agent_id).not("completed_at", "is", null)
+          .lte("started_at", ago(WINDOWS.unconverted.days + grace)).limit(1),
+        "the unconverted retention check",
+      ),
+    ];
+
+    for (const c of await Promise.all(checks)) {
+      if (!c.ok) return c;
+      const rows = ("data" in c ? c.data : []) as { id: string }[];
+      if (rows.length) return done({ overdue: true });
+    }
+    return done({ overdue: false });
+  } catch (e) {
+    return failed(e);
+  }
+}

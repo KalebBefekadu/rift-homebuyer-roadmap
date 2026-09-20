@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cronRefusal } from "@/lib/db/guard";
 import { due, claimStep, markTouch } from "@/lib/db/nurture";
 import { sendTouch, sendResume } from "@/lib/db/email";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -24,15 +25,9 @@ export const maxDuration = 60;
  * again on the next run, and the person on the other end has no way to know it
  * was a bug rather than a company that does not pay attention.
  */
-export async function POST(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    return NextResponse.json({ ok: false, error: "CRON_SECRET is not set — refusing to run" }, { status: 503 });
-  }
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
+async function run(req: Request) {
+  const refused = cronRefusal(req);
+  if (refused) return refused;
 
   const queue = await due(new Date());
   if (!queue.ok) {
@@ -118,3 +113,10 @@ export async function POST(req: Request) {
     failed: failedCount,
   });
 }
+
+/* Both verbs, same job. Vercel's scheduler sends GET; a human running this by
+   hand sends POST. Exporting only POST is how this endpoint spent its whole
+   life returning 405 to the scheduler while every check said it was fine —
+   see lib/core/cron.ts. */
+export const GET = run;
+export const POST = run;
