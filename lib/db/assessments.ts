@@ -2,11 +2,11 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { BUY_FUNNEL, SELL_FUNNEL, type Funnel } from "@/lib/core/funnel";
+import { BUY_FUNNEL, SELL_FUNNEL, applyWording, type Funnel } from "@/lib/core/funnel";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { boundedWrite, boundedRead } from "./bounded";
-import { currentVersionId } from "./funnel";
+import { currentVersionId, readWording } from "./funnel";
 
 /**
  * Assessments, answers, and the readout snapshot.
@@ -350,10 +350,21 @@ export async function readFunnel(side: "buy" | "sell"): Promise<DbResult<{ funne
     if (error) return failed(error.message);
     if (!data) return done({ funnel: fallback, source: "built-in" as const });
 
-    /* Reading published questions is phase 7 work (the funnel editor). Until
-       an agent can edit, reading a stored copy would only add a way for the
-       stored copy to drift from the engine. */
-    return done({ funnel: fallback, source: "built-in" as const });
+    /* The agent's own words over the code's own structure.
+       
+       This used to return the built-in funnel and ignore what it had just
+       read, with a note saying reading a stored copy "would only add a way
+       for the stored copy to drift from the engine". That was the right
+       worry and the wrong conclusion: the fix is not to refuse to read, it is
+       to make drift impossible. `applyWording` takes the title, the note, the
+       field label and the option LABELS, and reads no structural field at
+       all — not the key, not the type, not what it is bound to, not the
+       machine value behind an option. The engine's contract is unreachable
+       from anything stored. */
+    const worded = await readWording(side);
+    if (!worded.ok || !("data" in worded)) return done({ funnel: fallback, source: "built-in" as const });
+
+    return done({ funnel: applyWording(fallback, worded.data), source: "database" as const });
   } catch (e) {
     return failed(e);
   }

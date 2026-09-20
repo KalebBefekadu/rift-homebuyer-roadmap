@@ -11,6 +11,8 @@ import { addLead, addNote, setStage, archiveLead, setNextAction, type NewLead, t
 import type { StopId } from "@/lib/core/nurture";
 import { saveRule, clearRule } from "@/lib/db/settings";
 import type { BusinessRules } from "@/lib/core/settings";
+import { publishWording } from "@/lib/db/funnel";
+import type { Wording } from "@/lib/core/funnel";
 
 /**
  * Studio's write actions.
@@ -202,4 +204,30 @@ export async function undecideRule(key: keyof BusinessRules) {
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };
+}
+
+/**
+ * The agent's own words, published as a new version.
+ *
+ * Wording only, and the server does not trust the client about that — it
+ * rebuilds the questions from `lib/core/funnel.ts` and applies the words on
+ * top. A payload claiming to change a question's type or what it is bound to
+ * gets its title applied and everything else ignored.
+ *
+ * A new version rather than an edit in place, so that a lead captured last
+ * Tuesday still points at the words that person actually read.
+ */
+export async function publishQuestions(
+  side: "buy" | "sell", wording: Record<string, Wording>, note: string,
+) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await publishWording(side, wording, agent.name || agent.email || "the agent", note);
+  revalidatePath("/studio/questions");
+  revalidatePath(`/${side}/start`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, version: r.data.version };
 }

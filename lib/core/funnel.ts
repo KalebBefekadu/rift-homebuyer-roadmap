@@ -285,3 +285,87 @@ export function optionsFor(q: Question): Option[] {
 /** A question a person must answer to move on, and that needs a list to do it. */
 export const needsOptions = (q: Question) =>
   q.enabled && q.required && (q.type === "choice" || q.type === "select");
+
+/* ------------------------------------------------------------------ *
+ * Wording
+ * ------------------------------------------------------------------ */
+
+/**
+ * The parts of a question an agent may rewrite.
+ *
+ * Deliberately short, and the shortness is the design. Everything else —
+ * the key, the type, what it is bound to, the machine value behind each
+ * option, the bounds of a slider, whether it is required — comes from the code
+ * and cannot be overridden by anything stored.
+ *
+ * That is not caution about a hypothetical. The county question feeds the
+ * programme registry, `savings` and `monthlySaving` feed the months-to-close
+ * arithmetic, and `own` decides first-time-buyer eligibility. An editor that
+ * could remove one, or change the value behind "No, I haven't owned anything",
+ * would not produce an error — it would produce a readout computed against a
+ * default, which renders perfectly and is about nobody.
+ *
+ * So the agent gets his own voice, and the engine keeps its own contract.
+ */
+export interface Wording {
+  title?: string;
+  description?: string;
+  fieldLabel?: string;
+  placeholder?: string;
+  /** Option LABELS only, keyed by the machine value, which never moves. */
+  optionLabels?: Record<string, string>;
+}
+
+/** A non-empty string, or nothing. An empty title is a question with no text. */
+function words(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() !== "" ? v.trim() : undefined;
+}
+
+/**
+ * Stored wording over the built-in structure.
+ *
+ * Pure and total: an unknown key is ignored, a blank value falls back to the
+ * code's own, and nothing structural is read from the input at all. Hand it
+ * anything — a stale row, a half-finished edit, a hostile payload — and the
+ * worst outcome is the funnel the product shipped with.
+ */
+export function applyWording(funnel: Funnel, wording: Record<string, Wording>): Funnel {
+  return {
+    ...funnel,
+    questions: funnel.questions.map((q) => {
+      const w = wording[q.id];
+      if (!w) return q;
+
+      const labels = w.optionLabels ?? {};
+      return {
+        ...q,
+        title: words(w.title) ?? q.title,
+        description: words(w.description) ?? q.description,
+        fieldLabel: words(w.fieldLabel) ?? q.fieldLabel,
+        placeholder: words(w.placeholder) ?? q.placeholder,
+        /* Mapped over the code's own options, never replaced by the stored
+           list. A stored options array could add, drop or re-value an option;
+           this can only rename one that already exists. */
+        options: q.options?.map((o) => ({ ...o, label: words(labels[o.value]) ?? o.label })),
+      };
+    }),
+  };
+}
+
+/** What the agent has changed, for a diff he can read before publishing. */
+export function wordingChanges(funnel: Funnel, wording: Record<string, Wording>): string[] {
+  const out: string[] = [];
+  const edited = applyWording(funnel, wording);
+
+  funnel.questions.forEach((was, i) => {
+    const now = edited.questions[i]!;
+    if (was.title !== now.title) out.push(`“${was.title}” became “${now.title}”`);
+    if ((was.description ?? "") !== (now.description ?? "")) out.push(`The note under “${now.title}” changed`);
+    was.options?.forEach((o, n) => {
+      const after = now.options?.[n];
+      if (after && o.label !== after.label) out.push(`“${o.label}” became “${after.label}”`);
+    });
+  });
+
+  return out;
+}

@@ -142,6 +142,9 @@ export default async function StudioToday() {
             {/* Carries its own warning. Six decisions the product cannot make
                 for him, and until he has made them the page is the only place
                 that says so. */}
+            <Link href="/studio/questions" className="btn btn-g btn-sm" title="Your questions">
+              <Ico.doc size={14} />
+            </Link>
             <Link href="/studio/settings" className="btn btn-g btn-sm" title="Your decisions">
               <Ico.set size={14} />
               {undecidedCount ? <span className="chip chip-warn t-2xs">{undecidedCount}</span> : null}
