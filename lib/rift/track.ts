@@ -106,7 +106,12 @@ export function useCaptureTouch() {
     fetch("/api/attribution", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId: sessionId(), url: window.location.href }),
+      /* `document.referrer` is the one fact the server cannot observe: the
+         Referer header on THIS call is the page we are standing on, not the
+         page that sent us here. The landing URL is no longer sent, because the
+         server reads it from that header and a client-supplied one let any
+         caller attribute any session to any campaign. */
+      body: JSON.stringify({ sessionId: sessionId(), referrer: document.referrer || null }),
     }).catch(() => { /* attribution is never worth a visible failure */ });
   }, []);
 }

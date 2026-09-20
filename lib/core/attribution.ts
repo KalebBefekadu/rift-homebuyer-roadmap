@@ -13,6 +13,51 @@
  * works". Everything past it is somebody's browsing history.
  */
 
+/**
+ * A utm value is a query parameter, which means it is whatever a stranger
+ * typed into a link. These are stored and then rendered on the agent's screen
+ * by `describeTouch`, so an unbounded one is an unbounded attacker-controlled
+ * string in the database and in Studio.
+ */
+export const MAX_TAG = 120;
+
+function tag(raw: string | null): string | undefined {
+  const v = (raw ?? "").trim();
+  if (!v) return undefined;
+  return v.slice(0, MAX_TAG);
+}
+
+/**
+ * The host a visitor came from, or nothing when they came from us.
+ *
+ * This distinction is the whole module. The browser sends its own host as the
+ * referrer for every internal navigation, and a touch recorded from inside the
+ * site therefore reports the site as the channel — which is not a small error,
+ * it is the report saying every visitor arrived from the page they were
+ * already on, and "direct" never occurring at all.
+ */
+export function externalReferrer(
+  referrer: string | null | undefined,
+  selfHost: string | null | undefined,
+): string | undefined {
+  const host = stripToHost(referrer);
+  if (!host) return undefined;
+  if (selfHost && host.toLowerCase() === selfHost.toLowerCase()) return undefined;
+  return host;
+}
+
+/**
+ * A landing path with any capability token removed.
+ *
+ * `/r/<token>` is a shared readout, and the token IS the credential — that is
+ * the entire security model for a document somebody can forward. The query
+ * string is already dropped here because it can carry a stranger's answers;
+ * this route carries something stronger than answers in the path itself.
+ */
+export function safeLanding(pathname: string): string {
+  return pathname.replace(/^\/r\/[^/]+/, "/r/[token]");
+}
+
 export interface Touch {
   source?: string;
   medium?: string;
@@ -39,16 +84,24 @@ export function stripToHost(referrer: string | null | undefined): string | undef
   }
 }
 
-export function touchFromRequest(url: URL, referrer: string | null): Touch {
+/**
+ * @param url       the page the visitor landed on
+ * @param referrer  where they came from BEFORE that page, which only the
+ *                  browser knows — `document.referrer`, not the Referer header
+ *                  of the call that reports it, which is the landing page
+ * @param selfHost  our own host, so an internal navigation is not reported as
+ *                  a channel
+ */
+export function touchFromRequest(url: URL, referrer: string | null, selfHost?: string | null): Touch {
   const p = url.searchParams;
   return {
-    source: p.get("utm_source") ?? undefined,
-    medium: p.get("utm_medium") ?? undefined,
-    campaign: p.get("utm_campaign") ?? undefined,
-    referrer: stripToHost(referrer),
+    source: tag(p.get("utm_source")),
+    medium: tag(p.get("utm_medium")),
+    campaign: tag(p.get("utm_campaign")),
+    referrer: externalReferrer(referrer, selfHost ?? url.host),
     /* The path, without the query. A readout link carries somebody's answers
        in its query string, and attribution has no use for them. */
-    landing: url.pathname,
+    landing: safeLanding(url.pathname),
   };
 }
 
