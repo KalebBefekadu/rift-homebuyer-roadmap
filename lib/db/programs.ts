@@ -69,8 +69,19 @@ export interface RegistryRead {
   windowDays: number;
 }
 
-export async function readRegistry(today = new Date()): Promise<DbResult<RegistryRead>> {
-  const windowDays = DEFAULT_RULES.registryDays.value;
+export async function readRegistry(today = new Date(), overrideDays?: number): Promise<DbResult<RegistryRead>> {
+  /* The agent's own window when he has set one, the default otherwise.
+     
+     This read `DEFAULT_RULES.registryDays.value` directly, which made the
+     re-check window a constant wearing a setting's clothes: /studio/settings
+     could record a decision about it and every programme would go on being
+     suppressed at ninety days regardless. A settings page whose dials are not
+     connected is worse than no settings page — see RULE_REACH in
+     lib/core/settings.ts, which now has to be able to say "live" about this
+     one truthfully. */
+  const windowDays = typeof overrideDays === "number" && Number.isFinite(overrideDays) && overrideDays > 0
+    ? Math.round(overrideDays)
+    : DEFAULT_RULES.registryDays.value;
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() - windowDays);
   const cutoffISO = cutoff.toISOString().slice(0, 10);
@@ -124,8 +135,8 @@ export async function readRegistry(today = new Date()): Promise<DbResult<Registr
  * a suppression rule with nobody acting on it silently shrinks what customers
  * are shown until the registry is empty and nobody notices.
  */
-export async function readStale(today = new Date()): Promise<DbResult<AssistanceProgram[]>> {
-  const r = await readRegistry(today);
+export async function readStale(today = new Date(), overrideDays?: number): Promise<DbResult<AssistanceProgram[]>> {
+  const r = await readRegistry(today, overrideDays);
   if (!r.ok) return r;
   if ("skipped" in r) return r;
   return done(r.data.suppressed);

@@ -88,7 +88,7 @@ const KEY = "rift.rules";
  * into every revenue figure in the forward view and renders as NaN, or worse,
  * concatenates.
  */
-function usable<K extends keyof BusinessRules>(k: K, v: unknown): v is BusinessRules[K]["value"] {
+export function usable<K extends keyof BusinessRules>(k: K, v: unknown): v is BusinessRules[K]["value"] {
   const expected = typeof DEFAULT_RULES[k].value;
   if (typeof v !== expected) return false;
   /* NaN and Infinity are both `typeof "number"`, and both reach the screen. */
@@ -97,22 +97,41 @@ function usable<K extends keyof BusinessRules>(k: K, v: unknown): v is BusinessR
   return true;
 }
 
+/**
+ * Saved values over the defaults, dropping anything unusable.
+ *
+ * Pure, and separate from where the values came from, because there are now
+ * two sources: localStorage in the prototype, and `rift_business_rules` in the
+ * real Studio. The validation is the part worth having once — it exists
+ * because these were previously merged behind a `@ts-expect-error` claiming
+ * the setter had checked them, and neither the setter nor the store did.
+ *
+ * Value-only, so the prose above stays the single source and a stale saved
+ * copy of an earlier wording cannot overwrite it.
+ */
+export function mergeRules(saved: Partial<Record<keyof BusinessRules, unknown>>): BusinessRules {
+  const out = { ...DEFAULT_RULES };
+  const apply = <K extends keyof BusinessRules>(k: K) => {
+    const v = saved[k];
+    if (v === undefined || !usable(k, v)) return;
+    out[k] = { ...DEFAULT_RULES[k], value: v };
+  };
+  (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[]).forEach((k) => apply(k));
+  return out;
+}
+
+/** Which keys have no usable saved value, so "unset" and "chosen" can differ. */
+export function undecidedIn(saved: Partial<Record<keyof BusinessRules, unknown>>): (keyof BusinessRules)[] {
+  return (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[])
+    .filter((k) => saved[k] === undefined || !usable(k, saved[k]));
+}
+
 export function readRules(): BusinessRules {
   if (typeof window === "undefined") return DEFAULT_RULES;
   try {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_RULES;
-    const saved = JSON.parse(raw) as Partial<Record<keyof BusinessRules, unknown>>;
-    /* Merge value-only, so the prose above stays the single source and cannot
-       be overwritten by a stale saved copy of an earlier wording. */
-    const out = { ...DEFAULT_RULES };
-    const apply = <K extends keyof BusinessRules>(k: K) => {
-      const v = saved[k];
-      if (v === undefined || !usable(k, v)) return;
-      out[k] = { ...DEFAULT_RULES[k], value: v };
-    };
-    (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[]).forEach((k) => apply(k));
-    return out;
+    return mergeRules(JSON.parse(raw) as Partial<Record<keyof BusinessRules, unknown>>);
   } catch { return DEFAULT_RULES; }
 }
 
@@ -147,3 +166,76 @@ export const RULE_LABEL: Record<keyof BusinessRules, string> = {
   clientRetentionYears: "Client record retention",
   marketUnrepresented: "Market to unrepresented buyers",
 };
+
+/* ------------------------------------------------------------------ *
+ * What each rule currently reaches
+ * ------------------------------------------------------------------ */
+
+export interface Reach {
+  /** Does changing this change anything a person can see today? */
+  live: boolean;
+  /** Where it takes effect, or why it does not yet. */
+  where: string;
+}
+
+/**
+ * Whether a setting is connected to anything.
+ *
+ * This exists because the alternative is worse than not having a settings
+ * page. Five of these six currently reach nothing: the forward view that
+ * `commissionPct` prices is a prototype screen, Rift Offer does not exist
+ * outside the prototype either, the retention sweep's windows are fixed in
+ * lib/db/retention.ts rather than read from here, and `autoEmailReadout`
+ * describes a delivery that only ever happens when somebody asks for it.
+ *
+ * A dial connected to nothing, on a page that looks like it configures the
+ * product, is this codebase's signature failure built on purpose — the agent
+ * sets his commission to 3%, nothing anywhere disagrees, and he finds out
+ * when a forecast he has been quoting turns out to have been computed at 2.5.
+ *
+ * So every row says which it is. Being honest about a gap is cheap; the page
+ * is still worth having, because a decision that has been RECORDED with a
+ * date and a name is a decision, and the wiring is then a small job rather
+ * than a judgement call somebody has to make again.
+ */
+export const RULE_REACH: Record<keyof BusinessRules, Reach> = {
+  commissionPct: {
+    live: false,
+    where: "Recorded only. The forward view it prices lives in the prototype; nothing in Studio renders a revenue figure yet.",
+  },
+  autoEmailReadout: {
+    live: false,
+    where: "Recorded only. The readout is emailed when somebody asks for it and gives an address, and there is no address to send to before they do.",
+  },
+  registryOwner: {
+    live: true,
+    where: "Shown against every programme that is overdue a re-check, so the task has a name on it.",
+  },
+  registryDays: {
+    live: true,
+    where: "Programmes not verified within this many days stop being shown to buyers. Immediate in Studio; /buy/programs is cached for an hour, so the public page catches up within one.",
+  },
+  clientRetentionYears: {
+    live: false,
+    where: "Recorded only. The retention sweep's windows are fixed in lib/db/retention.ts; this one has a legal floor and needs the broker before it is wired to a delete.",
+  },
+  marketUnrepresented: {
+    live: false,
+    where: "Recorded only. Rift Offer does not exist outside the prototype, so there is no unrepresented buyer for this to apply to.",
+  },
+};
+
+/**
+ * Who decided a rule, and when.
+ *
+ * Here rather than in lib/db/settings.ts because the editor is a client
+ * component and lib/db is `server-only`. A type-only import across that line
+ * compiles today and breaks the build the moment somebody drops the `type`
+ * keyword — which is exactly the kind of latent trap lib/core/layers.test.ts
+ * exists to refuse, and it refused this one.
+ */
+export interface StoredRule {
+  key: keyof BusinessRules;
+  decidedAt: string | null;
+  decidedBy: string | null;
+}

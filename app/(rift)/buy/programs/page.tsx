@@ -5,6 +5,8 @@ import { range } from "@/lib/core/compute";
 import { FUNDING_LABEL, TYPE_LABEL, daysSinceVerified } from "@/lib/core/registry";
 import { Ico, Mark } from "@/components/rift/icons";
 import { Trust } from "@/components/rift/Trust";
+import { rulesOrDefaults } from "@/lib/db/settings";
+import { currentAgentId } from "@/lib/db/service";
 
 export const metadata: Metadata = {
   title: "Georgia homebuyer assistance programs",
@@ -28,7 +30,11 @@ export const revalidate = 3600;
  * own diligence, and hiding the gaps in it would make that claim false.
  */
 export default async function ProgramsPage() {
-  const read = await readRegistry(new Date());
+  /* The agent's own re-check window rather than the default. A stranger has
+     no session, so the id comes from the single-agent lookup — the same one
+     every other public write uses. */
+  const { rules } = await rulesOrDefaults(await currentAgentId());
+  const read = await readRegistry(new Date(), rules.registryDays.value);
   const data = read.ok && "data" in read ? read.data : null;
 
   if (!data) {

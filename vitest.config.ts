@@ -3,7 +3,25 @@ import { resolve } from "node:path";
 
 export default defineConfig({
   resolve: {
-    alias: { "@": resolve(__dirname, ".") },
+    alias: {
+      "@": resolve(__dirname, "."),
+      /**
+       * `server-only` is a build-time guard, not a runtime one.
+       *
+       * Its whole implementation is a throw that fires when a bundler resolves
+       * the browser condition — which is exactly what protects lib/db from
+       * being imported into a client component, and is enforced separately and
+       * properly by lib/core/layers.test.ts and by the build itself.
+       *
+       * Under vitest there is no client boundary to cross, so the throw only
+       * means the data layer cannot be unit tested at all. Until now it was
+       * not: every lib/db suite talks to Postgres through raw `pg` and asserts
+       * the schema, leaving the module's own logic — which window it applies,
+       * what it does with a nonsense value — untested. That is how a settings
+       * dial ends up connected to nothing.
+       */
+      "server-only": resolve(__dirname, "lib/core/test/server-only-shim.ts"),
+    },
   },
   test: {
     /**

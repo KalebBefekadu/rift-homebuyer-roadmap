@@ -6,6 +6,7 @@ import { funnelReport } from "@/lib/db/events";
 import { board, dueActions } from "@/lib/db/clients";
 import { STALL_CHIP } from "@/lib/core/pipeline";
 import { readStale } from "@/lib/db/programs";
+import { rulesOrDefaults } from "@/lib/db/settings";
 import { openItems } from "@/lib/db/review";
 import { due } from "@/lib/db/nurture";
 import { abandoned } from "@/lib/db/recovery";
@@ -60,6 +61,14 @@ export default async function StudioToday() {
      last two — for no reason beyond the order they were written in. Studio is
      the screen the agent opens first thing, so its latency is the product's
      felt speed. */
+  /* His own re-check window, before the reads that depend on it. One extra
+     round trip, and the alternative is a settings page that records a
+     decision the product then ignores. */
+  const agentRules = await rulesOrDefaults(agent.agentId);
+  const { rules } = agentRules;
+  const recheckDays = rules.registryDays.value;
+  const undecidedCount = agentRules.undecided.length;
+
   const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
     await Promise.all([
       rankedLeads(50),
@@ -67,7 +76,7 @@ export default async function StudioToday() {
       funnelReport("sell"),
       board(),
       dueActions(),
-      readStale(new Date()),
+      readStale(new Date(), recheckDays),
       openItems(),
       due(new Date()),
       abandoned(),
@@ -130,6 +139,13 @@ export default async function StudioToday() {
           </div>
           <div className="row gap-2">
             <Link href="/studio/add" className="btn btn-p btn-sm">Add someone</Link>
+            {/* Carries its own warning. Six decisions the product cannot make
+                for him, and until he has made them the page is the only place
+                that says so. */}
+            <Link href="/studio/settings" className="btn btn-g btn-sm" title="Your decisions">
+              <Ico.set size={14} />
+              {undecidedCount ? <span className="chip chip-warn t-2xs">{undecidedCount}</span> : null}
+            </Link>
             <span className="t-xs c-4">{agent.name}</span>
             <form action={signOut}>
               <button className="btn btn-g btn-sm" type="submit">Sign out</button>
@@ -208,6 +224,15 @@ export default async function StudioToday() {
               {stale.map((s) => s.name).join(", ")}. Nobody is being shown {stale.length === 1 ? "it" : "them"}
               {" "}until {stale.length === 1 ? "it is" : "they are"} checked again. Suppression is
               silent to the customer and loud here, which is the right way round.
+            </p>
+            {/* The task has a name on it. An unowned cadence is not a cadence:
+                programmes rot, stop being shown, and the list quietly shortens
+                with nobody having decided that. `registryOwner` is a setting
+                precisely so this sentence is somebody's decision rather than a
+                literal in a file. */}
+            <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.55 }}>
+              {rules.registryOwner.value} re-checks these, within {recheckDays} days of the last
+              verification. <Link href="/studio/settings" className="c-brand">Change either</Link>.
             </p>
           </div>
         ) : null}
