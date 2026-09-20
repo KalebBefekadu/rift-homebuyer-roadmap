@@ -42,7 +42,7 @@ export default async function ResultsPage({
      failure it prevents is an arithmetically correct absurdity, which is worse
      than an error page because an error page cannot be screenshotted as
      something this product said. */
-  const { inputs: i, ownership, timing, coBuyer, substituted } = parseReadoutParams(one);
+  const { inputs: i, ownership, timing, timingStated, coBuyer, substituted } = parseReadoutParams(one);
   const county = i.county;
 
   const [{ match, source, windowDays }, rate] = await Promise.all([
@@ -60,7 +60,7 @@ export default async function ResultsPage({
   const gap = cashGap(i);
   const levers = gapLevers(i);
   const monthly = monthlyComputed(i);
-  const readout = buyerReadout(i, match, timing);
+  const readout = buyerReadout(i, match, timing, timingStated);
   const withHelp = cashGap({ ...i, assistance: Math.round((match.openMin + match.openMax) / 2) });
 
   const band = [i.price - 40_000, i.price, i.price + 40_000].map((p) => ({

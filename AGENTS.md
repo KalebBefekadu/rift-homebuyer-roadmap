@@ -75,7 +75,9 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 8. **A sequence stops the moment a human replies.**
 9. **Nothing reaches `verified` without a named party.**
 10. **Never colour alone.** Every state carries an icon and a word.
-11. **A stated timeline is compared against the computed one.** Collecting an answer and
+11. **A stated timeline is compared against the computed one — and "you said" requires that
+    they said it.** A default applied because a parameter was missing is a planning
+    assumption, not a quote. Collecting an answer and
     never showing the person what it means against their own numbers is the polite version
     of hiding it.
 

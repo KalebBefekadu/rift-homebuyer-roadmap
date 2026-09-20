@@ -131,7 +131,8 @@ import { matchPrograms } from "./registry";
 
 const readout = (over: Partial<BuyerInputs>, timing: string) => {
   const i = buyer({ assistance: 0, ...over });
-  return buyerReadout(i, matchPrograms({ county: i.county, firstTimeBuyer: true }), timing);
+  /* Every case here names a timing, which is the point of the helper. */
+  return buyerReadout(i, matchPrograms({ county: i.county, firstTimeBuyer: true }), timing, true);
 };
 
 describe("timing tension", () => {

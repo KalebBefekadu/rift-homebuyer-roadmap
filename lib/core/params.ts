@@ -53,6 +53,20 @@ export interface ReadoutParams {
   coBuyer: boolean;
   /** Which values were not usable and fell back. Shown, never hidden. */
   substituted: string[];
+  /**
+   * Whether the visitor actually named a timeline.
+   *
+   * Separate from `substituted`, which means "you gave us something we could
+   * not use". This means "you gave us nothing", and the two need different
+   * sentences: the readout's tension block is written in the second person
+   * about what the reader said, and with no answer it was telling somebody
+   * "You said 3 to 9 months" — a statement they never made, about their own
+   * money, with no disclosure attached because nothing had been substituted.
+   *
+   * The default stays: it is a defensible planning assumption for the
+   * arithmetic. What it is not is a quote.
+   */
+  timingStated: boolean;
 }
 
 export function parseReadoutParams(get: (key: string) => string | undefined): ReadoutParams {
@@ -92,6 +106,7 @@ export function parseReadoutParams(get: (key: string) => string | undefined): Re
     },
     ownership,
     timing,
+    timingStated: TIMINGS.includes(rawTiming as (typeof TIMINGS)[number]),
     /* Naming a second decision-maker is a real signal — the person who did not
        answer these questions is usually the one who stalls it. */
     coBuyer: Boolean((get("w") ?? "").trim()),
@@ -114,6 +129,8 @@ export interface SellerReadoutParams {
   timing: string;
   coDecider: boolean;
   substituted: string[];
+  /** See the note on ReadoutParams.timingStated. */
+  timingStated: boolean;
 }
 
 /**
@@ -159,6 +176,7 @@ export function parseSellerParams(get: (key: string) => string | undefined): Sel
       assessedValue: price,
     },
     timing,
+    timingStated: TIMINGS.includes(rawTiming as (typeof TIMINGS)[number]),
     coDecider: Boolean((get("w") ?? "").trim()),
     substituted,
   };

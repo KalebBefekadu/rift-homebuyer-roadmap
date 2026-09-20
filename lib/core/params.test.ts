@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { parseReadoutParams, BOUNDS } from "./params";
-import { BUYER_DEFAULTS, cashToClose, cashGap, monthlyCost } from "./compute";
+import { parseReadoutParams, parseSellerParams, BOUNDS } from "./params";
+import { BUYER_DEFAULTS, SELLER_DEFAULTS, cashToClose, cashGap, monthlyCost } from "./compute";
+import { buyerReadout, sellerReadout } from "./results";
+import { matchPrograms } from "./registry";
 
 /**
  * The readout's trust boundary.
@@ -97,5 +99,79 @@ describe("the rule that outranks the rest", () => {
   it("substitutes nothing when nothing was given", () => {
     /* A bare /buy/results is a legitimate visit, not a mangled one. */
     expect(from({}).substituted).toEqual([]);
+  });
+});
+
+describe("whether the visitor actually named a timeline", () => {
+  /**
+   * The readout's tension block is the only sentence on the page written in
+   * the second person about something the reader told us — "You said 3 to 9
+   * months." It has to be true that they said it.
+   *
+   * It was not. The default is applied both when the parameter is absent and
+   * when it is unusable, and `substituted` only records the second — so a
+   * readout with no `t` at all asserted a statement nobody had made, with no
+   * disclosure attached. A truncated share link, which is the case params.ts
+   * was written for, produces exactly that.
+   */
+  const parse = (q: Record<string, string>) =>
+    parseReadoutParams((k) => q[k]);
+
+  it("is false when nothing was supplied, and the default is still applied", () => {
+    const r = parse({ c: "DeKalb" });
+    expect(r.timingStated).toBe(false);
+    /* The assumption stays — it is a defensible planning figure. What it must
+       not do is get quoted back to them. */
+    expect(r.timing).toBe("3 to 9 months");
+    /* Nothing was substituted, because nothing was supplied. This is precisely
+       why the flag has to exist separately. */
+    expect(r.substituted).not.toContain("timing");
+  });
+
+  it("is false when something unusable was supplied, and that IS disclosed", () => {
+    const r = parse({ t: "3 to 6 months" });
+    expect(r.timingStated).toBe(false);
+    expect(r.substituted).toContain("timing");
+  });
+
+  it("is true for each of the timings the product actually offers", () => {
+    for (const t of ["In the next 3 months", "3 to 9 months", "9 to 18 months", "Just exploring"]) {
+      const r = parse({ t });
+      expect(r.timingStated, `${t} is one of ours`).toBe(true);
+      expect(r.timing).toBe(t);
+    }
+  });
+
+  it("is not fooled by whitespace or by a near miss", () => {
+    expect(parse({ t: "  9 to 18 months  " }).timingStated).toBe(true);
+    expect(parse({ t: "9 to 18 Months" }).timingStated).toBe(false);
+  });
+
+  it("the seller boundary reports it too", () => {
+    expect(parseSellerParams((k) => ({ t: "Just exploring" } as Record<string, string>)[k]).timingStated).toBe(true);
+    expect(parseSellerParams(() => undefined).timingStated).toBe(false);
+  });
+});
+
+describe("the readout does not quote a timeline nobody gave", () => {
+  const inputs = { ...BUYER_DEFAULTS, savings: 9_000, monthlySaving: 650, assistance: 0 };
+  const match = matchPrograms({ county: inputs.county, firstTimeBuyer: true });
+
+  it("says so, and asks, instead of asserting", () => {
+    const r = buyerReadout(inputs, match, "3 to 9 months", false);
+    expect(r.tension?.headline).not.toMatch(/You said/);
+    expect(r.tension?.headline).toMatch(/not told us/);
+  });
+
+  it("still quotes one that was given", () => {
+    const r = buyerReadout(inputs, match, "3 to 9 months", true);
+    expect(r.tension?.headline).toMatch(/^You said 3 to 9 months/);
+  });
+
+  it("a seller who named no timeline is 'exploring', not whatever the default spells", () => {
+    /* The status chip is the first thing the agent sorts by. Somebody who said
+       nothing must not outrank somebody who said "9 to 18 months". */
+    expect(sellerReadout(SELLER_DEFAULTS, "3 to 9 months", false).status).toBe("exploring");
+    expect(sellerReadout(SELLER_DEFAULTS, "3 to 9 months", true).status).toBe("close");
   });
 });

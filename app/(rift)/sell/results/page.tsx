@@ -33,12 +33,12 @@ export default async function SellResultsPage({
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
 
-  const { inputs, timing, coDecider, substituted } = parseSellerParams(one);
+  const { inputs, timing, timingStated, coDecider, substituted } = parseSellerParams(one);
 
   const proceeds = netProceeds(inputs);
   const repairs = repairTriage(inputs.price);
   const unclaimed = unclaimedValue(inputs);
-  const readout = sellerReadout(inputs, timing);
+  const readout = sellerReadout(inputs, timing, timingStated);
 
   return (
     <Readout

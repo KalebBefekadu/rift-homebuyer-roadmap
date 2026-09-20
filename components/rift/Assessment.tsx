@@ -53,6 +53,15 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
 
   useCaptureTouch();
 
+  /* Lifted out of `funnel` so the effects below can depend on it honestly.
+     They all read `funnel.side` and none of them listed `funnel` as a
+     dependency — correct in practice, because the funnel is a server prop that
+     cannot change under a mounted assessment, and a lie all the same. The
+     linter was right to say so: the day that stops being true, the drafts get
+     written under the wrong key and the telemetry is filed against the wrong
+     side, with nothing failing. A string is cheap to depend on. */
+  const side = funnel.side;
+
   const questions = useMemo(() => funnel.questions.filter((x) => x.enabled), [funnel]);
 
   /* Restore, then apply anything the landing page already asked. Landing
@@ -60,7 +69,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   useEffect(() => {
     let restored: Answers = {};
     try {
-      const raw = window.localStorage.getItem(draftKey(funnel.side));
+      const raw = window.localStorage.getItem(draftKey(side));
       if (raw) restored = JSON.parse(raw) as Answers;
     } catch { /* storage unavailable — start clean */ }
 
@@ -70,14 +79,14 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
        does not read is a question the visitor gets asked twice, which is the
        clearest signal a form is not listening. */
     const fromLanding: Answers = {};
-    const text: [string, string][] = [["c", "county"], ["t", "timing"], ["o", funnel.side === "sell" ? "" : "ownership"]];
+    const text: [string, string][] = [["c", "county"], ["t", "timing"], ["o", side === "sell" ? "" : "ownership"]];
     for (const [key, bound] of text) {
       const v = bound ? q.get(key) : null;
       if (v) fromLanding[bound] = v;
     }
     /* Numbers travel as digits and must arrive as numbers: a price that stays
        a string sorts and sums as text, and the sliders would not move to it. */
-    const numeric: [string, string][] = funnel.side === "sell" ? [["p", "price"], ["o", "payoff"]] : [];
+    const numeric: [string, string][] = side === "sell" ? [["p", "price"], ["o", "payoff"]] : [];
     for (const [key, bound] of numeric) {
       const n = Number(q.get(key));
       if (Number.isFinite(n) && n > 0) fromLanding[bound] = n;
@@ -97,7 +106,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
        entirely because no such buyer default exists. That is the same
        shown-vs-used split described above, reintroduced on the other side the
        day this component was made to serve both. */
-    const DEFAULTS = funnel.side === "sell" ? SELLER_DEFAULTS : BUYER_DEFAULTS;
+    const DEFAULTS = side === "sell" ? SELLER_DEFAULTS : BUYER_DEFAULTS;
     const seeded: Answers = {};
     for (const question of questions) {
       if (question.type !== "slider" || !question.bound) continue;
@@ -129,12 +138,12 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     setReady(true);
 
     const resumed = Object.keys(restored).length > 0;
-    track({ name: resumed ? "assessment_resume" : "assessment_start", side: funnel.side, meta: { prefilled: Object.keys(fromLanding).length } });
+    track({ name: resumed ? "assessment_resume" : "assessment_start", side, meta: { prefilled: Object.keys(fromLanding).length } });
 
     fetch("/api/assessment/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionId: sessionId(), side: funnel.side, county: merged.county ?? null }),
+      body: JSON.stringify({ sessionId: sessionId(), side, county: merged.county ?? null }),
     })
       .then((r) => r.json())
       .then((d) => { if (d?.id) assessmentId.current = d.id; })
@@ -144,22 +153,22 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
 
   useEffect(() => {
     if (!ready) return;
-    try { window.localStorage.setItem(draftKey(funnel.side), JSON.stringify(answers)); } catch { /* ignore */ }
-  }, [answers, ready]);
+    try { window.localStorage.setItem(draftKey(side), JSON.stringify(answers)); } catch { /* ignore */ }
+  }, [answers, ready, side]);
 
   const current = questions[i];
 
   useEffect(() => {
     if (!ready || !current) return;
     shownAt.current = Date.now();
-    track({ name: "question_view", side: funnel.side, questionKey: current.id, meta: { step: i + 1, of: questions.length } });
-  }, [i, ready, current, questions.length]);
+    track({ name: "question_view", side, questionKey: current.id, meta: { step: i + 1, of: questions.length } });
+  }, [i, ready, current, questions.length, side]);
 
   /* The panel is computed from whatever has been answered so far, on defaults
      for the rest. Showing a number that moves as they answer is the entire
      argument for finishing. */
   const live = useMemo(() => {
-    if (funnel.side === "sell") {
+    if (side === "sell") {
       const inputs = {
         ...SELLER_DEFAULTS,
         county: String(answers.county ?? SELLER_DEFAULTS.county),
@@ -204,7 +213,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
         : { text: "Covered on savings alone", tone: "c-pos", detail: "" },
       foot: "Updating as you answer. Assistance is not counted here — it is upside, and only",
     };
-  }, [answers, funnel.side]);
+  }, [answers, side]);
 
   const answeredCount = questions.filter((x) => touched.has(x.id)).length;
 
@@ -212,7 +221,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     if (!current) return;
     const key = current.bound ?? current.id;
     track({
-      name: "question_answer", side: funnel.side, questionKey: current.id,
+      name: "question_answer", side, questionKey: current.id,
       dwellMs: Date.now() - shownAt.current,
       meta: { step: i + 1 },
     });
@@ -255,7 +264,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
 
        Note "o" means ownership for a buyer and payoff for a seller. They never
        share a page, and each is parsed by its own side's parser. */
-    const p = funnel.side === "sell"
+    const p = side === "sell"
       ? new URLSearchParams({
           c: String(answers.county ?? SELLER_DEFAULTS.county),
           p: String(answers.price ?? SELLER_DEFAULTS.price),
@@ -276,7 +285,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
              decision. */
           w: answers.who ? "1" : "",
         });
-    router.push(`/${funnel.side}/results?${p}`);
+    router.push(`/${side}/results?${p}`);
   };
 
   /* Leaving without finishing is the most common outcome and the most valuable
@@ -294,12 +303,12 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
       if (abandonSent.current) return;
       if (answeredCount >= questions.length) return;
       abandonSent.current = true;
-      track({ name: "assessment_abandon", side: funnel.side, questionKey: current?.id, meta: { answered: answeredCount, of: questions.length } });
+      track({ name: "assessment_abandon", side, questionKey: current?.id, meta: { answered: answeredCount, of: questions.length } });
       flush();
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [answeredCount, questions.length, current]);
+  }, [answeredCount, questions.length, current, side]);
 
   if (!ready || !current) {
     return <main className="shell-w sec buy"><p className="t-sm c-4">Loading your questions…</p></main>;
@@ -309,10 +318,10 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   const hasValues = answeredCount > 0;
 
   return (
-    <div className={funnel.side}>
+    <div className={side}>
       <header style={{ borderBottom: "1px solid var(--line-2)", background: "var(--paper)" }}>
         <div className="shell-w between" style={{ height: 56 }}>
-          <Link href={`/${funnel.side}`} className="row gap-2">
+          <Link href={`/${side}`} className="row gap-2">
             <Mark size={19} />
             <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
           </Link>
@@ -341,7 +350,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
             ) : null}
             <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.5 }}>
               {live.foot}
-              {funnel.side === "buy" ? " a lender can confirm it." : ""}
+              {side === "buy" ? " a lender can confirm it." : ""}
             </p>
           </div>
         </aside>

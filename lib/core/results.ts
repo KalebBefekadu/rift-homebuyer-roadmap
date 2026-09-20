@@ -102,8 +102,28 @@ function horizonOf(timing: string): number | null {
   return null; /* "Just exploring" — they named no deadline, so there is none to miss */
 }
 
+/**
+ * "You said…", only when they did.
+ *
+ * This block is the product's eleventh rule made visible — a stated timeline
+ * compared against the computed one — and it is the only sentence on the page
+ * written in the second person about something the reader told us. So it has
+ * to be true that they told us.
+ *
+ * It was not. `parseReadoutParams` falls back to "3 to 9 months" when the
+ * parameter is absent, which is a defensible assumption for the arithmetic and
+ * not a quote; and because nothing had been *substituted* — the value was
+ * missing, not wrong — no disclosure was shown either. A truncated share link,
+ * which is the exact case params.ts was written for, produced a page telling
+ * somebody they had said something about their own money that they had not.
+ *
+ * When nothing was stated there is no comparison to make, so the block stops
+ * asserting and starts asking. The arithmetic is still shown; it is the
+ * attribution that goes.
+ */
 function tensionOf(
   timing: string,
+  timingStated: boolean,
   months: number | null,
   helpMonths: number | null,
   hasHelp: boolean,
@@ -111,6 +131,17 @@ function tensionOf(
 ): Tension | undefined {
   const want = horizonOf(timing);
   if (want === null) return undefined;
+
+  if (!timingStated) {
+    if (months === null) return undefined;
+    return {
+      kind: "behind",
+      headline: `You have not told us when you want to move. On savings alone the arithmetic says about ${months} month${months === 1 ? "" : "s"}.`,
+      body: hasHelp && helpMonths !== null
+        ? `With the assistance you matched, if a lender approves it, that becomes about ${helpMonths} month${helpMonths === 1 ? "" : "s"}. Telling us your own timeline is what turns both of those from arithmetic into a plan.`
+        : "Telling us when you want to move is what turns this from arithmetic into a plan — it is the one answer this page cannot work out for you.",
+    };
+  }
 
   if (fullyCovered) {
     return {
@@ -159,7 +190,9 @@ function tensionOf(
  * they are ready to buy when they are not, which is the single worst thing
  * this product could do to a person.
  */
-export function buyerReadout(i: BuyerInputs, m: MatchResult, timing: string): Readout {
+export function buyerReadout(
+  i: BuyerInputs, m: MatchResult, timing: string, timingStated: boolean,
+): Readout {
   const cash = cashToClose(i);
   const own = cashGap({ ...i, assistance: 0 });
   const help = Math.round((m.openMin + m.openMax) / 2);
@@ -192,7 +225,7 @@ export function buyerReadout(i: BuyerInputs, m: MatchResult, timing: string): Re
       ? `The ${range(m.openMin, m.openMax)} of assistance you may qualify for would ${helpMonths === 0 ? "close that gap entirely" : `bring it to about ${helpMonths} month${helpMonths === 1 ? "" : "s"}`} — if a lender confirms it.`
       : undefined;
 
-  const tension = tensionOf(timing, months, helpMonths, hasHelp, own.fullyCovered);
+  const tension = tensionOf(timing, timingStated, months, helpMonths, hasHelp, own.fullyCovered);
 
   const reframe = {
     headline: `${money(cash.total)}, not ${money(cash.down)}`,
@@ -283,13 +316,19 @@ export function buyerReadout(i: BuyerInputs, m: MatchResult, timing: string): Re
  * Seller
  * ------------------------------------------------------------------ */
 
-export function sellerReadout(s: SellerInputs, timing: string): Readout {
+export function sellerReadout(
+  s: SellerInputs, timing: string, timingStated: boolean,
+): Readout {
   const r = netProceeds(s);
   const equityPct = Math.round((r.net / s.price) * 100);
   const thin = equityPct < 12;
 
+  /* An unstated timeline is "exploring", not whatever the default happens to
+     spell. The status chip is the first thing the agent sorts by, and a seller
+     who said nothing should not be ranked above one who said "9 to 18". */
   const status: Status =
-    timing.startsWith("In the next") ? "ready"
+    !timingStated ? "exploring"
+    : timing.startsWith("In the next") ? "ready"
     : timing.startsWith("3 to") ? "close"
     : timing.startsWith("9 to") ? "building"
     : "exploring";

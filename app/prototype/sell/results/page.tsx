@@ -31,10 +31,13 @@ function Results() {
   }), [q]);
 
   const timing = q.get("t") || "3 to 9 months";
+  /* The default is a planning assumption, not a quote — the readout's tension
+     block says "You said…" and must only do so when they did. */
+  const timingStated = Boolean(q.get("t"));
   const who = q.get("w") || "none";
 
   const r = useMemo(() => netProceeds(s), [s]);
-  const read = useMemo(() => sellerReadout(s, timing), [s, timing]);
+  const read = useMemo(() => sellerReadout(s, timing, timingStated), [s, timing, timingStated]);
   /* The call is about their actual blocker, not a generic slot. */
   const bookHref = `/prototype/book?v=sell&topic=${encodeURIComponent(read.blocker.title)}`;
 

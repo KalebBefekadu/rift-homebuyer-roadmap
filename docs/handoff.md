@@ -218,6 +218,20 @@ correct only when they named no deadline ("Just exploring"), and a one-month ove
 collision. Crying wolf on a nine-month answer that computes to ten is how the whole panel
 gets ignored.
 
+**"You said…" requires that they said it.** This is the only sentence in the product written
+in the second person about something the reader told us, and for a while it was not true.
+`parseReadoutParams` applies the default `"3 to 9 months"` both when the parameter is absent
+and when it is unusable, but `substituted` records only the second — so a readout reached
+without a `t` at all quoted somebody a statement they had never made, about their own money,
+with no disclosure attached. A share link truncated by a messaging app, which is the exact
+case that boundary was written for, produced it.
+
+Both parsers now return `timingStated`, and `buyerReadout`/`sellerReadout` take it. With no
+statement there is no comparison, so the block stops asserting and asks instead — the
+arithmetic stays, the attribution goes. A seller who named no timeline is `exploring` rather
+than whatever the default happens to spell, because the status chip is the first thing the
+agent sorts by.
+
 ---
 
 ## 5. What is deliberately fake in the prototype

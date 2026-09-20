@@ -26,6 +26,9 @@ function Results() {
   const savings = Number(q.get("s")) || 14_000;
   const monthlySaving = Number(q.get("r")) || 700;
   const timing = q.get("t") || "3 to 9 months";
+  /* The default is a planning assumption, not a quote — the readout's tension
+     block says "You said…" and must only do so when they did. */
+  const timingStated = Boolean(q.get("t"));
   const who = q.get("w") || "none";
 
   const m = useMemo(() => matchPrograms({ county, firstTimeBuyer: first }), [county, first]);
@@ -41,7 +44,7 @@ function Results() {
   const gap = useMemo(() => cashGap(i), [i]);
   const withHelp = useMemo(() => cashGap({ ...i, assistance: help }), [i, help]);
   const levers = useMemo(() => gapLevers(i), [i]);
-  const r = useMemo(() => buyerReadout(i, m, timing), [i, m, timing]);
+  const r = useMemo(() => buyerReadout(i, m, timing, timingStated), [i, m, timing, timingStated]);
   /* The call is about their actual blocker, not a generic slot. */
   const bookHref = `/prototype/book?v=buy&topic=${encodeURIComponent(r.blocker.title)}`;
 
