@@ -118,6 +118,20 @@ documentation update in the same commit.
 - Agent data is scoped `agent_id = auth.uid()`. Client access is limited to their own record
   and their own plan.
 - The service-role key never reaches the browser and is never `NEXT_PUBLIC_`.
+- **Every write runs on the service role, so RLS never sees it.** That is
+  deliberate — a stranger in the funnel has no session for a policy to key on —
+  but it means `lib/db/rls.test.ts` proves a boundary the application does not
+  use. What actually scopes a Studio write is the `.eq("agent_id", …)` somebody
+  remembered to type, and three writes reachable from `"use server"` actions
+  did not have one. A server action is a public HTTP endpoint with a generated
+  name; "somebody is signed in" and "this record is theirs" are different
+  questions. `lib/db/tenancy.test.ts` now covers both, and Studio writes take
+  the signed-in agent's id rather than resolving one.
+- **`currentAgentId()` refuses when more than one agent row exists.** It was
+  `limit 1`, which is correct for exactly as long as that table has one row and
+  silently wrong the instant it has two. The schema's RLS policies are all
+  written for several agents even though the product is built for one; the
+  refusal is what keeps that gap loud.
 - Monitoring carries operational context, never buyer PII or raw intake. `lib/brevo/sync.ts`
   shows the pattern: it reports `hasEmail: boolean`, never the address.
 - Telemetry stores question ids and timings, **never answer values**, and lives in a

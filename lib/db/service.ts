@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
+import { captureOpError } from "@/lib/monitoring/capture";
 
 /**
  * The service-role client.
@@ -69,6 +70,21 @@ export function serviceClient(): SupabaseClient | null {
  * That is not hypothetical — it happened the first time this was run against a
  * real database, and the symptom was every write skipping while the row was
  * plainly there in the table.
+ *
+ * **It refuses to guess when there is more than one agent.** This used to be
+ * `select id from rift_agents limit 1`, which is correct for exactly as long
+ * as that table has one row and silently wrong the instant it has two: a
+ * stranger's lead would be attached to whichever row Postgres happened to
+ * return, and nothing anywhere would report it. Every RLS policy in the schema
+ * is written `agent_id = rift_my_agent_id()`, so the database is built for
+ * several agents even though the product is not — and the gap between those
+ * two facts is the kind that gets discovered by an agent reading somebody
+ * else's client list.
+ *
+ * Refusing means every public write reports `skipped` with its own honest
+ * reason, which is the house rule: degrade visibly, never a silent success.
+ * It is also loud enough that whoever adds the second agent finds out
+ * immediately rather than a quarter later.
  */
 let agentId: string | null = null;
 let missingUntil = 0;
@@ -92,15 +108,29 @@ export async function currentAgentId(): Promise<string | null> {
      
      A timeout returns null, so the caller reports `skipped` with its own
      reason rather than pretending the write happened. */
-  const query = Promise.resolve(db.from("rift_agents").select("id").limit(1).maybeSingle());
+  /* Two, not one. Asking for a single row cannot distinguish "the agent" from
+     "the first of several", and that distinction is the whole point. */
+  const query = Promise.resolve(db.from("rift_agents").select("id").limit(2));
   const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
 
   if (timedOut || !result) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
   const { data, error } = result;
-  if (error || !data) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
+  const rows = (data ?? []) as { id: string }[];
+  if (error || rows.length === 0) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
-  agentId = data.id as string;
+  if (rows.length > 1) {
+    /* Not cached, and not retried on a short timer either — this is a
+       deployment that has outgrown an assumption baked into every module that
+       calls this, and it needs a person, not a retry. */
+    captureOpError(
+      new Error("more than one agent row exists — the single-agent assumption in lib/db/service.ts no longer holds"),
+      { op: "agent.resolve" },
+    );
+    return null;
+  }
+
+  agentId = rows[0]!.id;
   return agentId;
 }
 

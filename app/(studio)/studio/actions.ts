@@ -17,13 +17,20 @@ import type { StopId } from "@/lib/core/nurture";
  * with a generated name — it is not protected by the page that renders the
  * button, and treating it as if it were is how an action ends up callable by
  * anybody who reads the network tab.
+ *
+ * And every one passes `agent.agentId` down to the write. "Somebody is signed
+ * in" and "this record is theirs" are different questions, and three of these
+ * used to ask only the first: the data layer runs on the service-role client,
+ * which bypasses RLS, so the policies that would have caught a cross-agent
+ * write are never consulted and a bare id is authority. One agent exists
+ * today, which is exactly why this was cheap to fix now.
  */
 
 export async function advanceReview(id: string, confirmedBy?: string) {
   const agent = await currentAgent();
   if (!agent) return { ok: false as const, error: "not signed in" };
 
-  const r = await promoteItem(id, confirmedBy);
+  const r = await promoteItem(id, agent.agentId, confirmedBy);
   revalidatePath("/studio");
 
   if (!r.ok) return { ok: false as const, error: r.error };
@@ -42,9 +49,9 @@ export async function markRepliedTo(leadId: string) {
   const agent = await currentAgent();
   if (!agent) return { ok: false as const, error: "not signed in" };
 
-  const replied = await markReplied(leadId);
+  const replied = await markReplied(leadId, agent.agentId);
   /* A reply stops the sequence. Contract 4.11, and it is the same fact. */
-  await stop(leadId, "replied");
+  await stop(leadId, "replied", agent.agentId);
   revalidatePath("/studio");
 
   if (!replied.ok) return { ok: false as const, error: replied.error };
@@ -56,7 +63,7 @@ export async function stopSequence(leadId: string, reason: StopId) {
   const agent = await currentAgent();
   if (!agent) return { ok: false as const, error: "not signed in" };
 
-  const r = await stop(leadId, reason);
+  const r = await stop(leadId, reason, agent.agentId);
   revalidatePath("/studio");
 
   if (!r.ok) return { ok: false as const, error: r.error };

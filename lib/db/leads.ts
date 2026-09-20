@@ -209,15 +209,21 @@ export interface RankedLead {
  * second click cannot quietly improve the number. Speed to lead is about the
  * first response, and a metric you can retroactively flatter is not a metric.
  */
-export async function markReplied(leadId: string, at = new Date()): Promise<DbResult<{ repliedAt: string }>> {
+export async function markReplied(
+  leadId: string, agentId: string, at = new Date(),
+): Promise<DbResult<{ repliedAt: string }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
+  /* The signed-in agent, not the deployment's. This runs on the service-role
+     client, so RLS never sees the request and an id on its own is authority. */
+  if (!agentId) return failed("no agent");
 
   try {
     const marked = await boundedWrite(
       db.from("rift_leads")
         .update({ human_replied_at: at.toISOString() })
         .eq("id", leadId)
+        .eq("agent_id", agentId)
         .is("human_replied_at", null)
         .select("human_replied_at")
         .maybeSingle(),
@@ -233,7 +239,8 @@ export async function markReplied(leadId: string, at = new Date()): Promise<DbRe
     /* Already recorded. Report the original rather than pretending nothing
        happened — the caller wants to know when, not whether it just changed. */
     const { data: existing } = await db
-      .from("rift_leads").select("human_replied_at").eq("id", leadId).maybeSingle();
+      .from("rift_leads").select("human_replied_at")
+      .eq("id", leadId).eq("agent_id", agentId).maybeSingle();
     return existing?.human_replied_at
       ? done({ repliedAt: existing.human_replied_at as string })
       : failed("no such lead");

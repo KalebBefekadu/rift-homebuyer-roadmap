@@ -43,9 +43,15 @@ export async function enrol(leadId: string, band: Band, phoneConsent: boolean): 
 }
 
 /** Any stop condition. Immediate — the queue is recomputed, not drained. */
-export async function stop(leadId: string, reason: StopId): Promise<DbResult<{ stopped: true }>> {
+export async function stop(
+  leadId: string, reason: StopId, agentId: string,
+): Promise<DbResult<{ stopped: true }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
+  /* Scoped to the signed-in agent. Stopping a sequence is irreversible from
+     the product's side — the cadence does not restart — so an unscoped id
+     here lets one agent silence another's follow-ups permanently. */
+  if (!agentId) return failed("no agent");
   try {
     /* The agent is watching this button, and it is the action behind contract
        4.11 — a sequence that keeps sending because a stop hung is exactly the
@@ -54,6 +60,7 @@ export async function stop(leadId: string, reason: StopId): Promise<DbResult<{ s
       db.from("rift_enrolments")
         .update({ stopped_at: new Date().toISOString(), stop_reason: reason })
         .eq("lead_id", leadId)
+        .eq("agent_id", agentId)
         .is("stopped_at", null),
       "the stop",
     );

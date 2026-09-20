@@ -169,16 +169,27 @@ export async function openItems(): Promise<DbResult<ReviewItemWithFigure[]>> {
  * The rung and naming rules are checked here against the shared engine, and
  * again by the database. Two layers because this is the one place a mistake
  * puts a green "verified" chip next to a figure nobody confirmed.
+ *
+ * `agentId` is the SIGNED-IN agent, threaded from the server action rather
+ * than resolved here. It matters because this uses the service-role client,
+ * which bypasses RLS — so the policy that would have stopped a cross-agent
+ * write is never consulted, and `.eq("id", id)` alone would promote any review
+ * item in the database to anyone who knows a UUID. The action checks that
+ * somebody is signed in; only this checks that it is theirs.
  */
-export async function promoteItem(id: string, confirmedBy?: string): Promise<DbResult<{ state: TrustState }>> {
+export async function promoteItem(
+  id: string, agentId: string, confirmedBy?: string,
+): Promise<DbResult<{ state: TrustState }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
+  if (!agentId) return failed("no agent");
 
   try {
     const { data, error } = await db
       .from("rift_review_items")
       .select("id,state,ceiling,kind,figure_id")
       .eq("id", id)
+      .eq("agent_id", agentId)
       .maybeSingle();
     if (error) return failed(error.message);
     if (!data) return failed("no such review item");
@@ -205,6 +216,7 @@ export async function promoteItem(id: string, confirmedBy?: string): Promise<DbR
       db.from("rift_review_items")
         .update(patch)
         .eq("id", id)
+        .eq("agent_id", agentId)
         .eq("state", data.state)
         .select("id"),
       "the review",
