@@ -48,9 +48,15 @@ describe("the scheduled routes answer the scheduler", () => {
   const scheduled: { path: string }[] =
     JSON.parse(readFileSync("vercel.json", "utf8")).crons ?? [];
 
-  it("schedules at least the nurture run and the retention sweep", () => {
-    expect(scheduled.map((c) => c.path).sort())
-      .toEqual(["/api/nurture/run", "/api/retention/sweep"]);
+  it("schedules the three jobs the product cannot run without", () => {
+    /* Containment, not equality. The loop below is what actually protects the
+       product, and it covers whatever is scheduled — so a fourth cron must not
+       have to edit this line to be allowed to exist. What is asserted here is
+       that these three have not been quietly dropped. */
+    const paths = scheduled.map((c) => c.path);
+    for (const required of ["/api/nurture/run", "/api/retention/sweep", "/api/rates/refresh"]) {
+      expect(paths, `${required} is no longer scheduled`).toContain(required);
+    }
   });
 
   for (const { path } of scheduled) {

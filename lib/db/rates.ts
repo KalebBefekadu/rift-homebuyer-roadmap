@@ -1,6 +1,9 @@
 import "server-only";
 import { serviceClient } from "./service";
 import { describeRate, FALLBACK_RATE, type RateAssumption } from "@/lib/core/rate";
+import { MIN_PLAUSIBLE_PCT, MAX_PLAUSIBLE_PCT } from "@/lib/core/pmms";
+import { boundedWrite } from "./bounded";
+import { done, failed, skipped, type DbResult } from "./result";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 
 /**
@@ -41,4 +44,50 @@ export async function currentRate(today = new Date()): Promise<RateAssumption> {
   } catch {
     return describeRate(FALLBACK_RATE.pct, FALLBACK_RATE.source, null, today);
   }
+}
+
+/**
+ * Records a rate, idempotently.
+ *
+ * Keyed on `(product, as_of)`, so running the fetch four times in a week
+ * records one row four times rather than four rows. That matters more than it
+ * sounds: `currentRate` takes the newest `as_of`, so duplicate rows for the
+ * same week are harmless, but a fetch that invented today's date as `as_of`
+ * would make a three-week-old rate look recorded-today and permanently fresh.
+ * The date always comes from the published file.
+ */
+export async function recordRate(input: {
+  pct: number;
+  asOf: string;
+  source: string;
+  sourceUrl: string;
+}): Promise<DbResult<{ pct: number; asOf: string }>> {
+  /* The same band the hand-entry script refuses on, applied again here because
+     this is now the path that runs unattended. A guard that only exists in the
+     tool a human uses protects the case that was never the risk. */
+  if (!Number.isFinite(input.pct) || input.pct < MIN_PLAUSIBLE_PCT || input.pct > MAX_PLAUSIBLE_PCT) {
+    return failed(`${input.pct} is not a plausible mortgage rate`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.asOf)) return failed(`${input.asOf} is not a date`);
+
+  const db = serviceClient();
+  if (!db) return skipped("the database is not configured");
+
+  const wrote = await boundedWrite(
+    db.from("rift_rate_snapshots").upsert(
+      {
+        rate_pct: input.pct,
+        source: input.source,
+        source_url: input.sourceUrl,
+        as_of: input.asOf,
+        product: "conventional-30-fixed",
+        term_years: 30,
+      },
+      { onConflict: "product,as_of" },
+    ),
+    "the rate write",
+  );
+  if (!wrote.ok) return wrote;
+
+  return done({ pct: input.pct, asOf: input.asOf });
 }
