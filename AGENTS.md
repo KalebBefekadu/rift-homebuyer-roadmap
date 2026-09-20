@@ -66,7 +66,11 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
    `assistance: 0`.
 4. **A readout is an immutable snapshot.** Never rewrite what somebody was shown.
 5. **Custom funnel questions can never reach a compute input.**
-6. **Telemetry stores question ids and timings, never answer values.**
+6. **Telemetry stores question ids and timings, never answer values.** Enforced by an
+   **allowlist** in `lib/core/telemetry.ts` and an identical one in the `rift_events` CHECK
+   constraint — not a blocklist, which is what both of them were until a landing page sent
+   the visitor's residency status through all three layers unnoticed. Adding a key needs a
+   migration, on purpose.
 7. **First touch is immutable.** Later visits update last touch only.
 8. **A sequence stops the moment a human replies.**
 9. **Nothing reaches `verified` without a named party.**

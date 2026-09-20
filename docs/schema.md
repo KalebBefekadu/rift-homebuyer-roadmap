@@ -138,8 +138,15 @@ create trigger first_touch_is_immutable before update on attributions
 alter table consents alter column wording set not null;
 
 -- Telemetry: no answer values, ever. Belt and braces alongside the app rule.
-alter table events add constraint no_answer_payload
-  check (payload ? 'value' = false);
+-- An ALLOWLIST, not a blocklist. `payload - array[...]` removes every permitted
+-- key; anything left over is a key nobody approved and the row is refused.
+-- The shipped version is 20260920010000_rift_events_allowlist.sql and it must
+-- stay identical to ALLOWED_META in lib/core/telemetry.ts.
+alter table rift_events add constraint events_carry_no_answer
+  check (payload - array['page','qid','step','of','from','via',
+                         'answered','matched','source','band','prefilled',
+                         'live','hasTopic','delivered','consent','slot']
+         = '{}'::jsonb);
 ```
 
 ---

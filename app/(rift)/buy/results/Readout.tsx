@@ -125,7 +125,7 @@ export function Readout(p: Props) {
     return inFlight.current;
   };
 
-  useTrack({ name: "readout_view", side: "buy", meta: { status: r.status, matched: match.matched.length } });
+  useTrack({ name: "readout_view", side: "buy", meta: { band: r.status, matched: match.matched.length } });
 
   const bookHref = `/book?v=buy&topic=${encodeURIComponent(r.blocker.title)}`;
 

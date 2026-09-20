@@ -121,7 +121,13 @@ documentation update in the same commit.
 - Monitoring carries operational context, never buyer PII or raw intake. `lib/brevo/sync.ts`
   shows the pattern: it reports `hasEmail: boolean`, never the address.
 - Telemetry stores question ids and timings, **never answer values**, and lives in a
-  different table from the answers with different retention.
+  different table from the answers with different retention. The permitted keys are an
+  allowlist (`ALLOWED_META` in `lib/core/telemetry.ts`, mirrored in the `rift_events` CHECK
+  constraint and kept in step by `lib/core/telemetry.test.ts`). It was a blocklist in both
+  places, and a blocklist fails open: the buyers-abroad landing page sent `status` — the
+  visitor's residency situation, a close proxy for national origin — on every page view,
+  past a type with "no field that could hold an answer", past a sanitiser that stripped
+  eleven named keys, and past a constraint that rejected three. Nothing failed.
 
 ## Calculation
 

@@ -84,7 +84,21 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
   const script: React.CSSProperties = am ? { fontFamily: ETHIOPIC_STACK } : {};
 
   useCaptureTouch();
-  useTrack({ name: "landing_view", side: "buy", meta: { page: "abroad", status, use } });
+  /* The page, and nothing about the reader.
+     
+     This used to carry `status` and `use` — the visitor's residency situation
+     and what they intend to do with the house — straight into the analytics
+     table on every view. Two things wrong with that, and the second is the
+     serious one. It breaks the product's own rule that telemetry stores
+     question ids and timings and never answer values. And residency status is
+     about as close a proxy for national origin as this product could collect:
+     a protected class under the Fair Housing Act, sitting in a table keyed on
+     a session that joins to a lead. This page was designed around targeting a
+     SITUATION rather than an ethnicity, and then logged the situation.
+     
+     The drop-off signal that was wanted is already available without it —
+     `hero_answer` records which control was touched, by question id. */
+  useTrack({ name: "landing_view", side: "buy", meta: { page: "abroad" } });
 
   const s = statusById(status);
   const minDown = s.down[use];

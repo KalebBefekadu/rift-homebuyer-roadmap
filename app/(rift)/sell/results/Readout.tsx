@@ -39,7 +39,7 @@ export function Readout({
   const [saved, setSaved] = useState(false);
   const linkRef = useRef<string | null>(null);
 
-  useTrack({ name: "readout_view", side: "sell", meta: { status: r.status } });
+  useTrack({ name: "readout_view", side: "sell", meta: { band: r.status } });
 
   const bookHref = `/book?v=sell&topic=${encodeURIComponent(r.blocker.title)}`;
   const payback = repairs.filter((x) => x.verdict === "pays-back");

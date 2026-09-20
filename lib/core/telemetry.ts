@@ -8,10 +8,13 @@
  *
  * The privacy rule is enforced three times over, deliberately:
  *   1. `EventInput` has no field that could hold an answer.
- *   2. `sanitise()` strips anything answer-shaped before the write.
- *   3. A CHECK constraint on `rift_events` rejects the row outright.
- * The first two are guidance a future caller can route around. Only the third
- * is a guarantee — but the first two are where the mistake gets caught early.
+ *   2. `sanitise()` keeps only the keys on ALLOWED_META.
+ *   3. A CHECK constraint on `rift_events` enforces the same list in the
+ *      database, so a row written by anything other than this module is
+ *      rejected outright.
+ * Layers 2 and 3 were both blocklists and both failed open on the same key.
+ * They are allowlists now, and they are kept identical on purpose — see
+ * telemetry.test.ts, which fails when the migration and this file disagree.
  */
 
 export const EVENT_NAMES = [
@@ -30,27 +33,52 @@ export interface EventInput {
   /** Which question, never what was said. */
   questionKey?: string;
   dwellMs?: number;
-  /** Counts and flags only. Anything answer-shaped is dropped. */
+  /** Counts and flags only. Anything not on ALLOWED_META is dropped. */
   meta?: Record<string, string | number | boolean>;
 }
 
 /**
- * Keys that would carry an answer, however innocently they got there.
+ * The keys telemetry is allowed to carry. Everything else is dropped.
  *
- * `email` and `name` are on this list because they are almost always somebody
- * being helpful — and a stranger's address in an analytics payload is still a
- * stranger's address in an analytics store.
+ * This was a blocklist — `value`, `answer`, `input`, `email`, `phone` and a
+ * few more — and a blocklist fails open, which is a property you find out
+ * about afterwards. The buyers-abroad landing page sent
+ * `{ page, status, use }` on every view, and `status` there is the visitor's
+ * residency situation: citizen, resident, ITIN, or no U.S. status at all. It
+ * was not on the list, so it went through `sanitise`, through a type that
+ * "has no field that could hold an answer", and through a CHECK constraint
+ * that only rejected three literal key names — all three layers, into an
+ * analytics table keyed on a session that joins to a lead.
+ *
+ * Residency status is about as close a proxy for national origin as this
+ * product could collect, and national origin is a protected class under the
+ * Fair Housing Act. The page was carefully designed to target a situation
+ * rather than an ethnicity, and then logged the situation.
+ *
+ * An allowlist cannot fail that way. Adding a key is now a deliberate act
+ * with a diff, which is exactly the moment somebody should have to think
+ * about whether it is an answer.
+ *
+ * Note what is NOT here: `status`. In this product that word means somebody's
+ * situation, and the one legitimate use — the readout's computed readiness
+ * band — is called `band` precisely so the ambiguous word never appears in a
+ * payload again.
  */
-const FORBIDDEN = new Set([
-  "value", "answer", "input", "text", "amount", "savings", "price",
-  "email", "phone", "name", "address",
-]);
+export const ALLOWED_META = [
+  /* Which surface, which question, how far through. */
+  "page", "qid", "step", "of", "from", "via",
+  /* Counts and flags about what the product did, not what the person said. */
+  "answered", "matched", "source", "band", "prefilled", "live",
+  "hasTopic", "delivered", "consent", "slot",
+] as const;
+
+const ALLOWED = new Set<string>(ALLOWED_META);
 
 export function sanitise(meta: Record<string, unknown> | undefined) {
   const out: Record<string, string | number | boolean> = {};
   if (!meta) return out;
   for (const [k, v] of Object.entries(meta)) {
-    if (FORBIDDEN.has(k.toLowerCase())) continue;
+    if (!ALLOWED.has(k)) continue;
     if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") out[k] = v;
   }
   return out;

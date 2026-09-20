@@ -269,6 +269,12 @@ Supabase migrations apply with `scripts/apply-sql-migration.sh`. `scripts/bootst
 provisions a project from scratch — useful for a staging environment, and worth having one
 before there is real client data in production.
 
+**Without a connection string**, `output/pending-migrations.sql` is every migration the
+production database is still owed, concatenated in order, ready to paste into the Supabase
+SQL editor. It is idempotent — running it twice is safe — and it has been applied twice in a
+row against a copy of the production schema. Regenerate it by concatenating whichever files
+under `supabase/migrations/` have not been applied; delete it once they have.
+
 ## 13. Repository map
 
 ```

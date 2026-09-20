@@ -13,21 +13,33 @@ import { PHONE_CONSENT, EMAIL_NOTE, CONSENT_VERSION } from "@/lib/core/privacy";
  */
 
 describe("telemetry payloads", () => {
-  it("strips anything that could carry an answer", () => {
+  it("keeps only what is on the list", () => {
+    /* `resumed` used to survive this, because the rule was a blocklist and
+       nobody had thought of it. It is a harmless flag and it still does not
+       get through: adding a key is a deliberate act now, which is the point.
+       See lib/core/telemetry.test.ts for what that cost. */
     const out = sanitise({ value: 42000, answer: "yes", input: "x", step: 3, resumed: true });
-    expect(out).toEqual({ step: 3, resumed: true });
+    expect(out).toEqual({ step: 3 });
   });
 
   it("strips personal fields even when a caller means well", () => {
     /* `email` in an analytics payload is almost always somebody being helpful.
        It is still a stranger's address in an analytics store. */
-    const out = sanitise({ email: "a@b.com", phone: "404", name: "Maya", county: "DeKalb" });
-    expect(out).toEqual({ county: "DeKalb" });
+    const out = sanitise({ email: "a@b.com", phone: "404", name: "Maya" });
+    expect(out).toEqual({});
+  });
+
+  it("drops the county, which this test used to require it to keep", () => {
+    /* It asserted `{ county: "DeKalb" }` survives. That was wrong, and wrong
+       in the direction that matters: where somebody is buying is an answer to
+       a question they were asked, and in a housing product a county is not a
+       neutral field. It is out. */
+    expect(sanitise({ county: "DeKalb" })).toEqual({});
   });
 
   it("drops values that are not scalars", () => {
-    const out = sanitise({ nested: { a: 1 }, list: [1, 2], ok: 1 });
-    expect(out).toEqual({ ok: 1 });
+    const out = sanitise({ nested: { a: 1 }, list: [1, 2], step: 1 });
+    expect(out).toEqual({ step: 1 });
   });
 
   it("accepts only names in the taxonomy", () => {

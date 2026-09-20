@@ -108,18 +108,43 @@ describe("rift schema", () => {
   });
 
   test("a telemetry event can never carry an answer", async (c) => {
-    for (const key of ["value", "answer", "input"]) {
+    /* `status` is the one that matters and the reason this became an
+       allowlist. The old constraint named three keys and let it through: the
+       buyers-abroad page sent the visitor's residency situation under it, on
+       every view, into a table keyed on a session that joins to a lead.
+       `savings` and `county` are here because they are the next two somebody
+       would reach for without thinking. */
+    for (const key of ["value", "answer", "input", "status", "savings", "county", "email"]) {
       await rejects(c,
         "insert into rift_events (agent_id,session_id,name,payload) values ($1,'s1','question_answer',$2)",
         [AGENT, JSON.stringify({ [key]: 42000 })], /events_carry_no_answer/);
     }
   });
 
+  test("one unapproved key poisons an otherwise fine payload", async (c) => {
+    /* The realistic shape of the mistake: somebody adds a field to a payload
+       that was already correct. The row is refused rather than partially
+       written, because a constraint that accepted the good half would have
+       stored the bad half too. */
+    await rejects(c,
+      "insert into rift_events (agent_id,session_id,name,payload) values ($1,'s1','landing_view',$2)",
+      [AGENT, JSON.stringify({ page: "abroad", status: "foreign" })], /events_carry_no_answer/);
+  });
+
   test("a telemetry event with counts and flags is accepted", async (c) => {
     await c.query(
       "insert into rift_events (agent_id,session_id,name,question_key,dwell_ms,payload) values ($1,'s1','question_view','savings',4200,$2)",
-      [AGENT, JSON.stringify({ step: 3, resumed: false })]);
+      [AGENT, JSON.stringify({ step: 3, of: 7, band: "close" })]);
     const { rows } = await c.query("select count(*)::int n from rift_events where question_key='savings'");
+    expect(rows[0].n).toBe(1);
+  });
+
+  test("an empty payload is still fine", async (c) => {
+    /* The default. A constraint that rejected `{}` would refuse every event
+       that has nothing to say, which is most of them. */
+    await c.query(
+      "insert into rift_events (agent_id,session_id,name) values ($1,'s-empty','readout_view')", [AGENT]);
+    const { rows } = await c.query("select count(*)::int n from rift_events where session_id='s-empty'");
     expect(rows[0].n).toBe(1);
   });
 
