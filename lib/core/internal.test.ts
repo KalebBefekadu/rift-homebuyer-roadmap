@@ -75,3 +75,46 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     });
   }
 });
+
+describe("robots and the sitemap agree", () => {
+  /* Two lists of public paths, written in two files, that have to say the
+     same thing. /privacy was added to the sitemap and not to robots, and
+     nothing noticed because `Allow: /` happens to cover everything — so the
+     explicit list quietly became decorative while still looking like policy.
+     
+     The failure this guards against is the other direction: a page submitted
+     for indexing that robots disallows. That one produces a Search Console
+     warning weeks later and no signal at all before it. */
+  const robotsSrc = readFileSync("app/robots.ts", "utf8");
+  const sitemapSrc = readFileSync("app/sitemap.ts", "utf8");
+
+  const list = (src: string, key: string) => {
+    const at = src.indexOf(`${key}: [`);
+    if (at === -1) return [];
+    const body = src.slice(at, src.indexOf("]", at));
+    return [...body.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
+  };
+
+  const allowed = list(robotsSrc, "allow");
+  const disallowed = list(robotsSrc, "disallow");
+  const sitemap = [...sitemapSrc.matchAll(/\$\{base\}(\/[a-z/-]*)/g)].map((m) => m[1]!);
+
+  it("reads both lists", () => {
+    expect(allowed.length).toBeGreaterThan(5);
+    expect(sitemap.length).toBeGreaterThan(5);
+  });
+
+  it("never submits a path it also refuses", () => {
+    const contradictory = sitemap.filter((p) =>
+      disallowed.some((d) => (d.endsWith("/") ? p.startsWith(d) : p === d)));
+    expect(contradictory, "these are in the sitemap and disallowed in robots").toEqual([]);
+  });
+
+  it("allows every path it submits", () => {
+    const missing = sitemap.filter((p) => !allowed.includes(p));
+    expect(
+      missing,
+      "in the sitemap but not in robots' allow list — covered only by the bare `Allow: /`",
+    ).toEqual([]);
+  });
+});

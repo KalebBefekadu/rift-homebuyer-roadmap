@@ -18,7 +18,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/abroad", "/buy", "/buy/programs", "/buy/how", "/sell", "/sell/how", "/sell/unclaimed"],
+        /* Kept in step with app/sitemap.ts by lib/core/internal.test.ts. The
+           two drifted the moment /privacy was added: it was submitted for
+           indexing and absent from this list, which `Allow: /` covered by
+           accident rather than by anybody deciding it. */
+        allow: [
+          "/", "/abroad", "/buy", "/buy/programs", "/buy/how",
+          "/sell", "/sell/how", "/sell/unclaimed", "/privacy",
+        ],
         /* /dev is the development index. It is not secret, but it describes what
            is built and what is only specified, and it is not the product. */
         disallow: [
