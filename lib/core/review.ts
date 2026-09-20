@@ -106,11 +106,19 @@ export function ceilingNote(i: ReviewItem): string | null {
 export function promote(i: ReviewItem, to: TrustState, confirmedBy?: string): { ok: true; item: ReviewItem } | { ok: false; why: string } {
   const next = nextRung(i);
   if (!next) return { ok: false, why: ceilingNote(i) ?? "At its ceiling." };
-  if (to !== next) return { ok: false, why: `A figure cannot skip a rung. Next is ${to === "verified" ? "review" : next}.` };
+  /* This read `to === "verified" ? "review" : next`, so the one case it was
+     written for — somebody reaching straight for `verified` — was told "Next
+     is review", a rung that does not exist in the vocabulary, while the actual
+     next rung went unmentioned. The refusal is the only place the operator
+     learns what to do instead, so it has to name the real one. */
+  if (to !== next) return { ok: false, why: `A figure cannot skip a rung. Next is ${next}.` };
   if (to === "verified" && !confirmedBy?.trim()) {
     return { ok: false, why: "Verification needs the name of who confirmed it, in writing. Without a name this is still an estimate." };
   }
-  return { ok: true, item: { ...i, state: to, ...(confirmedBy ? { confirmedBy } : {}) } };
+  /* `confirmedBy` means "the party who decides confirmed this in writing", and
+     only `verified` means that. Recording a name against `reviewed` would put
+     somebody else's authority behind Kaleb's own judgement. */
+  return { ok: true, item: { ...i, state: to, ...(to === "verified" && confirmedBy ? { confirmedBy } : {}) } };
 }
 
 /* ------------------------------------------------------------------ *

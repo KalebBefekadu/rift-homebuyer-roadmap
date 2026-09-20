@@ -131,7 +131,27 @@ export interface Drift {
 }
 
 export function drift(field: string, was: number, now: number, cause: string): Drift {
-  const deltaPct = was === 0 ? (now === 0 ? 0 : 100) : ((now - was) / was) * 100;
+  /**
+   * Divided by the MAGNITUDE of the old figure, not the old figure.
+   *
+   * Dividing by a signed baseline inverts the sign whenever that baseline is
+   * negative, and one figure here is routinely negative: a seller whose payoff
+   * exceeds their price has net proceeds below zero. A client $113,575 short
+   * whose position improved to $50,000 short would have been shown "-56%" —
+   * rendered with its sign, next to a cause explaining the improvement — which
+   * reads as the situation getting worse by more than half.
+   *
+   * With the magnitude as the divisor, a figure moving up always reads
+   * positive, whichever side of zero it starts on.
+   */
+  const deltaPct =
+    was === 0
+      ? now === 0
+        ? 0
+        /* No baseline to be a percentage of. 100 stands for "all of it",
+           signed so the direction still means something. */
+        : now > 0 ? 100 : -100
+      : ((now - was) / Math.abs(was)) * 100;
   return {
     field, was, now,
     deltaPct: Math.round(deltaPct * 10) / 10,
@@ -178,7 +198,10 @@ export function canPublish(input: {
     blocks.push(`${material.length} figure${material.length === 1 ? " has" : "s have"} moved more than ${DRIFT_PCT}% since their readout. Show the change and its cause before publishing.`);
   }
 
-  if (input.trustStates.every((s) => s === "preliminary")) {
+  /* `[].every()` is true, so a plan carrying no figures at all warned that
+     "every figure in this plan is still a preliminary estimate" — a claim
+     about an empty set, printed on the first screen of a new relationship. */
+  if (input.trustStates.length > 0 && input.trustStates.every((s) => s === "preliminary")) {
     warns.push("Every figure in this plan is still a preliminary estimate. Publishable, but say so on the first screen rather than letting the plan imply otherwise.");
   }
 
