@@ -98,3 +98,71 @@ export const EMAIL_NOTE =
   "We email you your readout and tell you when something in it changes. No newsletter, " +
   "no list, and nothing sold on. One click unsubscribes.";
 
+
+/* ------------------------------------------------------------------ *
+ * Who else touches it
+ * ------------------------------------------------------------------ */
+
+export interface Subprocessor {
+  name: string;
+  does: string;
+  /** What of somebody's data actually reaches them. Specific, not "data". */
+  sees: string;
+}
+
+/**
+ * The third parties that hold any part of somebody's record.
+ *
+ * Named rather than summarised as "trusted partners", which is the phrase a
+ * privacy policy uses when it would rather you did not check. Each line says
+ * what that company actually receives, because "we share data with service
+ * providers" is true of every company that has ever leaked anything.
+ *
+ * Nothing on this list is an advertising or data-brokerage relationship, and
+ * that is the sentence worth being able to write. If one is ever added, it
+ * goes here first.
+ */
+export const SUBPROCESSORS: Subprocessor[] = [
+  {
+    name: "Supabase",
+    does: "The database, and the agent's sign-in",
+    sees: "Everything stored: your answers, your readout, your contact details and your consent record.",
+  },
+  {
+    name: "Vercel",
+    does: "Runs the site",
+    sees: "The ordinary request log of any web host — your IP address and which pages were requested.",
+  },
+  {
+    name: "Brevo",
+    does: "Sends the emails",
+    sees: "Your email address and the content of the messages sent to you, including the figures in your readout.",
+  },
+  {
+    name: "Sentry",
+    does: "Reports errors so they get fixed",
+    sees: "Technical detail about a failure — the page, the browser, the error. Session recording is switched off, so it never receives what you typed.",
+  },
+  {
+    name: "Cal.com",
+    does: "Holds a booked time",
+    sees: "Your name, email, and the time you chose — only if you book a call.",
+  },
+];
+
+/* ------------------------------------------------------------------ *
+ * Reaching a human
+ * ------------------------------------------------------------------ */
+
+/**
+ * Where a privacy request goes.
+ *
+ * `null` until there is a real monitored mailbox. Rendering a plausible
+ * address that nobody reads would be worse than the honest degradation below:
+ * a privacy policy naming a dead inbox is a promise that fails silently, in
+ * the one document whose entire job is to be relied on.
+ *
+ * The delete button does not depend on this. It never did — it is one click on
+ * the readout and it needs no address, no account and no reply from anyone.
+ */
+export const CONTACT_EMAIL: string | null = null;

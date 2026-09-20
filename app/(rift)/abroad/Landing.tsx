@@ -452,6 +452,11 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                   <div className="kicker c-4">Rift</div>
                   <Link href={`/book?v=abroad&lang=${locale}`} className="t-sm c-3">Book fifteen minutes</Link>
                   <Link href="/sell" className="t-sm c-3">Selling instead?</Link>
+                  {/* English, like the two links above it. The page is
+                      bilingual; this one is not translated yet and a label
+                      invented here would be exactly the guess the whole
+                      dictionary exists to avoid. */}
+                  <Link href="/privacy" className="t-sm c-3">What we keep</Link>
                   <Link href="/studio" className="t-sm c-3">Sign in</Link>
                 </div>
               </div>

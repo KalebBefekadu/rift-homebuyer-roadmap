@@ -143,6 +143,7 @@ export default function HomePage() {
           <Link href="/sell" className="t-sm c-3">For sellers</Link>
           <Link href="/buy/programs" className="t-sm c-3">Georgia programs</Link>
           <Link href="/buy/how" className="t-sm c-3">How this works</Link>
+          <Link href="/privacy" className="t-sm c-3">What we keep</Link>
         </div>
         <p className="t-xs c-4" style={{ marginTop: 14, lineHeight: 1.6, maxWidth: 660 }}>
           Prepared by Rift, guided by Kaleb Befekadu, Peachtree Cardinal, Georgia. Every figure is

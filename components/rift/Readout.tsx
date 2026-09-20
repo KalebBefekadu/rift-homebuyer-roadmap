@@ -14,6 +14,22 @@ import { Trust, TrustLadder } from "./Trust";
  * identity and a way back, and deliberately not the landing page's nav — the
  * "Get my numbers" call to action is nonsense to someone who is holding them.
  */
+/**
+ * Every link in here pointed at /prototype/*.
+ *
+ * That was harmless for as long as /prototype was served, and it stopped being
+ * harmless the moment those routes started returning 404 in production — which
+ * happened in the same sweep that closed them, with a full green suite and a
+ * page that rendered perfectly. This component is shared: the prototype uses
+ * it, and so does the real seller readout at /sell/results. So the live seller
+ * readout shipped with five dead links — the logo, "Change my answers", "Sign
+ * in", "About Kaleb" and the cross-sell — and nothing anywhere reported it,
+ * because a <Link> to a 404 is not an error until somebody clicks it.
+ *
+ * They point at the real routes now. "Sign in" is gone rather than repointed:
+ * it went to the client portal, which does not exist outside the prototype,
+ * and /studio is the agent's door, not the reader's.
+ */
 export function ReadoutShell({ v, children, ask }: {
   v: "buy" | "sell";
   children: React.ReactNode;
@@ -28,16 +44,15 @@ export function ReadoutShell({ v, children, ask }: {
         backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-2)",
       }}>
         <div className="shell-w between" style={{ height: 58 }}>
-          <Link href={`/prototype/${v}`} className="row gap-2">
+          <Link href={`/${v}`} className="row gap-2">
             <Mark size={20} />
             <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
             <span className="chip chip-brand hide-sm">Your readout</span>
           </Link>
           <div className="row gap-1">
-            <Link href={`/prototype/${v}/start`} className="btn btn-g btn-sm hide-sm">
+            <Link href={`/${v}/start`} className="btn btn-g btn-sm">
               <Ico.refresh size={13} />Change my answers
             </Link>
-            <Link href="/prototype/app" className="btn btn-g btn-sm">Sign in</Link>
           </div>
         </div>
       </header>
@@ -54,9 +69,10 @@ export function ReadoutShell({ v, children, ask }: {
             on this page requires you to work with us, and none of it stops working if you don&apos;t.
           </p>
           <div className="row gap-3 wrap" style={{ marginTop: 14 }}>
-            <Link href={`/prototype/${v}`} className="t-xs c-3">Back to Rift for {v === "buy" ? "buyers" : "sellers"}</Link>
-            <Link href="/prototype/kaleb" className="t-xs c-3">About Kaleb</Link>
-            <Link href={`/prototype/${v === "buy" ? "sell" : "buy"}`} className="t-xs c-3">
+            <Link href={`/${v}`} className="t-xs c-3">Back to Rift for {v === "buy" ? "buyers" : "sellers"}</Link>
+            <Link href={`/${v}/how`} className="t-xs c-3">How this works</Link>
+            <Link href="/privacy" className="t-xs c-3">What we keep</Link>
+            <Link href={`/${v === "buy" ? "sell" : "buy"}`} className="t-xs c-3">
               {v === "buy" ? "Selling instead?" : "Buying instead?"}
             </Link>
           </div>

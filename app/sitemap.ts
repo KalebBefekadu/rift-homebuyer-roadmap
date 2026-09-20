@@ -24,5 +24,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/sell`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/sell/unclaimed`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/sell/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    /* Low priority, but present. A privacy page nobody can find is the same
+       as not having one, and a crawler is one of the things looking. */
+    { url: `${base}/privacy`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
   ];
 }

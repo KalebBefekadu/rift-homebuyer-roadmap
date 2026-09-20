@@ -179,20 +179,28 @@ export function Readout(p: Props) {
           ) : null}
 
           {p.substituted?.length ? (
-            <p className="t-xs c-3 row gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
+            <p className="t-xs c-3 row-t gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
               <Ico.info size={12} style={{ flex: "none", marginTop: 2 }} />
               {/* Said out loud rather than quietly substituted. A link mangled
                   by a messaging app should still produce a sensible readout —
                   but the person is entitled to know which figures are ours
                   rather than theirs. */}
-              Part of this link was not readable, so we used our own figures for{" "}
-              {p.substituted.join(", ")}. <Link href="/buy/start" className="c-brand">Answer again</Link> for
-              numbers that are actually yours.
+              {/* One span, not three loose children. `.row` is flex, so every
+                  child becomes a column: on a phone this sentence rendered as
+                  three side-by-side blocks reading "…our own figures for
+                  timing. | Answer again | for numbers that are actually
+                  yours." It fitted on one line on a desktop, which is why it
+                  looked correct for as long as nobody opened it on a phone. */}
+              <span>
+                Part of this link was not readable, so we used our own figures for{" "}
+                {p.substituted.join(", ")}. <Link href="/buy/start" className="c-brand">Answer again</Link> for
+                numbers that are actually yours.
+              </span>
             </p>
           ) : null}
 
           {p.assumed?.length ? (
-            <p className="t-xs c-3 row gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
+            <p className="t-xs c-3 row-t gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
               <Ico.info size={12} style={{ flex: "none", marginTop: 2 }} />
               {/* The silence case. `substituted` covers a value we could not
                   use and says so; a value that was never sent said nothing at
@@ -201,9 +209,11 @@ export function Readout(p: Props) {
               {/* The punctuation lives inside the expression: JSX turns the
                   line break after a `{…}` into a space, which rendered
                   "what you set aside each month , so the figures". */}
-              {`You did not tell us ${p.assumed.join(", ")}, so the figures below are typical Georgia ones rather than yours. `}
-              <Link href="/buy/start" className="c-brand">Answer the questions</Link> and every
-              number on this page changes.
+              <span>
+                {`You did not tell us ${p.assumed.join(", ")}, so the figures below are typical Georgia ones rather than yours. `}
+                <Link href="/buy/start" className="c-brand">Answer the questions</Link> and every
+                number on this page changes.
+              </span>
             </p>
           ) : null}
 
@@ -443,6 +453,11 @@ export function Readout(p: Props) {
               here is a planning estimate, not a lending commitment, approval, or valuation. Nothing
               on this page requires you to work with us, and none of it stops working if you don&apos;t.
             </p>
+            <div className="row gap-3 wrap" style={{ marginTop: 14 }}>
+              <Link href="/buy/how" className="t-xs c-3">How this works</Link>
+              <Link href="/privacy" className="t-xs c-3">What we keep</Link>
+              <Link href="/sell" className="t-xs c-3">Selling instead?</Link>
+            </div>
           </div>
         </footer>
       </main>

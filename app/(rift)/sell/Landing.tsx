@@ -255,6 +255,7 @@ export function Landing({ counties }: { counties: string[] }) {
                 <div className="col gap-2">
                   <div className="kicker c-4">Rift</div>
                   <Link href="/book?v=sell" className="t-sm c-3">Book fifteen minutes</Link>
+                  <Link href="/privacy" className="t-sm c-3">What we keep</Link>
                   <Link href="/studio" className="t-sm c-3">Sign in</Link>
                 </div>
               </div>
