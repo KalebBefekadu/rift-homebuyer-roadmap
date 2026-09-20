@@ -8,7 +8,24 @@ export const metadata: Metadata = {
   description: "Seven questions. No account, and you keep the result.",
 };
 
-export const dynamic = "force-dynamic";
+/**
+ * Cached, not dynamic.
+ *
+ * This page renders the same thing for everybody: the funnel definition. The
+ * only per-visitor part is `Assessment`, a client component that reads the
+ * URL in the browser — nothing about the server render varies by who is
+ * asking. It was `force-dynamic` anyway, which cost every visitor a full
+ * render on the one page where the product first asks for something: about
+ * 1.7 seconds to first byte, against 0.19 for the landing page they arrived
+ * from, on a funnel whose own copy says people leave after two.
+ *
+ * Correctness is not traded for it. `publishQuestions` calls
+ * `revalidatePath("/{side}/start")`, so an edit in Studio invalidates this the
+ * moment it is published; the window below is the safety net for anything
+ * that changes the funnel without going through that action, not the
+ * mechanism.
+ */
+export const revalidate = 300;
 
 /**
  * The assessment.

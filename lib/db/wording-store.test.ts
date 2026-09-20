@@ -104,3 +104,26 @@ describe("the round trip", () => {
     expect(own.options?.[0]?.label.endsWith("!")).toBe(true);
   });
 });
+
+describe("publishing invalidates the page it changes", () => {
+  /* /buy/start and /sell/start are cached now — they render the same funnel
+     for everybody, and paying a dynamic render on the page where the product
+     first asks for something cost about 1.7 seconds against 0.19 for the
+     landing page people arrive from.
+     
+     That trade is only safe because publishing revalidates them. Without this
+     call the editor appears to work, reports success, writes the version —
+     and the questions a visitor reads keep saying the old thing for five
+     minutes, which is exactly long enough for the agent to conclude the
+     feature is broken, or worse, to not notice. */
+  const actions = readFileSync("app/(studio)/studio/actions.ts", "utf8");
+  const body = actions.slice(actions.indexOf("export async function publishQuestions"));
+
+  it("revalidates the assessment page for the side it published", () => {
+    expect(body).toContain("revalidatePath(`/${side}/start`)");
+  });
+
+  it("and the page the agent is looking at", () => {
+    expect(body).toContain('revalidatePath("/studio/questions")');
+  });
+});
