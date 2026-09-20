@@ -691,6 +691,9 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
           /* Linked when there is an assessment to link to, and honestly
              unlinked when there is not. */
           assessmentId: assessmentRef.current ?? "",
+          /* The handle erasure keys on. Without it a lead captured with no
+             assessment behind it cannot be found by "delete all of it". */
+          sessionId: sessionId(),
           email: email.trim(),
           lead: { side, completion: 1, source: "readout", ...lead },
           deliver: { shareUrl: url, cashToClose, gap, county },

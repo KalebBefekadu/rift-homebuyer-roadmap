@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import { track, useTrack, flush } from "@/lib/rift/track";
 import { translator, ETHIOPIC_STACK, isLocale } from "@/lib/core/i18n";
+import { sessionId } from "@/lib/rift/session";
 
 /**
  * The consultation booking.
@@ -79,6 +80,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           assessmentId: q.get("a") ?? "",
+          sessionId: sessionId(),
           name, email, phone,
           phoneConsent: consent,
           lead: { side, timing: q.get("t") ?? "", completion: 1, source: "booking" },

@@ -9,6 +9,7 @@ import {
 import { TrustLadder } from "@/components/rift/Trust";
 import { money, type SellerInputs, type RepairItem, type UnclaimedItem } from "@/lib/core/compute";
 import type { Readout as ReadoutModel } from "@/lib/core/results";
+import { sessionId } from "@/lib/rift/session";
 
 const VERDICT: Record<RepairItem["verdict"], { c: string; l: string }> = {
   "pays-back": { c: "chip-pos", l: "Worth doing" },
@@ -76,6 +77,10 @@ export function Readout({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           assessmentId: "",
+          /* This readout never links an assessment, so the session is the
+             ONLY thing joining this lead to the person who can ask for it to
+             be deleted. */
+          sessionId: sessionId(),
           email,
           lead: {
             side: "sell",

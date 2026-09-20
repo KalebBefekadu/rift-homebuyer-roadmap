@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { Client } from "pg";
 
 /**
@@ -230,5 +231,48 @@ describe("the erasure code still does all of that", () => {
 
   it("looks leads up by session as well as by assessment", () => {
     expect(forgetBody).toContain('.eq("session_id", sessionId)');
+  });
+});
+
+describe("every capture surface hands over a session", () => {
+  /* The erasure fix is worth exactly as much as this. A lead reaches
+     rift_leads.session_id only if the page that captured it sent one, and a
+     capture form added later that forgets is invisible: it stores the person
+     perfectly and quietly makes them impossible to delete. Nothing about that
+     looks wrong from any direction — which is why it is a test rather than a
+     convention. */
+  function tsxFiles(dir: string): string[] {
+    let out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) out = out.concat(tsxFiles(full));
+      else if (entry.endsWith(".tsx") || entry.endsWith(".ts")) out.push(full);
+    }
+    return out;
+  }
+
+  const callers = ["app/(rift)", "components/rift"]
+    .flatMap(tsxFiles)
+    .filter((f) => readFileSync(f, "utf8").includes('"/api/capture"'));
+
+  it("finds the capture forms", () => {
+    /* Four today: the buyer readout, the seller readout, /book, and the
+       abroad readout. If this drops, a form was removed or renamed and the
+       assertion below has stopped covering it. */
+    expect(callers.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("sends sessionId from each of them", () => {
+    const silent = callers.filter((f) => {
+      const src = readFileSync(f, "utf8");
+      const at = src.indexOf('"/api/capture"');
+      /* The body follows the URL closely; a generous window rather than a
+         parse, because the shape of these calls varies. */
+      return !/sessionId:\s*sessionId\(\)/.test(src.slice(at, at + 1600));
+    });
+    expect(
+      silent,
+      "a lead captured without a session id cannot be found by \"delete all of it\"",
+    ).toEqual([]);
   });
 });

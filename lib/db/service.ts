@@ -134,3 +134,37 @@ export async function currentAgentId(): Promise<string | null> {
   return agentId;
 }
 
+/**
+ * The agent's own email address.
+ *
+ * Read through the service client rather than from a session, because the
+ * caller is `/api/capture` — an anonymous stranger's request, with nobody
+ * signed in. There is one agent (see `currentAgentId` above, which refuses
+ * outright when that stops being true), so this is his address.
+ *
+ * Cached alongside the id and on the same terms: a success is kept, an
+ * absence is not. Returns null rather than throwing, so a deployment with no
+ * database sends no alert instead of failing a capture — the lead is worth
+ * more than the notification about it.
+ */
+let agentEmail: string | null = null;
+
+export async function currentAgentEmail(): Promise<string | null> {
+  if (agentEmail) return agentEmail;
+
+  const id = await currentAgentId();
+  if (!id) return null;
+
+  const db = serviceClient();
+  if (!db) return null;
+
+  const query = Promise.resolve(db.from("rift_agents").select("email").eq("id", id).maybeSingle());
+  const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+  if (timedOut || !result || result.error) return null;
+
+  const email = (result.data as { email?: string } | null)?.email;
+  if (!email) return null;
+
+  agentEmail = email;
+  return agentEmail;
+}

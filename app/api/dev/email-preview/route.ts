@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildReadout, buildTouch, buildResume } from "@/lib/db/email";
+import { buildReadout, buildTouch, buildResume, buildNewLead } from "@/lib/db/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
  *   /api/dev/email-preview?type=resume&last=1
  *   /api/dev/email-preview?type=readout-sell
  *   /api/dev/email-preview?type=readout-underwater
+ *   /api/dev/email-preview?type=new-lead&band=now
  */
 export async function GET(req: Request) {
   if (process.env.NODE_ENV === "production") {
@@ -33,7 +34,29 @@ export async function GET(req: Request) {
   /* Deliberately awkward sample data: a name with an apostrophe and one with a
      script tag, so the escaping is visible rather than assumed. */
   const built =
-    type === "touch"
+    type === "new-lead"
+      ? buildNewLead({
+          to: "kaleb@example.com",
+          name: "Marcus Webb",
+          email: "marcus@example.com",
+          phone: "(404) 555-0142",
+          side: "buy",
+          band: (url.searchParams.get("band") as "now" | "soon" | "later" | "nurture") ?? "now",
+          score: 82,
+          headline: "Ready now, fully answered, and reachable",
+          action: "Call today — he named a co-decider, so ask who else is on the call.",
+          signals: [
+            { label: "Timing", points: 30, note: "Wants to move in under three months" },
+            { label: "Completion", points: 12, note: "Answered every question" },
+            { label: "Co-buyer", points: -4, note: "Named someone else who decides" },
+          ],
+          timing: "0-3 months",
+          county: "DeKalb",
+          value: 325_000,
+          source: url.searchParams.get("source") ?? "readout",
+          studioUrl: `${url.origin}/studio`,
+        })
+      : type === "touch"
       ? buildTouch({
           to: "maya@example.com",
           name: "Maya O'Brien",

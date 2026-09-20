@@ -3,7 +3,9 @@ import { limited, readJson } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
-import { sendReadout } from "@/lib/db/email";
+import { sendReadout, sendNewLead } from "@/lib/db/email";
+import { currentAgentEmail } from "@/lib/db/service";
+import { siteUrl } from "@/lib/core/site";
 import { book } from "@/lib/db/calendar";
 import type { LeadInput } from "@/lib/core/lead";
 
@@ -58,7 +60,10 @@ export async function POST(req: Request) {
     }, { status: 400 });
   }
 
-  const lead = (b.lead ?? {}) as Partial<LeadInput>;
+  const lead = (b.lead ?? {}) as Partial<LeadInput> & { county?: unknown };
+  const wantsDeliver = (b.deliver ?? {}) as { county?: unknown };
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 60) : "");
+  const county = str(wantsDeliver.county) || str(lead.county) || str(b.county);
   const scored: LeadInput = {
     side: lead.side === "sell" ? "sell" : "buy",
     timing: typeof lead.timing === "string" ? lead.timing : "",
@@ -105,6 +110,55 @@ export async function POST(req: Request) {
   /* Holding the slot happens after the lead is stored and is reported
      separately. A calendar outage must not lose the relationship — the readout
      and the contact details are the durable part; a time can be rearranged. */
+  /* The agent finds out.
+     
+     Nothing did this. Studio ranked leads, timed an SLA against them and
+     computed the cadence they were owed — all of which needed Kaleb to be
+     looking at the screen already. A `now` band lead carries a fifteen-minute
+     reply target, and the only thing that could start that clock ticking in
+     his awareness was him happening to open a browser.
+     
+     After the lead is stored, never before, and its failure is reported
+     rather than raised: the relationship is the durable thing here and an
+     unsent alert must not cost it. Awaited rather than fired and forgotten,
+     because on a serverless runtime the response ends the invocation and a
+     floating promise is simply dropped — which would have made this exactly
+     the kind of thing that looks wired up and never runs. */
+  let alerted: string | undefined;
+  if (!("skipped" in r)) {
+    const to = await currentAgentEmail();
+    if (!to) {
+      alerted = "no agent address";
+    } else {
+      const base = siteUrl();
+      const sent = await sendNewLead({
+        to,
+        name: name || undefined,
+        email: email || undefined,
+        phone: phone && phoneTicked ? phone : undefined,
+        side: scored.side,
+        band: r.data.score.band,
+        score: r.data.score.score,
+        headline: r.data.score.headline,
+        action: r.data.score.action,
+        signals: r.data.score.signals,
+        timing: scored.timing,
+        /* From wherever the caller put it. The buyer readout sends it inside
+           `deliver`, the seller readout inside `lead`, and /book not at all —
+           reading only a top-level `b.county` would have produced an alert
+           subject with the county silently missing from every one of them. */
+        county: county || undefined,
+        value: scored.value,
+        source: scored.source,
+        studioUrl: `${base ?? ""}/studio/lead/${r.data.id}`,
+      });
+      alerted = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
+      if (!sent.ok) {
+        captureOpError(new Error(sent.error), { op: "email.newLead", extra: { band: r.data.score.band } });
+      }
+    }
+  }
+
   let booking: string | undefined;
   const slotStart = typeof b.slotStart === "string" ? b.slotStart : "";
   if (slotStart && email) {
@@ -153,5 +207,5 @@ export async function POST(req: Request) {
 
   if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason, delivery, booking });
 
-  return NextResponse.json({ ok: true, band: r.data.score.band, delivery, booking });
+  return NextResponse.json({ ok: true, band: r.data.score.band, delivery, booking, alerted });
 }

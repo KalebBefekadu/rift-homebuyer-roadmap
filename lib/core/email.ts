@@ -18,6 +18,7 @@
  */
 
 import { money } from "./compute";
+import { BAND_LABEL, type Band, type Signal } from "./lead";
 
 export interface ReadoutEmail {
   to: string;
@@ -107,6 +108,121 @@ export function buildReadout(r: ReadoutEmail): { subject: string; html: string }
   <p style="font-size:12px;color:#888">
     You are getting this because you asked for your readout at Rift. We do not run a newsletter
     and we do not sell anything on. <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a>.
+  </p>
+</div>`.trim();
+
+  return { subject, html };
+}
+
+export interface NewLeadEmail {
+  /** Kaleb's own address. */
+  to: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  side: "buy" | "sell";
+  band: Band;
+  score: number;
+  /** The scorer's own one-line reason, and what it says to do about it. */
+  headline: string;
+  action: string;
+  signals: Signal[];
+  /** Verbatim, in their words. Empty when the funnel never asked. */
+  timing: string;
+  county?: string;
+  /** Purchase price or estimated sale price. */
+  value: number;
+  /** Where they came from — "abroad" means a different conversation entirely. */
+  source: string;
+  /** Straight to this person in Studio. */
+  studioUrl: string;
+}
+
+/* How long the agent has, by band. Mirrors `sla()` in lib/core/lead.ts, which
+   takes a whole lead rather than a band and cannot be reached from here
+   without one. */
+const REPLY_WITHIN: Record<Band, string> = {
+  now: "within 15 minutes",
+  soon: "within 4 hours",
+  later: "within a day",
+  nurture: "within a day",
+};
+
+/**
+ * "Somebody just finished a readout."
+ *
+ * Nothing told the agent a lead had arrived. Studio ranked them, timed the
+ * SLA against them and showed the cadence they were owed — all of which
+ * required him to already be looking at the screen. A stranger who handed
+ * over their savings balance and their timeline at eleven at night sat
+ * invisible until he next opened a browser, while a `now` band lead has a
+ * fifteen-minute target on it.
+ *
+ * So this carries the facts rather than a notification. "You have a new lead"
+ * sends him to a laptop to find out whether it mattered; the band, the
+ * figure, their own words about timing and the two strongest signals let him
+ * decide from a phone screen, which is where he actually is.
+ *
+ * It refuses to send without a way to reach the person, and that is not a
+ * validation detail. An alert about somebody who left no address is an
+ * interruption with no available action at the end of it, and an alert stream
+ * that is sometimes not worth opening stops being opened.
+ */
+export function buildNewLead(l: NewLeadEmail): { subject: string; html: string } | null {
+  const reachable: [string, string][] = [];
+  if (l.email) reachable.push(["Email", l.email]);
+  if (l.phone) reachable.push(["Phone", l.phone]);
+  if (reachable.length === 0) return null;
+
+  const who = l.name ? escapeHtml(l.name) : "Someone";
+  const where = l.county ? ` in ${escapeHtml(l.county)} County` : "";
+  const doing = l.side === "buy" ? "buying" : "selling";
+
+  /* Abroad is not a channel, it is a different conversation: no Georgia
+     Dream, no Social Security number, and a wire from another country. Worth
+     the two words in the subject line. */
+  const abroad = l.source === "abroad";
+
+  const subject = `${BAND_LABEL[l.band]}: ${who}, ${doing}${where}${abroad ? " — from abroad" : ""}`;
+
+  const top = l.signals
+    .slice()
+    .sort((a, b) => Math.abs(b.points) - Math.abs(a.points))
+    .slice(0, 3);
+
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:6px 0;color:#666;font-size:13px;width:130px;vertical-align:top">${label}</td>
+      <td style="padding:6px 0;font-size:14px">${value}</td>
+    </tr>`;
+
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:13px;color:#666;margin:0 0 4px">${BAND_LABEL[l.band]} · score ${l.score} · reply ${REPLY_WITHIN[l.band]}</p>
+  <p style="font-size:17px;font-weight:600;margin:0 0 14px">${escapeHtml(l.headline)}</p>
+
+  <table style="border-collapse:collapse;width:100%">
+    ${row("Who", who)}
+    ${reachable.map(([label, value]) => row(label, escapeHtml(value))).join("")}
+    ${row("Doing", `${doing}${where}${abroad ? " — buying from outside the U.S." : ""}`)}
+    ${l.value > 0 ? row(l.side === "buy" ? "Target price" : "Sale price", money(l.value)) : ""}
+    ${l.timing ? row("Their timing", `&ldquo;${escapeHtml(l.timing)}&rdquo;`) : ""}
+  </table>
+
+  ${top.length ? `<p style="font-size:13px;color:#666;margin:16px 0 6px">What moved the ranking</p>
+  <ul style="font-size:13px;color:#444;margin:0;padding-left:18px">
+    ${top.map((s) => `<li>${escapeHtml(s.label)} — ${escapeHtml(s.note)}</li>`).join("")}
+  </ul>` : ""}
+
+  <p style="font-size:15px;margin:18px 0">
+    <strong>${escapeHtml(l.action)}</strong>
+  </p>
+  <p style="font-size:15px">
+    <a href="${l.studioUrl}" style="color:#e8442a">Open them in Studio</a>
+  </p>
+  <p style="font-size:12px;color:#888">
+    Sent because a readout was completed. The cadence has already started; replying in Studio
+    stops it.
   </p>
 </div>`.trim();
 

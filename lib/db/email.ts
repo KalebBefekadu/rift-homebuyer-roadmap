@@ -56,14 +56,14 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildResume,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail,
+  buildReadout, buildTouch, buildResume, buildNewLead,
+  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
 export {
-  buildReadout, buildTouch, buildResume,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail,
+  buildReadout, buildTouch, buildResume, buildNewLead,
+  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail,
 };
 
 /**
@@ -109,4 +109,29 @@ export async function sendResume(r: ResumeEmail): Promise<SendResult> {
     htmlContent: html,
     tags: ["recovery"],
   }, "email.resume");
+}
+
+/**
+ * The alert to the agent.
+ *
+ * Tagged separately so that the day this becomes noisy, it can be silenced
+ * without touching anything a client receives — and so a bounce on Kaleb's own
+ * address is distinguishable from a bounce on a stranger's, which is a very
+ * different problem.
+ *
+ * No unsubscribe footer: this is not marketing to a contact, it is the product
+ * telling its operator that somebody is waiting. Brevo's `{{ unsubscribe }}`
+ * on it would let one misclick stop every lead alert.
+ */
+export async function sendNewLead(l: NewLeadEmail): Promise<SendResult> {
+  const built = buildNewLead(l);
+  if (!built) {
+    return { ok: true, skipped: true, reason: "no way to reach this person — an alert with no action in it" };
+  }
+  return send({
+    to: [{ email: l.to, name: "Kaleb" }],
+    subject: built.subject,
+    htmlContent: built.html,
+    tags: ["agent-alert"],
+  }, "email.newLead");
 }
