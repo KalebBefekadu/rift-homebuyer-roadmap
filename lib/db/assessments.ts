@@ -322,50 +322,32 @@ export async function readByToken(
  */
 export async function readFunnel(side: "buy" | "sell"): Promise<DbResult<{ funnel: Funnel; source: "database" | "built-in" }>> {
   const fallback = side === "buy" ? BUY_FUNNEL : SELL_FUNNEL;
-  const db = serviceClient();
-  if (!db) return done({ funnel: fallback, source: "built-in" as const });
-
-  const agent_id = await currentAgentId();
-  if (!agent_id) return done({ funnel: fallback, source: "built-in" as const });
 
   try {
-    /* The assessment must render. It is the second most important page in the
-       product and the fallback IS the built-in funnel — the one the compute
-       engine was designed against — so a hang has an obviously right answer
-       and was instead producing a thirty-second blank page.
+    /* One round trip, not two.
        
-       Verified by freezing the database: every other public page survived and
-       this one did not, because it was the only read still unbounded. */
-    const query = Promise.resolve(
-      db.from("rift_funnels")
-        .select("id,version")
-        .eq("agent_id", agent_id)
-        .eq("side", side)
-        .maybeSingle(),
-    );
-    const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
-    if (timedOut || !result) return done({ funnel: fallback, source: "built-in" as const });
-
-    const { data, error } = result;
-    if (error) return failed(error.message);
-    if (!data) return done({ funnel: fallback, source: "built-in" as const });
-
-    /* The agent's own words over the code's own structure.
+       This used to look up the rift_funnels row purely to decide whether to
+       carry on, and then `readWording` resolved the same funnel and its
+       version all over again. Two sequential queries to learn one thing, on
+       the page where a stranger first meets the product — /buy/start was
+       spending about 1.7 seconds before its first byte, and the second query
+       was the redundant half of it.
        
-       This used to return the built-in funnel and ignore what it had just
-       read, with a note saying reading a stored copy "would only add a way
-       for the stored copy to drift from the engine". That was the right
-       worry and the wrong conclusion: the fix is not to refuse to read, it is
-       to make drift impossible. `applyWording` takes the title, the note, the
-       field label and the option LABELS, and reads no structural field at
-       all — not the key, not the type, not what it is bound to, not the
-       machine value behind an option. The engine's contract is unreachable
-       from anything stored. */
+       `readWording` already answers both questions: a `skipped` means there is
+       nothing published to read, which is exactly the case the first query
+       existed to detect. */
     const worded = await readWording(side);
     if (!worded.ok || !("data" in worded)) return done({ funnel: fallback, source: "built-in" as const });
 
+    /* The agent's own words over the code's own structure. `applyWording`
+       takes the title, the note, the field label and the option LABELS, and
+       reads no structural field at all — not the key, not the type, not what
+       it is bound to, not the machine value behind an option. The engine's
+       contract is unreachable from anything stored, which is what makes
+       reading this safe where the previous note concluded it was not. */
     return done({ funnel: applyWording(fallback, worded.data), source: "database" as const });
   } catch (e) {
     return failed(e);
   }
 }
+
