@@ -49,6 +49,8 @@ const PAGES: Array<[name: string, path: string]> = [
   ["programs", "/buy/programs"],
   ["unclaimed value", "/sell/unclaimed"],
   ["buy how", "/buy/how"],
+  ["abroad how", "/abroad/how"],
+  ["offer intake", "/offer"],
   ["sell how", "/sell/how"],
   [
     "buyer readout",

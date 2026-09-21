@@ -89,4 +89,8 @@ export const LIMITS = {
   review: { max: 5, windowMs: 60_000 },
   readout: { max: 10, windowMs: 60_000 },
   forget: { max: 10, windowMs: 60_000 },
+  /* Tighter than capture. Each submission writes an offer AND a lead, and
+     every one of them is something a person is expected to read — the cost of
+     abuse here is Kaleb's attention, which does not rate-limit itself. */
+  offer: { max: 4, windowMs: 60_000 },
 } as const;

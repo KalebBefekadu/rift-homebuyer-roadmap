@@ -24,7 +24,7 @@ export default function robots(): MetadataRoute.Robots {
            accident rather than by anybody deciding it. */
         allow: [
           "/", "/abroad", "/abroad/how", "/buy", "/buy/start", "/buy/programs", "/buy/how",
-          "/sell", "/sell/start", "/sell/how", "/sell/unclaimed", "/privacy",
+          "/sell", "/sell/start", "/sell/how", "/sell/unclaimed", "/offer", "/privacy",
         ],
         /* /dev is the development index. It is not secret, but it describes what
            is built and what is only specified, and it is not the product. */

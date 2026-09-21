@@ -356,6 +356,102 @@ and it will be the first one in this document that is worth more than the argume
 `docs/handoff.md` §9 records what the built MVP is and what is not yet true about it, which is
 more useful in the meantime than a score.
 
+## Production parity — what of the 93 actually ships
+
+Recorded 21 September 2026.
+
+**This is not pass five.** Pass five is still not run, for the reason given above: every
+field metric is zero and the benchmark's own rule says nothing over 84 is validated without
+them. Inventing a fifth number today would break that rule while appearing to respect it.
+
+It answers a different question, and one nobody had written down. **Passes three and four
+graded `/prototype`.** The 93 belongs to forty specification screens with invented clients.
+What is deployed at the public URL is a smaller product, and the difference between the two
+had never been stated in one place — so "93" was quietly being read as a description of what
+ships. It was not.
+
+No field data is needed to answer this. Either a route exists in production or it does not.
+
+| # | Criterion | Prototype | Ships | Where the gap is |
+| --- | --- | --- | --- | --- |
+| 1.1 | Value density before capture | 4 | **4** | Four ungated readouts now — buy, sell, abroad, and `/offer` |
+| 1.2 | Differentiation | 4 | **4** | `/buy/programs`, staleness suppression, true cash-to-close |
+| 1.3 | Value ladder | 4 | **4** | Three doors, nothing gated |
+| 1.4 | Delivery integrity | 4 | **4** | Assumptions and failure modes constrained at the database |
+| 1.5 | Entry surfaces and attribution | 3 | **3** | Target is 3. Do not spend here |
+| 1.6 | Speed, recovery, nurture | 4 | **2** | The engine ships and the cron runs. `BREVO_FROM_EMAIL` is unset, so **nothing has ever sent**. A cadence that cannot deliver is a design |
+| 2.1 | Attention triage | 4 | **4** | Today ranks by consequence |
+| 2.2 | Prepare-then-approve | 4 | **3** | Review queue and offer release ship. The offer room does not |
+| 2.3 | Automation depth | 4 | **2** | Same delivery gap as 1.6 |
+| 2.4 | Intake-to-plan cycle | 4 | **4** | `seam.ts` is wired as of today: publishing blocks on undisclosed drift |
+| 2.5 | Never-lose guarantee | 3 | **3** | Needs a failure drill, not a feature |
+| 3.1 | Five questions | 4 | **2** | The prototype's `/app` answers all five. Production has `/plan/<token>` — position and next action, not the other three. **The largest single parity gap in the product** |
+| 3.2 | Ownership | 4 | **4** | Every plan step names an owner; `ownerLabel` knows who is reading |
+| 3.3 | Trust labeling | 4 | **4** | All four states have producers |
+| 3.4 | Mobile completeness | 4 | **4** | Asserted by a Pixel 7 project on every run, not by inspection |
+| 3.5 | Accessibility | 3 | **4** | Raised on evidence, not on machinery: the full WCAG 2.2 AA ruleset over 19 public routes on two viewports, no suppression list, green. The 3 was scored with the note "not tool-audited" — the first audit returned 35 serious failures |
+| 4.1 | Consultation conversion | 4 | **4** | `/book`, blocker-aware |
+| 4.2 | Representation capture | 3 | **1** | Prototype only. There is no column for it, which is why `canPublish` has to assume the agreement exists |
+| 4.3 | Decision support | 3 | **0** | Prototype only. No production surface at all |
+| 4.4 | Offer and negotiation | 4 | **4** | Net-based comparison in Studio, and public intake as of today |
+| 4.5 | Pipeline visibility | 4 | **4** | Stall detection and a weighted forward view |
+| 5.1 | Post-closing continuity | 3 | **3** | Anniversary moments recur indefinitely, keyed so they cannot stop after year one |
+| 5.2 | Referral request mechanics | 4 | **4** | Eight moments, derived from lifecycle, gated behind the private check |
+| 5.3 | Review and reputation | 3 | **3** | The hard half ships. Still no follow-up for somebody who is asked and does not answer |
+| 5.4 | Long-term touches | 3 | **3** | Thirty days, six months, every anniversary |
+| 5.5 | Referral attribution loop | 4 | **3** | `referred_by` links referrer to referred. Nothing counts it on a screen yet |
+
+| Dimension | Prototype (pass four) | Ships today |
+| --- | --- | --- |
+| D1. Front-end value and capture | 28.8 | **26.3** |
+| D2. Agent operating leverage | 19.0 | **16.0** |
+| D3. Client experience clarity | 19.0 | **18.0** |
+| D4. Conversion to sale | 13.5 | **9.8** |
+| D5. Referral and retention | 12.8 | **12.0** |
+| **TOTAL** | **93** | **82** |
+
+**82, against a prototype scoring 93.** That eleven-point gap is the honest measure of how
+much of this product is specification, and it is the most useful number in this file —
+more useful than either score on its own, because it is the only one that says what to
+build next.
+
+### What the gap is actually made of
+
+Three things account for ten of the eleven points.
+
+1. **Nothing has ever sent an email** (1.6 and 2.3, −4.5 between them). `BREVO_FROM_EMAIL`
+   is unset. The nurture engine is complete, the cron runs on schedule, the sequences are
+   designed, the stop conditions work — and every run finds its recipients and delivers
+   nothing. This is not a build task. It is one environment variable and a verified sender,
+   and it is the single cheapest point on this table.
+
+2. **The client answers two of the five questions** (3.1, −2.0). `/plan/<token>` tells
+   somebody where they are and what is next. It does not tell them what their agent is
+   doing, what is approaching, or where to ask for help. The prototype's `/app` answers all
+   five and is the largest piece of specification not yet built.
+
+3. **Two conversion surfaces exist only as prototype** (4.2 and 4.3, −3.8). Representation
+   capture has no column, which is why the publish gate has to assume the agreement exists
+   rather than check it — the one precondition in `canPublish` that is asserted instead of
+   read. Decision support has no production surface at all.
+
+### What this changes about the backlog
+
+The previous backlog said "the prototype is finished and the next move is traffic, not
+features". That is still true of the prototype. It is not true of production, and reading
+the 93 as a production score is what hid the difference.
+
+The three lowest, as the rule requires:
+
+1. **4.3 Decision support (0).** No production surface. The prototype's decision rooms are
+   the specification.
+2. **4.2 Representation capture (1).** Needs a column and a lifecycle gate before it can be
+   a gate at all.
+3. **1.6 / 2.3 delivery (2).** Not a build. A sender address.
+
+Two of those three are features. One is a variable that would take an afternoon and move
+the total more than either.
+
 ## How to run this benchmark
 
 1. Score each criterion 0 to 4 against the ladder, citing the document section or prototype screen that earns the score.
