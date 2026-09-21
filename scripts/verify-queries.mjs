@@ -117,6 +117,81 @@ await check("startAssessment lookup", () => db.from("rift_assessments")
 await check("attribution lookup", () => db.from("rift_attributions")
   .select("session_id,visits").eq("session_id", "none").maybeSingle());
 
+/* ------------------------------------------------------------------ *
+ * Added 21 September 2026, with the five features built that day.
+ *
+ * Every one of these is a hand-written column list against a table that did
+ * not exist this morning. They are exactly the code this script exists for:
+ * TypeScript cannot check a string, and a wrong column here fails at runtime
+ * with a message about a schema cache, taking a page down rather than a query.
+ * ------------------------------------------------------------------ */
+
+await check("finishedRelationships (terminal stages)", () => db.from("rift_leads")
+  .select("id,stage").in("stage", ["Closed", "Lost"]).limit(5));
+
+await check("finishedRelationships stage history", () => db.from("rift_lead_notes")
+  .select("lead_id,from_stage,to_stage").eq("kind", "stage")
+  .in("lead_id", ["00000000-0000-4000-8000-000000000000"]).limit(5));
+
+await check("liveRelationships (lead_input jsonb)", () => db.from("rift_leads")
+  .select("name,stage,lead_input")
+  .is("archived_at", null).not("stage", "is", null)
+  .not("stage", "in", "(Closed,Lost)").limit(5));
+
+await check("representationOf", () => db.from("rift_leads")
+  .select("representation,representation_signed_on,representation_expires_on")
+  .eq("id", "00000000-0000-4000-8000-000000000000").maybeSingle());
+
+await check("lapsingAgreements", () => db.from("rift_leads")
+  .select("id,name,side,representation,representation_signed_on,representation_expires_on")
+  .is("archived_at", null).eq("representation", "signed")
+  .not("representation_expires_on", "is", null)
+  .lte("representation_expires_on", "2026-12-31")
+  .order("representation_expires_on", { ascending: true }).limit(5));
+
+await check("referralTokenFor", () => db.from("rift_leads")
+  .select("referral_token").eq("id", "00000000-0000-4000-8000-000000000000").maybeSingle());
+
+await check("referralLinks (who they sent)", () => db.from("rift_leads")
+  .select("id,name,stage").eq("referred_by", "00000000-0000-4000-8000-000000000000").limit(5));
+
+await check("firstRefFor", () => db.from("rift_attributions")
+  .select("first_ref").eq("session_id", "none").maybeSingle());
+
+await check("resolveReferrer by client token", () => db.from("rift_leads")
+  .select("id,session_id").eq("referral_token", "none").maybeSingle());
+
+await check("resolveReferrer by share token", () => db.from("rift_readouts")
+  .select("assessment_id").eq("share_token", "none").maybeSingle());
+
+await check("decisionsFor", () => db.from("rift_decisions")
+  .select("id,kind,question,context,decide_by,released_at,decided_at,chosen_option_id,outcome_note")
+  .eq("lead_id", "00000000-0000-4000-8000-000000000000")
+  .order("created_at", { ascending: false }).limit(5));
+
+await check("releasedFor (client read)", () => db.from("rift_decisions")
+  .select("id,kind,question,context,decide_by,released_at,decided_at,chosen_option_id,outcome_note")
+  .eq("lead_id", "00000000-0000-4000-8000-000000000000")
+  .not("released_at", "is", null)
+  .order("created_at", { ascending: false }).limit(5));
+
+await check("decision options", () => db.from("rift_decision_options")
+  .select("decision_id,id,label,detail,amount_cents,amount_label,upside,downside,sort")
+  .in("decision_id", ["00000000-0000-4000-8000-000000000000"])
+  .order("sort", { ascending: true }).limit(5));
+
+await check("referralQueue lifecycle columns", () => db.from("rift_leads")
+  .select("id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,referred_by")
+  .is("archived_at", null).limit(5));
+
+await check("readoutsFor (was rift_leads.figure_id, which does not exist)", () =>
+  db.from("rift_readouts").select("assessment_id")
+    .in("assessment_id", ["00000000-0000-4000-8000-000000000000"]).limit(5));
+
+await check("referral moments", () => db.from("rift_referral_moments")
+  .select("lead_id,moment_id,occurrence,state")
+  .in("lead_id", ["00000000-0000-4000-8000-000000000000"]).limit(5));
+
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);
 }

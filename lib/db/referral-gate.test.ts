@@ -31,7 +31,7 @@ const NOW = new Date("2026-09-21T12:00:00Z");
 const closedLead = (over: Record<string, unknown> = {}) => ({
   id: "l1", name: "A Client", email: "a@example.com", side: "buy",
   stage: "Closed", closed_on: "2024-01-01", mood: null,
-  client_token: "tok", figure_id: "fig", referred_by: null,
+  client_token: "tok", assessment_id: "assess-1", referred_by: null,
   ...over,
 });
 
@@ -109,7 +109,7 @@ describe("the queue", () => {
         closedLead({ id: "l1", mood: "good" }),
         /* Brand new: no readout, no plan, not closed. Nothing is due. */
         { id: "l2", name: "New", email: null, side: "buy", stage: "Exploring",
-          closed_on: null, mood: null, client_token: null, figure_id: null, referred_by: null },
+          closed_on: null, mood: null, client_token: null, assessment_id: null, referred_by: null },
       ] },
       rift_referral_moments: { data: [] },
     });

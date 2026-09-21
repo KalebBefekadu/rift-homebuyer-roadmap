@@ -35,7 +35,7 @@ const STATES = new Set<MomentState>(["waiting", "due", "sent", "acted", "decline
  * that has no business travelling into a referral calculation.
  */
 export const LIFECYCLE_COLUMNS =
-  "id,name,email,side,stage,closed_on,mood,mood_at,client_token,figure_id,referred_by" as const;
+  "id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,referred_by" as const;
 
 export interface Relationship {
   leadId: string;
@@ -48,16 +48,55 @@ export interface Relationship {
   todo: MomentStatus[];
 }
 
-function lifecycleOf(row: Record<string, unknown>): Lifecycle {
+/**
+ * @param withReadout assessment ids that have a readout on file. Passed in
+ *   rather than read per row, because "has this person been given their
+ *   numbers" is one query for the whole queue and five hundred otherwise.
+ */
+function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Lifecycle {
+  const assessmentId = (row.assessment_id as string | null) ?? null;
   return {
     stage: (row.stage as string | null) ?? "",
     closedOn: (row.closed_on as string | null) ?? null,
-    /* A recorded figure is the readout: it is what the assessment produced and
-       what the person was shown. */
-    readoutDelivered: row.figure_id != null,
+    /* Whether a readout exists for their assessment — it is what the
+       assessment produced and what the person was shown.
+
+       This asked for `rift_leads.figure_id`, WHICH DOES NOT EXIST. `figure_id`
+       is a column on rift_review_items; the intent was copied from there onto
+       the wrong table. PostgREST answers an unknown column with an error about
+       a schema cache, so every read in this module failed and /studio/referrals
+       was broken from the moment its migration applied. Nothing caught it: the
+       fake database used by the unit tests does not validate column names, and
+       the screen had never been opened against a real schema.
+
+       `scripts/verify-queries.mjs` caught it the first time these queries were
+       added to it. That is the entire reason that script exists — a column list
+       is a STRING, and neither TypeScript nor the build can check one. */
+    readoutDelivered: assessmentId != null && withReadout.has(assessmentId),
     planPublished: row.client_token != null,
     mood: ((row.mood as string | null) ?? null) as Mood,
   };
+}
+
+/** Which of these assessments produced a readout. One query, never per row. */
+async function readoutsFor(
+  db: NonNullable<ReturnType<typeof serviceClient>>,
+  assessmentIds: string[],
+): Promise<Set<string>> {
+  const out = new Set<string>();
+  const ids = assessmentIds.filter(Boolean);
+  if (!ids.length) return out;
+
+  const res = await boundedRead(
+    db.from("rift_readouts").select("assessment_id").in("assessment_id", ids).limit(1000),
+    "the delivered readouts",
+  );
+  if (!res.ok || !("data" in res)) return out;
+
+  for (const r of res.data as { assessment_id: string | null }[]) {
+    if (r.assessment_id) out.add(r.assessment_id);
+  }
+  return out;
 }
 
 const shapeRecorded = (r: Record<string, unknown>): RecordedMoment => ({
@@ -98,7 +137,8 @@ export async function momentsForLead(
     ? (decided.data as Record<string, unknown>[]).map(shapeRecorded)
     : [];
 
-  const life = lifecycleOf(row);
+  const withReadout = await readoutsFor(db, [(row.assessment_id as string | null) ?? ""]);
+  const life = lifecycleOf(row, withReadout);
   const statuses = momentsFor(life, recorded, now);
 
   return done({
@@ -150,10 +190,15 @@ export async function referralQueue(now: Date = new Date()): Promise<DbResult<Re
     }
   }
 
+  /* One query for the whole queue, not one per relationship. */
+  const withReadout = await readoutsFor(
+    db, rows.map((r) => (r.assessment_id as string | null) ?? ""),
+  );
+
   const out: Relationship[] = [];
   for (const row of rows) {
     const id = row.id as string;
-    const life = lifecycleOf(row);
+    const life = lifecycleOf(row, withReadout);
     const statuses = momentsFor(life, byLead.get(id) ?? [], now);
     const todo = actionable(statuses);
     if (todo.length === 0) continue;
