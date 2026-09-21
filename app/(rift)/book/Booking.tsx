@@ -89,6 +89,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
       });
       const d = await res.json();
       if (!d.ok && d.error) { setState("error"); setError(d.error); return; }
+      /* This rendered "done" over a request that stored nothing, so somebody
+         who had just asked the agent for a call believed they had, and he never
+         heard of it. Happened on every cold start. */
+      if (d.stored === false) {
+        setState("error");
+        setError("We could not save your request just now, so it has not reached Kaleb. Please try again in a minute.");
+        return;
+      }
       track({ name: "booking_complete", side, meta: { live } });
       flush();
       setState("done");

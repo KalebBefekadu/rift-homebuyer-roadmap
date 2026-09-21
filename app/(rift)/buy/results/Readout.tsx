@@ -708,6 +708,8 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
       }).then((x) => x.json());
 
       if (res?.error) { setState("error"); return; }
+      /* Stored nothing. "Noted" would be a lie — see `stored` in /api/capture. */
+      if (res?.stored === false) { setState("error"); return; }
       track({ name: "email_capture", side, meta: { delivered: res?.delivery === "sent" } });
       /* Three outcomes, three messages. "Check your inbox" for a message that
          was never sent is the kind of small lie that costs more than the

@@ -91,6 +91,10 @@ let missingUntil = 0;
 
 const MISSING_RETRY_MS = 10_000;
 
+/** The second try's deadline. Long enough to absorb a cold connection, short
+    enough to stay well inside the six-second write deadline behind it. */
+const COLD_START_MS = 3_500;
+
 export async function currentAgentId(): Promise<string | null> {
   if (agentId) return agentId;
   if (Date.now() < missingUntil) return null;
@@ -110,14 +114,35 @@ export async function currentAgentId(): Promise<string | null> {
      reason rather than pretending the write happened. */
   /* Two, not one. Asking for a single row cannot distinguish "the agent" from
      "the first of several", and that distinction is the whole point. */
-  const query = Promise.resolve(db.from("rift_agents").select("id").limit(2));
-  const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+  const ask = () => Promise.resolve(db.from("rift_agents").select("id").limit(2));
 
-  if (timedOut || !result) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
+  /* A SLOW ANSWER IS NOT "NO AGENT".
+
+     This used to treat a timeout exactly like an empty table: return null AND
+     remember the absence for ten seconds. The first query on a freshly started
+     serverless instance routinely takes longer than the two-second read
+     deadline — it is paying for the connection — so every cold start began
+     with ten seconds in which this function told every caller the agent did
+     not exist. Every write in the product gates on it. A lead captured in that
+     window reported `skipped`, which the readout renders as "email is not
+     switched on yet", and the stranger's address was simply not stored. An
+     offer submitted in it was refused with "no agent row exists yet". Found on
+     production, by a health check that had just been taught to stop lying,
+     returning 503 once and then 200 eight times in a row.
+
+     So: one retry with a longer deadline to absorb the connection cost, and a
+     timeout or a transport error is NEVER remembered. Only a definite answer —
+     the table is genuinely empty — is cached, because only that is a fact. */
+  let attempt = await withTimeout(ask(), READ_DEADLINE_MS, null);
+  if (attempt.timedOut) attempt = await withTimeout(ask(), COLD_START_MS, null);
+
+  const result = attempt.value;
+  if (attempt.timedOut || !result) return null;
 
   const { data, error } = result;
+  if (error) return null;
   const rows = (data ?? []) as { id: string }[];
-  if (error || rows.length === 0) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
+  if (rows.length === 0) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
   if (rows.length > 1) {
     /* Not cached, and not retried on a short timer either — this is a

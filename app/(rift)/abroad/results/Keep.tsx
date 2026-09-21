@@ -83,7 +83,7 @@ export function Keep({
       }).then((x) => x.json());
 
       track({ name: "email_capture", side: "buy", meta: { delivered: res?.delivery === "sent" } });
-      if (!res?.ok) { setState("err"); return; }
+      if (!res?.ok || res?.stored === false) { setState("err"); return; }
       /* Three outcomes, kept apart. "Saved but not sent" is the live state of
          this product until Brevo has a verified sender, and telling somebody
          their email is on its way when it is not is the one thing this page

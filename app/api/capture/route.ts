@@ -205,7 +205,15 @@ export async function POST(req: Request) {
     delivery = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
   }
 
-  if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason, delivery, booking });
+  /* `stored` says, in one word, whether the person's details now exist on our
+     side. `skipped` alone did not: the forms read `ok: true` and rendered
+     "Noted, but email is not switched on yet" over a capture that had stored
+     nothing — which happened on every cold start, while the agent lookup was
+     timing out and being remembered as absent. A form may say "noted" only
+     when this is true. */
+  if ("skipped" in r) {
+    return NextResponse.json({ ok: true, skipped: true, stored: false, reason: r.reason, delivery, booking });
+  }
 
-  return NextResponse.json({ ok: true, band: r.data.score.band, delivery, booking, alerted });
+  return NextResponse.json({ ok: true, stored: true, band: r.data.score.band, delivery, booking, alerted });
 }

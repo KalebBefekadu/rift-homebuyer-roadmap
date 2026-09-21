@@ -101,7 +101,8 @@ export function Readout({
         }),
       }).then((x) => x.json());
 
-      if (res?.error) return "error";
+      /* `stored: false` means nothing was kept on our side — never "noted". */
+      if (res?.error || res?.stored === false) return "error";
       track({ name: "email_capture", side: "sell", meta: { delivered: res?.delivery === "sent" } });
       setSaved(true);
       if (res?.delivery === "sent") return "sent";
