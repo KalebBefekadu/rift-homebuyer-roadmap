@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import {
   netOf, rankOffers, headlineTrap, gapsIn, anyReleased,
@@ -174,5 +175,34 @@ describe("release", () => {
        "visible" would put an unreviewed offer in front of somebody. */
     expect(anyReleased([offer(), offer({ id: "o2" })])).toBe(false);
     expect(anyReleased([offer({ releasedAt: "2026-09-20T00:00:00Z" })])).toBe(true);
+  });
+});
+
+/**
+ * The same facts reach both readers.
+ *
+ * `gapsIn` was on the agent's screen only. The facts it states — "no
+ * preapproval letter attached" — are material to the person actually
+ * deciding, and keeping them from the seller would be withholding something
+ * from the one reader who lives with the answer. That is the opposite of what
+ * the rest of this product does.
+ *
+ * It is only safe to show them because of the test above: they are facts about
+ * the paperwork and never judgements about a buyer.
+ */
+describe("what both pages show", () => {
+  const src = readFileSync("app/(rift)/plan/[token]/page.tsx", "utf8");
+  const agentSrc = readFileSync("app/(studio)/studio/lead/[id]/Offers.tsx", "utf8");
+
+  it("puts the paperwork gaps on the seller's page too", () => {
+    expect(src, "the seller is not told what is missing from an offer").toMatch(/gapsIn\(/);
+    expect(agentSrc).toMatch(/gapsIn\(/);
+  });
+
+  it("shows the seller only offers the agent released", () => {
+    /* The page reads plan.offers, which lib/db/plan.ts fills from
+       releasedOffersFor — filtered in the query. Asserted here so a future
+       edit cannot reach for the unfiltered list that sits next to it. */
+    expect(src).not.toMatch(/offersFor\(/);
   });
 });

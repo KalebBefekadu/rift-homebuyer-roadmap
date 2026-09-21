@@ -3,7 +3,7 @@ import Link from "next/link";
 import { readPlanByToken } from "@/lib/db/plan";
 import { currentAgentPublic } from "@/lib/db/service";
 import { groupPlan, summarise, headline, ownerLabel, daysUntil } from "@/lib/core/plan";
-import { rankOffers, headlineTrap, FINANCING_LABEL } from "@/lib/core/offers";
+import { rankOffers, headlineTrap, gapsIn, FINANCING_LABEL } from "@/lib/core/offers";
 import { money } from "@/lib/core/compute";
 import { Ico, Mark } from "@/components/rift/icons";
 
@@ -238,6 +238,26 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                           Conditional on {o.contingencies.join(", ")}
                         </div>
                       ) : null}
+                      {/* Shown to them, not only to the agent.
+
+                          These are facts about the paperwork — "no preapproval
+                          letter attached" — and they are material to the person
+                          actually deciding. Keeping them on the agent's screen
+                          alone would be withholding something from the one
+                          reader who is going to live with the answer, which is
+                          the opposite of what the rest of this product does.
+                          They are never judgements about a buyer; gapsIn is
+                          tested for exactly that. */}
+                      {gapsIn(o).length ? (
+                        <div className="col gap-1" style={{ marginTop: 8 }}>
+                          {gapsIn(o).map((g) => (
+                            <div key={g} className="t-xs c-3">
+                              <Ico.info size={11} style={{ marginRight: 5 }} />{g}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+
                       {/* The agent's own words, shown only because he released
                           it. Nothing here is generated about a buyer. */}
                       {o.note ? (
