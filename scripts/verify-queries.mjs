@@ -192,6 +192,58 @@ await check("referral moments", () => db.from("rift_referral_moments")
   .select("lead_id,moment_id,occurrence,state")
   .in("lead_id", ["00000000-0000-4000-8000-000000000000"]).limit(5));
 
+/* The sweep. Every remaining distinct column list in lib/db, added after
+   figure_id proved that an unverified one is an unexploded page. */
+
+const NIL = "00000000-0000-4000-8000-000000000000";
+
+await check("offersFor (inbound offer columns)", () => db.from("rift_offers")
+  .select("id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at")
+  .limit(5));
+
+await check("dueActions follow-up columns", () => db.from("rift_leads")
+  .select("id,name,side,next_action,next_due,client_token").limit(5));
+
+await check("planItemsDue", () => db.from("rift_plan_items")
+  .select("id,title,owner,owner_name,due_on,lead_id").is("done_at", null).limit(5));
+
+await check("readPlanByToken items", () => db.from("rift_plan_items")
+  .select("id,title,owner,owner_name,due_on,done_at,sort").eq("lead_id", NIL).limit(5));
+
+await check("SAFE_LEAD_COLUMNS", () => db.from("rift_leads")
+  .select("id,name,side,stage,stage_since,client_token").eq("client_token", "none").maybeSingle());
+
+await check("seller costs", () => db.from("rift_leads")
+  .select("payoff_cents,commission_pct").eq("id", NIL).maybeSingle());
+
+await check("lead notes", () => db.from("rift_lead_notes")
+  .select("id,kind,body,from_stage,to_stage,at").eq("lead_id", NIL).limit(5));
+
+await check("board / roster base columns", () => db.from("rift_leads")
+  .select("id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason,next_action,next_due")
+  .limit(5));
+
+await check("stored figures", () => db.from("rift_figures")
+  .select("label,value_cents,trust_state,confirmed_by,assumptions,could_be_wrong").limit(5));
+
+await check("business rules", () => db.from("rift_business_rules")
+  .select("key,value,decided_at,decided_by").limit(5));
+
+await check("funnel wording", () => db.from("rift_questions")
+  .select("key,title,description,field_label,options").limit(5));
+
+await check("review promote", () => db.from("rift_review_items")
+  .select("id,state,ceiling,kind,figure_id").eq("id", NIL).maybeSingle());
+
+await check("retention orphan sweep", () => db.from("rift_assessments")
+  .select("id,rift_leads(id)").limit(5));
+
+await check("nurture stop check", () => db.from("rift_leads")
+  .select("id,rift_enrolments(stopped_at)").limit(5));
+
+await check("markReplied", () => db.from("rift_leads")
+  .select("human_replied_at").eq("id", NIL).maybeSingle());
+
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);
 }

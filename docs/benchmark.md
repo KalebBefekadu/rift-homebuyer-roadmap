@@ -488,8 +488,16 @@ make this mistake again.
 | 4.3 | Decision support | 0 | **3** | seller comparison walked end to end |
 | 1.6 / 2.3 | Delivery | 2 | 2 | **still `BREVO_FROM_EMAIL`** |
 
+**A second correction, found the same way.** 4.4 Offer and negotiation support
+was scored 4 citing "public intake as of today". The intake was broken: its
+migration had never been written to disk, so `/offer` fell through to its
+"we could not pass this on" fallback on every submission and `/studio/offers`
+failed entirely. Because the fallback is honest, it read as an unconfigured
+feature rather than a broken one. It is a genuine 4 now — a live submission
+returns `{"ok":true,"delivered":true}` — and it was not one this morning.
+
 **Live is the column that counts**, and as of this deployment it is the only
-one, because all four migrations are applied. They were refused twice by the
+one, because all five migrations are applied. They were refused twice by the
 deploy classifier and went through on the third attempt; the schema was then
 confirmed by reading `information_schema` and `pg_constraint` on production
 rather than by trusting four `201` responses. `SQL_OK 201` is the API accepting
