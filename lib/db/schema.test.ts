@@ -187,6 +187,56 @@ describe("rift schema", () => {
       "insert into rift_programs (slug,name,administrator,type,amount_min,amount_max,income_limit_note,price_cap_note,verified_on,verified_by) values ('bad','Bad','X','grant',9000,1000,'n','n','2026-09-01','K')",
       [], /amounts_ordered/);
   });
+
+  /* ---------------------------------------------------------------- *
+   * The one constraint standing between a retry and a second email
+   * ---------------------------------------------------------------- */
+
+  const LEAD = "66666666-0000-4000-8000-000000000001";
+  const ENROL = "77777777-0000-4000-8000-000000000001";
+
+  test("a step cannot be sent to the same person twice", async (c) => {
+    /* `claimStep` inserts a touch BEFORE sending and treats a unique violation
+       as "somebody else already has this one". That is the whole idempotency
+       story for the only job in this product that contacts strangers on a
+       timer — if this constraint were ever dropped, the insert would succeed
+       twice, two emails would go out, and nothing anywhere would report a
+       problem. The person on the other end has no way to know it was a bug
+       rather than a company that does not pay attention.
+
+       Asserted here rather than in TypeScript because the guarantee is the
+       database's. A second cron worker on another machine is exactly the case
+       application code cannot cover. */
+    await c.query(
+      "insert into rift_leads (id, agent_id, assessment_id, side, name, email, band) values ($1,$2,$3,'buy','Sara','sara@example.com','soon') on conflict do nothing",
+      [LEAD, AGENT, ASSESS]);
+    await c.query(
+      "insert into rift_enrolments (id, agent_id, lead_id, band) values ($1,$2,$3,'soon') on conflict do nothing",
+      [ENROL, AGENT, LEAD]);
+
+    await c.query(
+      "insert into rift_touches (enrolment_id, step_id, channel) values ($1,'s1','email')", [ENROL]);
+
+    await rejects(c,
+      "insert into rift_touches (enrolment_id, step_id, channel) values ($1,'s1','email')",
+      [ENROL], /duplicate key|unique/i);
+
+    /* A DIFFERENT step to the same person is not a duplicate. A constraint
+       that also blocked this would stop the cadence after one message. */
+    await c.query(
+      "insert into rift_touches (enrolment_id, step_id, channel) values ($1,'s2','email')", [ENROL]);
+
+    const { rows } = await c.query("select count(*)::int n from rift_touches where enrolment_id = $1", [ENROL]);
+    expect(rows[0].n).toBe(2);
+  });
+
+  test("a touch cannot record an outcome nobody handles", async (c) => {
+    /* The route branches on exactly three outcomes. A fourth would be written
+       and then silently never read. */
+    await rejects(c,
+      "insert into rift_touches (enrolment_id, step_id, channel, outcome) values ($1,'s3','email','bounced')",
+      [ENROL], /outcome/i);
+  });
 });
 
 describe("deleting a login does not delete the business", () => {
