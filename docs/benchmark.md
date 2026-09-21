@@ -563,6 +563,35 @@ pipeline — the first of the three metrics vision.md names as mattering most �
 was not at zero. It was incapable of anything else. It can move for the first
 time, which is the precondition for pass five being worth running at all.
 
+## The failure drill 2.5 asked for — 21 September 2026
+
+Pass four said 2.5 "needs a failure drill, not a feature". One was run: nineteen
+surfaces, three legs — healthy, database unreachable, database hung (accepting
+connections and never answering).
+
+**What held, because of earlier fixes.** Nothing hung: reads gave up at two
+seconds, writes at six. The plan and share pages said "we cannot open this right
+now", never "this link is no longer open". Studio said it could not check the
+sign-in, not that the session had expired.
+
+**What did not, all fixed and on production:**
+
+| Defect | What the person saw |
+| --- | --- |
+| Health check reported a total outage as `ok: true` | A monitor would have said all-clear |
+| Every cold start remembered a slow agent lookup as "no agent" for 10s | Leads read "Noted" and were not stored; bookings read "done" and reached nobody; offers were refused |
+| Delete button folded "request never arrived" into "nothing was there" | Told retention would handle it — up to 18 months |
+| Failed-save message pointed at a share link that had also failed | "Keep the link above", over an empty space |
+
+The second is the most expensive defect found in this document's history, and
+it was invisible for the same reason as every other one: each symptom looked
+like success or like an unfinished feature. It surfaced on production twice as
+a one-off before being traced.
+
+**2.5 stays at 3.** The message leg could not be drilled, because email cannot
+send at all while Brevo's IP review refuses Vercel's addresses. A drill that
+skipped the channel most likely to fail is not the drill the criterion asks for.
+
 ## How to run this benchmark
 
 1. Score each criterion 0 to 4 against the ladder, citing the document section or prototype screen that earns the score.
