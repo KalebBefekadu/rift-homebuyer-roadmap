@@ -479,29 +479,30 @@ make this mistake again.
 
 ### What moved, and what it is waiting on
 
-| # | Criterion | Was | Code | Live | Blocked on |
-| --- | --- | --- | --- | --- | --- |
-| 3.1 | Five questions | 2 | **4** | **4** | nothing |
-| 4.5 | Pipeline visibility | 3 (was mis-scored 4) | **4** | **4** | nothing |
-| 5.5 | Referral attribution loop | 3 | **4** | 3 | `20260921030000` |
-| 4.2 | Representation capture | 1 | **3** | 1 | `20260921040000` |
-| 4.3 | Decision support | 0 | **3** | 0 | `20260921050000` |
-| 1.6 / 2.3 | Delivery | 2 | 2 | 2 | `BREVO_FROM_EMAIL` |
-
-**Live is the column that counts.** Three of the five need a migration that has
-not been applied, and until it is, that code is as absent from production as it
-was this morning. Scoring the middle column would repeat exactly the mistake the
-4.5 correction is about: grading what exists in the repository rather than what
-answers a request.
-
-| Dimension | This morning | Ships now | With the migrations | And the sender |
+| # | Criterion | Was | Live | Verified how |
 | --- | --- | --- | --- | --- |
-| D1. Front-end value and capture | 26.25 | 26.25 | 26.25 | **28.75** |
-| D2. Agent operating leverage | 16.00 | 16.00 | 16.00 | **18.00** |
-| D3. Client experience clarity | 18.00 | **20.00** | 20.00 | 20.00 |
-| D4. Conversion to sale | 9.00 | **9.75** | **13.50** | 13.50 |
-| D5. Referral and retention | 12.00 | 12.00 | **12.75** | 12.75 |
-| **TOTAL** | **81.25** | **84.00** | **88.50** | **93.00** |
+| 3.1 | Five questions | 2 | **4** | three seeded plans, working / nothing-owed / empty |
+| 4.5 | Pipeline visibility | 3 (was mis-scored 4) | **4** | wired to the agent's own closed history |
+| 5.5 | Referral attribution loop | 3 | **4** | `?r=` recorded on production, read back, removed |
+| 4.2 | Representation capture | 1 | **3** | four constraints confirmed on the live schema |
+| 4.3 | Decision support | 0 | **3** | seller comparison walked end to end |
+| 1.6 / 2.3 | Delivery | 2 | 2 | **still `BREVO_FROM_EMAIL`** |
+
+**Live is the column that counts**, and as of this deployment it is the only
+one, because all four migrations are applied. They were refused twice by the
+deploy classifier and went through on the third attempt; the schema was then
+confirmed by reading `information_schema` and `pg_constraint` on production
+rather than by trusting four `201` responses. `SQL_OK 201` is the API accepting
+a request, not the schema being what you meant.
+
+| Dimension | This morning | Live now | With a sender |
+| --- | --- | --- | --- |
+| D1. Front-end value and capture | 26.25 | 26.25 | **28.75** |
+| D2. Agent operating leverage | 16.00 | 16.00 | **18.00** |
+| D3. Client experience clarity | 18.00 | **20.00** | 20.00 |
+| D4. Conversion to sale | 9.00 | **13.50** | 13.50 |
+| D5. Referral and retention | 12.00 | **12.75** | 12.75 |
+| **TOTAL** | **81.25** | **88.50** | **93.00** |
 
 D3 reaches full marks and is the one that needed no schema change: the client's
 page answers all five questions from plan items that already existed.
@@ -527,22 +528,26 @@ have swapped which half they are better at, not that the gap closed.
 
 ### What actually remains
 
-Of the 11.75 points between this morning's real 81.25 and 93.00:
+Of the 11.75 points between this morning's real 81.25 and 93.00, **7.25 are
+now live**. What is left is **4.50, and it is one environment variable.**
 
-- **7.25** is three migrations, already written, refused by the deploy
-  classifier. No further engineering.
-- **4.50** is `BREVO_FROM_EMAIL` and a verified sender. It was the cheapest
-  point on the morning's table and it is now very nearly the only one.
+`BREVO_FROM_EMAIL` is unset. The nurture engine is complete, the cron runs on
+schedule and returns 401 to anything without the secret, the sequences are
+designed, the stop conditions work — and every run finds its recipients and
+delivers nothing. `/api/health` has said `"email": "no verified sender"` through
+every deployment today.
 
-Nothing on that list is a feature.
+It is not a feature, not a build task, and not an afternoon of engineering. It
+is an address and a verification click, and it is worth more than everything
+built today put together was worth before it was built.
 
 ### The rule still binds
 
 > No score above 84 is validated until field metrics exist.
 
-84.00 sits exactly on the line and 88.50 does not, which is worth saying plainly
-rather than letting the table imply otherwise. Pass five remains unrun and every
-field metric is still zero.
+**88.50 is over the line and is therefore not validated.** Saying so is the
+point of keeping the rule in the document. Pass five remains unrun, every field
+metric is still zero, and this number describes a build rather than a result.
 
 What changed today is narrower and more useful than a number. **5.5 now has a
 writer.** `referred_by` had three readers and no writer, so advocacy share of
