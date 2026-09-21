@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { abroadReturns, STATUSES, rentFor, ABROAD_DEFAULTS, statusById } from "./abroad";
+import { abroadReturns, STATUSES, rentFor, ABROAD_DEFAULTS, statusById, RENT_RATIO_SOURCE } from "./abroad";
+import { dictFor } from "./i18n";
 
 describe("buying from abroad", () => {
   it("never credits rent to someone who will live in the house", () => {
@@ -87,5 +88,59 @@ describe("parsing an abroad link", () => {
   it("clamps an absurd price instead of rendering it", async () => {
     const { parseAbroadParams } = await import("./abroad");
     expect(parseAbroadParams((k) => ({ p: "-9999" }[k]), ["DeKalb"]).price).toBe(60_000);
+  });
+});
+
+/**
+ * What the page is allowed to claim about where the rent figure came from.
+ *
+ * The rent ratios are engineering's own guesses. The page said "rent is
+ * estimated from county averages", which named a source that does not exist —
+ * and a guessed figure renders exactly like a measured one, so nothing about
+ * the screen could have told anybody.
+ *
+ * This is the product's central promise, not a copy nit: every figure carries
+ * what it assumes. Claiming a stronger provenance than you have is the one
+ * failure it cannot survive, because the whole argument for trusting the free
+ * readout is that its numbers are honest about themselves.
+ */
+describe("what the rent figure claims about itself", () => {
+  /* Phrases that assert somebody measured something. */
+  const OBSERVED = [
+    /county averages?/i, /market data/i, /based on actual/i,
+    /observed/i, /from comparable/i, /published rents?/i,
+  ];
+
+  it("does not claim a source while the ratios are assumed", () => {
+    expect(RENT_RATIO_SOURCE.basis, "this test needs rewriting the day real ratios land")
+      .toBe("assumed");
+
+    /* Every English string on this funnel, not just the one that was wrong.
+       The last time a claim like this was corrected in one place it survived
+       in four others. */
+    for (const [key, value] of Object.entries(dictFor("en"))) {
+      if (typeof value !== "string" || !/rent/i.test(value)) continue;
+      for (const claim of OBSERVED) {
+        expect(value, `${key} claims the rent figure is measured, and it is not`)
+          .not.toMatch(claim);
+      }
+    }
+  });
+
+  it("says outright that it is an assumption, somewhere the reader will see it", () => {
+    const all = Object.values(dictFor("en")).filter((v): v is string => typeof v === "string");
+    expect(
+      all.some((v) => /rent/i.test(v) && /(assumption|assumed|estimate)/i.test(v)),
+      "nothing on this funnel tells the reader the rent figure is an assumption",
+    ).toBe(true);
+  });
+
+  it("names a source when there is one to name", () => {
+    /* The other half. Once somebody supplies real ratios, `basis` becomes
+       "published" and a source has to be named with them — otherwise the
+       upgrade is just as unverifiable as the guess it replaced. */
+    if (RENT_RATIO_SOURCE.basis === "published") {
+      expect(RENT_RATIO_SOURCE.name, "published ratios must name their source").toBeTruthy();
+    }
   });
 });

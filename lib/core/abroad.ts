@@ -113,11 +113,24 @@ export const statusById = (id: StatusId) => STATUSES.find((s) => s.id === id) ??
 /**
  * Monthly rent as a share of price, by county.
  *
- * Rent does not track price evenly across the metro: the counties that have
- * appreciated most have the worst ratios, which is exactly the trade this
- * audience needs to see rather than be told about. A buyer choosing Clayton
- * over Cherokee is choosing cash flow over appreciation, and the panel should
- * make that choice visible instead of naming a single "Atlanta" number.
+ * THESE ARE WORKING ASSUMPTIONS, NOT OBSERVED AVERAGES.
+ *
+ * Said in capitals because the docblock that used to sit here did not say it.
+ * It read "rent does not track price evenly across the metro: the counties
+ * that have appreciated most have the worst ratios", which is the language of
+ * an observation, and these figures are nobody's observation — they were
+ * written to be plausible. The shape is a reasonable guess. The numbers are
+ * not data.
+ *
+ * That mattered because the page told the READER they were: "rent is estimated
+ * from county averages". A figure that is merely someone's guess renders
+ * exactly like a measured one, and claiming a source it does not have is worse
+ * than claiming none — it is the single failure this product cannot survive.
+ *
+ * They drive the cash-flow figure, the break-even down payment and the
+ * headline return. Replacing them takes a rent-to-price ratio per county from
+ * a source that can be named; see RENT_RATIO_SOURCE below, which is what the
+ * page reads to decide what it is allowed to claim.
  */
 const RENT_RATIO: Record<string, number> = {
   Clayton: 0.0082,
@@ -128,6 +141,21 @@ const RENT_RATIO: Record<string, number> = {
   Douglas: 0.0075,
   Cobb: 0.0066,
   Cherokee: 0.0063,
+};
+
+/**
+ * Where the ratios above came from, in the product's own terms.
+ *
+ * `"assumed"` means nobody has measured them. `"published"` means they came
+ * from a source that can be named, and the named source goes in `name`.
+ *
+ * This exists so the disclosure and the data cannot drift apart. The page
+ * reads this to decide what it is allowed to say, and lib/core/abroad.test.ts
+ * fails if the wording claims an observation while this says "assumed".
+ */
+export const RENT_RATIO_SOURCE: { basis: "assumed" | "published"; name: string | null } = {
+  basis: "assumed",
+  name: null,
 };
 
 export const rentFor = (price: number, county: string) =>

@@ -148,7 +148,7 @@ const en: Dict = {
   "doors.3.cta": "Buying to live here",
 
   "disc.hero":
-    "Planning estimates, not a loan approval or a rent guarantee. Down payments and rates come from what lenders in this market publish for each situation — your own lender's terms decide. Rent is estimated from county averages, not from a specific property.",
+    "Planning estimates, not a loan approval or a rent guarantee. Down payments and rates come from what lenders in this market publish for each situation — your own lender's terms decide. The rent figure is our own working assumption for this county, not a measured average and not a quote for a specific property.",
   "foot.note":
     "Rift for buyers abroad. Guided by Kaleb Befekadu, a licensed agent in Georgia. Every figure is a planning estimate, not a lending commitment, approval, or valuation. We are not tax advisors or immigration attorneys, and we tell you when a question belongs to one.",
   "foot.fair":
@@ -249,7 +249,7 @@ const en: Dict = {
     "Save the link. Nothing here expires, and no one has your details unless you give them.",
   "res.keep.cta": "Fifteen minutes with Kaleb",
   "res.disc":
-    "Planning estimates, not a loan approval, a rent guarantee, or a valuation. Down payments and rate premiums reflect what lenders in this market publish for each situation; your own lender's terms decide. Rent is estimated from county averages, not from a specific property. U.S. tax on rental income and the FIRPTA withholding on sale are real and are questions for a cross-border accountant, not for an agent.",
+    "Planning estimates, not a loan approval, a rent guarantee, or a valuation. Down payments and rate premiums reflect what lenders in this market publish for each situation; your own lender's terms decide. The rent figure is our own working assumption for this county, not a measured average and not a quote for a specific property. U.S. tax on rental income and the FIRPTA withholding on sale are real and are questions for a cross-border accountant, not for an agent.",
 
   /* Capture. This page had none: every other readout in the product can send
      itself to somebody and this one could only offer a call, so the only
@@ -526,6 +526,26 @@ export const isLocale = (v: unknown): v is Locale => v === "en" || v === "am";
  * caught anything in this product.
  */
 export const REVIEWED_AM: string[] = [];
+
+/**
+ * Keys whose Amharic is not merely unreviewed but now says something FALSE.
+ *
+ * A different and more urgent thing than the list below. Everything is
+ * unreviewed — that means "a non-native first pass, tone unchecked". These
+ * mean "the English was corrected and the Amharic still carries the claim that
+ * was wrong", so an Amharic reader is being told something the English reader
+ * is no longer told.
+ *
+ * `disc.hero` and `res.disc` both said the rent figure came from county
+ * averages. It does not: the ratios in lib/core/abroad.ts are engineering's
+ * own assumptions and always were. The English now says so. Until these two
+ * are retranslated, the Amharic page makes a claim about provenance that the
+ * product knows to be untrue — which is worse than an unpolished sentence,
+ * because it is exactly the promise this audience is being asked to trust.
+ *
+ * Empty this list by retranslating, not by deleting it.
+ */
+export const WRONG_IN_AM: string[] = ["disc.hero", "res.disc"];
 
 /** The keys still carrying an unreviewed translation. */
 export function unreviewedAm(): string[] {
