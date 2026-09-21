@@ -6,6 +6,8 @@ import { Unavailable } from "../../Unavailable";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
 import { readPlanForAgent } from "@/lib/db/plan";
+import { referralTokenFor, referralLinks } from "@/lib/db/referral";
+import { Referral } from "./Referral";
 import { offersFor } from "@/lib/db/offers";
 import { siteUrl } from "@/lib/core/site";
 import { Record as ClientRecord } from "./Record";
@@ -62,11 +64,20 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   /* Read after the record, not beside it. The record is what the agent came
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
-  const [plan, offers] = await Promise.all([readPlanForAgent(id), offersFor(id)]);
+  const [plan, offers, refToken, refLinks] = await Promise.all([
+    readPlanForAgent(id),
+    offersFor(id),
+    referralTokenFor(id),
+    referralLinks(id),
+  ]);
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
   const offerList = offers.ok && "data" in offers ? offers.data.offers : [];
   const sellerCosts = offers.ok && "data" in offers ? offers.data.costs : null;
+  const referralToken = refToken.ok && "data" in refToken ? refToken.data : null;
+  const links = refLinks.ok && "data" in refLinks
+    ? refLinks.data
+    : { referrer: null, sent: [] };
 
   return (
     <>
@@ -90,6 +101,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
           />
         ) : null}
+        <Referral
+          token={referralToken}
+          origin={siteUrl()}
+          firstName={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
+          sent={links.sent}
+          referrer={links.referrer}
+        />
       </div>
     </>
   );

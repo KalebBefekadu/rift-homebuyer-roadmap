@@ -8,6 +8,7 @@ import { boundedWrite } from "./bounded";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
 import { currentVersionId } from "./funnel";
+import { firstRefFor, resolveReferrer } from "./attribution";
 
 /**
  * Capture, consent, and lead scoring.
@@ -124,6 +125,45 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
 
     const { data, error } = created!;
     if (error) return failed(error.message);
+
+    /* Who sent them.
+
+       This is the write that did not exist. `referred_by` was added with the
+       referral moments migration, read in three places and set by nothing, so
+       "advocacy share of pipeline" — the first of the three metrics
+       docs/vision.md names as mattering most, targeting 30% by month 12 —
+       could not become non-zero by any path through the product.
+
+       AFTER the lead is stored, never before, and its failure is reported
+       rather than raised. The relationship is the durable thing; an unrecorded
+       referral is a real loss and a lost lead is a bigger one. */
+    const leadId = (data as { id: string }).id;
+    if (input.sessionId) {
+      try {
+        const ref = await firstRefFor(input.sessionId);
+        const referrer = ref
+          ? await resolveReferrer(ref, { excludeSessionId: input.sessionId })
+          : null;
+        if (referrer) {
+          const linked = await boundedWrite(
+            db.from("rift_leads").update({ referred_by: referrer }).eq("id", leadId),
+            "the referral link",
+          );
+          if (!linked.ok) {
+            captureOpError(new Error(String(linked.error)), {
+              op: "lead.capture.referrer",
+              extra: { migration: "20260921030000_rift_referral_attribution" },
+            });
+          }
+        }
+      } catch (e) {
+        /* Never fatal. A referral that cannot be recorded must not cost the
+           capture it arrived with. */
+        captureOpError(e instanceof Error ? e : new Error(String(e)), {
+          op: "lead.capture.referrer",
+        });
+      }
+    }
 
     const consents: Record<string, unknown>[] = [];
     if (input.email && input.emailConsentWording) {

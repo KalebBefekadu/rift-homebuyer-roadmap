@@ -269,3 +269,78 @@ describe("deleting a login does not delete the business", () => {
     expect(consents.rows[0].n).toBe(1);
   });
 });
+
+describe("referral attribution", () => {
+  const AGENT = "77777777-0000-4000-8000-000000000001";
+  const A = "77777777-0000-4000-8000-0000000000a1";
+  const B = "77777777-0000-4000-8000-0000000000b1";
+  const C = "77777777-0000-4000-8000-0000000000c1";
+
+  test("fixtures insert", async (c) => {
+    await c.query("insert into auth.users (id) values ('77777777-0000-4000-8000-000000000009') on conflict do nothing");
+    await c.query(
+      "insert into rift_agents (id, auth_user_id, name, email) values ($1,'77777777-0000-4000-8000-000000000009','R','r@example.com') on conflict do nothing", [AGENT]);
+    for (const [id, name] of [[A, "Referrer"], [B, "Referee"], [C, "Someone else"]]) {
+      await c.query(
+        "insert into rift_leads (id, agent_id, side, name, contact_basis) values ($1,$2,'buy',$3,'assessment') on conflict do nothing",
+        [id, AGENT, name]);
+    }
+    const { rows } = await c.query("select count(*)::int n from rift_leads where agent_id = $1", [AGENT]);
+    expect(rows[0].n).toBe(3);
+  });
+
+  test("every lead is given a handle it can pass on", async (c) => {
+    const { rows } = await c.query(
+      "select count(*)::int n, count(distinct referral_token)::int d from rift_leads where agent_id = $1", [AGENT]);
+    expect(rows[0].n).toBe(rows[0].d);
+  });
+
+  test("nobody refers themselves", async (c) => {
+    await rejects(c, "update rift_leads set referred_by = $1 where id = $1", [A], /no_self_referral/);
+  });
+
+  test("a referral can be recorded once", async (c) => {
+    await c.query("update rift_leads set referred_by = $1 where id = $2", [A, B]);
+    const { rows } = await c.query("select referred_by from rift_leads where id = $1", [B]);
+    expect(rows[0].referred_by).toBe(A);
+  });
+
+  test("a referral can never be repointed at another channel", async (c) => {
+    /* The failure this prevents is not a wrong row. It is an agent who
+       re-attributes a referral to the retargeting ad that caught it on the way
+       back, keeps buying retargeting, and stops asking for referrals. */
+    await rejects(c, "update rift_leads set referred_by = $1 where id = $2", [C, B], /repointed/);
+  });
+
+  test("deleting a referrer still works, and does not take the referee with them", async (c) => {
+    /* THE REGRESSION THIS FILE EXISTS FOR.
+    
+       The first version of the trigger above refused every change to a
+       non-null referred_by, including NULL. referred_by is `on delete set
+       null`, and a foreign-key SET NULL action fires row-level UPDATE
+       triggers — so deleting a referrer raised, and "delete all of it" failed
+       for any client who had introduced somebody. The strongest promise the
+       product makes, broken by a correctness guarantee about attribution, and
+       it would have surfaced the first time a referrer asked to be erased. */
+    await c.query("delete from rift_leads where id = $1", [A]);
+    const { rows } = await c.query("select id, referred_by from rift_leads where id = $1", [B]);
+    expect(rows, "the referee is a different person and must survive").toHaveLength(1);
+    expect(rows[0].referred_by, "the link goes with the deleted referrer").toBeNull();
+  });
+
+  test("first_ref is as immutable as every other first touch", async (c) => {
+    /* The trigger names its columns one at a time, so a new first_* column is
+       uncovered until it is added there. A guarantee that silently stops
+       applying to the newest field is worse than no guarantee. */
+    await c.query(
+      "insert into rift_attributions (session_id, agent_id, first_ref) values ('ref-sess',$1,'handle-1')", [AGENT]);
+    await rejects(c,
+      "update rift_attributions set first_ref = 'handle-2' where session_id = 'ref-sess'", [], /first touch is immutable/);
+  });
+
+  test("last_ref may move, because last touch is what it is for", async (c) => {
+    await c.query("update rift_attributions set last_ref = 'handle-2' where session_id = 'ref-sess'");
+    const { rows } = await c.query("select last_ref from rift_attributions where session_id = 'ref-sess'");
+    expect(rows[0].last_ref).toBe("handle-2");
+  });
+});

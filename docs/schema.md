@@ -220,6 +220,7 @@ configuration value. `lib/core/docs.test.ts` fails if the two drift apart.
 | Part-finished assessment, no contact details | 30 days | Long enough to resume on the same device, short enough that it is not a collection of strangers' finances |
 | Client record | Per `business_rules.clientRetentionYears` | **Has a legal floor.** Confirm with the broker before anything deletes |
 | Funnel telemetry | 24 months | Question ids and dwell only, never answers. Aggregated counts survive; individual event rows do not |
+| Referral link | With your record | Who introduced whom. `rift_leads.referred_by`, written once at capture and immutable thereafter. The referrer is never shown the referee's answers, figures or progress — only that they arrived |
 | Consent record | The relationship, then five years | The only evidence the contact was lawful. Stores the exact wording, not a reference to it |
 | Inbound offer | While it is live, then 24 months | The only record here ABOUT A THIRD PARTY — a property somebody else owns, and often a buyer who is not the person typing. The record of what was sent is the only protection either side has if the terms are disputed. A phone number given to deliver one is passed on with it and never stored |
 

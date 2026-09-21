@@ -65,6 +65,34 @@ export interface Touch {
   /** Host only. `stripToHost` is the enforcement, not a convention. */
   referrer?: string;
   landing?: string;
+  /**
+   * The `?r=` handle of whoever sent this visitor — another client's referral
+   * token, or the share token of a readout they forwarded.
+   *
+   * A REFERRAL IS A FIRST TOUCH. Somebody arrives on a friend's link, reads for
+   * ten minutes, leaves, comes back a week later through a Google search and
+   * finishes the assessment then. The friend sent them. An attribution model
+   * that credits the search has just told the agent to buy more search and stop
+   * asking for referrals, which is exactly backwards for a business whose best
+   * channel is people.
+   */
+  ref?: string;
+}
+
+/**
+ * A referral handle, or nothing.
+ *
+ * Stricter than `tag`. Every other field here is prose a marketer typed into a
+ * campaign URL; this one is an opaque token that gets looked up in the
+ * database, so anything that is not token-shaped is a mistake or an attempt,
+ * and neither is worth storing. Hex, base64url and uuid all survive this.
+ */
+export const MAX_REF = 64;
+
+export function refFrom(raw: string | null | undefined): string | undefined {
+  const v = (raw ?? "").trim();
+  if (!v || v.length > MAX_REF) return undefined;
+  return /^[A-Za-z0-9_-]+$/.test(v) ? v : undefined;
 }
 
 export function stripToHost(referrer: string | null | undefined): string | undefined {
@@ -99,6 +127,7 @@ export function touchFromRequest(url: URL, referrer: string | null, selfHost?: s
     medium: tag(p.get("utm_medium")),
     campaign: tag(p.get("utm_campaign")),
     referrer: externalReferrer(referrer, selfHost ?? url.host),
+    ref: refFrom(p.get("r")),
     /* The path, without the query. A readout link carries somebody's answers
        in its query string, and attribution has no use for them. */
     landing: safeLanding(url.pathname),
@@ -107,6 +136,10 @@ export function touchFromRequest(url: URL, referrer: string | null, selfHost?: s
 
 /** How a touch reads in Studio. Never "unknown" — "direct" is a real answer. */
 export function describeTouch(t: Touch): string {
+  /* A referral outranks a campaign tag. Somebody who arrives on a client's
+     link with a utm_source still attached — because the client copied the URL
+     out of a newsletter — was sent by the client. */
+  if (t.ref) return "referral";
   if (t.source) return t.campaign ? `${t.source} · ${t.campaign}` : t.source;
   if (t.referrer) return t.referrer;
   return "direct";

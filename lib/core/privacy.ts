@@ -60,6 +60,17 @@ export const RETENTION: RetentionRule[] = [
     thenWhat: "Aggregated counts survive, individual event rows do not.",
   },
   {
+    /* Added the day the referral link began recording anything. A product
+       that starts noting who introduced whom and does not say so on the page
+       listing what it keeps has quietly made the page wrong, and this page is
+       rendered to the customer as a promise rather than a policy. */
+    id: "referral",
+    what: "Who passed you the link, if you arrived on one",
+    keptFor: "With your record",
+    why: "A referral is the only way we learn that somebody thought this was worth passing on, and the person who did it deserves the credit. It records that they sent you and nothing else — they are never shown your answers, your figures or what you did next.",
+    thenWhat: "Deleted with your record. Asking us to delete yours removes the link from theirs as well.",
+  },
+  {
     /* Added because the panel was silent about it, and a retention list that
        omits one category is not a retention list — it is a selection. This
        record is also the only thing that can later prove the contact was

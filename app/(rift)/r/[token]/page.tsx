@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { readByToken } from "@/lib/db/assessments";
+import { refFrom } from "@/lib/core/attribution";
 import { money } from "@/lib/core/compute";
 import { Trust } from "@/components/rift/Trust";
 import { Ico, Mark } from "@/components/rift/icons";
@@ -31,6 +32,27 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
   const read = await readByToken(token);
   const snap = read.ok && "data" in read ? read.data : null;
 
+  /* Every way off this page credits whoever shared it.
+
+     docs/product.md calls a friend running their own assessment "the most
+     natural referral there is" and says the recipient is credited to the
+     sharer exactly like a referral. Nothing implemented it: all four of these
+     links pointed at a bare /buy/start, so the entire share-sourced half of
+     the growth loop arrived as "direct" and was indistinguishable from
+     somebody who typed the address in.
+
+     The share token is the handle — `resolveReferrer` looks it up through the
+     readout to the lead behind it — so no new token has to travel and the
+     recipient's URL carries nothing about the sharer beyond a value they
+     already have.
+
+     `refFrom` is applied to our own token on the way out. It is the same
+     validator the capture route uses on the way in, and a link built here that
+     the far end would reject is a referral silently lost between two pieces of
+     our own code. */
+  const handle = refFrom(token);
+  const start = handle ? `/buy/start?r=${encodeURIComponent(handle)}` : "/buy/start";
+
   /* A broken query is not an expired link.
      
      Telling the recipient "this never existed" when the database hiccupped
@@ -46,7 +68,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
           The link is fine — something on our side is not. Try again in a few minutes; nothing
           about it has changed or been deleted.
         </p>
-        <Link href="/buy/start" className="btn btn-g" style={{ marginTop: 16 }}>
+        <Link href={start} className="btn btn-g" style={{ marginTop: 16 }}>
           Work out your own in the meantime<Ico.arrowR size={14} />
         </Link>
       </main>
@@ -61,7 +83,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
           Readouts are kept for a limited time, and can be deleted by the person who made them
           at any point. You can work out your own in about four minutes.
         </p>
-        <Link href="/buy/start" className="btn btn-p" style={{ marginTop: 16 }}>Work out mine<Ico.arrowR size={14} /></Link>
+        <Link href={start} className="btn btn-p" style={{ marginTop: 16 }}>Work out mine<Ico.arrowR size={14} /></Link>
       </main>
     );
   }
@@ -75,7 +97,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
       <header style={{ borderBottom: "1px solid var(--line-2)" }}>
         <div className="shell-w between" style={{ height: 56 }}>
           <Link href="/buy" className="row gap-2"><Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span></Link>
-          <Link href="/buy/start" className="btn btn-g btn-sm">Work out mine</Link>
+          <Link href={start} className="btn btn-g btn-sm">Work out mine</Link>
         </div>
       </header>
 
@@ -146,7 +168,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
             These figures were worked out from one person&apos;s answers. Yours takes about four
             minutes and costs nothing.
           </p>
-          <Link href="/buy/start" className="btn btn-p" style={{ marginTop: 14 }}>
+          <Link href={start} className="btn btn-p" style={{ marginTop: 14 }}>
             Work out mine<Ico.arrowR size={14} />
           </Link>
         </div>

@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
@@ -272,6 +273,45 @@ export async function recordClosing(leadId: string, closedOn: string | null): Pr
 export interface ReferralLinks {
   referrer: { id: string; name: string | null } | null;
   sent: { id: string; name: string | null; stage: string | null }[];
+}
+
+/**
+ * This person's own handle.
+ *
+ * The column has a database default, so every lead minted since the migration
+ * already has one and this is a plain read. The write below is the safety net
+ * for two cases that do exist: a row created while the deploy was ahead of the
+ * migration, and anything the backfill missed.
+ *
+ * Twelve random bytes as hex. Not guessable, and it does not need to be — the
+ * token authorises nothing. Somebody who guessed one could credit a referral
+ * to a stranger, which is worth about as much as it sounds.
+ */
+export async function referralTokenFor(leadId: string): Promise<DbResult<string>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agentId = await currentAgentId();
+  if (!agentId) return skipped("not signed in");
+
+  const read = await boundedRead(
+    db.from("rift_leads").select("referral_token").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
+    "the referral handle",
+  );
+  if (!read.ok) return read as DbResult<string>;
+
+  const existing = "data" in read
+    ? (read.data as { referral_token: string | null } | null)?.referral_token ?? null
+    : null;
+  if (existing) return done(existing);
+
+  const token = randomBytes(12).toString("hex");
+  const wrote = await boundedWrite(
+    db.from("rift_leads").update({ referral_token: token })
+      .eq("id", leadId).eq("agent_id", agentId),
+    "the referral handle",
+  );
+  if (!wrote.ok) return wrote as DbResult<string>;
+  return done(token);
 }
 
 export async function referralLinks(leadId: string): Promise<DbResult<ReferralLinks>> {
