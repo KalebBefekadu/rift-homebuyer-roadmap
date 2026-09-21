@@ -140,7 +140,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
         <div className="shell-w between" style={{ height: 58 }}>
           <Link href="/abroad" className="row gap-2">
             <Mark size={20} />
-            <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
+            <span className="mark-name hide-xs" style={{ fontSize: 19 }}>Rift</span>
             <span className="chip chip-brand hide-sm" style={script}>{t("nav.abroad")}</span>
           </Link>
           <div className="row gap-2">

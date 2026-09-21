@@ -154,6 +154,17 @@
 .btn-ico { width: 32px; height: 32px; padding: 0; border-radius: 7px; }
 .btn[disabled] { opacity: .4; pointer-events: none; }
 .btn-link { color: var(--ink); font-weight: 550; border-bottom: 1px solid var(--ink-5); padding-bottom: 1px; }
+/* A button whose label is a SENTENCE.
+
+   `.btn` is `white-space: nowrap` and a fixed height, which is right for "Next"
+   and wrong for "Talk this through — 20 minutes, no obligation". That label is
+   328px of unbreakable text: on a 320px screen the primary call to action on
+   the buyer readout hung off the right-hand edge and took the page with it. */
+.btn-line {
+  white-space: normal; height: auto; min-height: 38px; padding: 9px 15px;
+  line-height: 1.35; text-align: left; max-width: 100%;
+}
+.btn-line > svg { flex: none; }
 .btn-link:hover { border-color: var(--ink); }
 
 /* ---------------- chips ---------------- */
@@ -169,6 +180,18 @@
 .chip-acc  { background: var(--accent-wash); color: var(--accent-2); border-color: var(--accent-line); }
 .chip-ink  { background: var(--ink); color: #fff; border-color: var(--ink); }
 .chip-out  { background: transparent; }
+/* A chip holding a SENTENCE rather than a label.
+
+   `.chip` is `white-space: nowrap` and a fixed 21px tall, which is exactly
+   right for "Hidden" or "Photos only" and exactly wrong for a line of prose:
+   an unbreakable 390px box that pushed the whole seller readout sideways on a
+   phone. The page scrolled horizontally under the reader's thumb, and nothing
+   about it looked wrong on a desktop or in any test. */
+.chip-line {
+  white-space: normal; height: auto; min-height: 21px; padding: 4px 8px;
+  align-items: flex-start; line-height: 1.45; text-align: left;
+}
+.chip-line > svg { flex: none; margin-top: 3px; }
 .dot { width: 5px; height: 5px; border-radius: 50%; flex: none; background: currentColor; }
 
 /* ---------------- form ---------------- */
@@ -259,6 +282,14 @@
 .center { text-align: center; }
 .hide-sm { display: initial; }
 @media (max-width: 720px) { .hide-sm { display: none !important; } }
+/* Below this, a phone has room for the mark or the wordmark, not both beside
+   a language toggle. 400px rather than 360 because the Amharic toggle is the
+   widest control in any header this product has. */
+.hide-xs { display: initial; }
+@media (max-width: 400px) {
+  .hide-xs { display: none !important; }
+  .shell-w { padding: 0 14px; }
+}
 
 /* ---------------- responsive ---------------- */
 .split { display: grid; grid-template-columns: minmax(0,1fr) 296px; gap: 22px; align-items: start; }

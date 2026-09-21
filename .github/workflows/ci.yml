@@ -66,12 +66,22 @@ jobs:
             exit 1
           fi
 
+      # Built ONCE, with nothing configured, and then both measured and served.
+      # The end-to-end suite runs against this exact bundle rather than one of
+      # its own — otherwise the thing whose size is budgeted and the thing that
+      # is walked are two different builds.
       - name: Build
         run: npx next build 2>&1 | tee /tmp/build.log
         env:
           # Sourcemap upload needs a token that a fork's PR will not have.
           # Building without it is the documented behaviour, not a workaround.
           SENTRY_AUTH_TOKEN: ""
+          # Inlined at build time, and the reason /sitemap.xml once served
+          # valid XML with no URLs in it for weeks.
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3177
+          NEXT_PUBLIC_SUPABASE_URL: ""
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+          NEXT_PUBLIC_SENTRY_DSN: ""
 
       # A budget, not a target. Every route in the public funnel pays this
       # before it pays for anything of its own, and the audience includes
@@ -92,3 +102,30 @@ jobs:
             echo "::error::Shared First Load JS is ${KB} kB, over the 200 kB budget."
             exit 1
           }
+
+      # Walks the real path against the build above, with NO database.
+      #
+      # 649 unit tests did not catch one of this product's real defects. Every
+      # one of them rendered perfectly and returned 200. This suite found four
+      # more on its first run: a chip holding a sentence that took the seller
+      # readout sideways on a phone, the same on the buyer readout's primary
+      # call to action, a header that did not fit a 320px screen, and a blank
+      # white page on the seller funnel's front door until JavaScript arrived.
+      #
+      # Running it unconfigured also makes it the first real test of the
+      # degradation contract — every public page must render without a
+      # database, which until now had only been asserted against mocks.
+      - name: Install Playwright's browser
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

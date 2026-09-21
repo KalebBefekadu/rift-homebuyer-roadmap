@@ -38,5 +38,18 @@ export default defineConfig({
      * so serialising it costs nothing worth having.
      */
     fileParallelism: false,
+
+    /**
+     * Vitest owns `*.test.ts`; Playwright owns `e2e/*.spec.ts`.
+     *
+     * Stated rather than left to the default, because vitest's default glob
+     * picks up `.spec.ts` too — and a Playwright file collected by vitest does
+     * not fail in a way that reads as a boundary problem. It fails with
+     * "Playwright Test did not expect test.describe() to be called here",
+     * three files red, and every one of the 649 real tests still passing
+     * underneath it.
+     */
+    include: ["lib/**/*.test.ts", "app/**/*.test.ts", "components/**/*.test.ts"],
+    exclude: ["e2e/**", "node_modules/**", ".next/**"],
   },
 });

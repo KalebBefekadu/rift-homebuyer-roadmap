@@ -341,7 +341,7 @@ export function Readout(p: Props) {
             <div className="card p-5">
               <div className="t-md w6">{r.blocker.title}</div>
               <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.65 }}>{r.blocker.body}</p>
-              <Link href={bookHref} className="btn btn-p" style={{ marginTop: 16 }}
+              <Link href={bookHref} className="btn btn-p btn-line" style={{ marginTop: 16 }}
                 onClick={() => track({ name: "booking_start", side: "buy", meta: { from: "blocker" } })}>
                 Talk this through — 20 minutes, no obligation<Ico.arrowR size={14} />
               </Link>

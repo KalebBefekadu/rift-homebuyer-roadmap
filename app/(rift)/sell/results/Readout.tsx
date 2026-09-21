@@ -223,7 +223,10 @@ export function Readout({
                 <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 640 }}>{u.detail}</p>
                 <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
                   <span className="chip"><Ico.users size={12} />Decided by {u.decidedBy}</span>
-                  {u.urgency ? <span className="chip chip-warn"><Ico.clock size={12} />{u.urgency}</span> : null}
+                  {/* chip-line, because `urgency` is a sentence rather than a label. A
+                      plain chip does not wrap: this one was 390px wide,
+                      unbreakable, and took the page sideways with it. */}
+                  {u.urgency ? <span className="chip chip-warn chip-line"><Ico.clock size={12} />{u.urgency}</span> : null}
                 </div>
               </div>
             ))}

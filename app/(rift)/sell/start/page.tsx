@@ -52,7 +52,12 @@ export default async function SellStartPage() {
   }
 
   return (
-    <Suspense fallback={null}>
+    /* A fallback with words in it, matching the buyer side. `null` here meant
+       the seller funnel's front door was a blank screen until JavaScript
+       arrived — on a slow phone, an empty white page on the one screen where
+       the product first asks for something. The buyer side has always shown a
+       line; there was never a reason for the two to differ. */
+    <Suspense fallback={<main className="shell-w sec sell"><p className="t-sm c-4">Loading your questions…</p></main>}>
       <Assessment funnel={funnel} />
     </Suspense>
   );

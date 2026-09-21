@@ -21,7 +21,10 @@ export function LocaleToggle({ locale, onChange }: {
         <button key={l.id} type="button" onClick={() => onChange(l.id)}
           aria-pressed={locale === l.id} lang={l.id}
           style={{
-            padding: "5px 10px", fontSize: 12.5, lineHeight: 1.4,
+            /* Tightened below 400px. This is the widest control in any
+               header the product has, and at 320px it is the difference
+               between the page fitting and the page scrolling sideways. */
+            padding: "5px clamp(7px, 3vw, 10px)", fontSize: 12.5, lineHeight: 1.4,
             background: locale === l.id ? "var(--ink)" : "transparent",
             color: locale === l.id ? "#fff" : "var(--c-2)",
             border: 0, cursor: "pointer",
