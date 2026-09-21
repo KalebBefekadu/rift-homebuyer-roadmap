@@ -21,6 +21,11 @@ import { compareToSnapshot } from "@/lib/db/seam";
 import { representationOf, setRepresentation, type RepStatus } from "@/lib/db/clients";
 import { standingOf } from "@/lib/core/representation";
 import { canPublish } from "@/lib/core/seam";
+import {
+  createDecision, addOption, removeOption, release, unrelease,
+  recordOutcome, clearOutcome, removeDecision,
+} from "@/lib/db/decisions";
+import type { Kind as DecisionKind } from "@/lib/core/decision";
 import type { Mood, MomentId, MomentState } from "@/lib/core/referral";
 
 /**
@@ -563,4 +568,130 @@ export async function recordRepresentation(
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const, status: r.data.status };
+}
+
+/* ------------------------------------------------------------------ *
+ * Decision Rooms
+ * ------------------------------------------------------------------ */
+
+export async function newDecision(input: {
+  leadId: string;
+  kind: DecisionKind;
+  question: string;
+  context?: string | null;
+  decideBy?: string | null;
+}) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await createDecision(input);
+  revalidatePath(`/studio/lead/${input.leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function addDecisionOption(leadId: string, input: {
+  decisionId: string;
+  label: string;
+  detail?: string | null;
+  amountCents?: number | null;
+  amountLabel?: string | null;
+  upside?: string | null;
+  downside?: string | null;
+}) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addOption(input);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function dropDecisionOption(leadId: string, optionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removeOption(optionId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * Let the client see a room.
+ *
+ * Returns the blocks rather than throwing them, so the form can show the agent
+ * what is wrong with the comparison instead of a failure. `release` re-runs
+ * `canRelease` against the stored room rather than trusting the page, because
+ * a check the caller can skip is not a check.
+ */
+export async function releaseDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await release(decisionId);
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath(`/plan`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  if (r.data.blocks.length) {
+    return { ok: false as const, error: r.data.blocks.join(" "), blocks: r.data.blocks };
+  }
+  return { ok: true as const, warns: r.data.warns };
+}
+
+export async function withdrawDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await unrelease(decisionId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function decide(leadId: string, decisionId: string, optionId: string, note?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await recordOutcome({ decisionId, optionId, note });
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function reopenDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await clearOutcome(decisionId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function deleteDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removeDecision(decisionId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
 }

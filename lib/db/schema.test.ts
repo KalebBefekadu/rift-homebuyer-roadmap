@@ -421,3 +421,101 @@ describe("representation", () => {
     expect(new Set(inDb)).toEqual(new Set(STATUSES));
   });
 });
+
+describe("decision rooms", () => {
+  const AGENT = "99999999-0000-4000-8000-000000000001";
+  const LEAD = "99999999-0000-4000-8000-0000000000a1";
+  const D1 = "99999999-0000-4000-8000-0000000000d1";
+  const D2 = "99999999-0000-4000-8000-0000000000d2";
+  const O1 = "99999999-0000-4000-8000-0000000000e1";
+  const O2 = "99999999-0000-4000-8000-0000000000e2";
+
+  test("fixtures insert", async (c) => {
+    await c.query("insert into auth.users (id) values ('99999999-0000-4000-8000-000000000009') on conflict do nothing");
+    await c.query(
+      "insert into rift_agents (id, auth_user_id, name, email) values ($1,'99999999-0000-4000-8000-000000000009','D','d@example.com') on conflict do nothing", [AGENT]);
+    await c.query(
+      "insert into rift_leads (id, agent_id, side, name, contact_basis) values ($1,$2,'sell','Decider','assessment') on conflict do nothing",
+      [LEAD, AGENT]);
+    await c.query(
+      "insert into rift_decisions (id, agent_id, lead_id, kind, question) values ($1,$2,$3,'offers','Which offer should we take?') on conflict do nothing",
+      [D1, AGENT, LEAD]);
+    await c.query(
+      "insert into rift_decisions (id, agent_id, lead_id, kind, question) values ($1,$2,$3,'offers','A different question entirely') on conflict do nothing",
+      [D2, AGENT, LEAD]);
+    await c.query(
+      "insert into rift_decision_options (id, agent_id, decision_id, label, amount_cents, amount_label) values ($1,$2,$3,'The Okafor offer',41230000,'would reach you') on conflict do nothing",
+      [O1, AGENT, D1]);
+    await c.query(
+      "insert into rift_decision_options (id, agent_id, decision_id, label) values ($1,$2,$3,'Belongs to the other room') on conflict do nothing",
+      [O2, AGENT, D2]);
+    const { rows } = await c.query("select count(*)::int n from rift_decisions where agent_id = $1", [AGENT]);
+    expect(rows[0].n).toBe(2);
+  });
+
+  test("a new room is invisible to the client", async (c) => {
+    /* Prepare-then-approve. NULL released_at is the whole gate. */
+    const { rows } = await c.query("select released_at from rift_decisions where id = $1", [D1]);
+    expect(rows[0].released_at).toBeNull();
+  });
+
+  test("a figure must say what it is", async (c) => {
+    /* A bare number in a comparison column is the reader's guess about what
+       they are comparing. */
+    await rejects(c,
+      "insert into rift_decision_options (agent_id, decision_id, label, amount_cents) values ($1,$2,'Unlabelled',500)",
+      [AGENT, D1], /amount_is_labelled/);
+  });
+
+  test("an outcome cannot name an option from a different room", async (c) => {
+    /* A plain foreign key would allow this, and it renders as a perfectly
+       ordinary decision naming an option the reader cannot see. */
+    await rejects(c,
+      "update rift_decisions set decided_at = now(), chosen_option_id = $1 where id = $2",
+      [O2, D1], /chosen_is_ours/);
+  });
+
+  test("half an outcome is refused", async (c) => {
+    /* A room that says a decision was made without saying what it was. */
+    await rejects(c,
+      "update rift_decisions set decided_at = now() where id = $1", [D1], /outcome_is_whole/);
+    await rejects(c,
+      "update rift_decisions set chosen_option_id = $1 where id = $2", [O1, D1], /outcome_is_whole/);
+  });
+
+  test("a whole outcome naming its own option is accepted", async (c) => {
+    await c.query(
+      "update rift_decisions set decided_at = now(), chosen_option_id = $1 where id = $2", [O1, D1]);
+    const { rows } = await c.query("select chosen_option_id from rift_decisions where id = $1", [D1]);
+    expect(rows[0].chosen_option_id).toBe(O1);
+  });
+
+  test("an option a decision names cannot be deleted out from under it", async (c) => {
+    /* RESTRICT, and the first version of this migration used SET NULL, which
+       is a trap on a COMPOSITE key: it nulls every column in the key, and the
+       second column here is rift_decisions.id. Deleting an option failed with
+       "null value in column id violates not-null constraint" — this test is
+       why that was found before it shipped rather than after.
+    
+       RESTRICT is also the better rule. Quietly removable evidence is not
+       evidence. */
+    await rejects(c,
+      "delete from rift_decision_options where id = $1", [O1], /chosen_is_ours|violates foreign key/);
+  });
+
+  test("reopening the decision frees the option again", async (c) => {
+    await c.query(
+      "update rift_decisions set decided_at = null, chosen_option_id = null where id = $1", [D1]);
+    await c.query("delete from rift_decision_options where id = $1", [O1]);
+    const { rows } = await c.query("select id from rift_decisions where id = $1", [D1]);
+    expect(rows, "the room is untouched").toHaveLength(1);
+  });
+
+  test("the kind vocabulary matches the one the code enforces", async (c) => {
+    const { KIND_LABEL } = await import("@/lib/core/decision");
+    const { rows } = await c.query(
+      "select pg_get_constraintdef(oid) d from pg_constraint where conname like '%decisions_kind%'");
+    const inDb = [...String(rows[0].d).matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
+    expect(new Set(inDb)).toEqual(new Set(Object.keys(KIND_LABEL)));
+  });
+});

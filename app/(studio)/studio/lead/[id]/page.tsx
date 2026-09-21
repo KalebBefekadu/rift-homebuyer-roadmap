@@ -10,6 +10,8 @@ import { referralTokenFor, referralLinks } from "@/lib/db/referral";
 import { representationOf } from "@/lib/db/clients";
 import { standingOf } from "@/lib/core/representation";
 import { Agreement } from "./Agreement";
+import { decisionsFor } from "@/lib/db/decisions";
+import { Decisions } from "./Decisions";
 import { Referral } from "./Referral";
 import { offersFor } from "@/lib/db/offers";
 import { siteUrl } from "@/lib/core/site";
@@ -67,12 +69,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   /* Read after the record, not beside it. The record is what the agent came
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
-  const [plan, offers, refToken, refLinks, rep] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
     referralLinks(id),
     representationOf(id),
+    decisionsFor(id),
   ]);
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
@@ -86,6 +89,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      timed-out query would tell the agent he has a compliance problem he does
      not have, and he has no way to tell the two apart from the screen. */
   const agreement = rep.ok && "data" in rep ? rep.data : null;
+  const decisions = rooms.ok && "data" in rooms ? rooms.data : [];
 
   return (
     <>
@@ -109,6 +113,11 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
           />
         ) : null}
+        <Decisions
+          leadId={id}
+          decisions={decisions}
+          agentFirst={agent.name.trim().split(/\s+/)[0] ?? "your agent"}
+        />
         {agreement ? (
           <Agreement
             leadId={id}

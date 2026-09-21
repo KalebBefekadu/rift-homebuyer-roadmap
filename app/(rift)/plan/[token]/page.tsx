@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { readPlanByToken } from "@/lib/db/plan";
-import { currentAgentPublic } from "@/lib/db/service";
+import { currentAgentPublic, currentAgentId } from "@/lib/db/service";
+import { releasedFor } from "@/lib/db/decisions";
+import { DecisionRoom } from "@/components/rift/DecisionRoom";
 import {
   groupPlan, summarise, headline, ownerLabel, daysUntil,
   nextForClient, notOnYou, whenPhrase, RECENT_DAYS,
@@ -83,6 +85,17 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
 
   const agent = await currentAgentPublic();
   const agentFirst = (agent?.name ?? "your agent").trim().split(/\s+/)[0]!;
+
+  /* Decision rooms the agent has RELEASED.
+  
+     `releasedFor` puts `.not("released_at", "is", null)` in the query rather
+     than filtering here, so a room he is half way through assembling is never
+     fetched at all — the same shape as readPlanByToken's narrow column list,
+     and for the same reason: a filter applied after the data arrives is one
+     refactor away from not being applied. */
+  const agentId = await currentAgentId();
+  const roomsRead = agentId ? await releasedFor(plan.leadId, agentId) : null;
+  const rooms = roomsRead?.ok && "data" in roomsRead ? roomsRead.data : [];
 
   const sections = groupPlan(plan.items);
   const s = summarise(plan.items);
@@ -167,6 +180,28 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
             else&rsquo;s. You will see it here the moment that changes.
           </p>
         </div>
+      ) : null}
+
+      {/* Decision Rooms.
+      
+          docs/benchmark.md scores 4.3 at 0 in production — absent, not weak.
+          High on the page and above the plan, because a decision waiting on
+          somebody outranks a checklist: this is the thing that stalls, and the
+          criterion asks for rooms "at the moments where clients actually
+          stall". Undecided ones first for the same reason. */}
+      {rooms.length ? (
+        <section style={{ marginTop: 26 }}>
+          <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
+            {rooms.length === 1 ? "A decision" : "Decisions"}
+          </div>
+          <div className="col gap-3" style={{ marginTop: 10 }}>
+            {[...rooms]
+              .sort((a, b) => Number(Boolean(a.decidedAt)) - Number(Boolean(b.decidedAt)))
+              .map((d) => (
+                <DecisionRoom key={d.id} decision={d} agentFirst={agentFirst} today={now} />
+              ))}
+          </div>
+        </section>
       ) : null}
 
       {/* Question three, the half the plan cannot answer.
