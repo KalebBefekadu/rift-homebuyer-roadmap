@@ -1,216 +1,520 @@
+-- Rift — migrations written 21 September 2026 and NOT yet applied.
+--
+-- Paste this whole file into the Supabase SQL editor, or run each file with
+--   bash scripts/apply-sql-migration.sh <path>
+--
+-- Every statement is additive and re-runnable. Applying this twice is safe.
+--
+-- Until these run, three features degrade honestly rather than silently:
+--   * /studio/referrals and /studio/offers say "nothing to read from"
+--   * referral links record nothing, and the Studio panel says so
+--   * the representation panel and Decision Rooms do not render
+--
+-- AFTER APPLYING, restart PostgREST's schema cache or the first write against
+-- a new column fails with a message about a schema cache. On Supabase this is
+-- automatic within a minute; locally it is `docker restart rift-postgrest`.
+
+
+-- =====================================================================
+-- 20260921010000_rift_referral_moments.sql
+-- =====================================================================
 -- ============================================================================
--- Rift — everything the production database is still owed, in one paste.
+-- The referral engine, given somewhere to remember things.
 --
--- Run this in the Supabase SQL editor (Project → SQL Editor → New query).
--- It is idempotent: running it twice is safe and does nothing the second time.
+-- `lib/core/referral.ts` has described eight moments, their triggers and the
+-- private satisfaction gate since before any of this was built, and until now
+-- nothing read it. docs/benchmark.md gives referral and retention a weight of
+-- 15 out of 100 — a seventh of the product's own grade — and the shipped
+-- product scored approximately nothing on it, because a closing produced a
+-- commission and no next relationship.
 --
--- Three migrations, oldest first. Each is also a file under
--- supabase/migrations/ — this is the same SQL, concatenated so it can be
--- applied without a connection string.
+-- THE RULE THIS SCHEMA EXISTS TO ENFORCE.
 --
---   1. 20260910000000  rift_next_action     — follow-up reminders. Until this
---      runs, Studio shows "Nothing scheduled" instead of the agent's own
---      reminders. It does not error; it is simply never able to store one.
+-- Nothing public is asked for before a private check. Every moment that would
+-- put a client in front of strangers — the closing-day review, the six-month
+-- ask, the anniversary — is gated behind one private question, and an unhappy
+-- client is routed to Kaleb rather than to a review form. That is not review
+-- gating to manufacture ratings: somebody who says they are unhappy is never
+-- asked for a public rating at all, and the private route exists so the
+-- complaint gets answered.
 --
---   2. 20260920000000  attribution_sweep_index — the index the retention sweep
---      has always needed. Harmless now, load-bearing on the first day the
---      24-month analytics window fires against real traffic.
---
---   3. 20260920010000  events_allowlist     — turns the telemetry CHECK
---      constraint from a blocklist into an allowlist, and deletes the payload
---      keys the blocklist let through. The application-side fix already
---      shipped, so nothing new is being collected either way; this removes
---      what was collected and makes the database the backstop it was
---      documented as being.
---
---   4. 20260920020000  forget_reaches_the_lead — gives rift_leads and
---      rift_consents their own session_id. Until this runs, "delete all of
---      it" cannot reach a lead captured without an assessment (the abroad
---      readout, or /book from a landing page), and the code that now tries
---      to will find nothing and report success. THIS IS THE ONE TO RUN
---      FIRST if you only run one.
--- ============================================================================
-
-
-
--- ─── 20260910000000_rift_next_action.sql ───────────────────────────────────
-
--- ============================================================================
--- The next thing you owe them, and when.
---
--- The board says who has gone quiet. It cannot say what you decided to do about
--- it, so the decision lives in the agent's head between sessions — which is
--- exactly where it gets lost. "Call Marcus Thursday" is the smallest unit of
--- account management and there was nowhere to put it.
---
--- One open action per person, deliberately. A queue of six things owed to the
--- same client is a queue nobody works; the next call is the only one that
--- matters and the rest are notes. Completing an action writes to the history,
--- so what was owed and when it was done stays auditable.
+-- `mood` is the column that check writes to, and it is deliberately nullable
+-- with no default. Unanswered is its own state and must not be mistaken for
+-- fine — a default of 'good' would ask the entire back catalogue for reviews
+-- on the first deployment.
 -- ============================================================================
 
-alter table rift_leads add column if not exists next_action text;
-alter table rift_leads add column if not exists next_due date;
+-- The private satisfaction check. Null means nobody has asked yet.
+alter table rift_leads add column if not exists mood text
+  check (mood is null or mood in ('good', 'mixed', 'bad'));
+alter table rift_leads add column if not exists mood_at timestamptz;
 
--- An action with no date is a wish, and a date with no action is an alarm
--- nobody can act on. They travel together or not at all.
+comment on column rift_leads.mood is
+  'Answer to the private satisfaction check. NULL means unasked, which is not the same as fine — no public ask may go out on a NULL. See gate() in lib/core/referral.ts.';
+
+-- The closing date, as its own fact.
+--
+-- `stage_since` was nearly good enough: a lead sitting in 'Closed' entered it
+-- on the closing day. Nearly, because stage_since is rewritten by any later
+-- stage change, and the whole post-closing cadence — thirty days, six months,
+-- every anniversary indefinitely — is counted from this date. A correction to
+-- somebody's stage two years later would silently move all of their
+-- anniversaries, and the only visible symptom would be a message arriving on
+-- the wrong day.
+alter table rift_leads add column if not exists closed_on date;
+
+comment on column rift_leads.closed_on is
+  'The closing date. Every post-closing moment is counted from here rather than from stage_since, which a later stage edit would move.';
+
+-- D5.5, the referral attribution loop: a referred lead linked to its referrer,
+-- visible and countable. One column, self-referencing.
+--
+-- ON DELETE SET NULL rather than CASCADE. Somebody exercising their right to
+-- be forgotten must not take the people they referred with them — those are
+-- separate relationships who consented separately, and deleting them would be
+-- doing a second thing to a third party on the strength of one person's
+-- request. The referred lead survives with no referrer, which is the honest
+-- record of what is left.
+alter table rift_leads add column if not exists referred_by uuid
+  references rift_leads(id) on delete set null;
+
+create index if not exists rift_leads_referred_by_idx
+  on rift_leads (referred_by) where referred_by is not null;
+
+comment on column rift_leads.referred_by is
+  'The relationship that sent this one. SET NULL on delete: erasing a referrer must not erase the people they referred.';
+
+create table if not exists rift_referral_moments (
+  id          uuid primary key default gen_random_uuid(),
+  agent_id    uuid not null references rift_agents(id) on delete cascade,
+  lead_id     uuid not null references rift_leads(id) on delete cascade,
+
+  moment_id   text not null check (moment_id in (
+                'value_delivered', 'plan_published', 'financing_secured',
+                'under_contract', 'closing_day', 'day_30', 'month_6', 'anniversary')),
+
+  -- Which time round. Zero for the seven moments that happen once.
+  --
+  -- The anniversary repeats every year on the closing date, indefinitely. A
+  -- record keyed on the moment alone would mark the first anniversary sent and
+  -- then suppress every anniversary after it — a cadence that quietly stops
+  -- after year one while every screen goes on showing it as running. That is
+  -- this product's recurring failure shape, and one integer removes it.
+  occurrence  integer not null default 0 check (occurrence >= 0),
+
+  state       text not null check (state in
+                ('waiting', 'due', 'sent', 'acted', 'declined', 'held')),
+
+  -- Why, in the agent's own words. Held-back moments are the ones worth
+  -- explaining to yourself six months later.
+  note        text check (note is null or length(note) <= 500),
+
+  decided_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now(),
+
+  -- One decision per moment per occurrence. This is what makes recording a
+  -- decision idempotent, so a retried request cannot produce two answers about
+  -- the same moment and leave the reader to pick.
+  unique (lead_id, moment_id, occurrence)
+);
+
+create index if not exists rift_referral_moments_lead_idx
+  on rift_referral_moments (lead_id, moment_id, occurrence);
+
+comment on table rift_referral_moments is
+  'A decision Kaleb has taken about one referral moment. Absence means undecided: the state is then derived from lifecycle data by momentsFor() rather than stored, so a moment becomes due on its own.';
+
+alter table rift_referral_moments enable row level security;
+
+drop policy if exists rift_referral_moments_owner on rift_referral_moments;
+create policy rift_referral_moments_owner on rift_referral_moments for all
+  using (agent_id in (select id from rift_agents where auth_user_id = auth.uid()))
+  with check (agent_id in (select id from rift_agents where auth_user_id = auth.uid()));
+
+-- =====================================================================
+-- 20260921030000_rift_referral_attribution.sql
+-- =====================================================================
+-- Referral attribution: the writer for a column that had none.
+--
+-- 20260921010000 added rift_leads.referred_by, a Studio screen that counts it,
+-- and referralLinks() to read it. Nothing in the product could ever set it.
+-- Three reads, zero writes — so "advocacy share of pipeline", the first of the
+-- three metrics docs/vision.md names as mattering most and the one with a 30%
+-- target by month 12, was not merely at zero. It was incapable of being
+-- anything else.
+--
+-- This adds the handle a referrer passes on, the field that carries it through
+-- a visit, and the two constraints that stop attribution rewriting itself.
+
+-- ---------------------------------------------------------------------------
+-- The handle
+-- ---------------------------------------------------------------------------
+
+-- Deliberately NOT client_token. That one opens somebody's plan — it is a
+-- credential, and the whole point of this column is to be given away. Handing
+-- a friend a link that shows them your payoff, your stage and every step your
+-- agent owes you is not a referral mechanism, it is a disclosure.
+alter table rift_leads add column if not exists referral_token text;
+
+-- A DEFAULT rather than an application write.
+--
+-- The alternative was minting one the first time the agent opened the record,
+-- which works and adds a write to a read path plus one more thing that can
+-- fail. A column default costs nothing, cannot be forgotten by a new insert
+-- path, and means the handle exists from the moment the person does. Crucially
+-- it also does not appear in any INSERT statement, so a deploy that lands
+-- before this migration is unaffected — the column simply is not there yet.
+alter table rift_leads
+  alter column referral_token set default encode(gen_random_bytes(12), 'hex');
+
+create unique index if not exists rift_leads_referral_token_idx
+  on rift_leads (referral_token) where referral_token is not null;
+
+comment on column rift_leads.referral_token is
+  'Public handle this person hands to somebody else. Appears in a URL as ?r=. Never opens anything — it only records who sent the visitor. See client_token for the credential.';
+
+-- ---------------------------------------------------------------------------
+-- Carrying it through the visit
+-- ---------------------------------------------------------------------------
+
+-- A referral is a first touch. Somebody arrives on a friend's link, reads for
+-- ten minutes, leaves, comes back a week later through a Google search and
+-- finally finishes the assessment — the friend sent them, and an attribution
+-- model that credits the search has just told the agent to buy more search.
+alter table rift_attributions add column if not exists first_ref text;
+alter table rift_attributions add column if not exists last_ref  text;
+
+comment on column rift_attributions.first_ref is
+  'The ?r= value on the visitor''s FIRST touch. Immutable, like every other first_* column — enforced by rift_reject_first_touch_change().';
+
+-- The trigger names its columns one by one, so a new first_* column is not
+-- covered until it is added here. Adding the column without this is the whole
+-- bug class: a guarantee that silently stops applying to the newest field.
+create or replace function rift_reject_first_touch_change()
+returns trigger language plpgsql as $$
+begin
+  if new.first_source   is distinct from old.first_source
+  or new.first_medium   is distinct from old.first_medium
+  or new.first_campaign is distinct from old.first_campaign
+  or new.first_referrer is distinct from old.first_referrer
+  or new.first_landing  is distinct from old.first_landing
+  or new.first_ref      is distinct from old.first_ref
+  or new.first_at       is distinct from old.first_at then
+    raise exception 'first touch is immutable (session %)', old.session_id;
+  end if;
+  return new;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Who sent them is written once
+-- ---------------------------------------------------------------------------
+
+-- Same reasoning as first touch, and it matters more here. A referral is the
+-- highest-margin relationship an agent has; re-pointing one at a later channel
+-- would make the cheapest source in the business look like the weakest.
+--
+-- WHAT IS REJECTED IS RE-POINTING, NOT CLEARING, and the difference is not a
+-- softening — the first version of this rejected both and broke erasure.
+--
+-- referred_by is `on delete set null`. A foreign-key SET NULL action fires
+-- row-level UPDATE triggers, so a trigger that refused every change to a
+-- non-null referred_by refused the cascade too, and DELETING A REFERRER
+-- FAILED. That is "delete all of it" — the strongest promise this product
+-- makes and the one with a legal obligation behind it — broken by a
+-- correctness guarantee about attribution, and it would have surfaced at the
+-- worst possible moment: somebody exercising their erasure right, on a person
+-- whose only distinguishing feature is that somebody else liked the product
+-- enough to pass it on.
+--
+-- So:
+--   NULL -> a value          allowed. The lead row is created first and the
+--                            referrer resolved immediately afterwards.
+--   a value -> a DIFFERENT   rejected. This is attribution being rewritten,
+--   value                    and it is the only case that corrupts anything.
+--   a value -> NULL          allowed. Either the referrer was deleted, or the
+--                            link is being withdrawn. Neither is a lie about
+--                            where a relationship came from; it is the absence
+--                            of a claim.
+create or replace function rift_reject_referrer_change()
+returns trigger language plpgsql as $$
+begin
+  if old.referred_by is not null
+     and new.referred_by is not null
+     and new.referred_by is distinct from old.referred_by then
+    raise exception 'who referred a lead cannot be repointed (lead %)', old.id;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists rift_referrer_is_immutable on rift_leads;
+create trigger rift_referrer_is_immutable
+  before update on rift_leads
+  for each row execute function rift_reject_referrer_change();
+
+-- Nobody refers themselves. Cheap to state, and the alternative is a
+-- self-referential row that renders as a person who sent themselves in.
 do $$
 begin
-  if not exists (select 1 from pg_constraint where conname = 'rift_leads_next_action_dated') then
-    alter table rift_leads add constraint rift_leads_next_action_dated
-      check ((next_action is null) = (next_due is null));
+  if not exists (
+    select 1 from pg_constraint where conname = 'rift_leads_no_self_referral'
+  ) then
+    alter table rift_leads add constraint rift_leads_no_self_referral
+      check (referred_by is null or referred_by <> id);
   end if;
 end $$;
 
--- Ordered by what is owed soonest, and only for people still being worked.
-create index if not exists rift_leads_due_idx
-  on rift_leads (agent_id, next_due)
-  where next_due is not null and archived_at is null;
+-- ---------------------------------------------------------------------------
+-- Backfill
+-- ---------------------------------------------------------------------------
 
-comment on column rift_leads.next_action is
-  'The one thing owed to this person next. Cleared when done; the completion is written to rift_lead_notes.';
+-- Everybody already in the book gets a handle, so the agent can send a
+-- referral link to a client he closed last month rather than only to people
+-- who arrive after this migration.
+update rift_leads
+   set referral_token = encode(gen_random_bytes(12), 'hex')
+ where referral_token is null;
 
--- ─── 20260920000000_rift_attribution_sweep_index.sql ───────────────────────────────────
+create index if not exists rift_leads_referred_by_idx2
+  on rift_leads (agent_id, referred_by) where referred_by is not null;
 
--- The index the retention sweep has always needed and never had.
+-- =====================================================================
+-- 20260921040000_rift_representation.sql
+-- =====================================================================
+-- Representation: the gate between a lead and a client.
 --
--- `rift_attributions` is keyed on session_id, which serves every read in the
--- product except one: the sweep deletes by (agent_id, first_at), and the
--- health check asks the same question to find out whether the sweep is still
--- running. Both are sequential scans today.
+-- docs/product.md requires this to be "a visible lifecycle state rather than
+-- an offline side channel". It was neither — there was no column at all, which
+-- is why canPublish() in lib/core/seam.ts was called with `hasAgreement: true`
+-- as a literal. The one precondition in the product that was asserted rather
+-- than read, inside the function whose entire job is refusing to publish when
+-- something is not true.
 --
--- It does not hurt yet, because the analytics window is twenty-four months and
--- the table is small. It starts hurting on the first day that window fires
--- against a table with real traffic in it, which is exactly the day nobody
--- will be watching the retention job — and a deletion job that times out is a
--- deletion job that silently stops keeping the promise printed at the bottom
--- of every readout.
---
--- No RLS change: the policy on this table is unchanged and still the one from
--- 20260907000000_rift_core.sql. An index is not a grant.
-create index if not exists rift_attributions_sweep_idx
-  on rift_attributions (agent_id, first_at);
+-- It is also the most consequential compliance moment in a residential
+-- transaction, and the record of it is what an agent would be asked for.
 
--- ─── 20260920010000_rift_events_allowlist.sql ───────────────────────────────────
+alter table rift_leads add column if not exists representation text
+  not null default 'none';
 
--- Telemetry: an allowlist in the database, and a clean-up of what the
--- blocklist let through.
---
--- `events_carry_no_answer` rejected three literal key names — value, answer,
--- input — and was described in the code as the only real guarantee behind the
--- rule that telemetry stores question ids and timings, never answer values.
--- It was a blocklist, and a blocklist fails open.
---
--- What went through it: the buyers-abroad landing page sent the visitor's
--- residency situation (citizen / resident / ITIN / no U.S. status) under the
--- key `status`, on every page view. Residency status is about as close a
--- proxy for national origin as this product could collect, national origin is
--- a protected class under the Fair Housing Act, and rift_events is keyed on a
--- session that joins to a lead. The page was designed to target a situation
--- rather than an ethnicity and then logged the situation.
---
--- Two things here, in this order, because the second cannot be added while the
--- first is still true of existing rows.
+alter table rift_leads add column if not exists representation_signed_on date;
+alter table rift_leads add column if not exists representation_expires_on date;
 
--- 1. Remove what should never have been collected.
---
---    Rewrites every payload to contain only allowed keys. This is deletion,
---    not masking: the values are gone from the row rather than hidden behind
---    a flag, which is the same standard the retention job is held to.
-update rift_events e
-   set payload = coalesce(
-         (select jsonb_object_agg(k, v)
-            from jsonb_each(e.payload) as t(k, v)
-           where k = any (array[
-             'page','qid','step','of','from','via',
-             'answered','matched','source','band','prefilled','live',
-             'hasTopic','delivered','consent','slot'
-           ])),
-         '{}'::jsonb)
- where exists (
-       select 1
-         from jsonb_object_keys(e.payload) as k
-        where k <> all (array[
-          'page','qid','step','of','from','via',
-          'answered','matched','source','band','prefilled','live',
-          'hasTopic','delivered','consent','slot'
-        ])
- );
+-- The vocabulary is closed, and it matches STATUSES in
+-- lib/core/representation.ts exactly. A status outside this list does not
+-- error anywhere — it simply fails `isCovered`, so the journey silently stops
+-- advancing and nobody can see why.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_leads_representation_check') then
+    alter table rift_leads add constraint rift_leads_representation_check
+      check (representation in ('none','prepared','sent','signed','expired','declined'));
+  end if;
+end $$;
 
--- 2. Make it impossible to write again.
+-- A signed agreement has a date it was signed.
 --
---    `payload - array[...]` removes every allowed key; if anything is left,
---    the row carried a key nobody approved and it is rejected. Adding a key
---    to telemetry now requires a migration, which is precisely the moment
---    somebody should have to decide whether it is an answer.
---
---    The list is kept identical to ALLOWED_META in lib/core/telemetry.ts, and
---    lib/core/telemetry.test.ts fails when the two drift apart.
-alter table rift_events drop constraint if exists events_carry_no_answer;
+-- Not "should have". The dates are the whole evidentiary value of the record:
+-- "signed" with no date says an agreement exists without saying when it began,
+-- which is the question that actually gets asked. Every other status has no
+-- signing date by definition, and storing one against `declined` would be a
+-- contradiction sitting in a column.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_leads_signed_is_dated') then
+    alter table rift_leads add constraint rift_leads_signed_is_dated
+      check (
+        (representation = 'signed' and representation_signed_on is not null)
+        or (representation <> 'signed' and representation_signed_on is null)
+      );
+  end if;
+end $$;
 
-alter table rift_events add constraint events_carry_no_answer check (
-  payload - array[
-    'page','qid','step','of','from','via',
-    'answered','matched','source','band','prefilled','live',
-    'hasTopic','delivered','consent','slot'
-  ] = '{}'::jsonb
+-- An agreement cannot run out before it starts.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_leads_expiry_follows_signing') then
+    alter table rift_leads add constraint rift_leads_expiry_follows_signing
+      check (
+        representation_expires_on is null
+        or representation_signed_on is null
+        or representation_expires_on >= representation_signed_on
+      );
+  end if;
+end $$;
+
+-- An expiry date belongs to an agreement. Recording one against a lead with
+-- nothing signed is a date attached to nothing, and it would render on the
+-- agent's screen as a deadline he has no way to meet.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_leads_expiry_needs_an_agreement') then
+    alter table rift_leads add constraint rift_leads_expiry_needs_an_agreement
+      check (representation_expires_on is null or representation_signed_on is not null);
+  end if;
+end $$;
+
+comment on column rift_leads.representation is
+  'none | prepared | sent | signed | expired | declined. Matches STATUSES in lib/core/representation.ts. NOTE: a stored ''signed'' with a past expiry reads as expired — standingOf() derives that rather than writing it back, because a derived truth stored twice is two truths.';
+
+comment on column rift_leads.representation_expires_on is
+  'Monitored deadline. docs/product.md: expiration "raises attention before it lapses, not after".';
+
+create index if not exists rift_leads_representation_idx
+  on rift_leads (agent_id, representation_expires_on)
+  where representation = 'signed' and representation_expires_on is not null;
+
+-- =====================================================================
+-- 20260921050000_rift_decisions.sql
+-- =====================================================================
+-- Decision Rooms.
+--
+-- docs/benchmark.md scores criterion 4.3 at 0 in production. Not weak —
+-- absent. The prototype has /app/decisions and a decision room; the shipped
+-- product had no surface at all, and the criterion asks for rooms "at the
+-- moments where clients actually stall, with scenarios and recorded outcomes".
+
+create table if not exists rift_decisions (
+  id          uuid primary key default gen_random_uuid(),
+  agent_id    uuid not null references rift_agents(id) on delete cascade,
+  lead_id     uuid not null references rift_leads(id) on delete cascade,
+
+  kind        text not null default 'other'
+              check (kind in ('affordability','offers','property','timing','other')),
+
+  -- Written for the client to read, like a plan item. Bounded because it
+  -- renders as a heading on their page and a paragraph in a heading slot is a
+  -- paragraph nobody reads.
+  question    text not null check (length(btrim(question)) between 5 and 200),
+
+  -- The agent's framing. Optional, because a room with two clearly labelled
+  -- options sometimes needs no preamble, and requiring one produces preamble.
+  context     text check (context is null or length(btrim(context)) > 0),
+
+  decide_by   date,
+
+  -- Prepare-then-approve, criterion 2.2. NULL means the client cannot see it.
+  -- Not a boolean: when it was released is the part that matters afterwards.
+  released_at timestamptz,
+
+  -- The recorded outcome. An outcome is a fact, not a state — which option,
+  -- when, and in whose words.
+  decided_at       timestamptz,
+  chosen_option_id uuid,
+  outcome_note     text,
+
+  created_at  timestamptz not null default now()
 );
 
--- No RLS change. The policy on rift_events is unchanged and still the one from
--- 20260907000000_rift_core.sql; a constraint is not a grant.
+create table if not exists rift_decision_options (
+  id            uuid primary key default gen_random_uuid(),
+  agent_id      uuid not null references rift_agents(id) on delete cascade,
+  decision_id   uuid not null references rift_decisions(id) on delete cascade,
 
+  label         text not null check (length(btrim(label)) between 1 and 120),
+  detail        text,
 
+  -- CENTS. These are money and a float is not money; the rest of this schema
+  -- stores money the same way for the same reason.
+  --
+  -- NULL is meaningful and is not zero: "sell first, then buy" has no figure,
+  -- and lib/core/decision.ts refuses to release a room where some options
+  -- carry one and others do not, because side by side an option with no number
+  -- reads as one that costs nothing.
+  amount_cents  bigint,
 
--- ─── 20260920020000_rift_forget_reaches_the_lead.sql ───────────────────────
+  -- What that number IS: "would reach you", "a month", "at the table". Two
+  -- options labelled differently are different quantities in the same column,
+  -- and canRelease() refuses that too.
+  amount_label  text,
 
--- ============================================================================
--- "Delete all of it" did not reach the person.
+  upside        text,
+  downside      text,
+
+  -- The agent's order. Never the amount: the largest number is not the best
+  -- option, which is the entire point of headlineTrap in lib/core/offers.ts.
+  sort          integer not null default 0,
+
+  created_at    timestamptz not null default now()
+);
+
+-- A figure needs to say what it is. A bare number in a comparison column is
+-- the reader's guess about what they are comparing.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_decision_options_amount_is_labelled') then
+    alter table rift_decision_options add constraint rift_decision_options_amount_is_labelled
+      check (amount_cents is null or length(btrim(coalesce(amount_label,''))) > 0);
+  end if;
+end $$;
+
+-- The chosen option must belong to this decision.
 --
--- `forget()` deletes the assessment, the events and the attribution for a
--- session, and its own docblock says it "is the same deletion the sweep
--- performs, triggered by the person rather than by time". That was true when
--- it was written: rift_leads.assessment_id cascaded, so deleting the
--- assessment took the lead with it.
---
--- 20260908000000 changed that cascade to SET NULL, for a good and carefully
--- argued reason — the retention sweep was destroying relationships the agent
--- was still working, as a side effect of a foreign key default. That fix is
--- right and stays. What nobody noticed is that `forget()` shares the
--- mechanism: from that migration onwards, a person clicking "Delete all of
--- it" had their assessment removed and their NAME, EMAIL, PHONE and CONSENT
--- RECORD left behind, while the page told them "Nothing about this visit is
--- left on this device or on our side."
---
--- The sweep was updated to delete leads explicitly. `forget()` was not.
---
--- Two problems here, and this file is the half that needs the database:
---
---   1. A lead captured with no assessment — from the abroad readout, or from
---      /book on a landing page — has no link to a session at all, so nothing
---      could find it even after the code is fixed. rift_leads gets its own
---      session_id.
---
---   2. Same for the consent record, which hangs off the assessment and is
---      SET NULL for the same reason.
---
--- Nullable, because every lead already in the table predates this and there
--- is no honest value to backfill. A null session_id means "captured before
--- this existed, or captured by something that had no session" — and the one
--- thing that must never happen is inventing a session id that would make an
--- unrelated person's delete request destroy this row.
--- ============================================================================
+-- A plain foreign key to rift_decision_options would let a decision be
+-- recorded against an option from a DIFFERENT room — which renders as a
+-- perfectly ordinary outcome naming an option the reader cannot see. The
+-- composite key makes that unrepresentable.
+create unique index if not exists rift_decision_options_scoped_idx
+  on rift_decision_options (id, decision_id);
 
-alter table rift_leads     add column if not exists session_id text;
-alter table rift_consents  add column if not exists session_id text;
+-- ON DELETE RESTRICT, and the alternative is worth recording because it was
+-- written first and is a trap.
+--
+-- `on delete set null` here does NOT null only chosen_option_id. A composite
+-- foreign key sets EVERY column in the key to null, and the second column of
+-- this one is rift_decisions.id — the primary key. Deleting an option that a
+-- decision named failed with "null value in column id violates not-null
+-- constraint", which is the good outcome; the bad one was available on
+-- Postgres 15+ as `set null (chosen_option_id)`, and writing version-specific
+-- syntax into a migration applied by hand to a database whose version nobody
+-- has checked is how a migration half-applies.
+--
+-- RESTRICT is also the better rule. An option a recorded decision names is
+-- part of the record of what was decided, and quietly removable evidence is
+-- not evidence. Reopen the decision first — which clears the reference — and
+-- then the option can go.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_decisions_chosen_is_ours') then
+    alter table rift_decisions add constraint rift_decisions_chosen_is_ours
+      foreign key (chosen_option_id, id)
+      references rift_decision_options (id, decision_id)
+      on delete restrict
+      deferrable initially deferred;
+  end if;
+end $$;
 
-create index if not exists rift_leads_session_idx
-  on rift_leads (session_id) where session_id is not null;
+-- An outcome has a time and an option, or it has neither. Half an outcome is
+-- a room that says a decision was made without saying what it was.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'rift_decisions_outcome_is_whole') then
+    alter table rift_decisions add constraint rift_decisions_outcome_is_whole
+      check ((decided_at is null) = (chosen_option_id is null));
+  end if;
+end $$;
 
-create index if not exists rift_consents_session_idx
-  on rift_consents (session_id) where session_id is not null;
+create index if not exists rift_decisions_lead_idx
+  on rift_decisions (lead_id, created_at desc);
 
-comment on column rift_leads.session_id is
-  'The browser session that produced this lead. Nullable for rows captured before 20260920020000. Used by lib/db/retention.ts forget() so that erasure reaches a lead with no assessment behind it.';
+-- The client's own read: released rooms for one relationship.
+create index if not exists rift_decisions_released_idx
+  on rift_decisions (lead_id, released_at) where released_at is not null;
 
-comment on column rift_consents.session_id is
-  'As rift_leads.session_id. A consent record is evidence that contact was lawful; when the person it is about is erased, there is nobody left for it to be evidence about, so it goes with them.';
+create index if not exists rift_decision_options_decision_idx
+  on rift_decision_options (decision_id, sort);
+
+alter table rift_decisions        enable row level security;
+alter table rift_decision_options enable row level security;
+
+drop policy if exists rift_decisions_owner on rift_decisions;
+create policy rift_decisions_owner on rift_decisions
+  for all using (agent_id = rift_my_agent_id()) with check (agent_id = rift_my_agent_id());
+
+drop policy if exists rift_decision_options_owner on rift_decision_options;
+create policy rift_decision_options_owner on rift_decision_options
+  for all using (agent_id = rift_my_agent_id()) with check (agent_id = rift_my_agent_id());
+
+comment on column rift_decisions.released_at is
+  'NULL means the client cannot see this room. Prepare-then-approve, benchmark 2.2.';
+
+comment on column rift_decision_options.amount_cents is
+  'NULL is "this option has no figure", which is not zero. See canRelease() in lib/core/decision.ts.';

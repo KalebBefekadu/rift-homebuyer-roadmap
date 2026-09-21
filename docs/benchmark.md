@@ -452,6 +452,104 @@ The three lowest, as the rule requires:
 Two of those three are features. One is a variable that would take an afternoon and move
 the total more than either.
 
+## Parity, remeasured — 21 September 2026, later the same day
+
+The audit above was recorded in the morning and five of its gaps were built in
+the afternoon. This records what changed and, more usefully, **one place where
+the morning's audit was wrong**.
+
+### The correction
+
+**4.5 Pipeline visibility was scored 4 and was not a 4.** The citation read
+"stall detection and a weighted forward view". Only the first half shipped:
+
+```bash
+grep -rn 'from "@/lib/core/pipeline"' app lib --include="*.tsx" --include="*.ts"
+```
+
+Production Studio imported `STALL_CHIP` and `STAGE_NAMES`. `forecast`,
+`weightFor`, `evidenceMix` and `commissionOn` were imported by exactly one
+file — `app/prototype/studio/clients/page.tsx`. A complete, tested forward view
+that nothing outside the prototype rendered, scored as shipping because the
+module existed.
+
+**So the morning's real total was 81.25, not 82.** That is the more useful
+number here: an audit that reads a module list rather than an import graph will
+make this mistake again.
+
+### What moved, and what it is waiting on
+
+| # | Criterion | Was | Code | Live | Blocked on |
+| --- | --- | --- | --- | --- | --- |
+| 3.1 | Five questions | 2 | **4** | **4** | nothing |
+| 4.5 | Pipeline visibility | 3 (was mis-scored 4) | **4** | **4** | nothing |
+| 5.5 | Referral attribution loop | 3 | **4** | 3 | `20260921030000` |
+| 4.2 | Representation capture | 1 | **3** | 1 | `20260921040000` |
+| 4.3 | Decision support | 0 | **3** | 0 | `20260921050000` |
+| 1.6 / 2.3 | Delivery | 2 | 2 | 2 | `BREVO_FROM_EMAIL` |
+
+**Live is the column that counts.** Three of the five need a migration that has
+not been applied, and until it is, that code is as absent from production as it
+was this morning. Scoring the middle column would repeat exactly the mistake the
+4.5 correction is about: grading what exists in the repository rather than what
+answers a request.
+
+| Dimension | This morning | Ships now | With the migrations | And the sender |
+| --- | --- | --- | --- | --- |
+| D1. Front-end value and capture | 26.25 | 26.25 | 26.25 | **28.75** |
+| D2. Agent operating leverage | 16.00 | 16.00 | 16.00 | **18.00** |
+| D3. Client experience clarity | 18.00 | **20.00** | 20.00 | 20.00 |
+| D4. Conversion to sale | 9.00 | **9.75** | **13.50** | 13.50 |
+| D5. Referral and retention | 12.00 | 12.00 | **12.75** | 12.75 |
+| **TOTAL** | **81.25** | **84.00** | **88.50** | **93.00** |
+
+D3 reaches full marks and is the one that needed no schema change: the client's
+page answers all five questions from plan items that already existed.
+
+### The last column is worth looking at twice
+
+**93.00, against the prototype's 93.00.** Not approximately — the same number,
+arrived at by a different route, and it is not a coincidence worth celebrating
+so much as a decomposition worth reading:
+
+| | Prototype | Production, fully applied |
+| --- | --- | --- |
+| D2. Agent operating leverage | 19.00 | **18.00** |
+| D3. Client experience clarity | 19.00 | **20.00** |
+
+Production would be **ahead on client clarity** — the five questions ship, and
+3.5 accessibility was raised on a tool audit rather than on a claim — and
+**behind on agent leverage**, because 2.2 prepare-then-approve ships as a review
+queue and not as the offer room.
+
+So the honest reading of "93 versus 93" is that the specification and the build
+have swapped which half they are better at, not that the gap closed.
+
+### What actually remains
+
+Of the 11.75 points between this morning's real 81.25 and 93.00:
+
+- **7.25** is three migrations, already written, refused by the deploy
+  classifier. No further engineering.
+- **4.50** is `BREVO_FROM_EMAIL` and a verified sender. It was the cheapest
+  point on the morning's table and it is now very nearly the only one.
+
+Nothing on that list is a feature.
+
+### The rule still binds
+
+> No score above 84 is validated until field metrics exist.
+
+84.00 sits exactly on the line and 88.50 does not, which is worth saying plainly
+rather than letting the table imply otherwise. Pass five remains unrun and every
+field metric is still zero.
+
+What changed today is narrower and more useful than a number. **5.5 now has a
+writer.** `referred_by` had three readers and no writer, so advocacy share of
+pipeline — the first of the three metrics vision.md names as mattering most —
+was not at zero. It was incapable of anything else. It can move for the first
+time, which is the precondition for pass five being worth running at all.
+
 ## How to run this benchmark
 
 1. Score each criterion 0 to 4 against the ladder, citing the document section or prototype screen that earns the score.

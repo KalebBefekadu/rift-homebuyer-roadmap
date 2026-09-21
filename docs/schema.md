@@ -13,7 +13,7 @@ and are left untouched; nothing here reads or writes them.
 
 ---
 
-## The five decisions that shape everything else
+## The six decisions that shape everything else
 
 Read these before the tables. Each one is a place where the obvious design produces a
 wrong number instead of an error.
@@ -43,6 +43,18 @@ fix was deriving instead of storing twice.
 ### 5. First touch is written once and never updated
 Enforce it in the database, not in application code. A `BEFORE UPDATE` trigger that rejects
 a change to `first_touch_*` is three lines and removes an entire class of attribution bug.
+
+The trigger names its columns **one at a time**, so a new `first_*` column is not covered
+until it is added there. `first_ref` — who referred this visitor — was the first to test
+that, and a guarantee which silently stops applying to the newest field is worse than none.
+
+### 6. A referral is written once, but may be cleared
+`rift_leads.referred_by` rejects being re-pointed at a different lead and permits being set
+to NULL. The distinction is not a softening. The column is `on delete set null`, a
+foreign-key SET NULL action fires row-level UPDATE triggers, and a trigger refusing every
+change refused the cascade too — so **deleting a referrer failed**, and "delete all of it"
+broke for any client who had introduced somebody. Re-pointing is the only case that corrupts
+anything; clearing is the absence of a claim.
 
 ---
 
@@ -84,7 +96,7 @@ it, and keep the corresponding test from [handoff.md](handoff.md) §7.
 | --- | --- | --- |
 | `leads` | A completed-or-abandoned assessment with a way to reach them | `funnel_version` pins what they were actually asked |
 | `lead_scores` | Score, band, and the six signals with their points | Store the breakdown, not just the total. An agent who cannot audit the ranking stops trusting it |
-| `clients` | A converted relationship | `stage` cached from `stage_transitions` |
+| `clients` | A converted relationship | `stage` cached from `stage_transitions`. **Representation** lives here: status, signed date, expiry. A stored `signed` with a past expiry is NOT coverage — `standingOf()` derives that from the clock rather than writing it back |
 | `stage_transitions` | Every stage change with its timestamp | The truth behind stall detection and pipeline weights |
 | `household_members` | Co-buyers, spouses, co-owners | The prototype treats a co-decider as a first-class signal |
 
@@ -107,6 +119,7 @@ it, and keep the corresponding test from [handoff.md](handoff.md) §7.
 | `touches` | Each step sent: channel actually used, and why if downgraded | The downgrade reason is data, not a log line |
 | `tasks` | Owner, due date, state | Owner is a person, always. An unowned task is a wish |
 | `referral_moments` | Fired moments, mood, gate outcome | |
+| `decisions`, `decision_options` | Decision Rooms. Question, options, released state, recorded outcome | Nothing reaches the client until `released_at` is set. The outcome's option is held inside its own room by a COMPOSITE foreign key — a plain one lets a decision name an option from a different room, which renders as an ordinary outcome naming something the reader cannot see |
 | `offers`, `offer_terms` | Rift Offer | Compared on net, never on price |
 | `documents` | Supabase Storage pointers + extracted dates | Phase 6 |
 
