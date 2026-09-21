@@ -44,10 +44,6 @@ body {
   color: var(--ink);
 }
 
-.font-display {
-  font-family: "DM Serif Display", Georgia, serif;
-}
-
 input,
 textarea,
 select {
@@ -90,78 +86,16 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
-.app-shell {
-  min-height: 100vh;
-  background: var(--app-bg);
-}
-
-.app-card {
-  border: 1px solid rgba(15, 41, 33, 0.1);
-  background: var(--app-panel);
-  box-shadow: var(--shadow);
-}
-
-.app-glass {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #17241e;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.17);
-}
-
-.metric-card {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #18271f;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  padding: 0.3rem 0.65rem;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #dce2d7;
-}
-
-.focus-ring {
-  transition:
-    transform 140ms ease,
-    box-shadow 140ms ease,
-    filter 140ms ease;
-}
-
-.focus-ring:hover {
-  transform: translateY(-1px);
-}
-
-.focus-ring:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-}
-
-.inline-suffix input {
-  padding-right: 26px;
-}
-
-@keyframes rift-fade {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes rift-drift {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(-24px, 18px);
-  }
-}
+/* Nothing else belongs here.
+ *
+ * Eight class rules and two keyframes from the retired portal MVP outlived it
+ * in this file, and one of them did damage: a dark-ground `.chip`, which
+ * collides with the live `.chip` in prototype/rift.css. Which one won depended
+ * on the order Next happened to emit two stylesheets, so a selected filter on
+ * Studio's People screen rendered as unselected — correct markup, correct
+ * class, correct aria-pressed, wrong colour.
+ *
+ * The element rules above stay: they are what an unstyled page outside `.rift`
+ * (not-found, global-error) is rendered with. Class rules for a design that no
+ * longer exists do not, because the next collision is silent too.
+ */

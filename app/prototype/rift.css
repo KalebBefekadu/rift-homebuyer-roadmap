@@ -56,14 +56,23 @@
    primary call to action on both public landing pages. */
 .rift a { text-decoration: none; }
 .rift a:not([class~="btn"]) { color: inherit; }
-/* The reset deliberately does not touch .btn. `.rift button` is (0,1,1) and
-   `.btn-p` is (0,1,0), so stripping background/border/padding here silently
-   out-specified every button class in the product: a <button class="btn btn-p">
-   rendered as bare text with no fill, while the identical <a class="btn btn-p">
-   looked right — which is why it survived. Links were never matched by this
-   selector. */
-.rift button { font: inherit; cursor: pointer; }
-.rift button:not([class~="btn"]) { color: inherit; background: none; border: 0; padding: 0; }
+/* `:where()`, so this reset has ZERO specificity and every class beats it.
+ *
+ * It was written as `.rift button:not([class~="btn"])` — (0,2,1) — which
+ * out-specified every visual class in the product and had to name its
+ * exceptions. It caught `.btn` first: a <button class="btn btn-p"> rendered as
+ * bare text with no fill while the identical <a class="btn btn-p"> looked
+ * right, because links were never matched. That was fixed by adding the `btn`
+ * exemption, and the fix was the wrong shape — a filter pill written as
+ * <button class="chip chip-ink"> hit exactly the same wall later, with correct
+ * markup, the correct class and the correct aria-pressed, rendering as plain
+ * text. The list of exemptions was always going to be one behind.
+ *
+ * At zero specificity it does what it is actually for — make a BARE button
+ * behave like text — and needs no exemptions at all. Unlayered, so it still
+ * beats Tailwind's preflight in @layer base. */
+.rift button { cursor: pointer; }
+:where(.rift button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
 .rift ul, .rift ol { margin: 0; padding: 0; list-style: none; }
 .rift input, .rift select, .rift textarea { font: inherit; color: inherit; }
 
