@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { readPlanByToken } from "@/lib/db/plan";
 import { currentAgentPublic } from "@/lib/db/service";
-import { groupPlan, summarise, headline, ownerLabel, daysUntil } from "@/lib/core/plan";
+import {
+  groupPlan, summarise, headline, ownerLabel, daysUntil,
+  nextForClient, notOnYou, whenPhrase, RECENT_DAYS,
+} from "@/lib/core/plan";
 import { rankOffers, headlineTrap, gapsIn, FINANCING_LABEL } from "@/lib/core/offers";
 import { money } from "@/lib/core/compute";
 import { Ico, Mark } from "@/components/rift/icons";
@@ -84,6 +87,16 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
   const sections = groupPlan(plan.items);
   const s = summarise(plan.items);
 
+  /* The other three of the five questions docs/vision.md promises every
+     customer can answer immediately. This page answered "where am I" and
+     "where do I ask"; these answer "what do I do next", "what is somebody
+     else doing", and "what is approaching". All derived from the plan items
+     that already exist — there is no appointments table and no documents
+     table, and a heading that is permanently empty is worse than no heading. */
+  const now = new Date();
+  const next = nextForClient(plan.items, now);
+  const finishedLately = notOnYou(plan.items, now).recentlyDone;
+
   /* Ranked here, on the server, like every other figure in this product. The
      browser receives numbers, never the arithmetic — this page is reachable by
      a link somebody forwarded, and a net computed in the browser from data in
@@ -115,6 +128,100 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           {" "}This page is kept up to date by {agentFirst}, and nothing on it is automatic.
         </p>
       ) : null}
+
+      {/* Question two: the one thing.
+
+          One, not a list — the plan below already shows everything. Somebody
+          opening this on a phone between other things is asking "is anything
+          waiting on me", and five bullet points is a worse answer to that than
+          one sentence. Absent entirely when nothing is owed by them, because a
+          page that manufactures a task to fill the space is a page people
+          learn to ignore. */}
+      {next ? (
+        <div className="card p-4" style={{
+          marginTop: 22,
+          borderColor: next.reason === "overdue" ? "var(--neg-line)" : "var(--accent-line)",
+          background: next.reason === "overdue" ? "var(--neg-wash)" : "var(--accent-wash)",
+        }}>
+          <div className="row gap-2" style={{ alignItems: "center" }}>
+            <Ico.arrowR size={14} className={next.reason === "overdue" ? "c-neg" : "c-acc"} />
+            <span className="t-2xs w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
+              {next.reason === "overdue" ? "Past its date, and waiting on you" : "Your next step"}
+            </span>
+          </div>
+          <div className="t-md w6" style={{ marginTop: 8, lineHeight: 1.5 }}>{next.item.title}</div>
+          <div className="t-xs c-3" style={{ marginTop: 5 }}>
+            {next.days === null
+              ? "No date set — worth asking about when you next speak."
+              : `Due ${WHEN(next.item.dueOn!)} · ${whenPhrase(next.days)}`}
+          </div>
+        </div>
+      ) : s.total > 0 ? (
+        /* No heading here. `headline()` above has already said "Nothing is
+           waiting on you right now" — a card repeating it verbatim two lines
+           later is how a page reads as generated. What is added is the part
+           the headline does not say: where the work actually is. */
+        <div className="card p-4" style={{ marginTop: 22 }}>
+          <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+            Everything currently open is at {agentFirst}&rsquo;s end or somebody
+            else&rsquo;s. You will see it here the moment that changes.
+          </p>
+        </div>
+      ) : null}
+
+      {/* Question three, the half the plan cannot answer.
+
+          The Done bucket above holds everything ever completed, in no relation
+          to now — something finished in March sits beside something finished on
+          Tuesday, and neither tells the reader whether anything is currently
+          happening. This does, and it ages out at three weeks so it cannot go
+          on implying momentum that stopped months ago.
+
+          It is the mechanism behind "inbound status questions under one per
+          client per month" in docs/benchmark.md: somebody who can see three
+          things finished lately stops needing to ask. */}
+      {finishedLately.length > 0 ? (
+        <section style={{ marginTop: 28 }}>
+          <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
+            Done for you in the last {Math.round(RECENT_DAYS / 7)} weeks
+          </div>
+          <div className="card p-4" style={{ marginTop: 10 }}>
+            <div className="col gap-2">
+              {finishedLately.map((it) => (
+                <div key={it.id} className="row gap-2" style={{ alignItems: "flex-start" }}>
+                  <Ico.check size={13} className="c-pos" style={{ flex: "none", marginTop: 4 }} />
+                  <div className="t-sm c-2" style={{ lineHeight: 1.5 }}>
+                    {it.title}
+                    <span className="c-4">
+                      {" · "}
+                      {ownerLabel(it, { agent: agentFirst, client: plan.firstName }, "client")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Question four is answered by the plan itself, not by a panel above it.
+
+          A "Coming up" section listing the next five dated items was built here
+          first and thrown away. The plan below is ALREADY grouped into "Past its
+          date", "This week" and "The next two weeks", so the panel restated every
+          one of them a second time — and the next-step card made the first of
+          them a third. Three copies of "Gather two months of pay stubs" on one
+          phone screen. The fix is not a better panel, it is a relative date on
+          each row, so how soon a thing is reads at a glance with no second list
+          to keep in step with the first.
+
+          The same reasoning removed the open half of "what is happening at our
+          end". Every open item already names its owner in the list; somebody
+          scanning it reads "Kaleb · Sep 22" and has their answer. What the list
+          could NOT say is what has been finished LATELY — the Done bucket holds
+          everything ever completed, in no relation to now — so that half
+          survives, below the plan, where reassurance belongs rather than
+          competing with the thing they have to do. */}
 
       {/* The plan being empty is a real state and reads as one. A client who
           opens this the day after a first call should not see a broken page. */}
@@ -164,8 +271,15 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                             {/* Who, always. A plan where nobody owes anything is
                                 a list of hopes. */}
                             {item.doneAt ? `${who} · done` : who}
+                            {/* The calendar date AND how soon that is.
+
+                                "Sep 24" requires the reader to work out what
+                                today is and subtract. A panel above the plan
+                                that did the subtraction for them was tried and
+                                removed — it restated the whole list — so the
+                                answer belongs on the row it is about. */}
                             {item.dueOn && !item.doneAt
-                              ? ` · ${WHEN(item.dueOn)}${late ? ` (${Math.abs(daysUntil(item.dueOn, new Date()))} days ago)` : ""}`
+                              ? ` · ${WHEN(item.dueOn)} · ${whenPhrase(daysUntil(item.dueOn, now))}`
                               : ""}
                           </div>
                         </div>
@@ -286,12 +400,25 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
         </section>
       ) : null}
 
+      {/* Question five: where to ask.
+
+          It was already here and it was already honest about the missing reply
+          box. What it did not do was name the person, say how quickly they
+          answer, or distinguish "this is wrong" from "I do not understand this"
+          — three different reasons to make contact, and a block that covers
+          only the first is one most people will not use. */}
       <div className="card p-4" style={{ marginTop: 26 }}>
-        <div className="t-sm w6">If something here is wrong</div>
+        <div className="t-sm w6">If you need something</div>
         <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-          Tell {agentFirst}. This page has no way to reply, deliberately — a message typed into
-          a page nobody is watching is worse than no message at all.
+          Anything on this page that is wrong, out of date, or that you would just
+          rather have explained — that is {agentFirst}, and it is a normal thing to
+          ask for. There is no reply box here on purpose: a message typed into a page
+          nobody is watching is worse than no message at all.
         </p>
+        {/* The booking link, and nothing else. `currentAgentPublic` returns
+            the name and deliberately not the address — it is the read every
+            public page uses, and widening it to hang a mailto here would put
+            the agent's inbox on surfaces that never asked for it. */}
         <Link href="/book" className="btn btn-s btn-sm" style={{ marginTop: 12 }}>
           <Ico.cal size={14} />Book fifteen minutes
         </Link>
