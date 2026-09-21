@@ -1,0 +1,176 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { currentAgent } from "@/lib/db/session";
+import { roster } from "@/lib/db/clients";
+import { rulesOrDefaults } from "@/lib/db/settings";
+import { STALL_CHIP } from "@/lib/core/pipeline";
+import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
+import { Ico } from "@/components/rift/icons";
+import { StudioHeader } from "../StudioHeader";
+import { Search } from "./Search";
+
+export const metadata: Metadata = { title: "People" };
+export const dynamic = "force-dynamic";
+
+const WHEN = (iso: string | null) => {
+  if (!iso) return "";
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  if (days < 365) return `${Math.round(days / 30)} months ago`;
+  return `${Math.round(days / 365)} years ago`;
+};
+
+/**
+ * Everybody, findable.
+ *
+ * Today's screen is the right default and the wrong tool for one job: somebody
+ * rings up and says their name. It ranks by what the answers imply is urgent,
+ * shows only who has been given a stage, and caps at what fits — so a lead who
+ * came through the funnel this morning and has not been picked up is not on it.
+ *
+ * This is deliberately the unranked view. No scoring order, no urgency, no
+ * opinion about who matters. A list, newest first, with a box to search it.
+ */
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const agent = await currentAgent();
+  /* Redirect, rather than explain. This matches settings, questions, add and
+     the client record — /studio itself is the front door and keeps its
+     explanation for somebody who arrived by accident, but an inner page
+     reached without a session is somebody whose link expired, and the useful
+     thing to do with them is put them where they can sign in. Two behaviours
+     for the same situation in one surface is how a product teaches people not
+     to trust what it says. */
+  if (!agent) redirect("/studio/sign-in");
+
+  const sp = await searchParams;
+  const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
+
+  const [list, rules] = await Promise.all([
+    roster({
+      q: one("q"),
+      filter: (["all", "working", "new", "archived"] as const).find((f) => f === one("filter")) ?? "all",
+      side: (["all", "buy", "sell"] as const).find((s) => s === one("side")) ?? "all",
+    }),
+    rulesOrDefaults(agent.agentId),
+  ]);
+
+  const people = list.ok && "data" in list ? list.data.people : [];
+  const more = list.ok && "data" in list ? list.data.more : false;
+  const searching = Boolean(one("q")?.trim());
+
+  return (
+    <>
+      <StudioHeader agentName={agent.name} undecided={rules.undecided.length} current="clients" />
+
+      <main className="shell-w sec" style={{ paddingTop: 28 }}>
+        <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>People</h1>
+        <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
+          Everyone, in the order they arrived. Today ranks them by what needs doing;
+          this is for when you already know whose name you are looking for.
+        </p>
+
+        <div style={{ marginTop: 20, maxWidth: 560 }}>
+          <Suspense fallback={<div className="t-sm c-4">Loading…</div>}>
+            <Search total={people.length} more={more} />
+          </Suspense>
+        </div>
+
+        {/* A read that failed is not an empty list, and must never render as
+            one. "You have nobody" and "we could not ask" are the same picture
+            and completely different facts. */}
+        {!list.ok ? (
+          <div className="card p-4" style={{ marginTop: 20, borderColor: "var(--warn-line)" }}>
+            <div className="row gap-2"><Ico.alert size={15} className="c-warn" />
+              <span className="t-sm w6">The list could not be read.</span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>
+              {list.error} — this is not an empty list, it is a list we could not fetch.
+            </p>
+          </div>
+        ) : "skipped" in list ? (
+          <div className="card p-4" style={{ marginTop: 20 }}>
+            <p className="t-sm c-3">{list.reason}.</p>
+          </div>
+        ) : people.length === 0 ? (
+          <div className="card p-4" style={{ marginTop: 20 }}>
+            <p className="t-sm c-3">
+              {searching
+                ? "Nobody matches that. Try part of a name, or an email."
+                : "Nobody yet. People arrive here when they finish a readout and leave their details, or you can add somebody yourself."}
+            </p>
+            {!searching ? (
+              <Link href="/studio/add" className="btn btn-p btn-sm" style={{ marginTop: 12 }}>Add someone</Link>
+            ) : null}
+          </div>
+        ) : (
+          <div className="card" style={{ marginTop: 20, overflow: "hidden" }}>
+            {people.map((p, i) => (
+              <Link
+                key={p.id}
+                href={`/studio/lead/${p.id}`}
+                className="between gap-3"
+                style={{
+                  padding: "13px 16px", gap: 12,
+                  borderBottom: i === people.length - 1 ? 0 : "1px solid var(--line-3)",
+                }}
+              >
+                <div className="col" style={{ gap: 3, minWidth: 0 }}>
+                  <div className="row gap-2 wrap">
+                    {/* The name, or an honest stand-in. A row reading "—" is
+                        somebody who left an email and no name, and pretending
+                        otherwise makes him look for a record that is not
+                        missing. */}
+                    <span className="t-md w6">{p.name?.trim() || p.email || "Someone who left no name"}</span>
+                    <span className="chip t-2xs">{p.side === "buy" ? "Buying" : "Selling"}</span>
+                    {p.band ? (
+                      <span className={`chip t-2xs ${BAND_TONE[p.band as Band] ?? ""}`}>
+                        {BAND_LABEL[p.band as Band] ?? p.band}
+                      </span>
+                    ) : null}
+                    {p.archivedAt ? <span className="chip t-2xs">Archived</span> : null}
+                  </div>
+
+                  <div className="t-xs c-4" style={{
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {[p.name?.trim() ? p.email : null, p.phone, `arrived ${WHEN(p.createdAt)}`]
+                      .filter(Boolean).join(" · ")}
+                  </div>
+
+                  {p.nextAction ? (
+                    <div className="t-xs c-3" style={{ marginTop: 2 }}>
+                      <Ico.clock size={11} style={{ marginRight: 5 }} />
+                      {p.nextAction}{p.nextDue ? ` — ${p.nextDue}` : ""}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="row gap-2" style={{ flex: "none" }}>
+                  {p.stage ? (
+                    <span className="t-xs c-3 hide-sm">{p.stage}</span>
+                  ) : (
+                    <span className="t-xs c-4 hide-sm">Not picked up</span>
+                  )}
+                  {p.stall ? (
+                    <span className={`chip t-2xs ${STALL_CHIP[p.stall.level].c}`}>
+                      {STALL_CHIP[p.stall.level].l}
+                    </span>
+                  ) : null}
+                  <Ico.chevR size={14} className="c-4" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </main>
+    </>
+  );
+}

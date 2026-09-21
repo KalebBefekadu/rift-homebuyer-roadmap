@@ -15,10 +15,11 @@ import { REVIEW_SLA_HOURS } from "@/lib/core/review";
 import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { ReviewRow } from "./ReviewRow";
 import { LeadRow } from "./LeadRow";
-import { signOut } from "./actions";
+import { StudioHeader } from "./StudioHeader";
+
 import { sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const metadata: Metadata = { title: "Today" };
@@ -130,32 +131,7 @@ export default async function StudioToday() {
 
   return (
     <>
-      <header style={{ borderBottom: "1px solid var(--line-2)", background: "var(--paper)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <div className="row gap-2">
-            <Mark size={19} />
-            <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-            <span className="chip chip-out t-2xs">Studio</span>
-          </div>
-          <div className="row gap-2">
-            <Link href="/studio/add" className="btn btn-p btn-sm">Add someone</Link>
-            {/* Carries its own warning. Six decisions the product cannot make
-                for him, and until he has made them the page is the only place
-                that says so. */}
-            <Link href="/studio/questions" className="btn btn-g btn-sm" title="Your questions">
-              <Ico.doc size={14} />
-            </Link>
-            <Link href="/studio/settings" className="btn btn-g btn-sm" title="Your decisions">
-              <Ico.set size={14} />
-              {undecidedCount ? <span className="chip chip-warn t-2xs">{undecidedCount}</span> : null}
-            </Link>
-            <span className="t-xs c-4">{agent.name}</span>
-            <form action={signOut}>
-              <button className="btn btn-g btn-sm" type="submit">Sign out</button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <StudioHeader agentName={agent.name} undecided={undecidedCount} current="today" />
 
       <main className="shell-w sec">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Today</h1>

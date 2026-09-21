@@ -70,13 +70,33 @@ test.describe("no page links somewhere that is not there", () => {
 });
 
 test.describe("what must not be reachable", () => {
-  for (const path of ["/prototype", "/prototype/app", "/dev", "/studio/today"]) {
-    test(`${path} is not open to the public`, async ({ page }) => {
+  /* Closed for good. A 404 is the assertion — /prototype is a design
+     specification that once left five dead links on the live seller readout,
+     and /dev was a debugging surface. */
+  for (const path of ["/prototype", "/prototype/app", "/prototype/studio", "/dev"]) {
+    test(`${path} is gone`, async ({ page }) => {
       const res = await page.goto(path);
-      const status = res?.status() ?? 0;
-      /* 404 for what was closed, a redirect to sign-in for what is private.
-         What must never happen is a 200 with the page on it. */
-      expect([404, 401, 403, 307, 308], `${path} answered ${status}`).toContain(status === 200 ? page.url().includes("sign-in") ? 307 : 200 : status);
+      expect(res?.status(), `${path} is still being served`).toBe(404);
+    });
+  }
+
+  /* Private, which is a different thing. Next serves an unauthenticated page
+     with a 200 either way, so the status code proves nothing — what matters is
+     that no client data is on it and the visitor is told where to sign in. */
+  for (const path of ["/studio", "/studio/clients", "/studio/settings", "/studio/questions", "/studio/add", "/studio/lead/some-id"]) {
+    test(`${path} shows a stranger nothing`, async ({ page }) => {
+      await page.goto(path);
+      const text = await page.locator("body").innerText();
+
+      expect(text, `${path} offered no way in`).toMatch(/sign in/i);
+
+      /* The shapes real client data takes on these screens. None may appear
+         to somebody with no session. */
+      for (const leak of [/@[a-z0-9-]+\.[a-z]{2,}/i, /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/, /\$[\d,]{4,}/]) {
+        expect(text, `${path} leaked something shaped like client data`).not.toMatch(leak);
+      }
+      /* And the controls that act on it. */
+      expect(text, `${path} showed a signed-out visitor the controls`).not.toMatch(/Sign out|Add someone/i);
     });
   }
 });

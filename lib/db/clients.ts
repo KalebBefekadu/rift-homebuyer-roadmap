@@ -425,3 +425,83 @@ export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead
   hasFollowUp = true;
   return done(((res.data ?? []) as unknown as Record<string, unknown>[]).map((r) => shape(r, now)));
 }
+
+/* ------------------------------------------------------------------ *
+ * Everybody, findable by name
+ * ------------------------------------------------------------------ */
+
+export interface RosterQuery {
+  /** Name, email or phone. Matched loosely; blank means everybody. */
+  q?: string;
+  /** "working" is the board, "new" is nobody has picked them up yet. */
+  filter?: "all" | "working" | "new" | "archived";
+  side?: "buy" | "sell" | "all";
+  limit?: number;
+}
+
+export interface Roster {
+  people: ManagedLead[];
+  /** True when the list was cut short, so the page can say so. */
+  more: boolean;
+  /** What was actually applied, echoed back so the page cannot claim otherwise. */
+  applied: Required<Omit<RosterQuery, "limit">>;
+}
+
+/** Everything PostgREST's `or` treats as syntax. */
+const escapeForOr = (s: string) => s.replace(/[(),*"\\]/g, " ").trim();
+
+/**
+ * The other way in.
+ *
+ * Today's screen ranks people by what the product thinks is urgent, which is
+ * the right default and the wrong tool when somebody rings up and says their
+ * name. `board()` cannot answer that: it returns only people who have been
+ * given a stage, sorted by neglect, capped at two hundred — so a lead who
+ * arrived through the funnel and has not been picked up yet is not in it, and
+ * neither is anybody archived.
+ *
+ * This is deliberately the unranked view. No scoring, no urgency, no opinion —
+ * a list, in the order a person would expect, that can be searched.
+ */
+export async function roster(query: RosterQuery = {}, now = new Date()): Promise<DbResult<Roster>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const q = escapeForOr((query.q ?? "").slice(0, 80));
+  const filter = query.filter ?? "all";
+  const side = query.side ?? "all";
+  /* One more than asked for, so "there are others" is a fact rather than a
+     guess from a full page. */
+  const limit = Math.min(Math.max(query.limit ?? 100, 1), 500);
+
+  const res = await readLeads((sel) => {
+    let b = db.from("rift_leads").select(sel).eq("agent_id", agent_id);
+
+    if (filter === "archived") b = b.not("archived_at", "is", null);
+    else b = b.is("archived_at", null);
+
+    if (filter === "working") b = b.not("stage", "is", null);
+    if (filter === "new") b = b.is("stage", null);
+    if (side !== "all") b = b.eq("side", side);
+
+    /* Case-insensitive contains, across the three things somebody is known by.
+       Phone is matched too because a missed call is a number, not a name. */
+    if (q) b = b.or(`name.ilike.*${q}*,email.ilike.*${q}*,phone.ilike.*${q}*`);
+
+    /* Newest first. The board sorts by neglect because it answers "who have I
+       left alone"; this answers "where is that person", and recency is the
+       closest thing to the order they are held in someone's memory. */
+    return b.order("created_at", { ascending: false }).limit(limit + 1);
+  }, "reading the roster");
+
+  if (!res.ok || !("data" in res)) return res as DbResult<Roster>;
+
+  const rows = res.data as Record<string, unknown>[];
+  return done({
+    people: rows.slice(0, limit).map((r) => shape(r, now)),
+    more: rows.length > limit,
+    applied: { q, filter, side },
+  });
+}
