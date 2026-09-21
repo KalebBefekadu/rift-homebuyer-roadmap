@@ -64,3 +64,27 @@ export const READ_DEADLINE_MS = 2_000;
  * carry it. What it must never do is return success.
  */
 export const WRITE_DEADLINE_MS = 6_000;
+
+/**
+ * How long the gate waits.
+ *
+ * Longer than a read on purpose, and the reason is what a miss COSTS rather
+ * than how slow the work is.
+ *
+ * A read that misses its deadline falls back to a documented answer and the
+ * visitor still gets their numbers — the trade is two seconds of patience
+ * against a slightly worse figure. A session check that misses has no
+ * equivalent: it cannot answer "who is asking", so the page either shows the
+ * agent a sign-in form he does not need or an apology he does not want. Both
+ * are worse than waiting.
+ *
+ * It also contends for the same event loop as everything else on the page.
+ * The deadline is wall-clock, so a heavier screen — the client record runs
+ * the record, the plan and the offers at once — makes a fast query look slow.
+ * A record page missed this on roughly one request in three at two seconds,
+ * against a local auth endpoint answering in under twenty milliseconds.
+ *
+ * Still bounded. An unbounded check is a blank tab with no way to tell an
+ * outage from a slow page, which is the failure the deadline exists for.
+ */
+export const AUTH_DEADLINE_MS = 6_000;

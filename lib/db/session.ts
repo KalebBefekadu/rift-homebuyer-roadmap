@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { serviceClient } from "./service";
-import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
+import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
 
 /**
  * Who is asking, on the agent surface.
@@ -57,7 +57,7 @@ export async function agentSession(): Promise<SessionState> {
      of as an absence. */
   const { value: auth, timedOut } = await withTimeout(
     supabase.auth.getUser().then((r) => r).catch(() => null),
-    READ_DEADLINE_MS,
+    AUTH_DEADLINE_MS,
     null,
   );
   if (timedOut) return { state: "unknown", reason: "the sign-in check did not answer in time" };
@@ -75,7 +75,7 @@ export async function agentSession(): Promise<SessionState> {
     Promise.resolve(
       db.from("rift_agents").select("id,name,email").eq("auth_user_id", data.user.id).maybeSingle(),
     ),
-    READ_DEADLINE_MS,
+    AUTH_DEADLINE_MS,
     null,
   );
   if (agentTimedOut) return { state: "unknown", reason: "the agent record did not load in time" };
