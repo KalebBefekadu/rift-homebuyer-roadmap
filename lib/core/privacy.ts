@@ -188,5 +188,9 @@ export const SUBPROCESSORS: Subprocessor[] = [
  *
  * The delete button does not depend on this. It never did — it is one click on
  * the readout and it needs no address, no account and no reply from anyone.
+ *
+ * Set 21 September 2026, by Kaleb, who named this his official address. It was
+ * held at null until then deliberately: two addresses existed for him and which
+ * one to publish was his decision, not engineering's.
  */
-export const CONTACT_EMAIL: string | null = null;
+export const CONTACT_EMAIL: string | null = "KalebBefekadu@gmail.com";

@@ -54,6 +54,59 @@ async function retentionCheck(): Promise<string> {
   return value;
 }
 
+/**
+ * Whether Brevo will actually send, asked of Brevo.
+ *
+ * This reported "configured" the moment two environment variables existed.
+ * Brevo refuses to send from an address it has not verified, and this account
+ * has IP allowlisting on — a request from an address it does not recognise
+ * gets a 401 whatever the key. Serverless functions do not have fixed
+ * addresses. So "configured" could be permanently true of an integration that
+ * had never delivered, and would never deliver: the scheduler bug again, in a
+ * different coat.
+ *
+ * Cached for ten minutes. This endpoint is public, and a health check that
+ * spends the sender's API quota on every monitor ping is its own outage.
+ * Only a status word leaves this function — never the key, never an address.
+ */
+const EMAIL_TTL_MS = 10 * 60_000;
+let emailCache: { at: number; value: string } | null = null;
+
+async function emailCheck(): Promise<string> {
+  const key = process.env.BREVO_API_KEY;
+  const from = process.env.BREVO_FROM_EMAIL;
+  if (!key) return "missing";
+  if (!from) return "no verified sender";
+
+  const now = Date.now();
+  if (emailCache && now - emailCache.at < EMAIL_TTL_MS) return emailCache.value;
+
+  let value: string;
+  try {
+    const res = await fetch("https://api.brevo.com/v3/senders", {
+      headers: { accept: "application/json", "api-key": key },
+      signal: AbortSignal.timeout(4000),
+    });
+    const body = await res.text();
+    if (res.status === 401 && /unrecognised IP/i.test(body)) {
+      value = "blocked — Brevo's IP allowlist refuses this server";
+    } else if (!res.ok) {
+      value = `refused by Brevo (${res.status})`;
+    } else {
+      const senders = (JSON.parse(body).senders ?? []) as { email?: string; active?: boolean }[];
+      const match = senders.find((s) => String(s.email).toLowerCase() === from.toLowerCase());
+      value = !match ? "sender not registered in Brevo"
+        : match.active ? "ready" : "sender awaiting verification";
+    }
+  } catch {
+    /* A timeout is not a verdict. Uncached, so it clears on the next ping. */
+    return "unknown — Brevo did not answer";
+  }
+
+  emailCache = { at: now, value };
+  return value;
+}
+
 export async function GET() {
   const db = serviceClient();
   const agent = db ? await currentAgentId() : null;
@@ -61,9 +114,7 @@ export async function GET() {
   const checks: Record<string, string> = {
     database: db ? "configured" : "missing",
     agent: agent ? "ready" : db ? "not bootstrapped" : "unknown",
-    email: process.env.BREVO_API_KEY
-      ? (process.env.BREVO_FROM_EMAIL ? "configured" : "no verified sender")
-      : "missing",
+    email: await emailCheck(),
     calendar: process.env.CAL_API_KEY && process.env.CAL_EVENT_TYPE_ID ? "configured" : "missing",
     /* "Configured" is not "working", and conflating them cost this product
        every scheduled run it ever had. The secret was set, this said
