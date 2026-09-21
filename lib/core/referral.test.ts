@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
-  MOMENTS, REFERRAL_STATE, STATE_CHIP, dueNow, gate, referralStats,
+  MOMENTS, STATE_CHIP, gate,
   type MomentState, type Mood,
 } from "./referral";
 
 /**
  * Deliberately narrow.
  *
- * This module is reached only from `/prototype/*`, which does not serve in
- * production — it is the specification for phase 5, not running code. What is
- * tested here is the one rule that has to survive into the real
- * implementation, because getting it wrong is not a bug but a thing done to a
- * person: nobody is asked to say something in public before they have been
- * asked, in private, whether they are happy.
+ * What is tested here is the one rule that has to hold however the engine is
+ * driven, because getting it wrong is not a bug but a thing done to a person:
+ * nobody is asked to say something in public before they have been asked, in
+ * private, whether they are happy.
+ *
+ * The moments are now derived from real lifecycle data rather than a fixture
+ * — see referral-moments.test.ts, which walks every combination of mood and
+ * gate rather than the five clients somebody happened to invent.
  */
 
 describe("the satisfaction gate", () => {
@@ -91,52 +93,6 @@ describe("the moments", () => {
     for (const s of states) {
       expect(STATE_CHIP[s].l, s).toBeTruthy();
       expect(STATE_CHIP[s].c, s).toBeTruthy();
-    }
-  });
-});
-
-describe("the queue and the counts", () => {
-  it("puts the strongest moment first", () => {
-    const strengths = dueNow().map((x) => x.m.strength);
-    expect(strengths).toEqual([...strengths].sort((a, b) => b - a));
-  });
-
-  it("carries only what is due or being held", () => {
-    for (const { c, m } of dueNow()) {
-      expect(["due", "held"]).toContain(c.states[m.id]);
-    }
-  });
-
-  /**
-   * The invariant the gate exists for, asserted against the seeded board: no
-   * moment that would put somebody in public is queued for a client who has
-   * not said they are happy. It holds today. It is here so that it still has
-   * to hold when this board is real data.
-   */
-  it("queues no public ask for a client who has not said it went well", () => {
-    for (const { c, m } of dueNow()) {
-      if (!m.gated) continue;
-      expect(gate(c.mood).askPublicly, `${c.client} · ${m.id}`).toBe(true);
-    }
-  });
-
-  it("counts referrals without double-counting an advocate", () => {
-    const s = referralStats();
-    const sent = REFERRAL_STATE.flatMap((c) => c.sent);
-    expect(s.sent).toBe(sent.length);
-    expect(s.closed + s.active).toBeLessThanOrEqual(s.sent);
-    expect(s.advocates).toBeLessThanOrEqual(REFERRAL_STATE.length);
-    expect(s.advocates).toBe(REFERRAL_STATE.filter((c) => c.sent.length > 0).length);
-  });
-
-  it("only uses states the model defines", () => {
-    const states: MomentState[] = ["waiting", "due", "sent", "acted", "declined", "held"];
-    const ids = new Set(MOMENTS.map((m) => m.id));
-    for (const c of REFERRAL_STATE) {
-      for (const [id, st] of Object.entries(c.states)) {
-        expect(ids.has(id as never), `${c.client} · ${id}`).toBe(true);
-        expect(states).toContain(st);
-      }
     }
   });
 });

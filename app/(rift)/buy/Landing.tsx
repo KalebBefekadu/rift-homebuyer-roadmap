@@ -196,7 +196,11 @@ export function Landing({
                       {l.credited ? <span className="chip chip-brand">back at closing</span> : null}
                     </div>
                   </div>
-                  <span className="num t-sm" style={{ opacity: l.credited ? 0.4 : 1 }}>{money(l.amount)}</span>
+                  {/* Ink, not opacity — the same fix as the readout, which carries its own
+                      copy of this block. `opacity: 0.4` put a real dollar figure at
+                      2.65:1, and the "back at closing" chip beside it was already
+                      saying the thing the fade was supposedly saying. */}
+                  <span className="num t-sm" style={{ color: l.credited ? "var(--ink-4)" : undefined }}>{money(l.amount)}</span>
                 </div>
               ))}
               <div className="between" style={{ padding: "15px 18px", background: "var(--sunk)" }}>

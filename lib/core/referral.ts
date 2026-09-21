@@ -1,5 +1,5 @@
 /**
- * Rift prototype — the referral engine.
+ * The referral engine.
  *
  * Referral was a page. A page is the wrong shape for it, because referral is
  * not a thing you ask for once at the end — it is a set of MOMENTS, each with
@@ -138,66 +138,223 @@ export function gate(mood: Mood): GateResult {
 }
 
 /* ------------------------------------------------------------------ *
- * Demonstration state
+ * Deriving the moments for a real relationship
  * ------------------------------------------------------------------ */
 
-export interface ClientMoments {
-  client: string;
-  initials: string;
-  color: string;
+/**
+ * What the database can actually see about a relationship.
+ *
+ * Deliberately narrow, and every field is something a query can answer. A
+ * trigger that cannot be observed does not get guessed at — see
+ * `OBSERVABLE` below, which is the whole design of this section.
+ */
+export interface Lifecycle {
   stage: string;
+  /** ISO date the relationship closed. Null until it has. */
+  closedOn: string | null;
+  /** They finished an assessment and were shown their numbers. */
+  readoutDelivered: boolean;
+  /** A plan exists and its link is open. */
+  planPublished: boolean;
+  /** The private satisfaction check. Null means unanswered, not "fine". */
   mood: Mood;
-  states: Partial<Record<MomentId, MomentState>>;
-  /** Who they have actually sent, and what happened. */
-  sent: { who: string; outcome: "closed" | "active" | "cold"; when: string }[];
 }
 
-export const REFERRAL_STATE: ClientMoments[] = [
-  {
-    client: "Priya Raman", initials: "PR", color: "#7a5c2e", stage: "Closed, 9 months ago", mood: "good",
-    states: { value_delivered: "acted", plan_published: "acted", financing_secured: "acted", under_contract: "waiting", closing_day: "acted", day_30: "sent", month_6: "acted", anniversary: "due" },
-    sent: [
-      { who: "Jordan Pike", outcome: "active", when: "22 minutes ago" },
-      { who: "Wendell Cho", outcome: "closed", when: "Aug 2026" },
-    ],
-  },
-  {
-    client: "Nadia & Chris Okafor", initials: "NO", color: "#8a4a2e", stage: "Under contract", mood: null,
-    states: { value_delivered: "acted", plan_published: "sent", financing_secured: "acted", under_contract: "held", closing_day: "waiting" },
-    sent: [],
-  },
-  {
-    client: "Harold & Ruth Vance", initials: "HV", color: "#3f6f5f", stage: "Preparing to list", mood: "mixed",
-    states: { value_delivered: "acted", plan_published: "acted", financing_secured: "waiting" },
-    sent: [],
-  },
-  {
-    client: "Maya Ellison", initials: "ME", color: "#2f5480", stage: "Building readiness", mood: null,
-    states: { value_delivered: "acted", plan_published: "due" },
-    sent: [],
-  },
-  {
-    client: "Wendell Cho", initials: "WC", color: "#6b4a7a", stage: "Closed, 13 months ago", mood: "good",
-    states: { closing_day: "acted", day_30: "acted", month_6: "declined", anniversary: "due" },
-    sent: [{ who: "Alina Ferreira", outcome: "active", when: "5 hours ago" }],
-  },
-];
-
-/** Everything that wants doing today, strongest moment first. */
-export function dueNow() {
-  const out: { c: ClientMoments; m: Moment }[] = [];
-  for (const c of REFERRAL_STATE)
-    for (const m of MOMENTS)
-      if (c.states[m.id] === "due" || c.states[m.id] === "held") out.push({ c, m });
-  return out.sort((a, b) => b.m.strength - a.m.strength);
+/**
+ * A moment the agent has already decided about.
+ *
+ * `occurrence` matters for exactly one moment and is the reason it is here at
+ * all. The anniversary repeats "every year on the closing date, indefinitely",
+ * so a record keyed on the moment alone would mark the first anniversary sent
+ * and then suppress every anniversary after it — a follow-up cadence that
+ * quietly stops after year one and looks, from every screen, exactly like one
+ * that is running. Non-recurring moments use 0.
+ */
+export interface RecordedMoment {
+  momentId: MomentId;
+  occurrence: number;
+  state: MomentState;
 }
 
-export const referralStats = () => {
-  const all = REFERRAL_STATE.flatMap((c) => c.sent);
-  return {
-    sent: all.length,
-    closed: all.filter((x) => x.outcome === "closed").length,
-    active: all.filter((x) => x.outcome === "active").length,
-    advocates: REFERRAL_STATE.filter((c) => c.sent.length > 0).length,
-  };
+/**
+ * Which triggers the data can actually answer.
+ *
+ * `financing_secured` is absent on purpose. "Pre-approval or assistance
+ * confirmed in writing" is not a column — it is a document in somebody's
+ * inbox — and the honest options were to leave the moment waiting until a
+ * human says otherwise, or to infer it from the stage having moved past
+ * Financing. The second is a guess, and this is the strongest ungated ask in
+ * the set: firing it at somebody whose pre-approval actually fell through is
+ * the single most expensive message this product could send.
+ *
+ * So it waits, visibly, until Kaleb records it. A moment that sits at "not
+ * yet" is a small loss. A moment that congratulates the wrong person is not.
+ */
+const OBSERVABLE: Record<MomentId, true | undefined> = {
+  value_delivered: true,
+  plan_published: true,
+  financing_secured: undefined,
+  under_contract: true,
+  closing_day: true,
+  day_30: true,
+  month_6: true,
+  anniversary: true,
 };
+
+export const DAY_MS = 86_400_000;
+/** Thirty days after closing. */
+export const DAY_30 = 30;
+/** Half a year, counted in days so it needs no calendar arithmetic. */
+export const MONTH_6 = 182;
+
+const dayOf = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+const daysBetween = (fromIso: string, now: Date) =>
+  Math.floor((Date.parse(now.toISOString().slice(0, 10) + "T00:00:00Z") - dayOf(fromIso)) / DAY_MS);
+
+/**
+ * How many anniversaries have come round, and none until a full year has.
+ *
+ * Counted in whole days rather than by comparing year numbers, because
+ * comparing years makes a 2 January closing have its "first anniversary" on 1
+ * January eleven months later.
+ */
+export function anniversariesPassed(closedOn: string, now: Date): number {
+  const days = daysBetween(closedOn, now);
+  if (days < 365) return 0;
+  /* 365.25 so the count does not drift a day early every fourth year and fire
+     the anniversary before the date it is named after. */
+  return Math.floor(days / 365.25);
+}
+
+/** Whether a moment's trigger condition has happened yet. */
+function triggered(id: MomentId, life: Lifecycle, now: Date): boolean {
+  if (!OBSERVABLE[id]) return false;
+  switch (id) {
+    case "value_delivered":
+      return life.readoutDelivered;
+    case "plan_published":
+      return life.planPublished;
+    case "under_contract":
+      return life.stage === "Under contract";
+    case "closing_day":
+      return life.closedOn !== null;
+    case "day_30":
+      return life.closedOn !== null && daysBetween(life.closedOn, now) >= DAY_30;
+    case "month_6":
+      return life.closedOn !== null && daysBetween(life.closedOn, now) >= MONTH_6;
+    case "anniversary":
+      return life.closedOn !== null && anniversariesPassed(life.closedOn, now) >= 1;
+    default:
+      return false;
+  }
+}
+
+/** The occurrence number a moment is currently on. */
+export function currentOccurrence(id: MomentId, life: Lifecycle, now: Date): number {
+  if (id !== "anniversary") return 0;
+  return life.closedOn ? anniversariesPassed(life.closedOn, now) : 0;
+}
+
+export interface MomentStatus {
+  moment: Moment;
+  state: MomentState;
+  occurrence: number;
+  /** True when the trigger has fired but the private check has not been answered. */
+  needsCheck: boolean;
+  /** Why this is not actionable, in words the agent would use. Null when it is. */
+  blockedBecause: string | null;
+}
+
+/**
+ * The state of every moment for one relationship.
+ *
+ * A recorded decision always wins over a derived one: once Kaleb has said
+ * "sent", "acted on", "declined" or "held back", that is the answer, and a
+ * later run does not quietly reopen it.
+ *
+ * THE GATE IS ENFORCED HERE, not at the surface that draws it. A gated moment
+ * whose private check is unanswered comes back `needsCheck`, and one whose
+ * check came back mixed or bad comes back `held` with the reason attached.
+ * Putting that rule in a component would mean the next component to render
+ * moments would have to remember it, and a rule that must be remembered is a
+ * rule that has already been broken somewhere.
+ */
+export function momentsFor(
+  life: Lifecycle,
+  recorded: RecordedMoment[],
+  now: Date = new Date(),
+): MomentStatus[] {
+  return MOMENTS.map((moment) => {
+    const occurrence = currentOccurrence(moment.id, life, now);
+    const decided = recorded.find(
+      (r) => r.momentId === moment.id && r.occurrence === occurrence,
+    );
+
+    if (decided) {
+      return { moment, state: decided.state, occurrence, needsCheck: false, blockedBecause: null };
+    }
+
+    if (!triggered(moment.id, life, now)) {
+      return {
+        moment,
+        state: "waiting" as const,
+        occurrence,
+        needsCheck: false,
+        blockedBecause: OBSERVABLE[moment.id]
+          ? null
+          : "Nothing in the record says this has happened. Mark it when it has.",
+      };
+    }
+
+    if (moment.gated) {
+      const g = gate(life.mood);
+      if (!g.askPublicly) {
+        return {
+          moment,
+          state: life.mood === null ? ("due" as const) : ("held" as const),
+          occurrence,
+          needsCheck: life.mood === null,
+          blockedBecause: g.note,
+        };
+      }
+    }
+
+    return { moment, state: "due" as const, occurrence, needsCheck: false, blockedBecause: null };
+  });
+}
+
+/**
+ * Whether a public ask may go out for this moment, right now.
+ *
+ * The one function any sending code must call. It answers false for every
+ * gated moment whose private check did not come back good — including the
+ * unanswered case, which is the one a truthy check on `mood` would get wrong.
+ */
+export function mayAskPublicly(status: MomentStatus, mood: Mood): boolean {
+  if (status.state !== "due") return false;
+  if (!status.moment.gated) return true;
+  return gate(mood).askPublicly;
+}
+
+/**
+ * What wants doing for this relationship, strongest first.
+ *
+ * `under_contract` is filtered out, and that is the point of it. Its ask is
+ * "Nothing. Say congratulations and go quiet", so a queue that listed it as
+ * work would be inviting exactly the contact the moment exists to prevent. It
+ * is still returned by `momentsFor` — the agent should be able to see that the
+ * restraint is deliberate rather than an omission.
+ */
+export const SILENT_MOMENTS: MomentId[] = ["under_contract"];
+
+export function actionable(statuses: MomentStatus[]): MomentStatus[] {
+  return statuses
+    .filter((s) => (s.state === "due" || s.state === "held") && !SILENT_MOMENTS.includes(s.moment.id))
+    .sort((a, b) => {
+      /* Something waiting on an answer outranks something merely held back:
+         the first is a question nobody has asked, the second is a decision
+         already taken. */
+      if (a.state !== b.state) return a.state === "due" ? -1 : 1;
+      return b.moment.strength - a.moment.strength;
+    });
+}

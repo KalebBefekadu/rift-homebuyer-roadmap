@@ -268,7 +268,14 @@ export function Readout(p: Props) {
                     <span className="t-sm w5">{l.label}</span>
                     {l.credited ? <span className="chip chip-brand">back at closing</span> : null}
                   </div>
-                  <span className="num t-sm" style={{ opacity: l.credited ? 0.4 : 1 }}>{money(l.amount)}</span>
+                  {/* De-emphasised with ink rather than opacity. `opacity: 0.4`
+                      dropped a real dollar figure to 2.65:1 — under the AA
+                      floor — and it was doing so on the one line the reader is
+                      most likely to want to check, because a credited cost is
+                      the surprising kind. The "back at closing" chip beside it
+                      already carries the meaning; the fade was never the thing
+                      saying it, only the thing making it hard to read. */}
+                  <span className="num t-sm" style={{ color: l.credited ? "var(--ink-4)" : undefined }}>{money(l.amount)}</span>
                 </div>
               ))}
               <div className="between" style={{ padding: "15px 18px", background: "var(--sunk)" }}>

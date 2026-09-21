@@ -34,6 +34,15 @@ export interface Call {
   filters: string[];
   /** The row or rows handed to insert/update/upsert. */
   payload?: unknown;
+  /**
+   * The second argument to `upsert`, where `onConflict` lives.
+   *
+   * Recorded as itself rather than flattened into `filters`. Which columns an
+   * upsert conflicts on is the whole difference between "a retry updates the
+   * row" and "a retry writes a second row that disagrees with the first", and
+   * an assertion about it should not have to parse a string to get there.
+   */
+  options?: unknown;
 }
 
 type Answer = {
@@ -100,7 +109,7 @@ export function fakeDb(answers: Answers = {}): Fake {
       },
       insert(rows: unknown) { call.verb = "insert"; call.payload = rows; return self; },
       update(row: unknown) { call.verb = "update"; call.payload = row; return self; },
-      upsert(rows: unknown, opts?: unknown) { call.verb = "upsert"; call.payload = rows; if (opts) call.filters.push(`opts:${JSON.stringify(opts)}`); return self; },
+      upsert(rows: unknown, opts?: unknown) { call.verb = "upsert"; call.payload = rows; call.options = opts; if (opts) call.filters.push(`opts:${JSON.stringify(opts)}`); return self; },
       delete() { call.verb = "delete"; return self; },
 
       eq(col: string, v: unknown) { call.filters.push(`eq:${col}=${String(v)}`); return self; },

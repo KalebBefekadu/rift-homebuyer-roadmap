@@ -92,12 +92,17 @@ export function TrustLadder({ at, ask }: {
             padding: "11px 16px", alignItems: "flex-start",
             borderBottom: i === order.length - 1 ? undefined : "1px solid var(--line-3)",
             background: isAt ? "var(--sunk)" : undefined,
-            opacity: i < ix ? 0.5 : 1,
           }}>
             <I size={14} className={isAt ? "c-acc" : "c-4"} style={{ marginTop: 2, flex: "none" }} />
             <div className="grow">
+              {/* A step already passed is set back in ink rather than faded.
+                  At 0.5 its label and its meaning both fell under AA, on the
+                  component that exists to tell somebody how far a number can
+                  be trusted — which is not a thing to make hard to read. The
+                  current step is already marked three other ways: a sunk
+                  ground, an accent icon, and a chip saying "You are here". */}
               <div className="row gap-2">
-                <span className={`t-sm ${isAt ? "w6" : "w5"}`}>{s.label}</span>
+                <span className={`t-sm ${isAt ? "w6" : "w5"}`} style={{ color: i < ix ? "var(--ink-4)" : undefined }}>{s.label}</span>
                 {isAt ? <span className="chip chip-acc">You are here</span> : null}
               </div>
               <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.5 }}>{s.meaning}</p>

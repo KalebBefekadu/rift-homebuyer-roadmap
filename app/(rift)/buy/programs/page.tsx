@@ -75,8 +75,15 @@ export default async function ProgramsPage() {
           {all.map((p) => {
             const stale = data.suppressed.some((s) => s.id === p.id);
             const age = daysSinceVerified(p, new Date());
+            /* A stale programme is set back with a ground, not with opacity.
+               Fading the card took its name, its amount and its own explanation
+               down with it — 0.72 put four separate elements below AA, including
+               the figure, on the one card whose whole purpose is to show
+               somebody what is being withheld from their match and why. The chip
+               and the sentence at the foot of the card already say it in
+               words. */
             return (
-              <div key={p.id} className="card p-4" style={{ opacity: stale ? 0.72 : 1 }}>
+              <div key={p.id} className="card p-4" style={{ background: stale ? "var(--canvas)" : undefined }}>
                 <div className="between wrap gap-2">
                   <div className="grow" style={{ minWidth: 220 }}>
                     <div className="row gap-2 wrap">

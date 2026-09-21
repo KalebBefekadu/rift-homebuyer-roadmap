@@ -1,10 +1,33 @@
 /* Rift — scoped to .rift so it never touches the production palette. */
 
 .rift {
+  /* The ink ramp is contrast-checked, and two of its steps moved to get there.
+     axe-core, run against the live buyer readout, returned 35 serious
+     contrast failures on one page; 33 of them were --ink-4 at #969ba4, which
+     lands at 2.79:1 on paper and 2.49:1 on --sunk where AA asks for 4.5:1. It
+     was carrying the assumption lines, the "built from" provenance line, and
+     most of the small print under the figures — which is to say, the parts of
+     a readout that exist precisely so a reader can check the numbers.
+
+     Solving --ink-4 for 4.5:1 lands it on #6a6f7a, which was --ink-3 to
+     within a digit, so the ramp could not simply be darkened one step: it had
+     two steps that cannot both be legible as text. --ink-3 moves down to keep
+     a step that is actually visible between them.
+
+     Ratios against paper / canvas / sunk, sunk being the binding ground:
+       --ink     19.31 / 18.51 / 17.28
+       --ink-2   12.10 / 11.60 / 10.83
+       --ink-3    6.83 /  6.54 /  6.11
+       --ink-4    5.04 /  4.83 /  4.51   <- the AA floor; nothing dimmer is text
+       --ink-5    1.71 /  1.64 /  1.53   <- borders only, never text
+     e2e/a11y.spec.ts holds this so it cannot drift back. */
   --ink: #0d0e10;
   --ink-2: #33363d;
-  --ink-3: #6a6f79;
-  --ink-4: #969ba4;
+  --ink-3: #565b64;
+  --ink-4: #6a6f7a;
+  /* Borders and rules only. It is not a text colour and there is no value of
+     this step that could be one — a divider that met 4.5:1 would read as a
+     line drawn in body text. */
   --ink-5: #c3c6cb;
 
   --line: #e5e3df;
@@ -17,6 +40,14 @@
 
   --accent: #e8442a;
   --accent-2: #c2351e;
+  /* The ground a WHITE label is allowed to sit on, and the reason it is a
+     separate token from --accent. The brand red is 3.97:1 against white: it is
+     the right colour for a rule, an icon or a line of art, and it is not dark
+     enough to carry text. That gap put the primary call to action on both
+     public landing pages below AA — the one button the entire funnel depends
+     on somebody pressing. --accent-2 gives the same red at 5.49:1. */
+  --accent-solid: #c2351e;
+  --accent-solid-2: #a32b18;
   --accent-wash: #fdf0ed;
   --accent-line: #f7d4cc;
 
@@ -24,7 +55,10 @@
   --pos-wash: #e9f5f0;
   --pos-line: #c5e4d8;
 
-  --warn: #a2670c;
+  /* 4.53:1 on --warn-wash. #a2670c missed at 4.24:1, which put the one chip
+     on the readout whose whole job is to say "this is not settled yet" below
+     the threshold on the ground it is always drawn on. */
+  --warn: #9c630c;
   --warn-wash: #fbf3e3;
   --warn-line: #eeddb8;
 
@@ -152,8 +186,8 @@
 .btn:active { transform: translateY(0.5px); }
 .btn-p  { background: var(--ink); color: #fff; }
 .btn-p:hover  { background: #24262b; }
-.btn-a  { background: var(--accent); color: #fff; }
-.btn-a:hover  { background: var(--accent-2); }
+.btn-a  { background: var(--accent-solid); color: #fff; }
+.btn-a:hover  { background: var(--accent-solid-2); }
 .btn-s  { background: var(--paper); border-color: var(--line); color: var(--ink); box-shadow: var(--sh-1); }
 .btn-s:hover  { background: var(--canvas); border-color: var(--ink-5); }
 .btn-g  { background: transparent; color: var(--ink-2); }
@@ -420,10 +454,17 @@
 }
 
 /* ---------------- product identities ---------------- */
-.buy  { --brand: #e8442a; --brand-2: #c2351e; --brand-wash: #fdf0ed; --brand-line: #f7d4cc; }
-.sell { --brand: #1d6a52; --brand-2: #15533f; --brand-wash: #e8f3ee; --brand-line: #c2e0d3; }
-.btn-brand { background: var(--brand); color: #fff; }
-.btn-brand:hover { background: var(--brand-2); }
+/* `--brand-solid` is the fill a white label sits on; `--brand` stays the
+   identity colour for rules, icons and art. They are the same value on the
+   sell side, whose green is 6.49:1 against white already, and deliberately
+   different on the buy side, whose red is 3.97:1 and never was a text ground.
+   Ratios against white: buy 5.49 / 7.20 hover, sell 6.49 / 8.97 hover. */
+.buy  { --brand: #e8442a; --brand-2: #c2351e; --brand-wash: #fdf0ed; --brand-line: #f7d4cc;
+        --brand-solid: #c2351e; --brand-solid-2: #a32b18; }
+.sell { --brand: #1d6a52; --brand-2: #15533f; --brand-wash: #e8f3ee; --brand-line: #c2e0d3;
+        --brand-solid: #1d6a52; --brand-solid-2: #15533f; }
+.btn-brand { background: var(--brand-solid); color: #fff; }
+.btn-brand:hover { background: var(--brand-solid-2); }
 .c-brand { color: var(--brand-2); }
 .chip-brand { background: var(--brand-wash); color: var(--brand-2); border-color: var(--brand-line); }
 

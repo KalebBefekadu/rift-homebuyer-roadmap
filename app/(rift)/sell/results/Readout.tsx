@@ -243,7 +243,15 @@ export function Readout({
           sub={`Of ${repairs.length} things sellers commonly do, ${payback.length} tend to come back in the price.`}
         >
           <div className="card" style={{ overflow: "hidden" }}>
-            <div className="scroll-x">
+            {/* Focusable, and named, because it scrolls.
+                A repair table that overflows sideways on a phone is reachable
+                with a finger and was reachable with nothing else: no tabindex
+                meant a keyboard could not scroll it, so the "Typical cost" and
+                "Verdict" columns — the two the section exists for — were
+                simply unavailable to anybody not using a pointer. The role and
+                label are what stop a focus stop appearing in the tab order
+                with nothing to announce it. */}
+            <div className="scroll-x" tabIndex={0} role="region" aria-label="What to fix, and what to leave alone">
               <table className="tbl">
                 <thead>
                   <tr>

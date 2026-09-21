@@ -145,8 +145,12 @@ export function FunnelEditor() {
       </div>
 
       <div className="col gap-2">
+        {/* Ground rather than opacity, for the same reason as everywhere else in
+            this product: 0.55 takes the question text under AA, and a disabled
+            question is exactly the one somebody is squinting at to decide
+            whether to turn it back on. */}
         {funnel.questions.map((q, i) => (
-          <div key={q.id} className="card" style={{ overflow: "hidden", opacity: q.enabled ? 1 : 0.55 }}>
+          <div key={q.id} className="card" style={{ overflow: "hidden", background: q.enabled ? undefined : "var(--canvas)" }}>
             <div className="row gap-3" style={{ padding: "12px 14px", alignItems: "flex-start" }}>
               <div className="col" style={{ gap: 2, flex: "none" }}>
                 <button className="btn btn-ico btn-sm" disabled={i === 0} onClick={() => reorder(q.id, -1)} aria-label="Move up">
