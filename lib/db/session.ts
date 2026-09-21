@@ -22,43 +22,95 @@ export interface AgentSession {
   name: string;
 }
 
-export async function currentAgent(): Promise<AgentSession | null> {
-  const supabase = await createClient();
-  if (!supabase) return null;
+/**
+ * Three answers, not two.
+ *
+ * `currentAgent()` returned `AgentSession | null`, and null meant four
+ * different things: nobody is signed in, Supabase is not configured, the auth
+ * call did not answer within two seconds, and the agent row could not be read.
+ * Every caller turned all four into `redirect("/studio/sign-in")`.
+ *
+ * So a two-second blip signed the agent out. Not really — the cookie was still
+ * there and the next request worked — but he was looking at a sign-in page,
+ * which says his session expired. It is reproducible on the first request
+ * after a cold start, and Vercel gives you a cold start plus a round trip to
+ * Supabase's auth service on exactly the requests most likely to be slow.
+ *
+ * This is the same discipline as DbResult in lib/db/result.ts, in the one
+ * place it was missing: "it did not work" and "there is nobody here" are
+ * different facts, and collapsing them produces a product that lies about
+ * which one happened.
+ */
+export type SessionState =
+  | { state: "signed-in"; agent: AgentSession }
+  /** There is genuinely no session, or the user is not an agent. */
+  | { state: "signed-out"; reason: string }
+  /** We could not find out. Never a reason to show a sign-in page. */
+  | { state: "unknown"; reason: string };
 
-  /* Both of these are on a deadline. Studio is behind a login, so a hang here
-     leaves the agent looking at a blank tab with no way to tell an outage from
-     a slow page — and the honest answer, "not signed in", is one the page
-     already renders well. */
-  const { value: auth } = await withTimeout(
+export async function agentSession(): Promise<SessionState> {
+  const supabase = await createClient();
+  if (!supabase) return { state: "unknown", reason: "sign-in is not configured on this deployment" };
+
+  /* Still on a deadline. Studio is behind a login and a hang leaves the agent
+     looking at a blank tab — but a miss now reports itself as a miss instead
+     of as an absence. */
+  const { value: auth, timedOut } = await withTimeout(
     supabase.auth.getUser().then((r) => r).catch(() => null),
     READ_DEADLINE_MS,
     null,
   );
-  if (!auth || auth.error || !auth.data?.user) return null;
+  if (timedOut) return { state: "unknown", reason: "the sign-in check did not answer in time" };
+  if (!auth) return { state: "unknown", reason: "the sign-in check failed" };
+
+  /* An auth error is genuinely signed-out: a missing, malformed or expired
+     token is what that error IS. Only the absence of an answer is unknown. */
+  if (auth.error || !auth.data?.user) return { state: "signed-out", reason: "no session" };
   const data = auth.data;
 
   const db = serviceClient();
-  if (!db) return null;
+  if (!db) return { state: "unknown", reason: "the database is not configured" };
 
-  const { value: agentRead } = await withTimeout(
+  const { value: agentRead, timedOut: agentTimedOut } = await withTimeout(
     Promise.resolve(
       db.from("rift_agents").select("id,name,email").eq("auth_user_id", data.user.id).maybeSingle(),
     ),
     READ_DEADLINE_MS,
     null,
   );
-  const agent = agentRead?.data ?? null;
+  if (agentTimedOut) return { state: "unknown", reason: "the agent record did not load in time" };
+  if (!agentRead || agentRead.error) return { state: "unknown", reason: "the agent record could not be read" };
+
+  const agent = agentRead.data ?? null;
 
   /* A signed-in user who is not an agent row is not an agent. There is no
      implicit provisioning here: creating an agent record because somebody
-     managed to sign up would hand a stranger the book of business. */
-  if (!agent) return null;
+     managed to sign up would hand a stranger the book of business.
+
+     This one IS signed-out rather than unknown — the question was asked and
+     answered, and the answer was no. */
+  if (!agent) return { state: "signed-out", reason: "signed in, but not an agent on this account" };
 
   return {
-    userId: data.user.id,
-    email: (agent.email as string) ?? data.user.email ?? "",
-    agentId: agent.id as string,
-    name: (agent.name as string) ?? "Agent",
+    state: "signed-in",
+    agent: {
+      userId: data.user.id,
+      email: (agent.email as string) ?? data.user.email ?? "",
+      agentId: agent.id as string,
+      name: (agent.name as string) ?? "Agent",
+    },
   };
+}
+
+/**
+ * The narrow question: who is asking, or nobody.
+ *
+ * Kept for the write actions, where the distinction does not help — an action
+ * that cannot confirm the session must refuse either way, and refusing is what
+ * this returns. Every PAGE should use `agentSession()` instead, because a page
+ * has somewhere better to send a person than a sign-in form they do not need.
+ */
+export async function currentAgent(): Promise<AgentSession | null> {
+  const s = await agentSession();
+  return s.state === "signed-in" ? s.agent : null;
 }

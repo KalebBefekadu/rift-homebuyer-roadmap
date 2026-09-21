@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { currentAgent } from "@/lib/db/session";
+import { agentSession } from "@/lib/db/session";
+import { Unavailable } from "../Unavailable";
 import { roster } from "@/lib/db/clients";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { STALL_CHIP } from "@/lib/core/pipeline";
@@ -40,15 +41,21 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const agent = await currentAgent();
-  /* Redirect, rather than explain. This matches settings, questions, add and
-     the client record — /studio itself is the front door and keeps its
-     explanation for somebody who arrived by accident, but an inner page
-     reached without a session is somebody whose link expired, and the useful
-     thing to do with them is put them where they can sign in. Two behaviours
-     for the same situation in one surface is how a product teaches people not
-     to trust what it says. */
-  if (!agent) redirect("/studio/sign-in");
+  const session = await agentSession();
+  /* Three answers, not two. A blip is not an expired session: redirecting on
+     "unknown" shows a sign-in form to somebody whose cookie is perfectly
+     fine, which says something false about what just happened.
+
+     Genuinely signed out, it redirects rather than explaining — matching
+     settings, questions, add and the client record. /studio itself is the
+     front door and keeps its explanation for somebody who arrived by
+     accident, but an inner page reached without a session is somebody whose
+     link expired, and the useful thing is to put them where they can sign in.
+     Two behaviours for one situation in one surface is how a product teaches
+     people not to trust what it says. */
+  if (session.state === "unknown") return <Unavailable reason={session.reason} />;
+  if (session.state === "signed-out") redirect("/studio/sign-in");
+  const agent = session.agent;
 
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;

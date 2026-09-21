@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { currentAgent } from "@/lib/db/session";
+import { agentSession } from "@/lib/db/session";
+import { Unavailable } from "../../Unavailable";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
 import { readPlanForAgent } from "@/lib/db/plan";
@@ -22,8 +23,13 @@ export const dynamic = "force-dynamic";
  * is continuing.
  */
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
-  const agent = await currentAgent();
-  if (!agent) redirect("/studio/sign-in");
+  const session = await agentSession();
+  /* A blip is not an expired session. Redirecting on "unknown" shows the
+     agent a sign-in form when his cookie is fine, which says something false
+     about what just happened — see lib/db/session.ts. */
+  if (session.state === "unknown") return <Unavailable reason={session.reason} />;
+  if (session.state === "signed-out") redirect("/studio/sign-in");
+  const agent = session.agent;
 
   const { id } = await params;
   const read = await readLead(id);

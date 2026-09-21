@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { currentAgent } from "@/lib/db/session";
+import { agentSession } from "@/lib/db/session";
+import { Unavailable } from "./Unavailable";
 import { rankedLeads } from "@/lib/db/leads";
 import { funnelReport } from "@/lib/db/events";
 import { board, dueActions } from "@/lib/db/clients";
@@ -39,7 +40,15 @@ export const dynamic = "force-dynamic";
  * nobody trusts still costs attention.
  */
 export default async function StudioToday() {
-  const agent = await currentAgent();
+  const session = await agentSession();
+
+  /* A session check that did not answer is not a signed-out visitor. Today is
+     the first thing the agent opens in the morning, which is the request most
+     likely to pay for a cold start — and telling him to sign in when his
+     cookie is fine says his session expired. See lib/db/session.ts. */
+  if (session.state === "unknown") return <Unavailable reason={session.reason} />;
+
+  const agent = session.state === "signed-in" ? session.agent : null;
 
   if (!agent) {
     return (

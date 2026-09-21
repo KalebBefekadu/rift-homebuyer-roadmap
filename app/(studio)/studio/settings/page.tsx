@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { currentAgent } from "@/lib/db/session";
+import { agentSession } from "@/lib/db/session";
+import { Unavailable } from "../Unavailable";
 import { readAgentRules } from "@/lib/db/settings";
 import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, type BusinessRules } from "@/lib/core/settings";
 import { Ico, Mark } from "@/components/rift/icons";
@@ -31,8 +32,13 @@ export const dynamic = "force-dynamic";
  * default become a policy by being looked at a few times.
  */
 export default async function SettingsPage() {
-  const agent = await currentAgent();
-  if (!agent) redirect("/studio/sign-in");
+  const session = await agentSession();
+  /* A blip is not an expired session. Redirecting on "unknown" shows the
+     agent a sign-in form when his cookie is fine, which says something false
+     about what just happened — see lib/db/session.ts. */
+  if (session.state === "unknown") return <Unavailable reason={session.reason} />;
+  if (session.state === "signed-out") redirect("/studio/sign-in");
+  const agent = session.agent;
 
   const read = await readAgentRules(agent.agentId);
 
