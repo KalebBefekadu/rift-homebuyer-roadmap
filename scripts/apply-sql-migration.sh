@@ -44,6 +44,23 @@ req=urllib.request.Request(
 try:
     with urllib.request.urlopen(req, timeout=180) as resp:
         print("SQL_OK", pathlib.Path(r'''$FILE''').name, resp.status)
+        # The rows, when the statement returned any.
+        #
+        # This used to be discarded, which made the script unable to answer the
+        # one question worth asking after a migration: did the columns actually
+        # arrive? "SQL_OK 201" is the API accepting the request, not the schema
+        # being what you meant — and every defect in this codebase so far has
+        # looked exactly like success. A verification query run through here
+        # printed nothing at all.
+        try:
+            rows = json.loads(resp.read() or b"[]")
+        except (ValueError, TypeError):
+            rows = []
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, dict):
+                print("  " + " | ".join(f"{k}={v}" for k, v in row.items()))
+            else:
+                print("  " + str(row))
 except urllib.error.HTTPError as e:
     print("SQL_FAIL", e.code, e.read().decode()[:800])
     raise SystemExit(1)
