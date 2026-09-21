@@ -16,11 +16,12 @@ import { signOut } from "./actions";
 export function StudioHeader({ agentName, undecided = 0, current }: {
   agentName: string;
   undecided?: number;
-  current: "today" | "clients" | "questions" | "settings" | "add";
+  current: "today" | "clients" | "calendar" | "questions" | "settings" | "add";
 }) {
   const nav = [
     { key: "today", href: "/studio", label: "Today" },
     { key: "clients", href: "/studio/clients", label: "People" },
+    { key: "calendar", href: "/studio/calendar", label: "What’s coming" },
   ] as const;
 
   return (

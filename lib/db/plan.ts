@@ -4,6 +4,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import type { Owner, PlanItem } from "@/lib/core/plan";
+import type { Commitment } from "@/lib/core/agenda";
 import type { Offer, SellerCosts } from "@/lib/core/offers";
 import { releasedOffersFor } from "./offers";
 
@@ -316,4 +317,118 @@ export async function readPlanForAgent(leadId: string): Promise<DbResult<{ items
     items: ("data" in items ? (items.data as Record<string, unknown>[]) : []).map(shapeItem),
     token,
   });
+}
+
+/* ------------------------------------------------------------------ *
+ * Everything dated, across everybody
+ * ------------------------------------------------------------------ */
+
+/**
+ * Every commitment with a date on it, from both places they live.
+ *
+ * Two queries rather than one, because they are two different promises. A
+ * next action is something the agent promised himself; a plan step is
+ * something a CLIENT can see he promised them, on a page they may have open.
+ * The agenda leads with the second for exactly that reason, so the difference
+ * has to survive the read.
+ *
+ * Unfinished steps only. A completed step with a date in the future is not a
+ * commitment, and a completed one in the past is not overdue.
+ */
+export async function datedCommitments(): Promise<DbResult<Commitment[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const [steps, actions] = await Promise.all([
+    boundedRead(
+      db.from("rift_plan_items")
+        .select("id,title,owner,owner_name,due_on,lead_id")
+        .eq("agent_id", agent_id)
+        .is("done_at", null)
+        .not("due_on", "is", null)
+        .order("due_on", { ascending: true }).limit(300),
+      "the dated steps",
+    ),
+    boundedRead(
+      db.from("rift_leads")
+        .select("id,name,side,next_action,next_due,client_token")
+        .eq("agent_id", agent_id)
+        .is("archived_at", null)
+        .not("next_due", "is", null)
+        .order("next_due", { ascending: true }).limit(300),
+      "the dated actions",
+    ),
+  ]);
+
+  /* Either half may be missing without the page being wrong — the follow-up
+     columns and the plan table shipped separately from the code that reads
+     them. What must not happen is an empty agenda that looks like a clear
+     month. If BOTH fail, that is reported. */
+  if (!steps.ok && !actions.ok) return steps;
+
+  const leadRows = actions.ok && "data" in actions
+    ? (actions.data as Record<string, unknown>[])
+    : [];
+  const byLead = new Map(leadRows.map((l) => [l.id as string, l]));
+
+  const out: Commitment[] = [];
+
+  for (const l of leadRows) {
+    if (!l.next_action || !l.next_due) continue;
+    out.push({
+      id: `action:${l.id as string}`,
+      kind: "action",
+      what: l.next_action as string,
+      dueOn: (l.next_due as string).slice(0, 10),
+      personId: l.id as string,
+      personName: ((l.name as string | null) ?? "").trim() || "Someone who left no name",
+      side: l.side as "buy" | "sell",
+      /* A next action is his own note. Nothing on the client's page shows it. */
+      visibleToThem: false,
+    });
+  }
+
+  if (steps.ok && "data" in steps) {
+    /* The steps' own leads may not be in the map above — that query only
+       returns people who have a next action. One more read rather than a
+       guess: a step attributed to the wrong person is worse than a slow page. */
+    const stepRows = steps.data as Record<string, unknown>[];
+    const missing = [...new Set(stepRows.map((s) => s.lead_id as string))]
+      .filter((id) => !byLead.has(id));
+
+    if (missing.length) {
+      const extra = await boundedRead(
+        db.from("rift_leads").select("id,name,side,client_token")
+          .eq("agent_id", agent_id).in("id", missing.slice(0, 200)),
+        "the people those steps belong to",
+      );
+      if (extra.ok && "data" in extra) {
+        for (const l of extra.data as Record<string, unknown>[]) byLead.set(l.id as string, l);
+      }
+    }
+
+    for (const s of stepRows) {
+      const lead = byLead.get(s.lead_id as string);
+      if (!lead) continue;
+      out.push({
+        id: `step:${s.id as string}`,
+        kind: "step",
+        what: s.title as string,
+        dueOn: (s.due_on as string).slice(0, 10),
+        personId: s.lead_id as string,
+        personName: ((lead.name as string | null) ?? "").trim() || "Someone who left no name",
+        side: lead.side as "buy" | "sell",
+        /* Only if a link is actually open. A step on a plan nobody can reach
+           carries no more exposure than a private note, and saying otherwise
+           would make every agenda look alarming. */
+        visibleToThem: Boolean(lead.client_token),
+        owner: s.owner as "client" | "agent" | "other",
+        ownerName: (s.owner_name as string | null) ?? null,
+      });
+    }
+  }
+
+  return done(out);
 }

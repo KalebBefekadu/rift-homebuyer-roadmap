@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import { Tibeb, Distance, ReturnBars } from "@/components/rift/art";
 import { LocaleToggle } from "@/components/rift/LocaleToggle";
+import { FaqSchema } from "@/components/rift/Agent";
 import { Announce } from "@/components/rift/Live";
 import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
@@ -130,6 +131,19 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
      requires the buyer to live in the house. Every answer this page needs has
      already been given above, so there is nothing left to ask. */
   const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}&lang=${locale}`;
+
+  /* One array, two consumers: the cards below and the structured data beside
+     them. Written out rather than generated from a range, because a missing
+     key must fail the i18n test loudly rather than render a card reading
+     "faq.q7". */
+  const faq: [string, string][] = [
+    [t("faq.q1"), t("faq.a1")],
+    [t("faq.q2"), t("faq.a2", { pct: `${ASSUMPTIONS.managementPct}%` })],
+    [t("faq.q3"), t("faq.a3")],
+    [t("faq.q4"), t("faq.a4")],
+    [t("faq.q5"), t("faq.a5")],
+    [t("faq.q6"), t("faq.a6")],
+  ];
 
   return (
     <div className="buy" lang={locale}>
@@ -375,15 +389,20 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
           }}>
             {t("faq.h2")}
           </h2>
+          {/* Declared to a search engine from the SAME array the page renders
+              from. Google's rule is that structured data must match what the
+              visitor sees, and a second copy written for crawlers drifts from
+              the page inside a release — at which point the product is making
+              two different claims about the same thing, one of them invisible.
+
+              Locale-aware, because the Amharic page is a real addressable
+              version of this page rather than a widget on top of the English
+              one, and declaring English answers on it would describe a page
+              that does not exist. */}
+          <FaqSchema locale={locale} items={faq.map(([q, a]) => ({ q, a }))} />
+
           <div className="g2 gap-3" style={{ marginTop: 24 }}>
-            {[
-              [t("faq.q1"), t("faq.a1")],
-              [t("faq.q2"), t("faq.a2", { pct: `${ASSUMPTIONS.managementPct}%` })],
-              [t("faq.q3"), t("faq.a3")],
-              [t("faq.q4"), t("faq.a4")],
-              [t("faq.q5"), t("faq.a5")],
-              [t("faq.q6"), t("faq.a6")],
-            ].map(([q, a]) => (
+            {faq.map(([q, a]) => (
               <div key={q} className="card p-4">
                 <div className="t-md w6" style={script}>{q}</div>
                 <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: am ? 1.9 : 1.65, ...script }}>{a}</p>

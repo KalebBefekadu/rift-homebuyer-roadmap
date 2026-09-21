@@ -45,3 +45,50 @@ export function AgentSchema() {
     />
   );
 }
+
+/**
+ * A page's questions, in the form a search engine reads.
+ *
+ * The buyers-abroad page answers six questions a foreign national actually
+ * types — whether you can buy without a green card, what a lender wants, what
+ * happens at sale. Those answers are already on the page, written and checked;
+ * declaring them costs nothing and is the difference between the page being
+ * found by somebody asking the question and being found by nobody.
+ *
+ * TAKES THE PAGE'S OWN TEXT. Not a second copy written for crawlers. Google's
+ * guidance is that structured data must match what the visitor sees, and a
+ * duplicate maintained separately drifts from the page within a release — at
+ * which point the product is making two different claims about the same thing,
+ * one of them invisible.
+ *
+ * Locale-aware, because the Amharic page is a real addressable version of this
+ * page rather than a widget on top of the English one, and declaring English
+ * answers on it would describe a page that does not exist.
+ */
+export function FaqSchema({ items, locale = "en" }: {
+  items: { q: string; a: string }[];
+  locale?: string;
+}) {
+  /* Nothing is emitted for nothing. An empty FAQPage is invalid structured
+     data, which is ignored silently — the worst of both outcomes. */
+  const usable = items.filter((i) => i.q.trim() && i.a.trim());
+  if (usable.length === 0) return null;
+
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    inLanguage: locale,
+    mainEntity: usable.map((i) => ({
+      "@type": "Question",
+      name: i.q.trim(),
+      acceptedAnswer: { "@type": "Answer", text: i.a.trim() },
+    })),
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
