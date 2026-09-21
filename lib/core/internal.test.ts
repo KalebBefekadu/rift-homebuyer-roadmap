@@ -59,6 +59,7 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     "/r/": "the token IS the credential — app/(rift)/r/[token]/page.tsx",
     "/buy/results": "a readout is public by design; that is the product",
     "/sell/results": "a readout is public by design; that is the product",
+    "/abroad/results": "a readout is public by design; that is the product",
     "/book": "public by design",
     "/studio": "behind Supabase auth — app/(studio)/studio/page.tsx",
   };
@@ -88,7 +89,14 @@ describe("robots and the sitemap agree", () => {
   const robotsSrc = readFileSync("app/robots.ts", "utf8");
   const sitemapSrc = readFileSync("app/sitemap.ts", "utf8");
 
-  const list = (src: string, key: string) => {
+  /* Comments stripped first. A `/* … *\/` inside either array put the comment
+     text through the quoted-string match, and the suite then asserted that a
+     route called "deposit, county and residency status in a URL" refuses in
+     production. The parser was reading prose as data. */
+  const bare = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+
+  const list = (raw: string, key: string) => {
+    const src = bare(raw);
     const at = src.indexOf(`${key}: [`);
     if (at === -1) return [];
     const body = src.slice(at, src.indexOf("]", at));

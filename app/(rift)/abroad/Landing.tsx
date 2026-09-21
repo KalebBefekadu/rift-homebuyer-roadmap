@@ -464,7 +464,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                 <div className="col gap-2">
                   <div className="kicker c-4">This product</div>
                   <Link href={go} className="t-sm c-3">My readout</Link>
-                  <Link href="/buy/how" className="t-sm c-3">How it works</Link>
+                  <Link href="/abroad/how" className="t-sm c-3">How it works</Link>
                   <Link href="/buy" className="t-sm c-3">Buying to live here</Link>
                 </div>
                 <div className="col gap-2">

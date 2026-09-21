@@ -23,14 +23,19 @@ export default function robots(): MetadataRoute.Robots {
            indexing and absent from this list, which `Allow: /` covered by
            accident rather than by anybody deciding it. */
         allow: [
-          "/", "/abroad", "/buy", "/buy/programs", "/buy/how",
-          "/sell", "/sell/how", "/sell/unclaimed", "/privacy",
+          "/", "/abroad", "/abroad/how", "/buy", "/buy/start", "/buy/programs", "/buy/how",
+          "/sell", "/sell/start", "/sell/how", "/sell/unclaimed", "/privacy",
         ],
         /* /dev is the development index. It is not secret, but it describes what
            is built and what is only specified, and it is not the product. */
+        /* /abroad/results was missing from this list while the other two
+           readouts were on it. Same kind of document — one person's price,
+           deposit, county and residency status in a URL — and the only one of
+           the three a crawler was free to index. The funnel written for people
+           outside the country was the one without the protection. */
         disallow: [
-          "/r/", "/buy/results", "/sell/results", "/book", "/studio",
-          "/api/", "/prototype/", "/dev",
+          "/r/", "/buy/results", "/sell/results", "/abroad/results",
+          "/book", "/studio", "/api/", "/prototype/", "/dev",
         ],
       },
     ],

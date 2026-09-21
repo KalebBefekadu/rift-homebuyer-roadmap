@@ -19,9 +19,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${base}/buy`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/abroad`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${base}/abroad/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    /* The assessment itself. Absent until a drift guard went looking, which
+       meant the two pages the entire funnel leads into — the ones a person
+       searching "first time home buyer georgia help" should land on — were the
+       only public pages a crawler could not find. Nothing was broken; they
+       were simply never in the list. */
+    { url: `${base}/buy/start`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/buy/programs`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/buy/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/sell`, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    { url: `${base}/sell/start`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/sell/unclaimed`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/sell/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     /* Low priority, but present. A privacy page nobody can find is the same
