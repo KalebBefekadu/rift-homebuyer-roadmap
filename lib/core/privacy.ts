@@ -70,6 +70,19 @@ export const RETENTION: RetentionRule[] = [
     why: "It is the evidence that we were allowed to contact you at all. Keeping the wording rather than a reference to it means we cannot quietly change what you agreed to after the fact.",
     thenWhat: "Deleted with the rest of the record.",
   },
+  {
+    /* Added the day /offer shipped, for the reason the note above gives. An
+       inbound offer is a genuinely new category: it is the only record here
+       that is ABOUT A THIRD PARTY — a property somebody else owns, and often a
+       buyer who is not the person typing. Leaving it off the list because the
+       submitter is not the subject would be the same selection this file
+       already refuses once. */
+    id: "offer",
+    what: "An offer you submitted, and the address it was on",
+    keptFor: "While it is live, then 24 months",
+    why: "An offer is a document somebody may act on, and the record of what was sent is the only protection either side has if the terms are later disputed. The address belongs to a property, not to you — we do not treat it as yours to delete, and we do not attach it to anybody who has not asked us to.",
+    thenWhat: "Deleted outright. A phone number given to deliver an offer is passed on with it and never stored.",
+  },
 ];
 
 /* ------------------------------------------------------------------ *

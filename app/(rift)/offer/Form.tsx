@@ -50,6 +50,9 @@ export function Form() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  /* Distinguished from "you left the address blank": one is theirs to fix and
+     one is ours, and only ours warrants sending them somewhere else. */
+  const [failedToSend, setFailedToSend] = useState(false);
 
   const num = (v: string) => {
     const n = Number(v.replace(/[^0-9.]/g, ""));
@@ -77,8 +80,9 @@ export function Form() {
 
   const send = async () => {
     const real = readSubmission({ ...draft, address, from, email });
-    if (!real.ok) { setErrors(real.errors); return; }
+    if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
     setErrors([]);
+    setFailedToSend(false);
     setSending(true);
     try {
       const res = await fetch("/api/offer", {
@@ -88,9 +92,10 @@ export function Form() {
       });
       const j = await res.json().catch(() => null);
       if (j?.ok) setSent(true);
-      else setErrors([j?.error ?? "That did not get through. Send it to Kaleb directly and nothing is lost."]);
+      else { setErrors([j?.error ?? "That did not get through."]); setFailedToSend(true); }
     } catch {
-      setErrors(["That did not get through. Send it to Kaleb directly and nothing is lost."]);
+      setErrors(["That did not get through."]);
+      setFailedToSend(true);
     } finally {
       setSending(false);
     }
@@ -304,9 +309,26 @@ export function Form() {
           </p>
 
           {errors.length ? (
-            <ul className="t-xs c-neg" style={{ marginTop: 10, paddingLeft: 16, lineHeight: 1.6 }}>
-              {errors.map((e) => <li key={e}>{e}</li>)}
-            </ul>
+            <div style={{ marginTop: 10 }}>
+              <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
+                {errors.map((e) => <li key={e}>{e}</li>)}
+              </ul>
+              {/* A dead end is not an honest failure, it is half of one.
+                  Telling somebody to "send it to Kaleb directly" without
+                  giving them a way to is the kind of message that reads as
+                  helpful and leaves them exactly where they were. The booking
+                  path does not depend on anything this one does. */}
+              {failedToSend ? (
+                <div className="card p-3" style={{ marginTop: 10, background: "var(--sunk)" }}>
+                  <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
+                    Your terms are still on this page and the arithmetic above is still yours —
+                    nothing was lost. The quickest way through is{" "}
+                    <Link href="/book?v=offer" className="u">fifteen minutes with Kaleb</Link>,
+                    which does not depend on whatever just failed here.
+                  </p>
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
           {sent ? (

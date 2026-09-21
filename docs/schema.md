@@ -221,6 +221,7 @@ configuration value. `lib/core/docs.test.ts` fails if the two drift apart.
 | Client record | Per `business_rules.clientRetentionYears` | **Has a legal floor.** Confirm with the broker before anything deletes |
 | Funnel telemetry | 24 months | Question ids and dwell only, never answers. Aggregated counts survive; individual event rows do not |
 | Consent record | The relationship, then five years | The only evidence the contact was lawful. Stores the exact wording, not a reference to it |
+| Inbound offer | While it is live, then 24 months | The only record here ABOUT A THIRD PARTY — a property somebody else owns, and often a buyer who is not the person typing. The record of what was sent is the only protection either side has if the terms are disputed. A phone number given to deliver one is passed on with it and never stored |
 
 **A lead is not a side effect of its assessment.** `rift_leads.assessment_id` is `SET NULL`,
 not `CASCADE`. It cascaded once, so the sweep that deletes an 18-month-old assessment silently
