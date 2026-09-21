@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { serviceClient, currentAgentId } from "@/lib/db/service";
+import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { currentRate } from "@/lib/db/rates";
 import { overdue } from "@/lib/db/retention";
 
@@ -72,11 +73,22 @@ async function retentionCheck(): Promise<string> {
 const EMAIL_TTL_MS = 10 * 60_000;
 let emailCache: { at: number; value: string } | null = null;
 
-async function emailCheck(): Promise<string> {
+async function emailCheck(deep: boolean): Promise<string> {
   const key = process.env.BREVO_API_KEY;
   const from = process.env.BREVO_FROM_EMAIL;
   if (!key) return "missing";
   if (!from) return "no verified sender";
+
+  /* Only when asked by somebody holding the cron secret.
+
+     The first version probed Brevo on any public request. Brevo's IP review
+     emails the account owner — "someone tried to use your organization account
+     from an IP address you have never used" — for every new address that
+     calls, and serverless functions run from a pool of changing addresses. So
+     a public health endpoint that asked Brevo anything turned every cold
+     instance into a security alert in Kaleb's inbox. A check that makes its
+     owner wonder whether he has been breached is not a health check. */
+  if (!deep) return "set — not verified (deep check requires the cron secret)";
 
   const now = Date.now();
   if (emailCache && now - emailCache.at < EMAIL_TTL_MS) return emailCache.value;
@@ -107,14 +119,39 @@ async function emailCheck(): Promise<string> {
   return value;
 }
 
-export async function GET() {
+/**
+ * Whether the database answers, asked of the database.
+ *
+ * This said "configured" whenever SUPABASE_URL was set — and `agent: "ready"`
+ * comes from an id cached in memory the first time it was read. A failure
+ * drill stopped the data API underneath a running server and this endpoint
+ * went on returning `"ok": true`, database configured, agent ready, retention
+ * clear: every line green, through a total outage, which is the one moment a
+ * health check exists for.
+ *
+ * One tiny indexed read, on a deadline, every call. Not cached: a check that
+ * answers from memory is a check of the memory.
+ */
+async function databaseProbe(db: NonNullable<ReturnType<typeof serviceClient>>): Promise<boolean> {
+  const { value, timedOut } = await withTimeout(
+    Promise.resolve(db.from("rift_agents").select("id").limit(1)),
+    READ_DEADLINE_MS,
+    null,
+  );
+  return !timedOut && Boolean(value) && !value!.error;
+}
+
+export async function GET(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  const deep = Boolean(secret) && req.headers.get("authorization") === `Bearer ${secret}`;
   const db = serviceClient();
-  const agent = db ? await currentAgentId() : null;
+  const reachable = db ? await databaseProbe(db) : false;
+  const agent = db && reachable ? await currentAgentId() : null;
 
   const checks: Record<string, string> = {
-    database: db ? "configured" : "missing",
-    agent: agent ? "ready" : db ? "not bootstrapped" : "unknown",
-    email: await emailCheck(),
+    database: !db ? "missing" : reachable ? "reachable" : "unreachable",
+    agent: agent ? "ready" : !db ? "unknown" : reachable ? "not bootstrapped" : "unknown — database unreachable",
+    email: await emailCheck(deep),
     calendar: process.env.CAL_API_KEY && process.env.CAL_EVENT_TYPE_ID ? "configured" : "missing",
     /* "Configured" is not "working", and conflating them cost this product
        every scheduled run it ever had. The secret was set, this said

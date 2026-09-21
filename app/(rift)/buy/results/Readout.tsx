@@ -763,8 +763,13 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
       </button>
       {state === "error" ? (
         <p className="t-xs c-neg" style={{ marginTop: 8, lineHeight: 1.5 }}>
-          We could not send that. Your readout is unaffected — keep the share link above, which
-          is the same document.
+          {/* The share link is made by the same database that just failed, so
+              when this message appears it is often not there. Pointing at
+              "the link above" over an empty space was found by a failure drill;
+              the page's own address carries every answer and is always here. */}
+          {link
+            ? "We could not send that. Your readout is unaffected — keep the share link above, which is the same document."
+            : "We could not send that. Your readout is unaffected — this page’s address is the readout itself, so bookmark it or copy it from the address bar."}
         </p>
       ) : null}
     </div>

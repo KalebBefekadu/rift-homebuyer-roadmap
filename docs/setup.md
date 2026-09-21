@@ -237,8 +237,8 @@ where somebody finds out.
 
 ```json
 { "ok": true, "checks": {
-  "database": "configured", "agent": "ready",
-  "email": "no verified sender", "calendar": "missing",
+  "database": "reachable", "agent": "ready",
+  "email": "ready", "calendar": "missing",
   "scheduler": "configured", "monitoring": "configured",
   "rate": "stale (never recorded)",
   "retention": "clear" } }
