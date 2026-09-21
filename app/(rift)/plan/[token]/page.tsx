@@ -3,6 +3,8 @@ import Link from "next/link";
 import { readPlanByToken } from "@/lib/db/plan";
 import { currentAgentPublic } from "@/lib/db/service";
 import { groupPlan, summarise, headline, ownerLabel, daysUntil } from "@/lib/core/plan";
+import { rankOffers, headlineTrap, FINANCING_LABEL } from "@/lib/core/offers";
+import { money } from "@/lib/core/compute";
 import { Ico, Mark } from "@/components/rift/icons";
 
 export const metadata: Metadata = {
@@ -81,6 +83,17 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
 
   const sections = groupPlan(plan.items);
   const s = summarise(plan.items);
+
+  /* Ranked here, on the server, like every other figure in this product. The
+     browser receives numbers, never the arithmetic — this page is reachable by
+     a link somebody forwarded, and a net computed in the browser from data in
+     the page is a net anybody can edit. */
+  const nets = plan.sellerCosts ? rankOffers(plan.offers, plan.sellerCosts) : [];
+  const offerNets = new Map(nets.map((n) => [n.offerId, n]));
+  const orderedOffers = plan.sellerCosts
+    ? nets.map((n) => plan.offers.find((o) => o.id === n.offerId)!)
+    : plan.offers;
+  const trap = plan.sellerCosts ? headlineTrap(plan.offers, plan.sellerCosts) : null;
   const side = plan.side === "buy" ? "buy" : "sell";
 
   return (
@@ -169,6 +182,89 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           ))}
         </div>
       )}
+
+      {/* The offer room.
+       
+          Only what the agent has released, and only ever ranked by what
+          reaches them. A seller comparing PDFs sees four headline numbers;
+          the highest of them is often not the best one, and that sentence is
+          the single most useful thing this product can say at this point in a
+          transaction — so it is computed rather than left to be noticed. */}
+      {plan.offers.length > 0 ? (
+        <section style={{ marginTop: 32 }}>
+          <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
+            Offers on your home
+          </div>
+          <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
+            {plan.sellerCosts
+              ? "Ordered by what would actually reach you after everything comes out — not by the number on the front page."
+              : `These are the offers ${agentFirst} has shared with you. What each one leaves you depends on your payoff, which is not recorded here yet.`}
+          </p>
+
+          {trap ? (
+            <div className="card p-4" style={{ marginTop: 14, borderColor: "var(--warn-line)", background: "var(--warn-wash)" }}>
+              <div className="t-sm w6">The highest offer is not the best one.</div>
+              <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
+                {trap.highest.from} offered {money(trap.highest.price)}. {trap.bestNet.from} offered
+                less and would leave you about {money(trap.difference)} more, once everything they
+                ask back comes out. Worth a conversation before you answer either.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="col gap-2" style={{ marginTop: 14 }}>
+            {orderedOffers.map((o, i) => {
+              const n = offerNets.get(o.id);
+              return (
+                <div key={o.id} className="card p-4" style={{
+                  borderColor: i === 0 && plan.sellerCosts && orderedOffers.length > 1 ? "var(--pos-line)" : undefined,
+                }}>
+                  <div className="between gap-3 wrap" style={{ alignItems: "flex-start" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="row gap-2 wrap">
+                        <span className="t-md w6">{o.from}</span>
+                        <span className="chip t-2xs">{FINANCING_LABEL[o.financing]}</span>
+                        {i === 0 && plan.sellerCosts && orderedOffers.length > 1
+                          ? <span className="chip chip-pos t-2xs">Leaves you most</span> : null}
+                      </div>
+                      <div className="t-xs c-4" style={{ marginTop: 4 }}>
+                        {money(o.price)} offered
+                        {o.concessions > 0 ? ` · asking ${money(o.concessions)} back` : ""}
+                        {o.repairCredit > 0 ? ` · ${money(o.repairCredit)} repair credit` : ""}
+                        {o.closeOn ? ` · closes ${WHEN(o.closeOn)}` : ""}
+                      </div>
+                      {o.contingencies.length ? (
+                        <div className="t-xs c-4" style={{ marginTop: 3 }}>
+                          Conditional on {o.contingencies.join(", ")}
+                        </div>
+                      ) : null}
+                      {/* The agent's own words, shown only because he released
+                          it. Nothing here is generated about a buyer. */}
+                      {o.note ? (
+                        <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>{o.note}</p>
+                      ) : null}
+                    </div>
+
+                    {n ? (
+                      <div style={{ textAlign: "right", flex: "none" }}>
+                        <div className="num t-lg">{money(n.net)}</div>
+                        <div className="t-2xs c-4">would reach you</div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6, maxWidth: 560 }}>
+            These figures are estimates from the terms as written. Your payoff moves daily with
+            interest and is only exact on a lender&rsquo;s statement, and a closing attorney&rsquo;s
+            settlement statement is the authority on the rest. Nothing here is a recommendation —
+            price is one thing an offer is, and how likely it is to close is another.
+          </p>
+        </section>
+      ) : null}
 
       <div className="card p-4" style={{ marginTop: 26 }}>
         <div className="t-sm w6">If something here is wrong</div>

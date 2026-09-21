@@ -13,6 +13,7 @@ import { saveRule, clearRule } from "@/lib/db/settings";
 import type { BusinessRules } from "@/lib/core/settings";
 import { publishWording } from "@/lib/db/funnel";
 import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
+import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer } from "@/lib/db/offers";
 import type { Owner } from "@/lib/core/plan";
 import type { Wording } from "@/lib/core/funnel";
 
@@ -164,6 +165,73 @@ export async function planNextAction(leadId: string, action: string | null, due:
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const, cleared: r.data.cleared };
+}
+
+/* ------------------------------------------------------------------ *
+ * Offers
+ * ------------------------------------------------------------------ */
+
+export async function recordOffer(leadId: string, input: Omit<NewOffer, "leadId">) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addOffer({ ...input, leadId });
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+/**
+ * Release an offer to the seller, or take it back.
+ *
+ * Its own action rather than a field on the form, because it is its own
+ * decision. An offer arrives while the agent is driving; presenting it
+ * unreviewed is how somebody replies to a number before anybody has read the
+ * terms under it.
+ */
+export async function releaseOffer(leadId: string, offerId: string, released: boolean) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setOfferReleased(offerId, released);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, released: r.data.released };
+}
+
+export async function deleteOffer(leadId: string, offerId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removeOffer(offerId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * The two figures every net depends on.
+ *
+ * Asked for rather than assumed. A comparison run against a payoff of zero
+ * ranks the offers correctly and reports a net out by the size of somebody's
+ * mortgage — and it reads perfectly.
+ */
+export async function saveSellerCosts(leadId: string, payoff: number, commissionPct: number) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setSellerCosts(leadId, payoff, commissionPct);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
 }
 
 /* ------------------------------------------------------------------ *

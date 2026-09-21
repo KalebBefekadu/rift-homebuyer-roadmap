@@ -6,9 +6,11 @@ import { Unavailable } from "../../Unavailable";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
 import { readPlanForAgent } from "@/lib/db/plan";
+import { offersFor } from "@/lib/db/offers";
 import { siteUrl } from "@/lib/core/site";
 import { Record as ClientRecord } from "./Record";
 import { Plan } from "./Plan";
+import { Offers } from "./Offers";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -60,9 +62,11 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   /* Read after the record, not beside it. The record is what the agent came
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
-  const plan = await readPlanForAgent(id);
+  const [plan, offers] = await Promise.all([readPlanForAgent(id), offersFor(id)]);
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
+  const offerList = offers.ok && "data" in offers ? offers.data.offers : [];
+  const sellerCosts = offers.ok && "data" in offers ? offers.data.costs : null;
 
   return (
     <>
@@ -76,6 +80,16 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
           clientFirst={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
         />
+        {/* Sellers only. A buyer has no offers ON them, and a panel that
+            renders empty on every buyer record is a panel he learns to skip. */}
+        {read.data.lead.side === "sell" ? (
+          <Offers
+            leadId={id}
+            offers={offerList}
+            costs={sellerCosts}
+            agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
+          />
+        ) : null}
       </div>
     </>
   );

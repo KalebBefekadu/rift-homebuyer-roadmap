@@ -318,7 +318,10 @@ export interface ProceedLine {
 }
 
 /** Georgia transfer tax is $1.00 per $500 of consideration — 0.2%. */
-const GA_TRANSFER_TAX_RATE = 0.002;
+/* Exported so the offer table and the seller's readout cannot quote different
+   transfer tax on the same house. A second copy of a statutory rate is a
+   second thing to forget when it changes. */
+export const GA_TRANSFER_TAX_RATE = 0.002;
 
 export function netProceeds(s: SellerInputs) {
   const commission = (s.price * s.commissionPct) / 100;

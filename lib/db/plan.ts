@@ -4,6 +4,8 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import type { Owner, PlanItem } from "@/lib/core/plan";
+import type { Offer, SellerCosts } from "@/lib/core/offers";
+import { releasedOffersFor } from "./offers";
 
 /**
  * The client's plan — reading it by token, and the agent's edits to it.
@@ -41,6 +43,15 @@ export interface ClientPlan {
   stage: string | null;
   stageSince: string | null;
   items: PlanItem[];
+  /**
+   * Offers the agent has RELEASED, and the costs to compare them against.
+   *
+   * Empty on a buyer, and empty on a seller until something is released. The
+   * costs are null unless both figures are recorded, and the page then shows
+   * the offers without a net rather than inventing one.
+   */
+  offers: Offer[];
+  sellerCosts: SellerCosts | null;
 }
 
 const shapeItem = (r: Record<string, unknown>): PlanItem => ({
@@ -94,14 +105,44 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
     ? (items.data as Record<string, unknown>[]).map(shapeItem)
     : [];
 
+  /* Only a seller can have offers ON them, and only released ones are ever
+     read — the filter is in the query in lib/db/offers.ts, not applied here,
+     because a filter applied after the read is one refactor from being
+     dropped. */
+  const side = row.side as "buy" | "sell";
+  let offers: Offer[] = [];
+  let sellerCosts: SellerCosts | null = null;
+
+  if (side === "sell") {
+    const [released, costs] = await Promise.all([
+      releasedOffersFor(row.id as string),
+      boundedRead(
+        db.from("rift_leads").select("payoff_cents,commission_pct").eq("id", row.id as string).maybeSingle(),
+        "the seller's costs",
+      ),
+    ]);
+    if (released.ok && "data" in released) offers = released.data;
+
+    const c = costs.ok && "data" in costs
+      ? (costs.data as { payoff_cents: number | null; commission_pct: number | null } | null)
+      : null;
+    /* Both, or neither. A net computed against an assumed payoff of zero reads
+       perfectly and is wrong by the size of their mortgage. */
+    if (c && c.payoff_cents !== null && c.commission_pct !== null) {
+      sellerCosts = { payoff: Number(c.payoff_cents) / 100, commissionPct: Number(c.commission_pct) };
+    }
+  }
+
   const name = ((row.name as string | null) ?? "").trim();
   return done({
     leadId: row.id as string,
     firstName: name ? name.split(/\s+/)[0]! : null,
-    side: row.side as "buy" | "sell",
+    side,
     stage: (row.stage as string | null) ?? null,
     stageSince: (row.stage_since as string | null) ?? null,
     items: list,
+    offers,
+    sellerCosts,
   });
 }
 
