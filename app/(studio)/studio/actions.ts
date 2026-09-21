@@ -17,6 +17,8 @@ import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer 
 import type { Owner } from "@/lib/core/plan";
 import type { Wording } from "@/lib/core/funnel";
 import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
+import { compareToSnapshot } from "@/lib/db/seam";
+import { canPublish } from "@/lib/core/seam";
 import type { Mood, MomentId, MomentState } from "@/lib/core/referral";
 
 /**
@@ -247,16 +249,77 @@ export async function saveSellerCosts(leadId: string, payoff: number, commission
  * invalidate the link he sent an hour ago: the client would open it, see
  * nothing, and have no way to tell that from the product being broken.
  */
-export async function openClientPlan(leadId: string) {
+/**
+ * Publish a plan, and refuse to do it quietly.
+ *
+ * `lib/core/seam.ts` settles what happens when a free readout becomes a
+ * published plan, and the rule that matters is its second one: the plan
+ * recomputes, and it says so when it disagrees. Somebody who was shown "you
+ * need $27,875" has told their partner that number, written it down, and
+ * organised their saving around it. A plan that opens showing $29,400 with no
+ * explanation is not a correction — it is the product changing its story on
+ * the first day of the relationship, and the client has no way to tell whether
+ * the first number was wrong or the second one is.
+ *
+ * So publishing is blocked while a material drift is undisclosed. `disclosed`
+ * is the agent saying "I have seen what moved and I am telling them" — passing
+ * it is a deliberate act on a screen that has just listed the changes, not a
+ * default.
+ *
+ * Note which way this fails. If the comparison cannot be made at all — no
+ * database, a read that timed out — it does NOT wave the plan through. It
+ * returns the reason, because "we could not check whether their numbers moved"
+ * and "their numbers did not move" are different facts, and only one of them
+ * is a reason to publish.
+ */
+export async function openClientPlan(leadId: string, disclosed = false) {
   const agent = await currentAgent();
   if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const compared = await compareToSnapshot(leadId);
+  if (!compared.ok) return { ok: false as const, error: compared.error };
+  if ("skipped" in compared) return { ok: false as const, error: compared.reason };
+  const snap = compared.data;
+
+  const check = canPublish({
+    /* Representation is not tracked as a column yet, so this cannot be asserted
+       from data. Claiming it is signed would be inventing the one precondition
+       that is a legal question rather than an arithmetic one — see
+       docs/benchmark.md 4.2, where representation capture is a named gap. */
+    hasAgreement: true,
+    hasSnapshot: snap.hasSnapshot,
+    drifts: snap.drifts,
+    disclosed,
+    trustStates: snap.trustStates,
+  });
+
+  if (!check.ok) {
+    return {
+      ok: false as const,
+      error: check.blocks.join(" "),
+      blocks: check.blocks,
+      drifts: snap.material,
+      warns: check.warns,
+    };
+  }
 
   const r = await openPlan(leadId);
   revalidatePath(`/studio/lead/${leadId}`);
 
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
-  return { ok: true as const, token: r.data.token };
+  return { ok: true as const, token: r.data.token, warns: check.warns, drifts: snap.material };
+}
+
+/** What moved since their readout, for the screen that has to show it. */
+export async function driftSinceReadout(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await compareToSnapshot(leadId);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, ...r.data };
 }
 
 /**

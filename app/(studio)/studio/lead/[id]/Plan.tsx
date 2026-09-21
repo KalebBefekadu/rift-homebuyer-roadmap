@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { ownerLabel, type Owner, type PlanItem } from "@/lib/core/plan";
 import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep } from "../../actions";
+import type { Drift } from "@/lib/core/seam";
 
 /**
  * The agent's end of the client's own page.
@@ -35,6 +36,10 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
   const [link, setLink] = useState<string | null>(token);
   const [copied, setCopied] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
+  /* What moved since their readout, held until the agent has seen it. Publishing
+     is blocked while this has anything in it and `disclosed` is false. */
+  const [drifts, setDrifts] = useState<Drift[]>([]);
+  const [warns, setWarns] = useState<string[]>([]);
 
   const [title, setTitle] = useState("");
   const [owner, setOwner] = useState<Owner>("client");
@@ -79,10 +84,15 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
 
         {!link ? (
           <button className="btn btn-p btn-sm" disabled={pending}
-            onClick={() => run(async () => {
-              const r = await openClientPlan(leadId);
-              if (r.ok) setLink(r.token);
-              return r;
+            onClick={() => start(async () => {
+              const r = await openClientPlan(leadId, false);
+              if (r.ok) { setLink(r.token); setWarns(r.warns ?? []); setDrifts([]); setError(null); return; }
+              /* A refusal because figures moved is not an error to print above
+                 the panel that is about to list them — printing both says the
+                 same thing twice and buries the part he can act on. */
+              const moved = r.drifts ?? [];
+              setDrifts(moved);
+              setError(moved.length ? null : r.error);
             })}>
             <Ico.share size={14} />Open their page
           </button>
@@ -90,6 +100,59 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
       </div>
 
       {error ? <p className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
+
+      {/* The disclosure. Publishing stops here until he has seen what moved —
+          not as a warning he can scroll past, but as the thing standing
+          between him and the button. A client who was shown one number and
+          opens a plan showing another has no way to know which was wrong, and
+          the fix is not to be more accurate, it is to say what changed. */}
+      {drifts.length ? (
+        <div className="card p-4" style={{ marginTop: 12, background: "var(--warn-wash)", borderColor: "var(--warn-line)" }}>
+          <div className="row gap-2">
+            <Ico.alert size={15} className="c-warn" style={{ flex: "none", marginTop: 2 }} />
+            <div className="grow">
+              <div className="t-sm w6">
+                {drifts.length === 1 ? "One figure has" : `${drifts.length} figures have`} moved since their readout.
+              </div>
+              <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>
+                They have already been shown these numbers and may well have repeated them to
+                somebody. Tell them what changed and why, then publish.
+              </p>
+
+              <div className="col gap-1" style={{ marginTop: 10 }}>
+                {drifts.map((d) => (
+                  <div key={d.field} className="t-xs" style={{ lineHeight: 1.5 }}>
+                    <span className="w6">{d.field}</span>{" "}
+                    <span className="num">${d.was.toLocaleString()}</span>
+                    {" → "}
+                    <span className="num w6">${d.now.toLocaleString()}</span>{" "}
+                    <span className="c-3">
+                      ({d.deltaPct > 0 ? "+" : ""}{d.deltaPct}% — {d.cause})
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <button className="btn btn-p btn-sm" style={{ marginTop: 12 }} disabled={pending}
+                onClick={() => run(async () => {
+                  const r = await openClientPlan(leadId, true);
+                  if (r.ok) { setLink(r.token); setWarns(r.warns ?? []); setDrifts([]); }
+                  return r;
+                })}>
+                I have told them — publish
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {warns.length ? (
+        <div style={{ marginTop: 10 }}>
+          {warns.map((w) => (
+            <p key={w} className="t-xs c-warn" style={{ lineHeight: 1.55 }}>{w}</p>
+          ))}
+        </div>
+      ) : null}
 
       {link && !origin ? (
         <p className="t-xs c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>
