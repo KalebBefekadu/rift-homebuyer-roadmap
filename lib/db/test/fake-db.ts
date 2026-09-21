@@ -1,3 +1,11 @@
+/* Marked like everything else in lib/db, and not as a formality: this file
+   fabricates database answers, and a bundler that could reach it from a client
+   component could reach the modules it stands in for. layers.test.ts asserts
+   the property with no exceptions, which is the only way a guard like that
+   stays worth anything. Under vitest the import resolves to a shim — see
+   vitest.config.ts. */
+import "server-only";
+
 /**
  * A PostgREST-shaped fake, for testing what the data layer DOES.
  *
