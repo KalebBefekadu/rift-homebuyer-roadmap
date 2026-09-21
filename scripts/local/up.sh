@@ -30,7 +30,22 @@ for _ in $(seq 1 30); do docker exec rift-pg pg_isready -U postgres >/dev/null 2
 # migrations, and sharing one database meant `npm test` destroyed this stack —
 # including the agent row, after which every write reported "no agent row
 # exists yet" two commands away from the cause.
-docker exec rift-pg psql -U postgres -q -c "create database rift_test;" >/dev/null 2>&1 || true
+#
+# NOT swallowed. This was `|| true` with both streams to /dev/null, and when it
+# failed — which it did, because pg_isready reports the server up a moment
+# before it will accept a CREATE DATABASE — the consequence was that every
+# database suite SKIPPED. Seventy tests, reported as "skipped", which the
+# schema suite's own docblock calls the worst possible outcome and which CI has
+# a dedicated step to catch. Locally there was nothing to catch it.
+if ! docker exec rift-pg psql -U postgres -q -c "create database rift_test;" 2>/tmp/rift-createdb.err; then
+  if grep -q "already exists" /tmp/rift-createdb.err; then
+    echo "  (rift_test already exists)"
+  else
+    echo "Could not create rift_test — the database suites would silently SKIP:" >&2
+    cat /tmp/rift-createdb.err >&2
+    exit 1
+  fi
+fi
 
 echo "→ schema, seed and grants"
 docker exec -i rift-pg psql -U postgres -q -v ON_ERROR_STOP=1 < supabase/test/shim.sql
