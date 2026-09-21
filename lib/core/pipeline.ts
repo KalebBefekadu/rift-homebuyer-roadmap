@@ -95,6 +95,54 @@ export function stallOf(stage: string, daysInStage: number, flag?: string, nextD
 /** One finished relationship: the stage it was in when counted, and whether it closed. */
 export interface Outcome { stage: string; closed: boolean }
 
+/** The two stages a relationship stops in. Neither is forecast from. */
+export const TERMINAL = ["Closed", "Lost"] as const;
+
+/**
+ * A relationship that has finished, and every stage it went through.
+ *
+ * `through` comes from the append-only note history — a stage change writes its
+ * own note carrying both ends of the move — so this is the record of what
+ * actually happened rather than a second copy of it that could drift.
+ */
+export interface Finished {
+  /** The stage it stopped in. */
+  final: string;
+  /** Every stage it was ever in, in any order, duplicates allowed. */
+  through: string[];
+}
+
+/**
+ * The agent's own outcomes, one per stage each finished relationship passed
+ * through.
+ *
+ * The question a forecast weight answers is "somebody is sitting in Searching
+ * today — how often does that end in a closing?", so a relationship that went
+ * Exploring → Searching → Under contract → Closed is evidence about all three
+ * of those stages, not only the last one. Counting only the final stage would
+ * make every closed deal evidence that Closing converts at 100% and teach the
+ * forecast nothing about the stages where the money is actually won or lost.
+ *
+ * A stage is counted once per relationship however many times it was entered.
+ * Somebody who bounced between Financing and Ready to shop four times is one
+ * outcome, not four, or an indecisive client would outweigh a decisive one.
+ */
+export function outcomesFrom(finished: Finished[]): Outcome[] {
+  const out: Outcome[] = [];
+  for (const f of finished) {
+    const closed = f.final === "Closed";
+    /* The terminal stages are excluded deliberately. "Of the relationships
+       that reached Closed, how many closed?" is 100% by construction, and a
+       forecast that believes it will read every deal in its last week as
+       certain. Only the stages somebody can still be sitting in are evidence. */
+    const stages = new Set(
+      f.through.filter((s) => s && !(TERMINAL as readonly string[]).includes(s)),
+    );
+    for (const stage of stages) out.push({ stage, closed });
+  }
+  return out;
+}
+
 export type Basis = "assumed" | "blended" | "observed";
 
 export interface Weight {
@@ -122,7 +170,19 @@ const CONFIDENT = 12;
 /** Below this, history is noise and we do not blend at all. */
 const MINIMUM = 4;
 
-export function weightFor(stage: string, history: Outcome[] = HISTORY): Weight {
+/**
+ * `history` is REQUIRED, and that is the point.
+ *
+ * It used to default to `HISTORY` below — forty-one invented outcomes seeded to
+ * look like a plausible solo agent's record. Any caller that forgot to pass real
+ * data got the fixture, and `BASIS_CHIP` then labelled the result "His own
+ * history" on screen. A forecast built from somebody else's imaginary closings,
+ * presented to the agent as his own evidence, is the exact failure this product
+ * exists to not commit. An omitted argument is now a type error instead.
+ *
+ * Pass `[]` to mean "no history yet". That is honest and scores `assumed`.
+ */
+export function weightFor(stage: string, history: Outcome[]): Weight {
   const assumed = ruleFor(stage).weight;
   const mine = history.filter((h) => h.stage === stage);
   const n = mine.length;
@@ -153,9 +213,14 @@ export const BASIS_CHIP: Record<Basis, { l: string; c: string }> = {
 };
 
 /**
- * Seeded history. Deliberately thin and uneven, because a solo agent's is —
- * plenty of contract-stage outcomes, almost nothing at the top of the funnel,
- * which is exactly the shape that makes an unshrunk average dangerous.
+ * Seeded history for the PROTOTYPE ONLY. Deliberately thin and uneven, because
+ * a solo agent's is — plenty of contract-stage outcomes, almost nothing at the
+ * top of the funnel, which is exactly the shape that makes an unshrunk average
+ * dangerous.
+ *
+ * Nothing under `app/(studio)` or `lib/db` may import this. These are invented
+ * closings, and the chips that render alongside them say "His own history".
+ * `lib/core/pipeline-history.test.ts` enforces it.
  */
 export const HISTORY: Outcome[] = [
   ...Array<Outcome>(3).fill({ stage: "Exploring", closed: false }),
@@ -170,7 +235,7 @@ export const HISTORY: Outcome[] = [
 ];
 
 /** How much of the forward view rests on evidence rather than assumption. */
-export function evidenceMix(stages: string[], history: Outcome[] = HISTORY) {
+export function evidenceMix(stages: string[], history: Outcome[]) {
   const w = stages.map((s) => weightFor(s, history));
   return {
     observed: w.filter((x) => x.basis === "observed").length,
@@ -201,9 +266,9 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 export function forecast(
   rows: { name: string; stage: string; value: number }[],
-  from = new Date("2026-09-06T12:00:00Z"),
-  months = 4,
-  history: Outcome[] = HISTORY,
+  from: Date,
+  months: number,
+  history: Outcome[],
 ): Forecast[] {
   const buckets: Forecast[] = [];
   for (let i = 0; i < months; i++) {

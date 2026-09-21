@@ -9,7 +9,7 @@ import { ranked, sla, BAND_LABEL, BAND_TONE } from "@/lib/core/lead";
 import { useAttribution, describeTouch } from "@/lib/prototype/attribution";
 import { MOMENTS, STATE_CHIP, gate } from "@/lib/core/referral";
 import { REFERRAL_STATE, dueNow, referralStats } from "./referral-demo";
-import { stallOf, STALL_CHIP, forecast, commissionOn, weightFor, evidenceMix, BASIS_CHIP } from "@/lib/core/pipeline";
+import { stallOf, STALL_CHIP, forecast, commissionOn, weightFor, evidenceMix, BASIS_CHIP, HISTORY } from "@/lib/core/pipeline";
 import { readRules, DEFAULT_RULES } from "@/lib/core/settings";
 import { money } from "@/lib/core/compute";
 
@@ -444,10 +444,10 @@ export default function Clients() {
             {(() => {
               const rows = CLIENTS.filter((c) => c.stage !== "Closed")
                 .map((c) => ({ name: c.name, stage: c.stage, value: dollars(c.value) }));
-              const fc = forecast(rows);
+              const fc = forecast(rows, new Date("2026-09-06T12:00:00Z"), 4, HISTORY);
               const totalW = fc.reduce((a, b) => a + b.weightedValue, 0);
               const pct = rules.commissionPct.value;
-              const mix = evidenceMix([...new Set(rows.map((r) => r.stage))]);
+              const mix = evidenceMix([...new Set(rows.map((r) => r.stage))], HISTORY);
               return (
                 <div className="card" style={{ marginBottom: 14, overflow: "hidden" }}>
                   <div className="between wrap gap-2" style={{ padding: "12px 16px", borderBottom: "1px solid var(--line-2)" }}>
@@ -494,7 +494,7 @@ export default function Clients() {
                     </p>
                     <div className="row wrap gap-2" style={{ marginTop: 8 }}>
                       {[...new Set(rows.map((r) => r.stage))].map((st) => {
-                        const w = weightFor(st);
+                        const w = weightFor(st, HISTORY);
                         return (
                           <span key={st} className="chip" title={w.note}>
                             {st} · {Math.round(w.weight * 100)}%

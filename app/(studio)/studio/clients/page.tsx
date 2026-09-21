@@ -4,9 +4,10 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
-import { roster } from "@/lib/db/clients";
+import { roster, liveRelationships, finishedRelationships } from "@/lib/db/clients";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { STALL_CHIP } from "@/lib/core/pipeline";
+import { Forward } from "./Forward";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { Ico } from "@/components/rift/icons";
 import { StudioHeader } from "../StudioHeader";
@@ -60,18 +61,35 @@ export default async function ClientsPage({
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
 
-  const [list, rules] = await Promise.all([
+  /* One round. None of these depends on another, and the forward view must not
+     make the list of people wait — if the forecast query is the slow one, the
+     thing the agent actually came here for is still the roster. */
+  const [list, rules, live, finished] = await Promise.all([
     roster({
       q: one("q"),
       filter: (["all", "working", "new", "archived"] as const).find((f) => f === one("filter")) ?? "all",
       side: (["all", "buy", "sell"] as const).find((s) => s === one("side")) ?? "all",
     }),
     rulesOrDefaults(agent.agentId),
+    liveRelationships(),
+    finishedRelationships(),
   ]);
 
   const people = list.ok && "data" in list ? list.data.people : [];
   const more = list.ok && "data" in list ? list.data.more : false;
   const searching = Boolean(one("q")?.trim());
+
+  /* A failed or skipped read is not an empty book of business.
+
+     `finished` falling back to [] is safe and correct — it means every stage
+     reports "assumed", which is exactly what the screen should say when it
+     cannot read the history. `live` falling back to [] is NOT safe in the same
+     way: it renders "Nothing to forecast yet" to an agent with eleven live
+     relationships. So the panel is shown only when the live read actually
+     answered, and its absence is silence rather than a false statement. */
+  const liveOk = live.ok && "data" in live;
+  const forwardRows = liveOk ? live.data : [];
+  const historyRows = finished.ok && "data" in finished ? finished.data : [];
 
   return (
     <>
@@ -83,6 +101,24 @@ export default async function ClientsPage({
           Everyone, in the order they arrived. Today ranks them by what needs doing;
           this is for when you already know whose name you are looking for.
         </p>
+
+        {/* Only when the roster is unfiltered. A forecast sitting above the
+            results of a name search is answering a question nobody asked, and
+            it would look like a forecast OF the search. */}
+        {liveOk && !searching && (one("filter") ?? "all") === "all" && (one("side") ?? "all") === "all" ? (
+          <div style={{ marginTop: 20 }}>
+            <Forward
+              live={forwardRows}
+              finished={historyRows}
+              commissionPct={rules.rules.commissionPct.value}
+              /* Whether that percentage is his decision or our default. A
+                 forecast quoting a commission nobody chose is the house bug —
+                 a dial connected to nothing — and the money line here is the
+                 most quotable number on the screen. */
+              commissionDecided={!rules.undecided.includes("commissionPct")}
+            />
+          </div>
+        ) : null}
 
         <div style={{ marginTop: 20, maxWidth: 560 }}>
           <Suspense fallback={<div className="t-sm c-4">Loading…</div>}>

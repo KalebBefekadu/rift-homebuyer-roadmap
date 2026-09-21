@@ -149,7 +149,7 @@ describe("the forward view", () => {
   ];
 
   it("weights the count rather than listing wishes", () => {
-    const bs = forecast(rows, new Date(2026, 8, 6), 6);
+    const bs = forecast(rows, new Date(2026, 8, 6), 6, HISTORY);
     const sum = (f: (b: (typeof bs)[number]) => number) => bs.reduce((n, b) => n + f(b), 0);
     expect(sum((b) => b.count)).toBe(rows.length);
     /* An unweighted pipeline forecast is a wish list, and a solo agent who
@@ -160,7 +160,7 @@ describe("the forward view", () => {
 
   it("drops anything closing outside the window", () => {
     const far = [{ name: "Early", stage: "Exploring", value: 1 }];
-    const total = forecast(far, new Date(2026, 8, 6), 2).reduce((n, b) => n + b.count, 0);
+    const total = forecast(far, new Date(2026, 8, 6), 2, HISTORY).reduce((n, b) => n + b.count, 0);
     expect(total).toBe(0);
   });
 
@@ -172,26 +172,26 @@ describe("the forward view", () => {
    */
   it("produces consecutive months from any starting day", () => {
     for (const day of [1, 15, 28, 29, 30, 31]) {
-      const months = forecast([], new Date(2026, 0, day), 4).map((b) => b.month);
+      const months = forecast([], new Date(2026, 0, day), 4, HISTORY).map((b) => b.month);
       expect(months, `starting on ${day} January`).toEqual(["Jan 2026", "Feb 2026", "Mar 2026", "Apr 2026"]);
     }
   });
 
   it("crosses a year boundary without losing a month", () => {
-    expect(forecast([], new Date(2026, 11, 31), 3).map((b) => b.month))
+    expect(forecast([], new Date(2026, 11, 31), 3, HISTORY).map((b) => b.month))
       .toEqual(["Dec 2026", "Jan 2027", "Feb 2027"]);
   });
 
   it("never repeats a month heading", () => {
     for (const day of [1, 30, 31]) {
-      const months = forecast([], new Date(2026, 0, day), 6).map((b) => b.month);
+      const months = forecast([], new Date(2026, 0, day), 6, HISTORY).map((b) => b.month);
       expect(new Set(months).size).toBe(months.length);
     }
   });
 
   it("files a deal under the month it is actually expected to close", () => {
     /* Under contract is 25 days to close; from 6 Sep that is 1 October. */
-    const [sep, oct] = forecast([rows[0]], new Date(2026, 8, 6), 4);
+    const [sep, oct] = forecast([rows[0]], new Date(2026, 8, 6), 4, HISTORY);
     expect(sep.count).toBe(0);
     expect(oct.count).toBe(1);
     expect(oct.names).toEqual(["Maya"]);
@@ -204,10 +204,10 @@ describe("the forward view", () => {
     const strong = { name: "Strong", stage: "Under contract", value: 1 };
     const weaker = { name: "Weaker", stage: "Reviewing offers", value: 1 };
 
-    const alone = forecast([strong], from, 4).find((b) => b.count > 0)!;
+    const alone = forecast([strong], from, 4, HISTORY).find((b) => b.count > 0)!;
     expect(alone.basis).toBe("observed");
 
-    const together = forecast([strong, weaker], from, 4).find((b) => b.count === 2)!;
+    const together = forecast([strong, weaker], from, 4, HISTORY).find((b) => b.count === 2)!;
     expect(together.basis).toBe(weightFor("Reviewing offers", HISTORY).basis);
     expect(together.basis).not.toBe("observed");
   });
@@ -215,15 +215,15 @@ describe("the forward view", () => {
   /* An empty bucket started at "observed" and was never pulled down, so a
      month with nothing in it rendered as "His own history". */
   it("claims no evidence for a month that holds nothing", () => {
-    for (const b of forecast([], new Date(2026, 8, 6), 4)) {
+    for (const b of forecast([], new Date(2026, 8, 6), 4, HISTORY)) {
       expect(b.count).toBe(0);
       expect(b.basis).toBe("assumed");
     }
   });
 
   it("asks for as many months as it was given", () => {
-    expect(forecast(rows, new Date(2026, 8, 6), 7)).toHaveLength(7);
-    expect(forecast(rows, new Date(2026, 8, 6), 1)).toHaveLength(1);
+    expect(forecast(rows, new Date(2026, 8, 6), 7, HISTORY)).toHaveLength(7);
+    expect(forecast(rows, new Date(2026, 8, 6), 1, HISTORY)).toHaveLength(1);
   });
 });
 
