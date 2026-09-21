@@ -86,9 +86,17 @@ test.describe("what must not be reachable", () => {
   for (const path of ["/studio", "/studio/clients", "/studio/calendar", "/studio/settings", "/studio/questions", "/studio/add", "/studio/lead/some-id"]) {
     test(`${path} shows a stranger nothing`, async ({ page }) => {
       await page.goto(path);
-      const text = await page.locator("body").innerText();
 
-      expect(text, `${path} offered no way in`).toMatch(/sign in/i);
+      /* Polled. These pages hold their content behind a Suspense boundary, so
+         a single read lands on the loading shell often enough to fail on a
+         page that is perfectly correct — which is this suite's own version of
+         the bug it exists to catch. */
+      await expect
+        .poll(async () => (await page.locator("body").innerText()).toLowerCase(),
+              { message: `${path} offered no way in`, timeout: 10_000 })
+        .toMatch(/sign in|sign-in/);
+
+      const text = await page.locator("body").innerText();
 
       /* The shapes real client data takes on these screens. None may appear
          to somebody with no session. */
@@ -146,8 +154,15 @@ test.describe("the client's own plan", () => {
 
     const text = await page.locator("body").innerText();
     expect(text).toMatch(/cannot open this right now/i);
-    expect(text, "told the client their link expired when it did not")
-      .not.toMatch(/no longer open|expired|revoked/i);
+
+    /* The wrong CLAIM, not the word. The page says "this does not mean your
+       link has expired", which is the right sentence and contains the word —
+       so the first version of this assertion failed on the very copy it was
+       written to protect. */
+    expect(text, "told the client their link was revoked when it was not")
+      .not.toMatch(/this link is no longer open/i);
+    expect(text, "did not reassure the client that the link still works")
+      .toMatch(/does not mean your link has expired/i);
   });
 
   test("is never indexed", async ({ page }) => {
