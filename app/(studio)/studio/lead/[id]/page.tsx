@@ -7,6 +7,9 @@ import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
 import { readPlanForAgent } from "@/lib/db/plan";
 import { referralTokenFor, referralLinks } from "@/lib/db/referral";
+import { representationOf } from "@/lib/db/clients";
+import { standingOf } from "@/lib/core/representation";
+import { Agreement } from "./Agreement";
 import { Referral } from "./Referral";
 import { offersFor } from "@/lib/db/offers";
 import { siteUrl } from "@/lib/core/site";
@@ -64,11 +67,12 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   /* Read after the record, not beside it. The record is what the agent came
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
-  const [plan, offers, refToken, refLinks] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
     referralLinks(id),
+    representationOf(id),
   ]);
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
@@ -78,6 +82,10 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const links = refLinks.ok && "data" in refLinks
     ? refLinks.data
     : { referrer: null, sent: [] };
+  /* A read that failed is not "no agreement". Rendering "Nothing yet" over a
+     timed-out query would tell the agent he has a compliance problem he does
+     not have, and he has no way to tell the two apart from the screen. */
+  const agreement = rep.ok && "data" in rep ? rep.data : null;
 
   return (
     <>
@@ -99,6 +107,16 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             offers={offerList}
             costs={sellerCosts}
             agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
+          />
+        ) : null}
+        {agreement ? (
+          <Agreement
+            leadId={id}
+            side={read.data.lead.side}
+            status={agreement.status}
+            signedOn={agreement.signedOn}
+            expiresOn={agreement.expiresOn}
+            standing={standingOf(agreement)}
           />
         ) : null}
         <Referral

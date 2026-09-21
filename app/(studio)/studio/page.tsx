@@ -4,7 +4,7 @@ import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "./Unavailable";
 import { rankedLeads } from "@/lib/db/leads";
 import { funnelReport } from "@/lib/db/events";
-import { board, dueActions } from "@/lib/db/clients";
+import { board, dueActions, lapsingAgreements } from "@/lib/db/clients";
 import { STALL_CHIP } from "@/lib/core/pipeline";
 import { readStale } from "@/lib/db/programs";
 import { rulesOrDefaults } from "@/lib/db/settings";
@@ -79,7 +79,7 @@ export default async function StudioToday() {
   const recheckDays = rules.registryDays.value;
   const undecidedCount = agentRules.undecided.length;
 
-  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
@@ -91,9 +91,11 @@ export default async function StudioToday() {
       due(new Date()),
       abandoned(),
       currentRate(),
+      lapsingAgreements(),
     ]);
 
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
+  const lapsing = lapsingRead.ok && "data" in lapsingRead ? lapsingRead.data : [];
 
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
   const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
@@ -318,6 +320,50 @@ export default async function StudioToday() {
             </div>
           )}
         </section>
+
+        {/* Agreements running out.
+        
+            docs/product.md: "Expiration is a monitored deadline that raises
+            attention before it lapses, not after." High on the page because an
+            agreement that lapses uncovers everything it covered from the day
+            it ran out, not from the day somebody noticed — and the notice is
+            the only thing standing between those two dates. */}
+        {lapsing.length ? (
+          <section style={{ marginTop: 32 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Agreements running out
+            </h2>
+            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+              Representation lapses on a date, and everything it covered is uncovered from that
+              day rather than from the day it is noticed. Renewing one is a conversation; finding
+              out afterwards is not.
+            </p>
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {lapsing.map((l, i) => (
+                <Link
+                  key={l.id}
+                  href={`/studio/lead/${l.id}`}
+                  className="between gap-3"
+                  style={{
+                    display: "flex", padding: "12px 16px", alignItems: "center",
+                    borderBottom: i === lapsing.length - 1 ? 0 : "1px solid var(--line-3)",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-sm w6 trunc">{l.name}</div>
+                    <div className="t-xs c-4" style={{ marginTop: 2 }}>{l.standing.note}</div>
+                  </div>
+                  <span
+                    className={`chip t-2xs ${l.standing.covered ? "chip-warn" : "chip-neg"}`}
+                    style={{ flex: "none" }}
+                  >
+                    {l.standing.covered ? "Running out" : "Expired"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Abandoned */}
         {partial.length ? (

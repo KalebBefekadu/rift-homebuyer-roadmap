@@ -18,6 +18,8 @@ import type { Owner } from "@/lib/core/plan";
 import type { Wording } from "@/lib/core/funnel";
 import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
 import { compareToSnapshot } from "@/lib/db/seam";
+import { representationOf, setRepresentation, type RepStatus } from "@/lib/db/clients";
+import { standingOf } from "@/lib/core/representation";
 import { canPublish } from "@/lib/core/seam";
 import type { Mood, MomentId, MomentState } from "@/lib/core/referral";
 
@@ -281,12 +283,25 @@ export async function openClientPlan(leadId: string, disclosed = false) {
   if ("skipped" in compared) return { ok: false as const, error: compared.reason };
   const snap = compared.data;
 
+  /* Representation, read rather than asserted.
+
+     This was `hasAgreement: true` — a literal, inside the one function in the
+     product whose entire job is refusing to publish when something is not
+     true. The comment above it said the column did not exist, which was
+     accurate and is no longer.
+
+     A read that FAILED does not block. "We could not check whether an
+     agreement exists" and "no agreement exists" are different facts, exactly
+     as the docblock above says of drift — and only one of them is a reason to
+     refuse. A database blip must not read to the agent as a compliance
+     problem, because he cannot tell them apart from the message. */
+  const rep = await representationOf(leadId);
+  const hasAgreement = rep.ok && "data" in rep
+    ? standingOf(rep.data).covered
+    : true;
+
   const check = canPublish({
-    /* Representation is not tracked as a column yet, so this cannot be asserted
-       from data. Claiming it is signed would be inventing the one precondition
-       that is a legal question rather than an arithmetic one — see
-       docs/benchmark.md 4.2, where representation capture is a named gap. */
-    hasAgreement: true,
+    hasAgreement,
     hasSnapshot: snap.hasSnapshot,
     drifts: snap.drifts,
     disclosed,
@@ -518,4 +533,34 @@ export async function setClosingDate(leadId: string, closedOn: string | null) {
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };
+}
+
+/* ------------------------------------------------------------------ *
+ * Representation
+ * ------------------------------------------------------------------ */
+
+/**
+ * Record where the representation agreement stands.
+ *
+ * Rift never signs and never sends for signature — docs/vision.md is explicit
+ * that those are among the actions which never become automatic in any mode.
+ * This records a paper event that happened elsewhere, which is the whole of
+ * what a product is entitled to do here.
+ */
+export async function recordRepresentation(
+  leadId: string,
+  status: RepStatus,
+  signedOn?: string | null,
+  expiresOn?: string | null,
+) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setRepresentation(leadId, status, { signedOn, expiresOn });
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath("/studio");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, status: r.data.status };
 }

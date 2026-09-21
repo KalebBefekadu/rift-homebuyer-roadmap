@@ -344,3 +344,80 @@ describe("referral attribution", () => {
     expect(rows[0].last_ref).toBe("handle-2");
   });
 });
+
+describe("representation", () => {
+  const AGENT = "88888888-0000-4000-8000-000000000001";
+  const L = "88888888-0000-4000-8000-0000000000a1";
+
+  test("fixtures insert", async (c) => {
+    await c.query("insert into auth.users (id) values ('88888888-0000-4000-8000-000000000009') on conflict do nothing");
+    await c.query(
+      "insert into rift_agents (id, auth_user_id, name, email) values ($1,'88888888-0000-4000-8000-000000000009','G','g@example.com') on conflict do nothing", [AGENT]);
+    await c.query(
+      "insert into rift_leads (id, agent_id, side, name, contact_basis) values ($1,$2,'buy','Gated','assessment') on conflict do nothing",
+      [L, AGENT]);
+    const { rows } = await c.query("select representation from rift_leads where id = $1", [L]);
+    expect(rows[0].representation, "a new lead starts uncovered").toBe("none");
+  });
+
+  test("the status vocabulary is closed", async (c) => {
+    /* A status outside the list does not error anywhere in the application —
+       it fails isCovered, so the journey silently stops advancing and nobody
+       can see why. The database is the only place that can refuse it. */
+    await rejects(c,
+      "update rift_leads set representation = 'probably fine' where id = $1",
+      [L], /representation_check/);
+  });
+
+  test("a signed agreement must carry the date it was signed", async (c) => {
+    /* The dates are the evidentiary value of the record. "Signed" with no date
+       says an agreement exists without saying when it began, which is the
+       question that gets asked. */
+    await rejects(c,
+      "update rift_leads set representation = 'signed' where id = $1",
+      [L], /signed_is_dated/);
+  });
+
+  test("an unsigned status may not carry a signing date", async (c) => {
+    await rejects(c,
+      "update rift_leads set representation = 'declined', representation_signed_on = '2026-01-01' where id = $1",
+      [L], /signed_is_dated/);
+  });
+
+  test("an expiry date belongs to an agreement", async (c) => {
+    /* A date attached to nothing renders on the agent's screen as a deadline
+       he has no way to meet. */
+    await rejects(c,
+      "update rift_leads set representation_expires_on = '2026-12-31' where id = $1",
+      [L], /expiry_needs_an_agreement/);
+  });
+
+  test("an agreement cannot run out before it starts", async (c) => {
+    await rejects(c,
+      "update rift_leads set representation='signed', representation_signed_on='2026-06-01', representation_expires_on='2026-01-01' where id = $1",
+      [L], /expiry_follows_signing/);
+  });
+
+  test("a properly dated agreement is accepted", async (c) => {
+    await c.query(
+      "update rift_leads set representation='signed', representation_signed_on='2026-01-01', representation_expires_on='2026-12-31' where id = $1",
+      [L]);
+    const { rows } = await c.query(
+      "select representation, representation_expires_on from rift_leads where id = $1", [L]);
+    expect(rows[0].representation).toBe("signed");
+  });
+
+  test("the vocabulary matches the one the code enforces", async (c) => {
+    /* Two lists of the same six strings in two languages. They drift the day
+       somebody adds a seventh to one of them. */
+    const { STATUSES } = await import("@/lib/core/representation");
+    const { rows } = await c.query(
+      "select pg_get_constraintdef(oid) d from pg_constraint where conname = 'rift_leads_representation_check'");
+    for (const s of STATUSES) {
+      expect(rows[0].d, `the database does not allow "${s}"`).toContain(`'${s}'`);
+    }
+    /* And nothing the code does not know about. */
+    const inDb = [...String(rows[0].d).matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
+    expect(new Set(inDb)).toEqual(new Set(STATUSES));
+  });
+});

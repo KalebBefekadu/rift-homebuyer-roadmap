@@ -13,8 +13,14 @@ import {
   type Finished,
 } from "@/lib/core/pipeline";
 
+import {
+  standingOf, mayAdvance, STATUSES, STATUS_RULES, EXPIRY_WARNING_DAYS,
+  type Representation, type Standing, type Status as RepStatus,
+} from "@/lib/core/representation";
+
 export { STAGE_NAMES };
 export type { Stage, NoteKind, LeadNote, ManagedLead, Finished };
+export type { Representation, Standing, RepStatus };
 
 /**
  * People the agent is actually working.
@@ -227,14 +233,39 @@ export async function setStage(leadId: string, stage: Stage, why?: string): Prom
   if (!agent_id) return skipped("no agent row exists yet");
 
   const current = await boundedRead(
-    db.from("rift_leads").select("stage").eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
+    db.from("rift_leads").select("stage,side").eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
     "reading the current stage",
   );
-  const from = current.ok && "data" in current
-    ? ((current.data as { stage: string | null } | null)?.stage ?? null)
+  const row = current.ok && "data" in current
+    ? (current.data as { stage: string | null; side: string } | null)
     : null;
+  const from = row?.stage ?? null;
 
   if (from === stage && !why) return done({ stage });
+
+  /* The representation gate.
+
+     docs/product.md: a buyer journey cannot advance past "Ready to shop", and
+     a seller's past pricing and launch, while representation is anything other
+     than signed — and Rift "blocks the advance and explains why rather than
+     silently allowing it".
+
+     Enforced on the write, not in the component that calls it. A gate that
+     lives in a form is a gate that the next caller does not have.
+
+     A read that FAILED does not block. Refusing to let an agent move somebody
+     because a query timed out would turn a database blip into a compliance
+     alarm, and he has no way to tell the two apart. `representationOf`
+     returning `none` on an unreadable row would be the wrong default here for
+     exactly that reason, so the failure is distinguished from the answer. */
+  if (row) {
+    const side = row.side === "sell" ? "sell" : "buy";
+    const rep = await representationOf(leadId);
+    if (rep.ok && "data" in rep) {
+      const check = mayAdvance(side, stage, rep.data);
+      if (!check.allowed) return failed(check.because!);
+    }
+  }
 
   const res = await boundedWrite(
     db.from("rift_leads")
@@ -578,6 +609,150 @@ export async function finishedRelationships(): Promise<DbResult<Finished[]>> {
     final: r.stage,
     through: through.get(r.id) ?? [r.stage],
   })));
+}
+
+/* ------------------------------------------------------------------ *
+ * Representation
+ * ------------------------------------------------------------------ */
+
+/**
+ * The agreement on file, as it stands today.
+ *
+ * Read separately from the board rather than added to SELECT_BASE, because
+ * this arrived after the migration for it and every read in this module shares
+ * that column list. Bolting three new columns onto the list would make each of
+ * them a way for the roster to fail entirely on a deploy that landed first.
+ */
+export async function representationOf(leadId: string): Promise<DbResult<Representation>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const res = await boundedRead(
+    db.from("rift_leads")
+      .select("representation,representation_signed_on,representation_expires_on")
+      .eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
+    "the representation agreement",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<Representation>;
+
+  const row = res.data as Record<string, unknown> | null;
+  if (!row) return failed("no such person");
+
+  /* An unrecognised status is read as `none`, which REFUSES rather than
+     permits. The alternative — passing an unknown string through to
+     `isCovered` — also refuses, but silently and with a chip reading whatever
+     the database happened to contain. */
+  const raw = (row.representation as string | null) ?? "none";
+  const status = (STATUSES as readonly string[]).includes(raw) ? (raw as RepStatus) : "none";
+
+  return done({
+    status,
+    signedOn: (row.representation_signed_on as string | null) ?? null,
+    expiresOn: (row.representation_expires_on as string | null) ?? null,
+  });
+}
+
+/**
+ * Record what the agreement now is.
+ *
+ * Writes a note, like a stage change does, because the history of when
+ * representation moved is the part somebody would actually be asked about and
+ * a column only holds the latest answer.
+ *
+ * The dates are cleared whenever the status is not `signed`. The database
+ * enforces the same rule; doing it here too means the caller gets a coherent
+ * row rather than a constraint violation for something it could have fixed.
+ */
+export async function setRepresentation(
+  leadId: string,
+  status: RepStatus,
+  dates: { signedOn?: string | null; expiresOn?: string | null } = {},
+): Promise<DbResult<{ status: RepStatus }>> {
+  if (!(STATUSES as readonly string[]).includes(status)) return failed(`unknown status: ${status}`);
+
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const signed = status === "signed";
+  if (signed && !dates.signedOn) {
+    return failed("a signed agreement needs the date it was signed — that is the part anyone would ask for");
+  }
+
+  const patch = {
+    representation: status,
+    representation_signed_on: signed ? dates.signedOn! : null,
+    representation_expires_on: signed ? (dates.expiresOn || null) : null,
+  };
+
+  const res = await boundedWrite(
+    db.from("rift_leads").update(patch).eq("id", leadId).eq("agent_id", agent_id).select("id").single(),
+    "the representation agreement",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<{ status: RepStatus }>;
+
+  const label = STATUS_RULES[status].label.toLowerCase();
+  await addNote(leadId, "note", signed
+    ? `Representation ${label} ${dates.signedOn}${dates.expiresOn ? `, expires ${dates.expiresOn}` : ", no end date"}.`
+    : `Representation set to ${label}.`);
+
+  return done({ status });
+}
+
+/**
+ * Agreements running out, soonest first.
+ *
+ * docs/product.md: "Expiration is a monitored deadline that raises attention
+ * before it lapses, not after." Includes those already lapsed, because an
+ * agreement that ran out last week is more urgent than one running out next
+ * week and a list that quietly drops it is worse than no list.
+ */
+export async function lapsingAgreements(now = new Date()): Promise<DbResult<Lapsing[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const horizon = new Date(now.getTime() + EXPIRY_WARNING_DAYS * 86_400_000)
+    .toISOString().slice(0, 10);
+
+  const res = await boundedRead(
+    db.from("rift_leads")
+      .select("id,name,side,representation,representation_signed_on,representation_expires_on")
+      .eq("agent_id", agent_id)
+      .is("archived_at", null)
+      .eq("representation", "signed")
+      .not("representation_expires_on", "is", null)
+      .lte("representation_expires_on", horizon)
+      .order("representation_expires_on", { ascending: true })
+      .limit(100),
+    "agreements running out",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<Lapsing[]>;
+
+  return done((res.data as Record<string, unknown>[]).map((r) => {
+    const rep: Representation = {
+      status: "signed",
+      signedOn: (r.representation_signed_on as string | null) ?? null,
+      expiresOn: (r.representation_expires_on as string | null) ?? null,
+    };
+    return {
+      id: r.id as string,
+      name: (r.name as string | null) ?? "Unnamed",
+      side: (r.side as "buy" | "sell"),
+      standing: standingOf(rep, now),
+    };
+  }));
+}
+
+export interface Lapsing {
+  id: string;
+  name: string;
+  side: "buy" | "sell";
+  standing: Standing;
 }
 
 /** One live relationship, as the forward view needs it. */
