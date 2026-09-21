@@ -7,7 +7,6 @@ import { Track } from "./Track";
 import type { Readout, Status, Tension } from "@/lib/core/results";
 import { EMAIL_NOTE, RETENTION, heldLocally } from "@/lib/prototype/privacy";
 import { ForgetMe } from "@/components/rift/Forget";
-import { track } from "@/lib/prototype/telemetry";
 import { Trust, TrustLadder } from "./Trust";
 
 /**
