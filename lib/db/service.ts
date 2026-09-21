@@ -168,3 +168,38 @@ export async function currentAgentEmail(): Promise<string | null> {
   agentEmail = email;
   return agentEmail;
 }
+
+let agentPublic: { name: string } | null = null;
+
+/**
+ * The agent's name, for a page rendered to somebody who is not signed in.
+ *
+ * Deliberately separate from `currentAgent()` in lib/db/session.ts, which
+ * resolves a SESSION. The client's plan at /plan/<token> has no session by
+ * design, and reaching for the session-based one there would have returned
+ * null and addressed the client's own agent as "your agent" on every line.
+ *
+ * Name only. It is the one field on the agent row that is already public —
+ * it is on the landing page, in the structured data and on the readout — and
+ * a helper that returned the row would put the email in front of the next
+ * page that calls it.
+ */
+export async function currentAgentPublic(): Promise<{ name: string } | null> {
+  if (agentPublic) return agentPublic;
+
+  const id = await currentAgentId();
+  if (!id) return null;
+
+  const db = serviceClient();
+  if (!db) return null;
+
+  const query = Promise.resolve(db.from("rift_agents").select("name").eq("id", id).maybeSingle());
+  const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+  if (timedOut || !result || result.error) return null;
+
+  const name = (result.data as { name?: string } | null)?.name;
+  if (!name) return null;
+
+  agentPublic = { name };
+  return agentPublic;
+}

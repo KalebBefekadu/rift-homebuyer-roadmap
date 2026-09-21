@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { currentAgent } from "@/lib/db/session";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
+import { readPlanForAgent } from "@/lib/db/plan";
+import { siteUrl } from "@/lib/core/site";
 import { Record as ClientRecord } from "./Record";
+import { Plan } from "./Plan";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -48,5 +51,26 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   }
   if (!read.data) notFound();
 
-  return <ClientRecord lead={read.data.lead} notes={read.data.notes} />;
+  /* Read after the record, not beside it. The record is what the agent came
+     for; the plan is a panel on it, and a slow second query must not be able
+     to keep him from the phone number he is looking at the page to find. */
+  const plan = await readPlanForAgent(id);
+  const items = plan.ok && "data" in plan ? plan.data.items : [];
+  const token = plan.ok && "data" in plan ? plan.data.token : null;
+
+  return (
+    <>
+      <ClientRecord lead={read.data.lead} notes={read.data.notes} />
+      <div className="shell-w" style={{ paddingBottom: 40 }}>
+        <Plan
+          leadId={id}
+          items={items}
+          token={token}
+          origin={siteUrl()}
+          agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
+          clientFirst={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
+        />
+      </div>
+    </>
+  );
 }

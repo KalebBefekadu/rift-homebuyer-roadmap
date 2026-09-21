@@ -132,3 +132,38 @@ test("health answers honestly with nothing configured", async ({ request }) => {
   expect(body).toHaveProperty("ok");
   expect(JSON.stringify(body)).not.toMatch(/SUPABASE_SERVICE_ROLE|eyJ[A-Za-z0-9_-]{20}/);
 });
+
+test.describe("the client's own plan", () => {
+  /* Runs with no database, so this asserts the honest-degradation half: the
+     page must not tell somebody their link was revoked when in fact nothing
+     was ever asked. Those are different sentences about their agent, and the
+     reader cannot tell them apart. */
+  const TOKEN = "a".repeat(32);
+
+  test("does not claim a link expired when the database is simply absent", async ({ page }) => {
+    const res = await page.goto(`/plan/${TOKEN}`);
+    expect(res?.status()).toBe(200);
+
+    const text = await page.locator("body").innerText();
+    expect(text).toMatch(/cannot open this right now/i);
+    expect(text, "told the client their link expired when it did not")
+      .not.toMatch(/no longer open|expired|revoked/i);
+  });
+
+  test("is never indexed", async ({ page }) => {
+    /* A link unguessable to a person is trivially findable by a crawler that
+       has been given it. */
+    await page.goto(`/plan/${TOKEN}`);
+    const robots = await page.locator('meta[name="robots"]').getAttribute("content");
+    expect(robots ?? "", "the client's plan is indexable").toMatch(/noindex/);
+  });
+
+  test("shows a stranger nothing that looks like client data", async ({ page }) => {
+    await page.goto(`/plan/${TOKEN}`);
+    const text = await page.locator("body").innerText();
+    for (const leak of [/@[a-z0-9-]+\.[a-z]{2,}/i, /\$[\d,]{4,}/, /score/i, /\bband\b/i]) {
+      expect(text, "the plan page leaked something shaped like the agent's record")
+        .not.toMatch(leak);
+    }
+  });
+});

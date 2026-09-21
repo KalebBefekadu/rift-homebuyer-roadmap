@@ -19,7 +19,7 @@ import { test, expect } from "@playwright/test";
 /** Pages that carry the product's buttons and chips. */
 const PAGES = [
   "/", "/buy", "/sell", "/abroad", "/book", "/privacy",
-  "/buy/start", "/sell/start",
+  "/buy/start", "/sell/start", "/plan/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600",
   "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months",
 ];

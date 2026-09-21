@@ -12,6 +12,8 @@ import type { StopId } from "@/lib/core/nurture";
 import { saveRule, clearRule } from "@/lib/db/settings";
 import type { BusinessRules } from "@/lib/core/settings";
 import { publishWording } from "@/lib/db/funnel";
+import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
+import type { Owner } from "@/lib/core/plan";
 import type { Wording } from "@/lib/core/funnel";
 
 /**
@@ -162,6 +164,85 @@ export async function planNextAction(leadId: string, action: string | null, due:
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const, cleared: r.data.cleared };
+}
+
+/* ------------------------------------------------------------------ *
+ * The client's plan
+ * ------------------------------------------------------------------ */
+
+/**
+ * Open the client's own page, or hand back the link that is already open.
+ *
+ * Idempotent on the database side. An agent who clicks twice must not
+ * invalidate the link he sent an hour ago: the client would open it, see
+ * nothing, and have no way to tell that from the product being broken.
+ */
+export async function openClientPlan(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await openPlan(leadId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, token: r.data.token };
+}
+
+/**
+ * Revoke it.
+ *
+ * Nulling the token breaks every copy of the link at once, which is the only
+ * way to take back something that has been forwarded. The steps are kept: the
+ * relationship may resume, and deleting somebody's agreed plan because a link
+ * travelled too far is a second mistake on top of the first.
+ */
+export async function closeClientPlan(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await closePlan(leadId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function addStep(leadId: string, title: string, owner: Owner, ownerName: string | null, dueOn: string | null) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addPlanItem({ leadId, title, owner, ownerName, dueOn });
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function tickStep(leadId: string, itemId: string, isDone: boolean) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setPlanItemDone(itemId, isDone);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, done: r.data.done };
+}
+
+export async function dropStep(leadId: string, itemId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removePlanItem(itemId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
 }
 
 /**
