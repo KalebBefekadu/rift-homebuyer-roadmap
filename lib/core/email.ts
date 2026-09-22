@@ -229,6 +229,57 @@ export function buildNewLead(l: NewLeadEmail): { subject: string; html: string }
   return { subject, html };
 }
 
+export interface OfferChosenEmail {
+  /** Kaleb's own address. */
+  to: string;
+  /** The seller, as Studio names them. */
+  seller: string;
+  from: string;
+  price: number;
+  /** Null when the seller's costs were not recorded, so no net was shown to them. */
+  net: number | null;
+  /** Whether it was the best net on the table, when that was computable. */
+  bestNet: boolean | null;
+  of: number;
+  /** Their own words, if they left any. */
+  note: string | null;
+  studioUrl: string;
+}
+
+/**
+ * "Your seller picked one."
+ *
+ * The one moment in a listing when minutes matter to somebody other than the
+ * agent: a buyer's offer carries a response deadline, and a seller who has
+ * made up their mind at 9pm is waiting on a signature, not on a Studio login.
+ *
+ * It says plainly that this is not an acceptance. The agent knows that; the
+ * point is that the words in his inbox should match the words on the seller's
+ * page, so nobody reads the other one's record as a stronger thing than it is.
+ */
+export function buildOfferChosen(c: OfferChosenEmail): { subject: string; html: string } {
+  const seller = escapeHtml(c.seller);
+  const from = escapeHtml(c.from);
+  const subject = `${c.seller} chose the offer from ${c.from}`;
+
+  const netLine = c.net === null
+    ? "No net was shown to them — their payoff is not recorded."
+    : `About ${money(c.net)} to them after costs${c.bestNet === true ? ", the best net of the " + c.of : c.bestNet === false ? ", not the best net of the " + c.of : ""}.`;
+
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:17px;font-weight:600;margin:0 0 10px">${seller} chose the offer from ${from}, at ${money(c.price)}.</p>
+  <p style="font-size:14px;margin:0 0 10px">${escapeHtml(netLine)}</p>
+  ${c.note ? `<p style="font-size:14px;margin:0 0 10px">In their words: &ldquo;${escapeHtml(c.note)}&rdquo;</p>` : ""}
+  <p style="font-size:13px;color:#666;margin:0 0 14px">
+    This is their choice, not an acceptance. Nothing is binding until they sign it.
+  </p>
+  <p style="font-size:15px"><a href="${c.studioUrl}" style="color:#e8442a">Open them in Studio</a></p>
+</div>`.trim();
+
+  return { subject, html };
+}
+
 export interface TouchEmail {
   to: string;
   name?: string;

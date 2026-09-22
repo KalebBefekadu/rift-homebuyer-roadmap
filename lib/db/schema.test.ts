@@ -519,3 +519,80 @@ describe("decision rooms", () => {
     expect(new Set(inDb)).toEqual(new Set(Object.keys(KIND_LABEL)));
   });
 });
+
+describe("the offer room", () => {
+  const AGENT = "77777777-0000-4000-8000-000000000001";
+  const SELLER = "77777777-0000-4000-8000-0000000000a1";
+  const OTHER = "77777777-0000-4000-8000-0000000000a2";
+  const HELD = "77777777-0000-4000-8000-0000000000b1";    // not released
+  const SHOWN = "77777777-0000-4000-8000-0000000000b2";   // released
+  const THEIRS = "77777777-0000-4000-8000-0000000000b3";  // released, on the other seller
+
+  test("fixtures insert", async (c) => {
+    await c.query("insert into auth.users (id) values ('77777777-0000-4000-8000-000000000009') on conflict do nothing");
+    await c.query(
+      "insert into rift_agents (id, auth_user_id, name, email) values ($1,'77777777-0000-4000-8000-000000000009','R','r@example.com') on conflict do nothing", [AGENT]);
+    for (const [id, name] of [[SELLER, "Seller"], [OTHER, "Other seller"]]) {
+      await c.query(
+        "insert into rift_leads (id, agent_id, side, name, contact_basis) values ($1,$2,'sell',$3,'assessment') on conflict do nothing",
+        [id, AGENT, name]);
+    }
+    await c.query(
+      "insert into rift_offers (id, agent_id, lead_id, offered_by, price_cents, financing) values ($1,$2,$3,'Held back',40000000,'conventional')",
+      [HELD, AGENT, SELLER]);
+    await c.query(
+      "insert into rift_offers (id, agent_id, lead_id, offered_by, price_cents, financing, released_at) values ($1,$2,$3,'Shown',41000000,'fha',now())",
+      [SHOWN, AGENT, SELLER]);
+    await c.query(
+      "insert into rift_offers (id, agent_id, lead_id, offered_by, price_cents, financing, released_at) values ($1,$2,$3,'Elsewhere',30000000,'cash',now())",
+      [THEIRS, AGENT, OTHER]);
+    await c.query("insert into rift_offer_rooms (lead_id, agent_id) values ($1,$2)", [SELLER, AGENT]);
+  });
+
+  test("a take cannot be stored without the draft and the offers it was approved for", async (c) => {
+    /* 2.2 is "the difference is visible and recorded". A take with no draft
+       beside it records nothing about the difference. */
+    await rejects(c,
+      "update rift_offer_rooms set take = 'x', approved_at = now() where lead_id = $1",
+      [SELLER], /approval_is_whole/);
+  });
+
+  test("a seller cannot choose an offer they were never shown", async (c) => {
+    await rejects(c,
+      "update rift_offer_rooms set chosen_offer_id = $1, chosen_at = now(), chosen_seen = '{}' where lead_id = $2",
+      [HELD, SELLER], /has not been released/);
+  });
+
+  test("a choice cannot name an offer on somebody else's house", async (c) => {
+    /* Released, so the trigger passes it. Only the composite key stops it. */
+    await rejects(c,
+      "update rift_offer_rooms set chosen_offer_id = $1, chosen_at = now(), chosen_seen = '{}' where lead_id = $2",
+      [THEIRS, SELLER], /chosen_is_theirs/);
+  });
+
+  test("a choice is stored whole", async (c) => {
+    await rejects(c,
+      "update rift_offer_rooms set chosen_offer_id = $1 where lead_id = $2",
+      [SHOWN, SELLER], /choice_is_whole/);
+  });
+
+  test("a chosen offer cannot be withdrawn or deleted from under the choice", async (c) => {
+    await c.query(
+      "update rift_offer_rooms set chosen_offer_id = $1, chosen_at = now(), chosen_seen = '{}' where lead_id = $2",
+      [SHOWN, SELLER]);
+    await rejects(c, "update rift_offers set released_at = null where id = $1", [SHOWN], /reopen their choice/);
+    await rejects(c, "delete from rift_offers where id = $1", [SHOWN], /chosen_is_theirs/);
+
+    /* An offer nobody chose is still the agent's to take back. */
+    await c.query("update rift_offers set released_at = now() where id = $1", [HELD]);
+    await c.query("update rift_offers set released_at = null where id = $1", [HELD]);
+  });
+
+  test("forgetting the seller takes the room with them, choice and all", async (c) => {
+    /* NO ACTION, not RESTRICT: the lead's delete cascades to both the offers
+       and this row, and RESTRICT can fire between the two. */
+    await c.query("delete from rift_leads where id = $1", [SELLER]);
+    const { rows } = await c.query("select count(*)::int n from rift_offer_rooms where lead_id = $1", [SELLER]);
+    expect(rows[0].n).toBe(0);
+  });
+});

@@ -11,6 +11,8 @@ import {
 import { rankOffers, headlineTrap, gapsIn, FINANCING_LABEL } from "@/lib/core/offers";
 import { money } from "@/lib/core/compute";
 import { Ico, Mark } from "@/components/rift/icons";
+import { NOT_ACCEPTANCE } from "@/lib/core/offer-room";
+import { Choose } from "./Choose";
 
 export const metadata: Metadata = {
   title: "Your plan",
@@ -361,6 +363,23 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
             </div>
           ) : null}
 
+          {/* The agent's take. Only ever what he approved, and only while it
+              was approved for exactly these offers — readPlanByToken drops it
+              otherwise, so a take written before an offer arrived never sits
+              above a table it does not describe. */}
+          {plan.take ? (
+            <div className="card p-4" style={{ marginTop: 14 }}>
+              <div className="row gap-2" style={{ alignItems: "center" }}>
+                <Ico.users size={14} className="c-3" />
+                <span className="t-sm w6">{agentFirst}&rsquo;s take</span>
+                <span className="t-2xs c-4">· {whenPhrase(daysUntil(plan.take.approvedAt.slice(0, 10), now))}</span>
+              </div>
+              <p className="t-sm c-2" style={{ marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-line" }}>
+                {plan.take.text}
+              </p>
+            </div>
+          ) : null}
+
           <div className="col gap-2" style={{ marginTop: 14 }}>
             {orderedOffers.map((o, i) => {
               const n = offerNets.get(o.id);
@@ -375,6 +394,8 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                         <span className="chip t-2xs">{FINANCING_LABEL[o.financing]}</span>
                         {i === 0 && plan.sellerCosts && orderedOffers.length > 1
                           ? <span className="chip chip-pos t-2xs">Leaves you most</span> : null}
+                        {plan.choice?.offerId === o.id
+                          ? <span className="chip chip-brand t-2xs"><Ico.check size={10} />Your choice</span> : null}
                       </div>
                       <div className="t-xs c-4" style={{ marginTop: 4 }}>
                         {money(o.price)} offered
@@ -400,8 +421,11 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                       {gapsIn(o).length ? (
                         <div className="col gap-1" style={{ marginTop: 8 }}>
                           {gapsIn(o).map((g) => (
-                            <div key={g} className="t-xs c-3">
-                              <Ico.info size={11} style={{ marginRight: 5 }} />{g}
+                            <div key={g} className="t-xs c-3 row gap-1" style={{ alignItems: "flex-start" }}>
+                              {/* In a row: the icon renders as a block, and
+                                  inline it sat on a line of its own above
+                                  every note at phone width. */}
+                              <Ico.info size={11} style={{ flex: "none", marginTop: 3 }} /><span>{g}</span>
                             </div>
                           ))}
                         </div>
@@ -426,11 +450,41 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
             })}
           </div>
 
+          {/* The choice. Recorded once, with what they were shown; changing it
+              is a conversation with the agent, who can reopen it. */}
+          {plan.choice ? (
+            <div className="card p-4" style={{ marginTop: 14, borderColor: "var(--pos-line)" }}>
+              <div className="t-sm w6">
+                You told {agentFirst} you want the offer from {plan.choice.seen.from}
+                <span className="c-4 w5"> · {whenPhrase(daysUntil(plan.choice.at.slice(0, 10), now))}</span>
+              </div>
+              <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+                Recorded with what you saw: {money(plan.choice.seen.price)} offered
+                {plan.choice.seen.net !== null ? `, about ${money(plan.choice.seen.net)} to you after costs` : ""}.
+                {" "}{NOT_ACCEPTANCE} If you change your mind, tell {agentFirst} and it can be reopened.
+              </p>
+            </div>
+          ) : (
+            <Choose
+              token={token}
+              agentFirst={agentFirst}
+              options={orderedOffers.map((o) => {
+                const n = offerNets.get(o.id);
+                return {
+                  id: o.id,
+                  label: o.from,
+                  detail: `${money(o.price)} offered${n ? ` · about ${money(n.net)} to you` : ""}`,
+                };
+              })}
+            />
+          )}
+
           <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6, maxWidth: 560 }}>
             These figures are estimates from the terms as written. Your payoff moves daily with
             interest and is only exact on a lender&rsquo;s statement, and a closing attorney&rsquo;s
-            settlement statement is the authority on the rest. Nothing here is a recommendation —
-            price is one thing an offer is, and how likely it is to close is another.
+            settlement statement is the authority on the rest. The figures are not a recommendation —
+            price is one thing an offer is, and how likely it is to close is another
+            {plan.take ? `; the only recommendation on this page is ${agentFirst}'s own` : ""}.
           </p>
         </section>
       ) : null}

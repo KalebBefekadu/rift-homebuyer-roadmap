@@ -14,6 +14,7 @@ import type { BusinessRules } from "@/lib/core/settings";
 import { publishWording } from "@/lib/db/funnel";
 import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
 import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer } from "@/lib/db/offers";
+import { approveTake, withdrawTake, reopenChoice } from "@/lib/db/offer-room";
 import type { Owner } from "@/lib/core/plan";
 import type { Wording } from "@/lib/core/funnel";
 import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
@@ -220,6 +221,56 @@ export async function deleteOffer(leadId: string, offerId: string) {
 
   const r = await removeOffer(offerId);
   revalidatePath(`/studio/lead/${leadId}`);
+
+  /* The database refuses to delete an offer the seller chose — a recorded
+     choice pointing at nothing is a record of nothing. Said in English. */
+  if (!r.ok && /rift_offer_rooms_chosen_is_theirs/.test(r.error)) {
+    return { ok: false as const, error: "The seller chose this offer. Reopen their choice before deleting it" };
+  }
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * The offer room: approve the take, withdraw it, reopen the seller's choice.
+ *
+ * Approval takes only the words. The draft it is recorded against and the set
+ * of offers it covers are recomputed on the server — see lib/db/offer-room.ts
+ * — so the audit trail is what Rift actually drafted, not what a form posted.
+ */
+export async function approveOfferTake(leadId: string, take: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  if (typeof take !== "string") return { ok: false as const, error: "write something first" };
+
+  const r = await approveTake(leadId, take);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function withdrawOfferTake(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await withdrawTake(leadId);
+  revalidatePath(`/studio/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function reopenOfferChoice(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await reopenChoice(leadId);
+  revalidatePath(`/studio/lead/${leadId}`);
+  revalidatePath("/studio");
 
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };

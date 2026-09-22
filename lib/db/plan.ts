@@ -7,6 +7,8 @@ import type { Owner, PlanItem } from "@/lib/core/plan";
 import type { Commitment } from "@/lib/core/agenda";
 import type { Offer, SellerCosts } from "@/lib/core/offers";
 import { releasedOffersFor } from "./offers";
+import { clientRoomFor } from "./offer-room";
+import { takeIsCurrent, type ChoiceSnapshot } from "@/lib/core/offer-room";
 
 /**
  * The client's plan — reading it by token, and the agent's edits to it.
@@ -53,6 +55,15 @@ export interface ClientPlan {
    */
   offers: Offer[];
   sellerCosts: SellerCosts | null;
+  /**
+   * The agent's approved take on those offers — null unless it was approved
+   * for EXACTLY the offers released now. Decided here, not in the page: a
+   * take about a table that has since changed is advice about a choice that no
+   * longer exists, and "the component checks" is one refactor from nobody does.
+   */
+  take: { text: string; approvedAt: string } | null;
+  /** Which offer they said they want, and what they were shown when they did. */
+  choice: { offerId: string; at: string; seen: ChoiceSnapshot } | null;
 }
 
 const shapeItem = (r: Record<string, unknown>): PlanItem => ({
@@ -113,16 +124,30 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
   const side = row.side as "buy" | "sell";
   let offers: Offer[] = [];
   let sellerCosts: SellerCosts | null = null;
+  let take: ClientPlan["take"] = null;
+  let choice: ClientPlan["choice"] = null;
 
   if (side === "sell") {
-    const [released, costs] = await Promise.all([
+    const [released, costs, room] = await Promise.all([
       releasedOffersFor(row.id as string),
       boundedRead(
         db.from("rift_leads").select("payoff_cents,commission_pct").eq("id", row.id as string).maybeSingle(),
         "the seller's costs",
       ),
+      clientRoomFor(row.id as string),
     ]);
     if (released.ok && "data" in released) offers = released.data;
+
+    /* A failed room read costs the take and the recorded choice, never the
+       offers themselves. The page then offers a choice it cannot record, and
+       the write refuses — loudly — rather than the page going blank. */
+    if (room.ok && "data" in room) {
+      const r = room.data;
+      if (takeIsCurrent(r, offers)) take = { text: r.take!, approvedAt: r.approvedAt! };
+      if (r.chosenOfferId && r.chosenAt && r.chosenSeen) {
+        choice = { offerId: r.chosenOfferId, at: r.chosenAt, seen: r.chosenSeen };
+      }
+    }
 
     const c = costs.ok && "data" in costs
       ? (costs.data as { payoff_cents: number | null; commission_pct: number | null } | null)
@@ -144,6 +169,8 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
     items: list,
     offers,
     sellerCosts,
+    take,
+    choice,
   });
 }
 

@@ -592,6 +592,50 @@ a one-off before being traced.
 send at all while Brevo's IP review refuses Vercel's addresses. A drill that
 skipped the channel most likely to fail is not the drill the criterion asks for.
 
+## The offer room — 21 September 2026, evening
+
+2.2 was the last criterion production scored below the prototype that engineering could close
+without anybody's credentials. It asked for the offer room, and the review queue plus offer release
+was a 3 because it stopped short of the two things a seller needs at that table: **what their agent
+thinks**, and **a way to say "this one" that is recorded with what they were looking at**.
+
+Both ship, in one table (`rift_offer_rooms`, one row per seller):
+
+- **The take.** Rift drafts what its own arithmetic can defend — which offer is highest, which
+  leaves the seller most, what paperwork is missing — and **ends on a bracketed line it refuses to
+  fill**. Approval is refused while that line is there. Rift's draft and the approved words are
+  stored side by side, so "the agent approved what the software prepared" is a recorded difference
+  rather than a claim, which is the letter of 2.2. A take is approved for an exact set of released
+  offers and **hides itself when that set changes**: advice written before an offer arrived never
+  sits above a table it does not describe. Studio says so in as many words.
+- **The choice.** The seller picks one released offer on their plan page, optionally with a note.
+  The snapshot of what they were shown — price, net, whether it was the best net, whether the take
+  was on screen — is computed on the server, never sent by the browser. It is conditional in the
+  `WHERE` clause, so two taps make one choice. Both pages say, in the same words, that **this is
+  not an acceptance**. Studio's Today lists it, because the alert email cannot yet be proven to
+  arrive.
+
+The database holds the lines, and each was broken on purpose before it was trusted: a take without
+its draft, a choice of an unreleased offer, a choice of **another seller's** offer (a composite key —
+a plain one allows it), a half-written choice, withdrawing or deleting an offer somebody chose. All
+refused. Forgetting the seller still cascades, because the key is `NO ACTION` and not `RESTRICT`.
+
+**2.2: 3 → 4.** D2 moves 16.00 → 17.00 live, 18.00 → 19.00 with a sender — level with the
+prototype's 19.00. **Live total 89.50; 94.00 with a sender.** The rule above still binds, harder.
+
+### Two things the drill found that no test would have
+
+- **The choose button saved the choice and then sat on "Recording…" forever.** It was a server
+  action; the response came back `{"ok":true}` in half a second and the refreshed page never
+  committed on the public layout. Every other anonymous write in the product is a route, and now
+  this one is too, with the confirmation shown the moment the server says it is stored. Found by a
+  headless run on a Pixel 7 profile, with the row already in the database.
+- **Georgia transfer tax was charged at double the statutory rate.** `GA_TRANSFER_TAX_RATE` was
+  0.2% — "$1.00 per $500" — and O.C.G.A. § 48-6-1 says $1.00 per $1,000. Every seller net on every
+  readout and in every offer comparison was about 0.1% of the price too low: roughly $400 on a
+  $400,000 house. Found by checking an offer-room draft's "$2,676 more" by hand and getting $2,663.
+  Readouts already issued are snapshots and keep what they showed.
+
 ## How to run this benchmark
 
 1. Score each criterion 0 to 4 against the ladder, citing the document section or prototype screen that earns the score.

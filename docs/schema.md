@@ -120,7 +120,8 @@ it, and keep the corresponding test from [handoff.md](handoff.md) §7.
 | `tasks` | Owner, due date, state | Owner is a person, always. An unowned task is a wish |
 | `referral_moments` | Fired moments, mood, gate outcome | |
 | `decisions`, `decision_options` | Decision Rooms. Question, options, released state, recorded outcome | Nothing reaches the client until `released_at` is set. The outcome's option is held inside its own room by a COMPOSITE foreign key — a plain one lets a decision name an option from a different room, which renders as an ordinary outcome naming something the reader cannot see |
-| `offers`, `offer_terms` | Rift Offer | Compared on net, never on price |
+| `offers`, `offer_terms` | Rift Offer | Compared on net, never on price. An offer the seller chose cannot be withdrawn or deleted until the agent reopens the choice |
+| `offer_rooms` | One per seller: the agent's approved take on the released offers, Rift's draft beside it, and the seller's recorded choice | Prepare-then-approve (benchmark 2.2). The draft states facts and ends on a marker the agent must replace; approval is refused while it remains. A take is approved for an exact set of offers and hidden when that set changes. The choice names an offer through a COMPOSITE key `(chosen_offer_id, lead_id)`, so it cannot point at another seller's house, and is `NO ACTION` rather than `RESTRICT` so forgetting the seller still cascades. A choice is not an acceptance, and both pages say so |
 | `documents` | Supabase Storage pointers + extracted dates | Phase 6 |
 
 ---

@@ -18,6 +18,8 @@ import { siteUrl } from "@/lib/core/site";
 import { Record as ClientRecord } from "./Record";
 import { Plan } from "./Plan";
 import { Offers } from "./Offers";
+import { Take } from "./Take";
+import { roomFor } from "@/lib/db/offer-room";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -69,13 +71,14 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   /* Read after the record, not beside it. The record is what the agent came
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
-  const [plan, offers, refToken, refLinks, rep, rooms] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
     referralLinks(id),
     representationOf(id),
     decisionsFor(id),
+    read.data.lead.side === "sell" ? roomFor(id) : Promise.resolve(null),
   ]);
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
@@ -90,6 +93,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      not have, and he has no way to tell the two apart from the screen. */
   const agreement = rep.ok && "data" in rep ? rep.data : null;
   const decisions = rooms.ok && "data" in rooms ? rooms.data : [];
+  /* Null when the read failed, so the panel can say so rather than render
+     "no choice yet" over a seller who may well have chosen. */
+  const room = offerRoom && offerRoom.ok && "data" in offerRoom ? offerRoom.data : null;
 
   return (
     <>
@@ -112,6 +118,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             costs={sellerCosts}
             agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
           />
+        ) : null}
+        {read.data.lead.side === "sell" ? (
+          <Take leadId={id} offers={offerList} costs={sellerCosts} room={room} />
         ) : null}
         <Decisions
           leadId={id}

@@ -56,14 +56,14 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildResume, buildNewLead,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail,
+  buildReadout, buildTouch, buildResume, buildNewLead, buildOfferChosen,
+  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
 export {
-  buildReadout, buildTouch, buildResume, buildNewLead,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail,
+  buildReadout, buildTouch, buildResume, buildNewLead, buildOfferChosen,
+  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail,
 };
 
 /**
@@ -134,4 +134,15 @@ export async function sendNewLead(l: NewLeadEmail): Promise<SendResult> {
     htmlContent: built.html,
     tags: ["agent-alert"],
   }, "email.newLead");
+}
+
+/** The alert that a seller has picked an offer. Same tag, same reasons, as the lead alert. */
+export async function sendOfferChosen(c: OfferChosenEmail): Promise<SendResult> {
+  const { subject, html } = buildOfferChosen(c);
+  return send({
+    to: [{ email: c.to, name: "Kaleb" }],
+    subject,
+    htmlContent: html,
+    tags: ["agent-alert"],
+  }, "email.offerChosen");
 }

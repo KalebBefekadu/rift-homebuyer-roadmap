@@ -180,6 +180,23 @@ await check("decision options", () => db.from("rift_decision_options")
   .in("decision_id", ["00000000-0000-4000-8000-000000000000"])
   .order("sort", { ascending: true }).limit(5));
 
+await check("roomFor (agent)", () => db.from("rift_offer_rooms")
+  .select("prepared,take,approved_at,approved_for,chosen_offer_id,chosen_at,chosen_seen,client_note")
+  .eq("lead_id", "00000000-0000-4000-8000-000000000000").eq("agent_id", "00000000-0000-4000-8000-000000000000").maybeSingle());
+
+await check("clientRoomFor (seller)", () => db.from("rift_offer_rooms")
+  .select("take,approved_at,approved_for,chosen_offer_id,chosen_at,chosen_seen")
+  .eq("lead_id", "00000000-0000-4000-8000-000000000000").maybeSingle());
+
+await check("recentChoices", () => db.from("rift_offer_rooms")
+  .select("lead_id,chosen_at,chosen_seen,client_note")
+  .eq("agent_id", "00000000-0000-4000-8000-000000000000").not("chosen_offer_id", "is", null)
+  .gte("chosen_at", new Date(0).toISOString()).order("chosen_at", { ascending: false }).limit(10));
+
+await check("chooseOffer seller read", () => db.from("rift_leads")
+  .select("agent_id,name,side,payoff_cents,commission_pct")
+  .eq("id", "00000000-0000-4000-8000-000000000000").maybeSingle());
+
 await check("referralQueue lifecycle columns", () => db.from("rift_leads")
   .select("id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,referred_by")
   .is("archived_at", null).limit(5));

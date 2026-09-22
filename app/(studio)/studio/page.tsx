@@ -5,6 +5,7 @@ import { Unavailable } from "./Unavailable";
 import { rankedLeads } from "@/lib/db/leads";
 import { funnelReport } from "@/lib/db/events";
 import { board, dueActions, lapsingAgreements } from "@/lib/db/clients";
+import { recentChoices } from "@/lib/db/offer-room";
 import { STALL_CHIP } from "@/lib/core/pipeline";
 import { readStale } from "@/lib/db/programs";
 import { rulesOrDefaults } from "@/lib/db/settings";
@@ -79,7 +80,7 @@ export default async function StudioToday() {
   const recheckDays = rules.registryDays.value;
   const undecidedCount = agentRules.undecided.length;
 
-  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
@@ -92,10 +93,12 @@ export default async function StudioToday() {
       abandoned(),
       currentRate(),
       lapsingAgreements(),
+      recentChoices(),
     ]);
 
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
   const lapsing = lapsingRead.ok && "data" in lapsingRead ? lapsingRead.data : [];
+  const choices = choicesRead.ok && "data" in choicesRead ? choicesRead.data : [];
 
   const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
   const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
@@ -320,6 +323,47 @@ export default async function StudioToday() {
             </div>
           )}
         </section>
+
+        {/* Sellers who chose an offer.
+
+            Above the agreements, because an offer carries a response deadline
+            measured in hours. The alert email may not have arrived — email is
+            the one integration this product has never been able to prove —
+            so the choice is here whether or not it did. */}
+        {choices.length ? (
+          <section style={{ marginTop: 32 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Sellers who chose an offer
+            </h2>
+            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+              From their plan page, in the last week. A choice is not an acceptance — the next
+              step is the paperwork, before the buyer&rsquo;s deadline.
+            </p>
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {choices.map((c, i) => (
+                <Link
+                  key={c.leadId}
+                  href={`/studio/lead/${c.leadId}`}
+                  className="between gap-3"
+                  style={{
+                    display: "flex", padding: "12px 16px", alignItems: "center",
+                    borderBottom: i === choices.length - 1 ? 0 : "1px solid var(--line-3)",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-sm w6 trunc">{c.name} chose {c.seen.from}</div>
+                    <div className="t-xs c-4 trunc" style={{ marginTop: 2 }}>
+                      {c.note ? `\u201c${c.note}\u201d` : `$${Math.round(c.seen.price).toLocaleString()} offered`}
+                    </div>
+                  </div>
+                  <span className="chip chip-pos t-2xs" style={{ flex: "none" }}>
+                    {new Date(c.chosenAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Agreements running out.
         
