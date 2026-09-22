@@ -24,9 +24,9 @@ describe("what actually reaches the seller", () => {
   it("takes everything the buyer asks back out of the headline", () => {
     const n = netOf(offer({ price: 400_000, concessions: 9_000, repairCredit: 3_500 }), costs);
     expect(n.askedBack).toBe(12_500);
-    /* 400,000 − 200,000 payoff − 20,000 commission − 800 transfer tax
+    /* 400,000 − 200,000 payoff − 20,000 commission − 400 transfer tax
        − 12,500 asked back − 2,675 fixed. */
-    expect(n.net).toBe(400_000 - 200_000 - 20_000 - 800 - 12_500 - FIXED_SELLER_COSTS);
+    expect(n.net).toBe(400_000 - 200_000 - 20_000 - 400 - 12_500 - FIXED_SELLER_COSTS);
   });
 
   it("does not treat earnest money as extra", () => {
@@ -83,8 +83,8 @@ describe("ranking", () => {
     const a = offer({ id: "a", price: 410_000 });
     const b = offer({ id: "b", price: 400_000 });
     const ranked = rankOffers([a, b], costs);
-    /* 10,000 less price, less 500 commission and 20 transfer tax on it. */
-    expect(ranked[1]!.behindBy).toBeCloseTo(-(10_000 - 500 - 20), 6);
+    /* 10,000 less price, less 500 commission and 10 transfer tax on it. */
+    expect(ranked[1]!.behindBy).toBeCloseTo(-(10_000 - 500 - 10), 6);
   });
 
   it("keeps a genuine tie in the order it was given", () => {
@@ -92,7 +92,9 @@ describe("ranking", () => {
        expose — the higher sticker would quietly win on a number that does not
        reach the seller. */
     const first = offer({ id: "first", price: 400_000 });
-    const second = offer({ id: "second", price: 410_000, concessions: 10_000 - 500 - 20 });
+    /* Built from the rate rather than a literal, so the tie survives the next
+       time a statutory rate is corrected — the last literal did not. */
+    const second = offer({ id: "second", price: 410_000, concessions: 10_000 - 500 - 10_000 * GA_TRANSFER_TAX_RATE });
 
     const ranked = rankOffers([first, second], costs);
     expect(ranked[0]!.net).toBeCloseTo(ranked[1]!.net, 6);

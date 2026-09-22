@@ -204,7 +204,7 @@ describe("a seller who owes more than the sale produces", () => {
     expect(r.verdict).toMatch(/bring about/);
     /* The shortfall is stated as a positive amount to find, not a negative
        amount to receive. */
-    expect(r.verdict).toContain("$73,575");
+    expect(r.verdict).toContain("$73,275");
     expect(r.verdict).not.toContain("-$");
   });
 
@@ -232,7 +232,7 @@ describe("a seller who owes more than the sale produces", () => {
   it("leaves a seller with equity exactly as it was", () => {
     const r = sellerReadout(healthy, "3 to 9 months", true);
     expect(r.status).toBe("close");
-    expect(r.verdict).toMatch(/walk away with about \$193,145/);
+    expect(r.verdict).toMatch(/walk away with about \$193,560/);
     expect(r.blocker.title).not.toMatch(/short of your payoff/);
   });
 

@@ -203,7 +203,7 @@ export function read(s: Submission, commissionPct = ASSUMED_COMMISSION_PCT): Rea
   const proportionalCosts = s.price * k;
 
   /* P(1 − k) = price(1 − k) − askedBack, solved for P. `k` cannot reach 1 —
-     it is capped at 10% commission plus 0.2% transfer tax — so this cannot
+     it is capped at 10% commission plus 0.1% transfer tax — so this cannot
      divide by zero however the assumption is set. */
   const costPerDollarBack = 1 / (1 - k);
   const equivalentCleanPrice = Math.round(s.price - askedBack * costPerDollarBack);

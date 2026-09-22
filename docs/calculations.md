@@ -131,7 +131,7 @@ stops it.
 ## Seller
 
 `netProceeds(s)` subtracts commission, concessions, Georgia transfer tax
-(**$1.00 per $500 of consideration — 0.2%**), settlement, prorated tax, payoff admin,
+(**$1.00 per $1,000 of consideration — 0.1%**, O.C.G.A. § 48-6-1; it said 0.2% until September 2026, which understated every seller's net by 0.1% of the price), settlement, prorated tax, payoff admin,
 repairs, and moving from the price, then the mortgage payoff. `repairTriage()` ranks repairs
 by payback, and `unclaimedValue()` finds homestead and age-65 exemptions the owner has not
 filed.

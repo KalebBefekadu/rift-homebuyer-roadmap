@@ -83,7 +83,7 @@ describe("what the offer is worth to a seller", () => {
   it("makes a dollar asked back cost more than a dollar of price", () => {
     const r = read(ok());
     expect(r.costPerDollarBack).toBeGreaterThan(1);
-    /* At a 6% commission plus 0.2% transfer tax: 1/(1 − 0.062). */
+    /* At a 6% commission plus 0.1% transfer tax: 1/(1 − 0.061). */
     expect(r.costPerDollarBack).toBeCloseTo(1 / (1 - (6 / 100 + GA_TRANSFER_TAX_RATE)), 3);
   });
 

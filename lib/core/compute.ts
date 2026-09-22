@@ -317,11 +317,20 @@ export interface ProceedLine {
   note: string;
 }
 
-/** Georgia transfer tax is $1.00 per $500 of consideration — 0.2%. */
+/**
+ * Georgia transfer tax: $1.00 per $1,000 of consideration — 0.1%.
+ *
+ * O.C.G.A. § 48-6-1: "$1.00 for the first $1,000.00 … and 10 cents for each
+ * additional $100.00", which is one tenth of a percent. This said "$1.00 per
+ * $500 — 0.2%" until September 2026, which charged every seller double: about
+ * $400 too little reaching them on a $400,000 sale, on every readout and in
+ * every offer comparison. Found while checking an offer-room draft by hand.
+ * Readouts already issued are snapshots and keep the figure they showed.
+ */
 /* Exported so the offer table and the seller's readout cannot quote different
    transfer tax on the same house. A second copy of a statutory rate is a
    second thing to forget when it changes. */
-export const GA_TRANSFER_TAX_RATE = 0.002;
+export const GA_TRANSFER_TAX_RATE = 0.001;
 
 export function netProceeds(s: SellerInputs) {
   const commission = (s.price * s.commissionPct) / 100;
@@ -335,7 +344,7 @@ export function netProceeds(s: SellerInputs) {
     { label: "Mortgage payoff", amount: s.payoff, note: "Principal balance plus interest to the closing date" },
     { label: "Commission", amount: commission, note: `${pct(s.commissionPct)} total, split as negotiated` },
     { label: "Seller concessions", amount: concessions, note: `${pct(s.concessionsPct)} allowance — common ask in the current market` },
-    { label: "Georgia transfer tax", amount: transferTax, note: "$1.00 per $500 of the sale price" },
+    { label: "Georgia transfer tax", amount: transferTax, note: "$1.00 per $1,000 of the sale price" },
     { label: "Settlement and recording", amount: settlement, note: "Closing attorney, deed preparation, recording fees" },
     { label: "Prorated property tax", amount: proratedTax, note: "Your share of the tax year up to closing" },
     { label: "Payoff and wire fees", amount: payoffAdmin, note: "Lender statement, wire, and courier charges" },
