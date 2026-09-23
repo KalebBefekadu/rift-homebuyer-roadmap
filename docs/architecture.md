@@ -209,7 +209,7 @@ one at a time, not as a tree.
 | `lib/prototype/attribution.ts` | First-touch capture. First touch is immutable; later visits update last touch only |
 | `lib/core/privacy.ts` | Retention rules and versioned TCPA consent wording — data the server stores and the browser renders |
 | `lib/prototype/privacy.ts` | The browser-side half: acting on a deletion request, reporting what is on this device |
-| `lib/core/referral.ts` | Eight referral moments with escalating asks and the satisfaction gate |
+| `lib/core/referral.ts` | Eight referral moments with escalating asks, and the private service check, which raises follow-ups and never decides who is asked for a review |
 | `lib/core/pipeline.ts` | Stage rules, stall detection with named causes, weighted forward view. Weights shrink toward the agent's own closed history and are labelled with their basis |
 | `lib/core/nurture.ts` | The cadence engine. Four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
 | `lib/core/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party — enforced in `promote()`, not in the UI |

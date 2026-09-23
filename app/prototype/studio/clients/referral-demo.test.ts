@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOMENTS, gate, type MomentState } from "@/lib/core/referral";
+import { MOMENTS, type MomentState } from "@/lib/core/referral";
 import { REFERRAL_STATE, dueNow, referralStats } from "@/app/prototype/studio/clients/referral-demo";
 
 /**
@@ -21,19 +21,6 @@ describe("the queue and the counts", () => {
   it("carries only what is due or being held", () => {
     for (const { c, m } of dueNow()) {
       expect(["due", "held"]).toContain(c.states[m.id]);
-    }
-  });
-
-  /**
-   * The invariant the gate exists for, asserted against the seeded board: no
-   * moment that would put somebody in public is queued for a client who has
-   * not said they are happy. It holds today. It is here so that it still has
-   * to hold when this board is real data.
-   */
-  it("queues no public ask for a client who has not said it went well", () => {
-    for (const { c, m } of dueNow()) {
-      if (!m.gated) continue;
-      expect(gate(c.mood).askPublicly, `${c.client} · ${m.id}`).toBe(true);
     }
   });
 

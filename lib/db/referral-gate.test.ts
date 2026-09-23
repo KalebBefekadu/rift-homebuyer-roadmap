@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fakeDb, type Answers, type Fake } from "./test/fake-db";
+import { MOMENTS } from "@/lib/core/referral";
 
 /**
  * The gate, at the layer that actually talks to the database.
@@ -37,36 +38,35 @@ const closedLead = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => { vi.clearAllMocks(); });
 
-describe("nothing public before the private check", () => {
-  it("does not treat an unanswered check as a good one", async () => {
-    build({
-      rift_leads: { data: [closedLead({ mood: null })] },
-      rift_referral_moments: { data: [] },
-    });
-    const r = await momentsForLead("l1", NOW);
-    const rel = ("data" in r ? r.data : null)!;
-    const gated = rel!.statuses.filter((s) => s.moment.gated);
-    expect(gated.length).toBeGreaterThan(0);
-    for (const g of gated) {
-      expect(g.needsCheck, `${g.moment.id} should be asking the private question`).toBe(true);
-    }
-  });
-
-  it("holds every gated moment when the answer was not good", async () => {
-    for (const mood of ["mixed", "bad"] as const) {
+describe("the private check decides follow-ups, not reviews (decision D12)", () => {
+  it("reads the same moments from the database whatever the answer was", async () => {
+    const seen: string[] = [];
+    for (const mood of [null, "good", "mixed", "bad"] as const) {
       build({
         rift_leads: { data: [closedLead({ mood })] },
         rift_referral_moments: { data: [] },
       });
       const r = await momentsForLead("l1", NOW);
       const rel = ("data" in r ? r.data : null)!;
-      for (const g of rel!.statuses.filter((s) => s.moment.gated)) {
-        expect(g.state, `${g.moment.id} with mood=${mood}`).toBe("held");
-      }
+      const review = rel!.statuses.filter((s) => s.moment.review);
+      expect(review.length).toBeGreaterThan(0);
+      seen.push(JSON.stringify(rel!.statuses.map((s) => [s.moment.id, s.state, s.blockedBecause])));
     }
+    expect(new Set(seen).size).toBe(1);
   });
 
-  it("refuses to write anything the gate does not understand", async () => {
+  it("keeps somebody owed a follow-up in the queue with nothing else due", async () => {
+    const decided = MOMENTS.map((m) => ({ lead_id: "l1", moment_id: m.id, occurrence: m.id === "anniversary" ? 2 : 0, state: "acted" }));
+    build({
+      rift_leads: { data: [closedLead({ mood: "bad" })] },
+      rift_referral_moments: { data: decided },
+    });
+    const r = await referralQueue(NOW);
+    const people = ("data" in r ? r.data : null)!;
+    expect(people.map((p) => p.leadId)).toContain("l1");
+  });
+
+  it("refuses to write anything the check does not understand", async () => {
     build({ rift_leads: { data: [closedLead()] } });
     const r = await recordMood("l1", "fine" as never);
     expect(r.ok).toBe(false);

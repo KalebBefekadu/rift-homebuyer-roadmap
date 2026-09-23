@@ -2,15 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
-import { STATE_CHIP, type MomentId, type MomentState, type Mood } from "@/lib/core/referral";
+import { STATE_CHIP, serviceCheck, type MomentId, type MomentState, type Mood } from "@/lib/core/referral";
 import { decideMoment, setMood } from "../actions";
 
 /**
- * The private check, and the decisions that depend on it.
+ * The private service check, and the moments.
  *
- * Drawn as one component because they are one thought. Splitting the mood
- * buttons away from the moments they gate would let a screen render the ask
- * without the question, and the whole rule is that the question comes first.
+ * Two separate things. The check asks whether somebody needs a follow-up; the
+ * moments say what is due. The check has no say over the moments: a review
+ * invitation is the same for everyone (lib/core/referral.ts, rule 2).
  */
 
 const MOOD_LABEL: Record<"good" | "mixed" | "bad", string> = {
@@ -37,9 +37,9 @@ export function MoodCheck({ leadId, mood, name }: { leadId: string; mood: Mood; 
         <div className="grow">
           <div className="t-sm w6">Have you asked {name} how it went?</div>
           <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>
-            In private, and before anything public. Nobody is asked to say something in
-            public who has not first been asked, quietly, whether they are happy, and
-            somebody who says they are not is never then asked for a rating.
+            In private. The answer decides whether you owe them a follow-up, never
+            whether they are asked for a review: everyone who reaches a review moment
+            is asked the same way.
           </p>
 
           <div className="row gap-2 wrap" style={{ marginTop: 10 }}>
@@ -62,14 +62,9 @@ export function MoodCheck({ leadId, mood, name }: { leadId: string; mood: Mood; 
             ) : null}
           </div>
 
-          {/* What the answer actually does, said before it is given rather
-              than after. An agent choosing between three buttons should know
-              which of them stops a review request going out. */}
-          {mood === "mixed" || mood === "bad" ? (
+          {serviceCheck(mood).followUp ? (
             <p className="t-xs c-warn" style={{ marginTop: 10, lineHeight: 1.55 }}>
-              {mood === "bad"
-                ? "No public ask goes out, now or later, unless they raise it themselves. The job is to fix it."
-                : "No public ask while something is unresolved. A review request now is asking them to publish a shrug."}
+              {serviceCheck(mood).note}
             </p>
           ) : null}
 
@@ -81,7 +76,7 @@ export function MoodCheck({ leadId, mood, name }: { leadId: string; mood: Mood; 
 }
 
 export function MomentRow({
-  leadId, momentId, occurrence, label, ask, why, state, blockedBecause, needsCheck, gated,
+  leadId, momentId, occurrence, label, ask, why, state, blockedBecause, review,
 }: {
   leadId: string;
   momentId: MomentId;
@@ -91,8 +86,7 @@ export function MomentRow({
   why: string;
   state: MomentState;
   blockedBecause: string | null;
-  needsCheck: boolean;
-  gated: boolean;
+  review: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +107,7 @@ export function MomentRow({
             <span className="t-sm w6">{label}</span>
             <span className={`chip ${chip.c}`}>{chip.l}</span>
             {occurrence > 0 ? <span className="chip">Year {occurrence}</span> : null}
-            {gated ? <span className="chip">Needs the private check</span> : null}
+            {review ? <span className="chip">Includes a review request</span> : null}
           </div>
           <p className="t-sm" style={{ marginTop: 6, lineHeight: 1.55 }}>{ask}</p>
           <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>{why}</p>
@@ -129,10 +123,7 @@ export function MomentRow({
             this delicate would be a promise about tone that no template
             can keep. */}
         <div className="row gap-2 wrap" style={{ flex: "none" }}>
-          {needsCheck ? (
-            <span className="t-xs c-4" style={{ maxWidth: 180 }}>Answer the check above first.</span>
-          ) : (
-            <>
+          <>
               <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("sent")}>
                 Asked
               </button>
@@ -145,8 +136,7 @@ export function MomentRow({
               <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("held")}>
                 Hold back
               </button>
-            </>
-          )}
+          </>
         </div>
       </div>
     </div>

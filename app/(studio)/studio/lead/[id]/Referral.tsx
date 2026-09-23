@@ -13,9 +13,9 @@ import { Ico } from "@/components/rift/icons";
  * the plumbing behind it is.
  *
  * It is deliberately on the agent's screen rather than the client's. Every ask
- * in this product is gated on the private satisfaction check: see `gate()` in
- * lib/core/referral.ts: and a permanent "refer a friend" box on somebody's
- * plan page is exactly the ungated, untimed ask that gate exists to prevent.
+ * in this product belongs to a moment with a reason and a time (MOMENTS in
+ * lib/core/referral.ts), and a permanent "refer a friend" box on somebody's
+ * plan page is exactly the untimed ask those moments exist to prevent.
  * Kaleb decides when to send this. The product does not decide for him.
  */
 export function Referral({

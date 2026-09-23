@@ -7,7 +7,7 @@ import { Ico } from "@/components/rift/icons";
 import { CLIENTS, REP_CHIP } from "@/lib/prototype/clients";
 import { ranked, sla, BAND_LABEL, BAND_TONE } from "@/lib/core/lead";
 import { useAttribution, describeTouch } from "@/lib/prototype/attribution";
-import { MOMENTS, STATE_CHIP, gate } from "@/lib/core/referral";
+import { MOMENTS, STATE_CHIP, serviceCheck } from "@/lib/core/referral";
 import { REFERRAL_STATE, dueNow, referralStats } from "./referral-demo";
 import { stallOf, STALL_CHIP, forecast, commissionOn, weightFor, evidenceMix, BASIS_CHIP, HISTORY } from "@/lib/core/pipeline";
 import { readRules, DEFAULT_RULES } from "@/lib/core/settings";
@@ -291,7 +291,7 @@ export default function Clients() {
                 <span className="t-xs c-4">Strongest moment first</span>
               </div>
               {dueNow().map(({ c, m }) => {
-                const g = gate(c.mood);
+                const check = serviceCheck(c.mood);
                 const held = c.states[m.id] === "held";
                 return (
                   <div key={c.client + m.id} className="row gap-3" style={{ padding: "13px 16px", borderBottom: "1px solid var(--line-3)", alignItems: "flex-start" }}>
@@ -300,22 +300,20 @@ export default function Clients() {
                       <div className="row gap-2 wrap">
                         <span className="t-md w55">{c.client}</span>
                         <span className={`chip ${STATE_CHIP[c.states[m.id] ?? "waiting"].c}`}>{m.label}</span>
-                        {m.gated ? (
-                          <span className={`chip ${g.askPublicly ? "chip-pos" : "chip-warn"}`}>
-                            <Ico.shield size={11} />{g.route}
-                          </span>
+                        {m.review ? <span className="chip">Includes a review request</span> : null}
+                        {check.followUp ? (
+                          <span className="chip chip-warn"><Ico.shield size={11} />{check.label}</span>
                         ) : null}
                       </div>
                       <p className="t-sm c-2" style={{ marginTop: 5, lineHeight: 1.55 }}>
                         {held ? "Deliberately holding: " : ""}{m.ask}
                       </p>
                       <p className="t-xs c-4" style={{ marginTop: 4, lineHeight: 1.5 }}>
-                        {/* The satisfaction gate only speaks for moments it governs. */}
-                        {held ? m.why : m.gated ? g.note : m.why}
+                        {held ? m.why : check.followUp ? check.note : m.why}
                       </p>
                     </div>
                     <div className="row gap-1" style={{ flex: "none" }}>
-                      <button className="btn btn-p btn-sm" disabled={m.gated && !g.askPublicly}>
+                      <button className="btn btn-p btn-sm">
                         <Ico.send size={13} />Send
                       </button>
                       <button className="btn btn-g btn-sm">Skip</button>

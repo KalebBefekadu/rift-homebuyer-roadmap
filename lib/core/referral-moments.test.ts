@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  MOMENTS, momentsFor, actionable, mayAskPublicly, anniversariesPassed,
+  MOMENTS, momentsFor, actionable, mayAsk, serviceCheck, anniversariesPassed,
   currentOccurrence, SILENT_MOMENTS, DAY_30, MONTH_6,
   type Lifecycle, type Mood, type MomentId, type MomentState, type RecordedMoment,
 } from "./referral";
@@ -97,51 +97,56 @@ describe("the dates after closing", () => {
   });
 });
 
-describe("nothing public before the private check", () => {
+describe("a review invitation is the same for everyone (decision D12)", () => {
   /**
-   * Walks every gated moment against every possible mood, rather than the one
-   * or two a fixture happened to contain. `mood === null` is the case a
-   * truthy check gets wrong, and it is also the most common one: nobody has
-   * asked them yet.
+   * Asking only the people who said they were happy is review gating, which
+   * Google forbids. So the moments must come out identical whatever the
+   * private check said, including unanswered: walked across every mood and
+   * every point in a relationship rather than the one a fixture contained.
    */
   const MOODS: Mood[] = ["good", "mixed", "bad", null];
+  const POINTS: [Partial<Lifecycle>, string][] = [
+    [{ readoutDelivered: true }, "2026-02-01"],
+    [{ stage: "Closed", closedOn: "2026-01-01", readoutDelivered: true, planPublished: true }, "2026-01-01"],
+    [{ stage: "Closed", closedOn: "2026-01-01", readoutDelivered: true, planPublished: true }, "2026-08-01"],
+    [{ stage: "Closed", closedOn: "2020-01-01", readoutDelivered: true, planPublished: true }, "2026-09-21"],
+  ];
 
-  it("never reports a public ask as allowed unless they said it went well", () => {
-    for (const mood of MOODS) {
-      const l = life({ stage: "Closed", closedOn: "2020-01-01", readoutDelivered: true, planPublished: true, mood });
-      for (const s of momentsFor(l, [], at("2026-09-21"))) {
-        const allowed = mayAskPublicly(s, mood);
-        if (s.moment.gated && mood !== "good") {
-          expect(allowed, `${s.moment.id} with mood=${mood} must not be askable`).toBe(false);
-        }
+  it("derives every moment identically whatever they said about how it went", () => {
+    for (const [point, day] of POINTS) {
+      const baseline = momentsFor(life({ ...point, mood: null }), [], at(day));
+      for (const mood of MOODS) {
+        expect(momentsFor(life({ ...point, mood }), [], at(day)), `mood=${mood} at ${day}`).toEqual(baseline);
       }
     }
   });
 
-  it("asks the private question rather than holding a client nobody has asked", () => {
-    const l = life({ stage: "Closed", closedOn: "2026-01-01", mood: null });
-    const s = find(l, "closing_day", [], at("2026-02-01"));
-    expect(s.needsCheck).toBe(true);
-    expect(s.state).toBe("due");
-    expect(s.blockedBecause).toMatch(/before they answer/i);
-  });
-
-  it("holds, and says why, when the check came back short of good", () => {
-    for (const mood of ["mixed", "bad"] as const) {
-      const l = life({ stage: "Closed", closedOn: "2026-01-01", mood });
-      const s = find(l, "closing_day", [], at("2026-02-01"));
-      expect(s.state).toBe("held");
-      expect(s.needsCheck).toBe(false);
-      expect(s.blockedBecause).toBeTruthy();
-    }
-  });
-
-  it("leaves ungated moments alone whatever the mood", () => {
+  it("offers the closing-day review to an unhappy client like anyone else", () => {
     for (const mood of MOODS) {
-      const s = find(life({ readoutDelivered: true, mood }), "value_delivered");
+      const s = find(life({ stage: "Closed", closedOn: "2026-01-01", mood }), "closing_day", [], at("2026-02-01"));
+      expect(s.moment.review).toBe(true);
       expect(s.state).toBe("due");
-      expect(mayAskPublicly(s, mood)).toBe(true);
+      expect(mayAsk(s), `mood=${mood}`).toBe(true);
     }
+  });
+
+  it("uses the private check only to raise a follow-up", () => {
+    expect(serviceCheck("mixed").followUp).toBe(true);
+    expect(serviceCheck("bad").followUp).toBe(true);
+    expect(serviceCheck("good").followUp).toBe(false);
+    expect(serviceCheck(null).followUp).toBe(false);
+    for (const mood of MOODS) {
+      const c = serviceCheck(mood);
+      expect(c.label.trim()).not.toBe("");
+      expect(c.note.trim()).not.toBe("");
+      /* The agent is never told to hold a review back because of the answer. */
+      expect(c.note).not.toMatch(/no (public )?ask|not (be )?asked|hold (it|them) back|do not ask/i);
+    }
+  });
+
+  it("marks exactly the moments whose ask includes a public review", () => {
+    expect(MOMENTS.filter((m) => m.review).map((m) => m.id).sort()).toEqual(["closing_day", "month_6"]);
+    for (const m of MOMENTS) expect(m.review, m.id).toBe(/review/i.test(m.ask));
   });
 });
 
@@ -189,12 +194,12 @@ describe("a recorded decision is the answer", () => {
     }
   });
 
-  it("does not let a recorded decision bypass the gate for a public ask", () => {
-    /* Recording "due" by hand must not become a way round the private check. */
-    const rec: RecordedMoment[] = [{ momentId: "closing_day", occurrence: 0, state: "due" }];
-    const l = life({ stage: "Closed", closedOn: "2026-01-01", mood: "bad" });
-    const s = find(l, "closing_day", rec, at("2026-02-01"));
-    expect(mayAskPublicly(s, l.mood)).toBe(false);
+  it("lets only a due moment be asked, whatever was recorded around it", () => {
+    for (const state of ["sent", "acted", "declined", "held"] as const) {
+      const rec: RecordedMoment[] = [{ momentId: "closing_day", occurrence: 0, state }];
+      const s = find(life({ stage: "Closed", closedOn: "2026-01-01", mood: "bad" }), "closing_day", rec, at("2026-02-01"));
+      expect(mayAsk(s), state).toBe(false);
+    }
   });
 });
 

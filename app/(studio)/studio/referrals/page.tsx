@@ -5,6 +5,7 @@ import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { StudioHeader } from "../StudioHeader";
 import { referralQueue } from "@/lib/db/referral";
+import { serviceCheck } from "@/lib/core/referral";
 import { Ico } from "@/components/rift/icons";
 import { MoodCheck, MomentRow } from "./Moment";
 
@@ -104,7 +105,7 @@ export default async function ReferralsPage() {
           <div className="col gap-4" style={{ marginTop: 22 }}>
             {people.map((p) => {
               const name = (p.name ?? "").trim() || "This person";
-              const needsCheck = p.todo.some((s) => s.needsCheck);
+              const check = serviceCheck(p.life.mood);
               return (
                 <section key={p.leadId} className="col gap-2">
                   <div className="between wrap gap-2">
@@ -112,17 +113,17 @@ export default async function ReferralsPage() {
                       <Link href={`/studio/lead/${p.leadId}`} className="t-md w6">{name}</Link>
                       {p.stage ? <span className="chip">{p.stage}</span> : null}
                       {p.life.closedOn ? <span className="chip chip-pos">Closed {p.life.closedOn}</span> : null}
+                      {check.followUp ? <span className="chip chip-warn">{check.label}</span> : null}
                     </div>
                     <span className="t-xs c-4">
                       {p.todo.length} {p.todo.length === 1 ? "moment" : "moments"}
                     </span>
                   </div>
 
-                  {/* The check is drawn whenever anything gated is in play,
-                      and only then. Asking an agent how somebody feels when
-                      nothing depends on the answer is a question for its own
-                      sake, and those are the ones that stop being answered. */}
-                  {needsCheck || p.todo.some((s) => s.moment.gated) ? (
+                  {/* The service check is drawn once somebody has closed, or
+                      while a follow-up is owed. It raises follow-ups; it never
+                      decides who is asked for a review. */}
+                  {p.life.closedOn || check.followUp ? (
                     <MoodCheck leadId={p.leadId} mood={p.life.mood} name={name} />
                   ) : null}
 
@@ -137,8 +138,7 @@ export default async function ReferralsPage() {
                       why={s.moment.why}
                       state={s.state}
                       blockedBecause={s.blockedBecause}
-                      needsCheck={s.needsCheck}
-                      gated={s.moment.gated}
+                      review={s.moment.review}
                     />
                   ))}
                 </section>

@@ -13,13 +13,18 @@
  *      closing day it can be a name. Asking for a name at moment one is how
  *      you spend goodwill you have not earned.
  *
- *   2. NOTHING PUBLIC IS ASKED FOR BEFORE A PRIVATE CHECK. Every public review
- *      request is gated behind one private question. An unhappy client is
- *      routed to the agent, never to a review form. This is not review-gating
- *      to manufacture ratings: the private route exists so the complaint gets
- *      answered, and someone who says they are unhappy is never then asked for
- *      a public rating anyway. If they are happy, they are asked plainly and
- *      once.
+ *   2. A REVIEW INVITATION IS THE SAME FOR EVERYONE. Whoever reaches a review
+ *      moment is asked the same way, plainly and once, whatever they said
+ *      about how it went. The private service check is a separate track: an
+ *      unhappy answer raises a follow-up for the agent and never decides
+ *      whether somebody is asked. Asking only the people who said they were
+ *      happy is review gating, which Google's review policy forbids and
+ *      docs/product.md already ruled out ("no pre-screening for positive
+ *      sentiment"). Decision D12, 23 September 2026 (docs/handoff.md 8.2).
+ *
+ *      This file used to do exactly that: a `gate()` held every public ask
+ *      until the check came back good. It never reached a real client (Rift
+ *      had none, and has never sent an email), and it is gone.
  */
 
 export type MomentId =
@@ -37,8 +42,9 @@ export interface Moment {
   ask: string;
   /** Why this moment and not another. */
   why: string;
-  /** Public reviews require the private satisfaction check first. */
-  gated: boolean;
+  /** The ask includes a public review. Marked so the screen can say so; it
+   *  changes nothing about who is asked (rule 2). */
+  review: boolean;
   /** Roughly how strong this moment is, 1–5. Used to order the queue. */
   strength: number;
 }
@@ -48,49 +54,49 @@ export const MOMENTS: Moment[] = [
     id: "value_delivered", label: "Readout delivered", trigger: "They finished the assessment and got their numbers",
     ask: "Send this to someone it would help",
     why: "They have just been given something for nothing and owe us nothing. The only honest ask here is for the tool, not for a name.",
-    gated: false, strength: 2,
+    review: false, strength: 2,
   },
   {
     id: "plan_published", label: "Plan published", trigger: "Kaleb reviewed and published their plan",
     ask: "Share the plan with anyone helping you",
     why: "Sharing is genuinely useful to them at this point: a gifting parent or a co-buyer needs it. Reach is a side effect of a real need.",
-    gated: false, strength: 2,
+    review: false, strength: 2,
   },
   {
     id: "financing_secured", label: "Financing secured", trigger: "Pre-approval or assistance confirmed in writing",
     ask: "Would a friend in the same spot want the assistance check?",
     why: "The single most quotable moment for a first-time buyer. They just found out the money is real. Specific, and specific asks travel.",
-    gated: false, strength: 4,
+    review: false, strength: 4,
   },
   {
     id: "under_contract", label: "Under contract", trigger: "Binding agreement executed",
     ask: "Nothing. Say congratulations and go quiet.",
     why: "They are about to be busy and anxious for thirty days. Asking here costs more than it earns, and restraint is remembered.",
-    gated: false, strength: 1,
+    review: false, strength: 1,
   },
   {
     id: "closing_day", label: "Closing day", trigger: "Keys handed over",
     ask: "A public review, and anyone you think I should meet",
     why: "The peak. Gratitude is highest and the memory is complete. If only one ask is ever made, it is this one.",
-    gated: true, strength: 5,
+    review: true, strength: 5,
   },
   {
     id: "day_30", label: "Thirty days in", trigger: "30 days after closing",
     ask: "Anything gone wrong I can help with?",
     why: "Not an ask at all. It is the check that makes the six-month ask credible, and it catches problems while they are still small.",
-    gated: false, strength: 1,
+    review: false, strength: 1,
   },
   {
     id: "month_6", label: "Six months in", trigger: "6 months after closing",
     ask: "A review, if you didn't leave one, and an introduction if anyone comes to mind",
     why: "Long enough that the answer is considered rather than euphoric. Reviews written here are the ones that read as real.",
-    gated: true, strength: 4,
+    review: true, strength: 4,
   },
   {
     id: "anniversary", label: "Anniversary", trigger: "Every year on the closing date, indefinitely",
     ask: "Here's what your home did this year. Anyone you'd send my way?",
     why: "Carries value first (an equity and tax update they did not ask for), so the ask arrives attached to something.",
-    gated: true, strength: 3,
+    review: false, strength: 3,
   },
 ];
 
@@ -104,37 +110,43 @@ export const STATE_CHIP: Record<MomentState, { l: string; c: string }> = {
 };
 
 /* ------------------------------------------------------------------ *
- * The satisfaction gate
+ * The private service check
  * ------------------------------------------------------------------ */
 
 export type Mood = "good" | "mixed" | "bad" | null;
 
-export interface GateResult {
-  askPublicly: boolean;
-  route: string;
+export interface ServiceCheck {
+  /** Something needs putting right, and the agent should follow up. */
+  followUp: boolean;
+  label: string;
   note: string;
 }
 
-export function gate(mood: Mood): GateResult {
+/**
+ * What the private "how did it go?" answer means: whether the agent owes this
+ * person a follow-up. Nothing else. In particular it has no say over any
+ * moment's ask, and `momentsFor` does not read it (rule 2 above).
+ */
+export function serviceCheck(mood: Mood): ServiceCheck {
   if (mood === "good")
-    return {
-      askPublicly: true,
-      route: "Review request sent",
-      note: "They said it went well. Asked once, plainly, with a direct link.",
-    };
+    return { followUp: false, label: "It went well", note: "Nothing to put right." };
   if (mood === "mixed")
     return {
-      askPublicly: false,
-      route: "Raised with Kaleb",
-      note: "Something is unresolved. A review request now would be asking them to publish a shrug.",
+      followUp: true,
+      label: "Follow up",
+      note: "Something is unresolved. Follow up about it directly. It does not change whether they are asked for a review: everyone is asked the same way.",
     };
   if (mood === "bad")
     return {
-      askPublicly: false,
-      route: "Escalated to Kaleb today",
-      note: "No public ask, now or later, unless they raise it themselves. The job is to fix it.",
+      followUp: true,
+      label: "Follow up today",
+      note: "They are unhappy. Talk to them and put right what you can. That is separate from any review invitation, which goes to everyone the same way.",
     };
-  return { askPublicly: false, route: "Waiting on the check", note: "Nothing public goes out before they answer." };
+  return {
+    followUp: false,
+    label: "Not asked yet",
+    note: "Ask them privately how it went. The answer decides whether you follow up, never whether they are asked for a review.",
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -156,7 +168,8 @@ export interface Lifecycle {
   readoutDelivered: boolean;
   /** A plan exists and its link is open. */
   planPublished: boolean;
-  /** The private satisfaction check. Null means unanswered, not "fine". */
+  /** The private service check. Null means unanswered, not "fine". It is
+   *  carried for the follow-up it may raise; no moment depends on it. */
   mood: Mood;
 }
 
@@ -183,7 +196,7 @@ export interface RecordedMoment {
  * confirmed in writing" is not a column: it is a document in somebody's
  * inbox, and the honest options were to leave the moment waiting until a
  * human says otherwise, or to infer it from the stage having moved past
- * Financing. The second is a guess, and this is the strongest ungated ask in
+ * Financing. The second is a guess, and this is the strongest early ask in
  * the set: firing it at somebody whose pre-approval actually fell through is
  * the single most expensive message this product could send.
  *
@@ -259,8 +272,6 @@ export interface MomentStatus {
   moment: Moment;
   state: MomentState;
   occurrence: number;
-  /** True when the trigger has fired but the private check has not been answered. */
-  needsCheck: boolean;
   /** Why this is not actionable, in words the agent would use. Null when it is. */
   blockedBecause: string | null;
 }
@@ -272,12 +283,10 @@ export interface MomentStatus {
  * "sent", "acted on", "declined" or "held back", that is the answer, and a
  * later run does not quietly reopen it.
  *
- * THE GATE IS ENFORCED HERE, not at the surface that draws it. A gated moment
- * whose private check is unanswered comes back `needsCheck`, and one whose
- * check came back mixed or bad comes back `held` with the reason attached.
- * Putting that rule in a component would mean the next component to render
- * moments would have to remember it, and a rule that must be remembered is a
- * rule that has already been broken somewhere.
+ * `life.mood` is deliberately not read here. Whether a moment is due depends
+ * on what has happened, never on what the person said about how it went
+ * (rule 2 at the top of this file). The test that walks every moment against
+ * every mood holds that in place.
  */
 export function momentsFor(
   life: Lifecycle,
@@ -291,7 +300,7 @@ export function momentsFor(
     );
 
     if (decided) {
-      return { moment, state: decided.state, occurrence, needsCheck: false, blockedBecause: null };
+      return { moment, state: decided.state, occurrence, blockedBecause: null };
     }
 
     if (!triggered(moment.id, life, now)) {
@@ -299,41 +308,25 @@ export function momentsFor(
         moment,
         state: "waiting" as const,
         occurrence,
-        needsCheck: false,
         blockedBecause: OBSERVABLE[moment.id]
           ? null
           : "Nothing in the record says this has happened. Mark it when it has.",
       };
     }
 
-    if (moment.gated) {
-      const g = gate(life.mood);
-      if (!g.askPublicly) {
-        return {
-          moment,
-          state: life.mood === null ? ("due" as const) : ("held" as const),
-          occurrence,
-          needsCheck: life.mood === null,
-          blockedBecause: g.note,
-        };
-      }
-    }
-
-    return { moment, state: "due" as const, occurrence, needsCheck: false, blockedBecause: null };
+    return { moment, state: "due" as const, occurrence, blockedBecause: null };
   });
 }
 
 /**
- * Whether a public ask may go out for this moment, right now.
+ * Whether this moment's ask may go out, right now.
  *
- * The one function any sending code must call. It answers false for every
- * gated moment whose private check did not come back good: including the
- * unanswered case, which is the one a truthy check on `mood` would get wrong.
+ * The one function any sending code must call. It takes no mood, on purpose:
+ * a review invitation is the same for everyone (rule 2), so the only question
+ * is whether the moment is due and nobody has decided about it yet.
  */
-export function mayAskPublicly(status: MomentStatus, mood: Mood): boolean {
-  if (status.state !== "due") return false;
-  if (!status.moment.gated) return true;
-  return gate(mood).askPublicly;
+export function mayAsk(status: MomentStatus): boolean {
+  return status.state === "due";
 }
 
 /**
@@ -351,9 +344,8 @@ export function actionable(statuses: MomentStatus[]): MomentStatus[] {
   return statuses
     .filter((s) => (s.state === "due" || s.state === "held") && !SILENT_MOMENTS.includes(s.moment.id))
     .sort((a, b) => {
-      /* Something waiting on an answer outranks something merely held back:
-         the first is a question nobody has asked, the second is a decision
-         already taken. */
+      /* Something due outranks something the agent chose to hold back: the
+         first is waiting on him, the second is a decision already taken. */
       if (a.state !== b.state) return a.state === "due" ? -1 : 1;
       return b.moment.strength - a.moment.strength;
     });

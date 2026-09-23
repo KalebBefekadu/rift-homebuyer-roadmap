@@ -181,9 +181,13 @@ No proxy for a protected class enters lead scoring, matching, or routing. No nam
 no neighbourhood scoring, no language inference, no photo. `lib/core/lead.ts` documents
 the complete input list; treat additions to it as a compliance change, not a feature.
 
-### 4.9 Nothing public is requested before a private check
-Every public review request passes the satisfaction gate. Someone who reports a bad
-experience is routed to the agent and is not asked for a rating, then or later.
+### 4.9 A review invitation is the same for everyone
+Everyone who reaches a review moment is invited the same way, whatever they said about how
+it went. The private "how did it go?" check is a separate track: an unhappy or unresolved
+answer raises a follow-up for the agent and never decides whether somebody is asked. Asking
+only happy clients is review gating, which Google's review policy forbids. This replaced the
+earlier rule ("not asked for a rating, then or later") by decision D12 (section 8.2); the
+invariant is tested across every mood in `lib/core/referral-moments.test.ts`.
 
 ### 4.10 First touch never moves
 Attribution stores first touch immutably. Later visits update last touch only.

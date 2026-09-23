@@ -4,7 +4,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import {
-  momentsFor, actionable, MOMENTS,
+  momentsFor, actionable, serviceCheck, MOMENTS,
   type Lifecycle, type Mood, type MomentId, type MomentState,
   type MomentStatus, type RecordedMoment,
 } from "@/lib/core/referral";
@@ -201,7 +201,9 @@ export async function referralQueue(now: Date = new Date()): Promise<DbResult<Re
     const life = lifecycleOf(row, withReadout);
     const statuses = momentsFor(life, byLead.get(id) ?? [], now);
     const todo = actionable(statuses);
-    if (todo.length === 0) continue;
+    /* Somebody owed a follow-up stays on the list with nothing else due: the
+       follow-up is the work. */
+    if (todo.length === 0 && !serviceCheck(life.mood).followUp) continue;
     out.push({
       leadId: id,
       name: (row.name as string | null) ?? null,
@@ -258,11 +260,12 @@ export async function recordMoment(input: {
 }
 
 /**
- * Record the private satisfaction check.
+ * Record the private service check.
  *
- * The one write that decides whether anything public may ever be asked of this
- * person, so it takes only the three answers the gate understands and `null`
- * to un-ask. There is no path here that sets it to a default.
+ * It decides whether the agent owes this person a follow-up, and nothing
+ * about who is asked for a review (lib/core/referral.ts, rule 2). It takes
+ * only the three answers `serviceCheck` understands and `null` to un-ask.
+ * There is no path here that sets it to a default.
  */
 export async function recordMood(leadId: string, mood: Mood): Promise<DbResult<null>> {
   if (mood !== null && mood !== "good" && mood !== "mixed" && mood !== "bad") {
