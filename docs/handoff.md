@@ -392,6 +392,75 @@ respectively, so changing the rule changes what customers are actually shown and
 what the forecast actually says. The remaining four are declared and surfaced but
 not yet load-bearing — wire them as their features land.
 
+### 8.1 Product re-evaluation (22 September 2026)
+
+The [blueprint v4 review and implementation package](blueprint-v4/README.md) reviews the
+supplied buyer/seller blueprint against this repository. It is a **proposal for review**,
+not an applied migration or authorization to begin the new product work.
+
+The following decisions were explicitly confirmed by Kaleb during that review:
+
+| Decision | Confirmed direction |
+| --- | --- |
+| Next release | Complete the buyer journey first, with shared foundations for sellers |
+| First useful slice | Buyer search: translating preferences and setting up/updating Matrix/OneHome searches |
+| Existing tool stack | Matrix/OneHome, ShowingTime, Google email/calendar, Remine for GAR forms and e-signature |
+| Private client access | Email sign-in for private documents and decisions; selected read-only summaries may use share links |
+| New automation | Prepare drafts and internal reminders; agent approves external actions |
+
+These answers settle the corresponding directions in the new package; they do **not**
+accept every proposed implementation, resolve the old traffic-gate/build-order conflict,
+or confirm that integration permissions exist. Existing nurture authority is not changed
+implicitly. The [decision register](blueprint-v4/review-and-decisions.md#4-decision-register)
+tracks the remaining owner/broker decisions and the
+[findings](blueprint-v4/review-and-decisions.md#2-findings-requiring-explicit-resolution).
+Record their acceptance, rejection, or parking here before dependent implementation.
+Do not infer that unanswered active-client/migration questions mean there are no clients.
+
+### 8.2 What the first buyer-search release accepted, and what it parked (23 September 2026)
+
+Kaleb asked for the package to be implemented. This is the record the package asks for
+before dependent work (W00): each finding accepted, rejected or parked, and what a parked
+one disables. Nothing below is an engineer's default standing in for a business decision.
+
+| Item | Disposition | What shipped, or what stays off |
+| --- | --- | --- |
+| F01, D01, D10 | Accepted | Buyer search is the first slice: journeys (W01), client sign-in and membership (W02), the search brief (W03), the Matrix approval and setup record (W04), the shared shortlist (W05) |
+| F02 | Accepted | Existing work was extended, not replaced: `rift_leads`, readouts, `/plan/<token>`, decisions and offer rooms are untouched |
+| F03, REQ-PRIV-01 | Accepted | Brief, reactions and homes are private product records. Nothing new is sent to analytics |
+| F05 | Accepted | A journey points at an existing lead; one lead can hold several. No automatic household merge |
+| F07, REQ-DEC-03 | Accepted | Buyer answers are "These are right" and "Something should change", never accept or sign |
+| F10, F20 | Accepted | No match percentages; fit is "meets 2 of 3, 1 still to check". A Matrix search is only "set up" when the agent records it, and every screen says the confirmation is his |
+| F11, D03 | Accepted | Buyers sign in by emailed link at `/app` and see a journey only through an accepted, unrevoked membership. Old plan links grant none of it |
+| F12, D02 | Accepted | No Matrix, ShowingTime, Remine or Google integration. The manual path (copy criteria, record the saved search) is the product until account rights are confirmed |
+| F18 | Accepted | Criteria describe homes and chosen places. Wording about who lives nearby, school rankings or crime is refused, including in free text |
+| D04 | Accepted | Rift sends nothing. Invitation links are copied and sent by the agent; the only emails are Supabase sign-in links a buyer asks for |
+| Review note on `/plan` referrers | Accepted | `/plan/:token*` and `/app` now send no referrer and are disallowed in robots |
+| Operations naming (spec §2) | Accepted | The agent surface is labelled Operations; `/studio` URLs are unchanged |
+| D05 | Parked | No import or backfill. Journeys are started by hand per client |
+| D06, F13, F14 | Parked | No tours (W06), offer or document pipeline (W08), deadlines (W09). The existing representation gate is unchanged |
+| D07, F17 | Parked | No new notifications, reminders or service promises |
+| D08 | Parked | The old traffic gate is neither declared met nor superseded here |
+| D09 | Parked | Exception handling for unusual transactions waits with W08 and W09 |
+| D11, F08, F09 | Parked | Money contract v2 (W10) not started; "cash to close" and the existing engine are unchanged |
+| D12, F15 | Parked | Advocacy automation not expanded |
+| F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
+| W07, W11 to W13 | Not started | Depend on the parked decisions above |
+
+Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
+deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
+
+How the journey pages write, and why. Every write on `/studio/journey/<id>` and on the
+buyer's `/app` pages goes to an API route (`/api/studio/journey`, `/api/app`) and shows its
+confirmation from that route's answer. The page then refreshes through
+`components/rift/useRefresh.ts`, which reloads the page if the refresh has not landed within
+four seconds. On a production build, about half of all updates to the journey page never
+committed: the React build bundled with Next 15.5 lost the wake-up for a render it had
+suspended (the full diagnosis is in that file). Server actions wait for that same update, so
+a saved brief sat on "Saving…" for good. Invitation links are shown once and never stored,
+so those two writes refresh without the reload. Retry the plain pattern when Next ships a
+newer React.
+
 ---
 
 ## 9. What the built MVP actually is

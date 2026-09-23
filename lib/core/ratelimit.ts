@@ -96,4 +96,10 @@ export const LIMITS = {
   /* Per plan link, not per address. A seller chooses once; the headroom is
      for a double tap and a retry on a bad signal, and nothing else. */
   choose: { max: 6, windowMs: 60_000 },
+  /* A sign-in link is an email Supabase sends on our behalf, to an address a
+     stranger can type. Tight, and per ten minutes rather than per minute. */
+  signin: { max: 5, windowMs: 600_000 },
+  /* A signed-in buyer answering, reacting and adding homes. Generous enough
+     for somebody working through a shortlist, not for a script. */
+  app: { max: 60, windowMs: 60_000 },
 } as const;

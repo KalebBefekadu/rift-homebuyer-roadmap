@@ -51,7 +51,7 @@ export default async function SettingsPage() {
           and showing you the defaults as though they were your settings is the one thing it must
           not do. Nothing has been changed. The error was: {read.error}
         </p>
-        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Studio</Link>
+        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Operations</Link>
       </Frame>
     );
   }
@@ -65,7 +65,7 @@ export default async function SettingsPage() {
           are a defensible starting position and nobody&rsquo;s decision.
         </p>
         <Defaults />
-        <Link href="/studio" className="btn btn-g" style={{ marginTop: 18 }}>Back to Studio</Link>
+        <Link href="/studio" className="btn btn-g" style={{ marginTop: 18 }}>Back to Operations</Link>
       </Frame>
     );
   }
@@ -150,7 +150,7 @@ function Frame({ children }: { children: React.ReactNode }) {
           <Link href="/studio" className="row gap-2">
             <Mark size={19} />
             <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-            <span className="chip chip-out t-2xs">Studio</span>
+            <span className="chip chip-out t-2xs">Operations</span>
           </Link>
           <Link href="/studio" className="t-sm c-3">← Today</Link>
         </div>

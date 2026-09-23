@@ -37,8 +37,17 @@ http.createServer(async (req, res) => {
   const path = req.url ?? "";
 
   if (path.startsWith("/auth/v1/user")) {
+    /* A forged token that carries `sub` and `email` claims answers as that
+       user, so the buyer's signed-in pages (/app) can be rendered locally as
+       somebody who is not the agent. Anything else is the seeded agent. */
+    let user = LOCAL_USER;
+    try {
+      const token = String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      const claims = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8"));
+      if (claims.sub && claims.email) user = { ...LOCAL_USER, id: claims.sub, email: claims.email };
+    } catch { /* not a JWT: the seeded agent */ }
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify(LOCAL_USER));
+    res.end(JSON.stringify(user));
     return;
   }
   if (path.startsWith("/auth/v1/")) {

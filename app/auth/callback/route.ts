@@ -24,16 +24,19 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = safeNext(searchParams.get("next"));
+  /* A buyer's link fails back to the buyer's sign-in page, never to the
+     agent's: "Operations: sign in" is not something a client should see. */
+  const signIn = next.startsWith("/app") ? "/app/sign-in" : "/studio/sign-in";
 
-  if (!code) return NextResponse.redirect(`${origin}/studio/sign-in?error=missing_code`);
+  if (!code) return NextResponse.redirect(`${origin}${signIn}?error=missing_code`);
 
   const supabase = await createClient();
-  if (!supabase) return NextResponse.redirect(`${origin}/studio/sign-in?error=unconfigured`);
+  if (!supabase) return NextResponse.redirect(`${origin}${signIn}?error=unconfigured`);
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     captureOpError(error, { op: "auth.callback" });
-    return NextResponse.redirect(`${origin}/studio/sign-in?error=expired`);
+    return NextResponse.redirect(`${origin}${signIn}?error=expired`);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

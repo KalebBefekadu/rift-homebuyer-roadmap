@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "../prototype/rift.css";
 
 export const metadata: Metadata = {
-  title: { default: "Studio · Rift", template: "%s · Studio" },
+  title: { default: "Operations · Rift", template: "%s · Operations" },
   robots: { index: false, follow: false },
 };
 

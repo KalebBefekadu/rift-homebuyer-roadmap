@@ -54,7 +54,7 @@ export default async function StudioToday() {
   if (!agent) {
     return (
       <main className="shell-w sec">
-        <h1 className="serif" style={{ fontSize: 28 }}>Studio is for the agent.</h1>
+        <h1 className="serif" style={{ fontSize: 28 }}>Operations is for the agent.</h1>
         <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
           Sign in to see the people your readout has produced. If you arrived here by accident,
           the buyer product is a better place to be.

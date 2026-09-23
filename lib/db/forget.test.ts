@@ -115,7 +115,11 @@ async function forget(c: Client, session: string) {
     "select id from rift_leads where agent_id=$1 and session_id=$2", [AGENT, session]);
   const leadIds = [...new Set([...byA, ...byS].map((r) => r.id as string))];
 
-  if (leadIds.length) await c.query("delete from rift_leads where id = any($1)", [leadIds]);
+  if (leadIds.length) {
+    /* Journeys first: origin_lead_id is RESTRICT, so the lead cannot go while one exists. */
+    await c.query("delete from rift_journeys where agent_id=$1 and origin_lead_id = any($2)", [AGENT, leadIds]);
+    await c.query("delete from rift_leads where id = any($1)", [leadIds]);
+  }
   if (ids.length) await c.query("delete from rift_assessments where id = any($1)", [ids]);
   if (ids.length) {
     await c.query("delete from rift_consents where agent_id=$1 and assessment_id = any($2)", [AGENT, ids]);
@@ -195,6 +199,29 @@ describe("erasure, from a readout", () => {
     expect(await count(c, "rift_consents", "session_id=$1", ["stays-4"])).toBe(1);
   });
 
+  test("reaches a person with a buying journey, and everything under it", async (c) => {
+    /* A journey refuses to let its lead be deleted, so an erasure that did
+       not remove journeys first would fail on exactly the people the agent
+       has started working with. */
+    const { leadId } = await seed(c, "gone-6", { withAssessment: true });
+    const { rows: [j] } = await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'buy','First home') returning id",
+      [AGENT, leadId]);
+    await c.query(
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,1,1,'[]','agent','Kaleb')`, [AGENT, j.id]);
+    await c.query(
+      `insert into rift_journey_members (agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
+       values ($1,$2,'person@example.com','buyer','{search}',$3, now() + interval '1 day')`, [AGENT, j.id, "f".repeat(64)]);
+
+    await forget(c, "gone-6");
+
+    expect(await count(c, "rift_leads", "id=$1", [leadId])).toBe(0);
+    expect(await count(c, "rift_journeys", "id=$1", [j.id])).toBe(0);
+    expect(await count(c, "rift_search_revisions", "journey_id=$1", [j.id])).toBe(0);
+    expect(await count(c, "rift_journey_members", "journey_id=$1", [j.id])).toBe(0);
+  });
+
   test("counts the person, not only the paperwork", async (c) => {
     /* A session with a lead and no assessment used to return `deleted: 0`,
        which the route turns into "nothing was stored on our side to remove":
@@ -227,6 +254,13 @@ describe("the erasure code still does all of that", () => {
     /* SET NULL severs the link. Deleting first makes the lead unfindable and
        the erasure silently partial: the exact shape of the original bug. */
     expect(leadLookup).toBeLessThan(assessmentDelete);
+  });
+
+  it("removes journeys before the lead they would otherwise hold in place", () => {
+    const journeys = forgetBody.indexOf('from("rift_journeys").delete()');
+    const leads = forgetBody.indexOf('from("rift_leads").delete()');
+    expect(journeys).toBeGreaterThan(-1);
+    expect(journeys).toBeLessThan(leads);
   });
 
   it("looks leads up by session as well as by assessment", () => {

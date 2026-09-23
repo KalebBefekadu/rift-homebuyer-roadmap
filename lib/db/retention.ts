@@ -1,4 +1,5 @@
 import "server-only";
+import { journeyTablesMissing } from "./journeys";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
@@ -165,11 +166,26 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       .is("human_replied_at", null)
       .lte("created_at", ago(WINDOWS.unconverted.days));
 
-    const deletableLeads = ((coldLeads ?? []) as unknown as {
+    const quietLeads = ((coldLeads ?? []) as unknown as {
       id: string; rift_enrolments: { stopped_at: string | null }[];
     }[])
       .filter((l) => !l.rift_enrolments?.some((e) => e.stopped_at === null))
       .map((l) => l.id);
+
+    /* A lead with a journey is being worked, whatever its reply column says:
+       the agent started a buying or selling goal on it. The database refuses
+       to delete it anyway (rift_journeys.origin_lead_id is RESTRICT), and one
+       refused row would fail the whole sweep, so it is left out here and
+       said so below. A missing table (a deploy ahead of its migration) means
+       no journeys exist. */
+    let working = new Set<string>();
+    if (quietLeads.length) {
+      const { data: j, error: jErr } = await db
+        .from("rift_journeys").select("origin_lead_id").eq("agent_id", agent_id).in("origin_lead_id", quietLeads);
+      if (jErr && !journeyTablesMissing(jErr.message)) return failed(jErr.message);
+      working = new Set(((j ?? []) as { origin_lead_id: string }[]).map((r) => r.origin_lead_id));
+    }
+    const deletableLeads = quietLeads.filter((id) => !working.has(id));
 
     if (deletableLeads.length) {
       const { error } = await db.from("rift_leads").delete().in("id", deletableLeads);
@@ -177,7 +193,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
     }
 
     held.push(
-      "Leads with a recorded reply or a live sequence are untouched. Those are relationships, not expired records.",
+      "Leads with a recorded reply, a live sequence or a journey are untouched. Those are relationships, not expired records.",
       "Client records are untouched. The period has a legal floor and is the broker's to set.",
       "Consent records are untouched. They outlive the relationship because they are what proves the contact was lawful.",
     );
@@ -289,6 +305,19 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
     const leadIds = [...new Set([...rows(byAssessment), ...rows(bySession)])];
 
     if (leadIds.length) {
+      /* Journeys FIRST. A journey refuses to let its lead be deleted
+         (origin_lead_id is RESTRICT, so a future transaction file is never
+         removed as a side effect), which is right for everything except a
+         person asking to be forgotten. Their journeys today hold a search
+         brief, invitations and a shortlist, no transaction record, so they
+         go too, and everything under them cascades from the journey. When
+         transaction records exist this is where the broker's hold rule
+         belongs (first-migration-proposal, "deletion compatibility"). */
+      const journeys = await boundedWrite(
+        db.from("rift_journeys").delete().eq("agent_id", agent_id).in("origin_lead_id", leadIds),
+        "their journeys");
+      if (!journeys.ok && !journeyTablesMissing(journeys.error)) return journeys;
+
       /* rift_enrolments cascades from the lead, so the sequence stops by
          construction rather than by remembering to stop it. */
       const gone = await boundedWrite(

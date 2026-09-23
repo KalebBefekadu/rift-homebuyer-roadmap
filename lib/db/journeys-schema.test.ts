@@ -1,0 +1,373 @@
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { Client } from "pg";
+
+/**
+ * Journeys, members, the search brief and the shortlist, against a real
+ * Postgres with the whole migration history applied.
+ *
+ * The acceptance list in docs/blueprint-v4/first-migration-proposal.md is the
+ * spine of this file, extended to the three migrations after it. Policies are
+ * exercised as a role that is NOT the table owner (the owner bypasses RLS,
+ * which is how a first version of lib/db/rls.test.ts passed while proving
+ * nothing).
+ */
+
+const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/rift_test";
+let db: Client | null = null;
+
+const A_USER = "a0000000-0000-4000-8000-0000000000aa";
+const B_USER = "b0000000-0000-4000-8000-0000000000bb";
+const CLIENT_USER = "c0000000-0000-4000-8000-0000000000cc";
+const A = "a2222222-0000-4000-8000-00000000000a";
+const B = "b2222222-0000-4000-8000-00000000000b";
+const A_LEAD = "a3333333-0000-4000-8000-00000000000a";
+const B_LEAD = "b3333333-0000-4000-8000-00000000000b";
+const J1 = "a4444444-0000-4000-8000-000000000001";
+const J2 = "a4444444-0000-4000-8000-000000000002";
+const HASH = "a".repeat(64);
+
+function riftMigrations(): string[] {
+  const dir = "supabase/migrations";
+  return readdirSync(dir).filter((f) => f.endsWith(".sql") && f.includes("_rift_")).sort().map((f) => `${dir}/${f}`);
+}
+
+beforeAll(async () => {
+  const c = new Client({ connectionString: URL_, connectionTimeoutMillis: 1500 });
+  try {
+    await c.connect();
+    await c.query("drop schema if exists public cascade; create schema public;");
+    await c.query(readFileSync("supabase/test/shim.sql", "utf8"));
+    for (const f of riftMigrations()) await c.query(readFileSync(f, "utf8"));
+    await c.query("insert into auth.users (id) values ($1),($2),($3) on conflict do nothing", [A_USER, B_USER, CLIENT_USER]);
+    await c.query(
+      "insert into rift_agents (id, auth_user_id, name, email) values ($1,$2,'Agent A','a@example.com'), ($3,$4,'Agent B','b@example.com')",
+      [A, A_USER, B, B_USER]);
+    await c.query(
+      "insert into rift_leads (id, agent_id, side, name, contact_basis) values ($1,$2,'buy','Devon','assessment'), ($3,$4,'buy','Other','assessment')",
+      [A_LEAD, A, B_LEAD, B]);
+    await c.query("do $$ begin if not exists (select 1 from pg_roles where rolname='rls_user') then execute 'create role rls_user nologin'; end if; end $$");
+    await c.query("grant usage on schema public to rls_user");
+    await c.query("grant select, insert, update, delete on all tables in schema public to rls_user");
+    db = c;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    db = null;
+    try { await c.end(); } catch { /* never connected */ }
+    if (!/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|timeout expired/i.test(msg)) {
+      throw new Error(`database setup failed (not a connection problem): ${msg}`);
+    }
+  }
+}, 60_000);
+
+afterAll(async () => { if (db) await db.end(); });
+
+const test = (name: string, fn: (c: Client) => Promise<void>) =>
+  it(name, async (ctx) => {
+    if (!db) return ctx.skip();
+    await fn(db);
+  });
+
+let inTx = false;
+
+/** Runs as a signed-in user who is not the table owner, then rolls back. */
+async function as<T>(c: Client, userId: string | null, fn: () => Promise<T>): Promise<T> {
+  await c.query("begin");
+  inTx = true;
+  await c.query("set local role rls_user");
+  if (userId) await c.query(`set local "request.jwt.claim.sub" = '${userId}'`);
+  try { return await fn(); } finally { await c.query("rollback"); inTx = false; }
+}
+
+/** A statement expected to fail, isolated so the failure does not poison what follows. */
+async function refused(c: Client, sql: string, params: unknown[], match: RegExp) {
+  await c.query(inTx ? "savepoint s" : "begin");
+  try {
+    await expect(c.query(sql, params as never[])).rejects.toThrow(match);
+  } finally {
+    await c.query(inTx ? "rollback to savepoint s" : "rollback");
+  }
+}
+
+describe("journeys (first-migration-proposal acceptance)", () => {
+  test("fixtures: two journeys on one relationship, both buying", async (c) => {
+    // 6. Two journeys for one relationship, including two on the same side, are permitted.
+    await c.query(
+      "insert into rift_journeys (id, agent_id, origin_lead_id, side, label) values ($1,$2,$3,'buy','First home'), ($4,$2,$3,'buy','Rental')",
+      [J1, A, A_LEAD, J2]);
+    const { rows } = await c.query("select count(*)::int n from rift_journeys where origin_lead_id = $1", [A_LEAD]);
+    expect(rows[0].n).toBe(2);
+  });
+
+  test("1. the agent reads their own journeys; another agent and a stranger read none", async (c) => {
+    expect((await as(c, A_USER, () => c.query("select id from rift_journeys"))).rowCount).toBe(2);
+    expect((await as(c, B_USER, () => c.query("select id from rift_journeys"))).rowCount).toBe(0);
+    expect((await as(c, null, () => c.query("select id from rift_journeys"))).rowCount).toBe(0);
+  });
+
+  test("2. B cannot insert a journey under A's agent id", async (c) => {
+    await as(c, B_USER, () => refused(c,
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'buy','x')",
+      [A, A_LEAD], /row-level security/));
+  });
+
+  test("3. A cannot attach a journey to B's relationship, even bypassing RLS (AT02)", async (c) => {
+    await refused(c,
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'buy','x')",
+      [A, B_LEAD], /rift_journeys_relationship_same_agent/);
+  });
+
+  test("4. a signed-in client with no agent row sees no journeys", async (c) => {
+    expect((await as(c, CLIENT_USER, () => c.query("select id from rift_journeys"))).rowCount).toBe(0);
+  });
+
+  test("7. empty, whitespace and oversized labels and unknown sides fail", async (c) => {
+    for (const label of ["", "   ", "x".repeat(161)]) {
+      await refused(c, "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'buy',$3)", [A, A_LEAD, label], /check/);
+    }
+    await refused(c, "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'rent','x')", [A, A_LEAD], /check/);
+  });
+
+  test("8. deleting a lead or agent that has a journey is refused, not cascaded", async (c) => {
+    await refused(c, "delete from rift_leads where id = $1", [A_LEAD], /rift_journeys_relationship_same_agent/);
+    await refused(c, "delete from rift_agents where id = $1", [A], /foreign key/);
+  });
+
+  test("AT03. updating one journey never changes the other", async (c) => {
+    await c.query("begin");
+    await c.query("update rift_journeys set label = 'Starter home' where id = $1", [J1]);
+    const { rows } = await c.query("select label from rift_journeys where id = $1", [J2]);
+    expect(rows[0].label).toBe("Rental");
+    await c.query("rollback");
+  });
+});
+
+describe("members", () => {
+  const M1 = "a5555555-0000-4000-8000-000000000001";
+  const M2 = "a5555555-0000-4000-8000-000000000002";
+
+  test("fixtures: an invitation and an accepted co-buyer", async (c) => {
+    await c.query(
+      `insert into rift_journey_members (id, agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
+       values ($1,$2,$3,'devon@example.com','buyer','{search,homes,money}',$4, now() + interval '14 days')`,
+      [M1, A, J1, HASH]);
+    await c.query(
+      `insert into rift_journey_members (id, agent_id, journey_id, email, role, scopes, auth_user_id, accepted_at)
+       values ($1,$2,$3,'sam@example.com','co-buyer','{search,homes}',$4, now())`,
+      [M2, A, J1, CLIENT_USER]);
+  });
+
+  test("a member must belong to the same agent as the journey", async (c) => {
+    await refused(c,
+      `insert into rift_journey_members (agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
+       values ($1,$2,'x@example.com','viewer','{search}',$3, now())`,
+      [B, J1, "b".repeat(64)], /rift_journey_members_journey_same_agent/);
+  });
+
+  test("one live row per address on a journey", async (c) => {
+    await refused(c,
+      `insert into rift_journey_members (agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
+       values ($1,$2,'devon@example.com','viewer','{search}',$3, now())`,
+      [A, J1, "c".repeat(64)], /one_live_email/);
+  });
+
+  test("addresses are stored lower-case, and scopes are from the list", async (c) => {
+    await refused(c,
+      `insert into rift_journey_members (agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
+       values ($1,$2,'Mixed@Example.com','viewer','{search}',$3, now())`,
+      [A, J1, "d".repeat(64)], /check/);
+    await refused(c,
+      `insert into rift_journey_members (agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
+       values ($1,$2,'e@example.com','viewer','{everything}',$3, now())`,
+      [A, J1, "e".repeat(64)], /check/);
+  });
+
+  test("a login is attached only by accepting, and an accepted link is spent", async (c) => {
+    await refused(c, "update rift_journey_members set auth_user_id = $1 where id = $2", [CLIENT_USER, M1], /user_means_accepted/);
+    await refused(c, "update rift_journey_members set accepted_at = now() where id = $1", [M1], /accepted_link_spent/);
+  });
+
+  test("a waiting invitation has a link and an expiry", async (c) => {
+    await refused(c, "update rift_journey_members set invite_token_hash = null where id = $1", [M1], /pending_has_link/);
+  });
+
+  test("another agent cannot read the invitations (AT02)", async (c) => {
+    expect((await as(c, B_USER, () => c.query("select id from rift_journey_members"))).rowCount).toBe(0);
+    expect((await as(c, CLIENT_USER, () => c.query("select id from rift_journey_members"))).rowCount).toBe(0);
+  });
+});
+
+describe("search revisions", () => {
+  const brief = JSON.stringify([{ id: "beds", field: "bedrooms", operator: "atLeast", value: 3, unit: "count", strength: "hard", statedBy: "Devon", statedAt: "2026-09-20", sourceRef: "call" }]);
+  const insert = (c: Client, rev: number, journey = J1, agent = A) => c.query(
+    `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+     values ($1,$2,$3,1,$4,'agent','Agent A') returning id`, [agent, journey, rev, brief]);
+
+  test("revisions are numbered in order with no gaps", async (c) => {
+    await insert(c, 1);
+    await refused(c,
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,3,1,$3,'agent','A')`, [A, J1, brief], /out of order/);
+    await refused(c,
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,1,1,$3,'agent','A')`, [A, J1, brief], /out of order|one_number/);
+  });
+
+  test("a revision is never edited (AT09)", async (c) => {
+    await refused(c, "update rift_search_revisions set criteria = '[]' where journey_id = $1", [J1], /cannot be edited/);
+  });
+
+  test("another journey keeps its own numbering", async (c) => {
+    const r = await insert(c, 1, J2);
+    expect(r.rowCount).toBe(1);
+  });
+
+  test("a revision cannot be written onto somebody else's journey", async (c) => {
+    await refused(c,
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,2,1,$3,'agent','B')`, [B, J1, brief], /journey_same_agent/);
+  });
+
+  test("a client revision names the member; an agent revision does not", async (c) => {
+    await refused(c,
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,2,1,$3,'client','Sam')`, [A, J1, brief], /rift_search_revisions_author/);
+  });
+
+  test("asking for changes has to say what", async (c) => {
+    const rev = await c.query("select id from rift_search_revisions where journey_id = $1 and revision = 1", [J1]);
+    await refused(c,
+      "insert into rift_search_responses (agent_id, journey_id, revision_id, member_id, response) values ($1,$2,$3,$4,'changes-requested')",
+      [A, J1, rev.rows[0].id, "a5555555-0000-4000-8000-000000000002"], /changes_say_why/);
+  });
+});
+
+describe("approval and activation (AT11, AT12, AT13)", () => {
+  const pkg = JSON.stringify({ destination: "matrix", filters: [] });
+  const brief = JSON.stringify([]);
+  let rev1 = "";
+
+  test("fixtures", async (c) => {
+    rev1 = (await c.query("select id from rift_search_revisions where journey_id = $1 and revision = 1", [J1])).rows[0].id;
+  });
+
+  const approve = (c: Client, revision: string, request: string, agent = A) => c.query(
+    "select rift_approve_search_package($1,$2,$3,'daily',$4,$5,'Agent A',$6) id",
+    [agent, J1, revision, pkg, HASH, request]);
+
+  test("approving is refused for somebody else's journey", async (c) => {
+    await refused(c, "select rift_approve_search_package($1,$2,$3,'daily',$4,$5,'B',$6)",
+      [B, J1, rev1, pkg, HASH, "b9999999-0000-4000-8000-000000000001"], /not in your book/);
+  });
+
+  test("the same approval request twice records one package", async (c) => {
+    const req = "a9999999-0000-4000-8000-000000000001";
+    const one = (await approve(c, rev1, req)).rows[0].id;
+    const two = (await approve(c, rev1, req)).rows[0].id;
+    expect(two).toBe(one);
+    const { rows } = await c.query("select status from rift_search_packages where journey_id = $1", [J1]);
+    expect(rows).toEqual([{ status: "manual-action-needed" }]);
+  });
+
+  test("an approved package is fixed", async (c) => {
+    await refused(c, "update rift_search_packages set cadence = 'weekly' where journey_id = $1", [J1], /cannot be changed/);
+  });
+
+  test("active means evidence: no reference, no active status (AT11)", async (c) => {
+    await refused(c, "update rift_search_packages set status = 'active-confirmed', confirmed_at = now() where journey_id = $1",
+      [J1], /confirmed_has_evidence/);
+  });
+
+  test("a newer revision makes the older approval unconfirmable (AT12)", async (c) => {
+    await c.query("begin");
+    await c.query(
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,2,1,$3,'agent','A')`, [A, J1, brief]);
+    const waiting = (await c.query("select id from rift_search_packages where journey_id = $1 and status = 'manual-action-needed'", [J1])).rows[0].id;
+    await expect(c.query("select rift_confirm_search_package($1,$2,'Devon 3bd',null,null,$3)",
+      [A, waiting, "a9999999-0000-4000-8000-0000000000c1"])).rejects.toThrow(/brief changed after you approved/);
+    await c.query("rollback");
+    // And approving the stale revision is refused too.
+    await c.query("begin");
+    await c.query(
+      `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
+       values ($1,$2,2,1,$3,'agent','A')`, [A, J1, brief]);
+    await expect(approve(c, rev1, "a9999999-0000-4000-8000-0000000000c2")).rejects.toThrow(/review the latest revision/);
+    await c.query("rollback");
+  });
+
+  test("recording the setup twice records it once, and a later setup supersedes it (AT13)", async (c) => {
+    const waiting = (await c.query("select id from rift_search_packages where journey_id = $1 and status = 'manual-action-needed'", [J1])).rows[0].id;
+    const req = "a9999999-0000-4000-8000-0000000000d1";
+    await c.query("select rift_confirm_search_package($1,$2,'Devon 3bd',null,null,$3)", [A, waiting, req]);
+    await c.query("select rift_confirm_search_package($1,$2,'Devon 3bd',null,null,$3)", [A, waiting, req]);
+    const active = await c.query("select id, status, external_ref from rift_search_packages where journey_id = $1 and status = 'active-confirmed'", [J1]);
+    expect(active.rows).toEqual([{ id: waiting, status: "active-confirmed", external_ref: "Devon 3bd" }]);
+
+    // A second round: new approval, new confirmation, the first one is superseded.
+    await approve(c, rev1, "a9999999-0000-4000-8000-0000000000d2");
+    const next = (await c.query("select id from rift_search_packages where journey_id = $1 and status = 'manual-action-needed'", [J1])).rows[0].id;
+    await c.query("select rift_confirm_search_package($1,$2,null,'https://matrix.example/s/1',null,$3)", [A, next, "a9999999-0000-4000-8000-0000000000d3"]);
+    const { rows } = await c.query("select id, status from rift_search_packages where journey_id = $1 order by approved_at", [J1]);
+    expect(rows.map((r) => r.status)).toEqual(["superseded", "active-confirmed"]);
+  });
+
+  test("a second waiting approval replaces the first rather than stacking", async (c) => {
+    await approve(c, rev1, "a9999999-0000-4000-8000-0000000000e1");
+    await approve(c, rev1, "a9999999-0000-4000-8000-0000000000e2");
+    const { rows } = await c.query("select count(*)::int n from rift_search_packages where journey_id = $1 and status = 'manual-action-needed'", [J1]);
+    expect(rows[0].n).toBe(1);
+  });
+
+  test("the commands are not callable by a signed-in user", async (c) => {
+    await as(c, A_USER, () => refused(c, "select rift_approve_search_package($1,$2,$3,'daily',$4,$5,'A',$6)",
+      [A, J1, rev1, pkg, HASH, "a9999999-0000-4000-8000-0000000000f1"], /permission denied/));
+  });
+});
+
+describe("shortlist and reactions (AT14)", () => {
+  const H = "a6666666-0000-4000-8000-000000000001";
+  test("fixtures", async (c) => {
+    await c.query(
+      `insert into rift_shortlist_homes (id, agent_id, journey_id, address, url, facts_source, facts_as_of, added_by_kind, added_by_label)
+       values ($1,$2,$3,'12 Oak St, Lilburn','https://example.com/1','Matrix listing','2026-09-21','agent','Agent A')`, [H, A, J1]);
+  });
+
+  test("two people's reactions to one home both stay", async (c) => {
+    await c.query(
+      `insert into rift_home_reactions (agent_id, journey_id, home_id, member_id, actor_label, reaction)
+       values ($1,$2,$3,'a5555555-0000-4000-8000-000000000002','Sam','pass'),
+              ($1,$2,$3,'a5555555-0000-4000-8000-000000000001','Devon','interested')`, [A, J1, H]);
+    const { rows } = await c.query("select actor_label, reaction from rift_home_reactions where home_id = $1 order by actor_label", [H]);
+    expect(rows).toEqual([{ actor_label: "Devon", reaction: "interested" }, { actor_label: "Sam", reaction: "pass" }]);
+  });
+
+  test("a reaction is history", async (c) => {
+    await refused(c, "update rift_home_reactions set reaction = 'maybe' where home_id = $1", [H], /is history/);
+  });
+
+  test("a link that could run is refused", async (c) => {
+    await refused(c,
+      `insert into rift_shortlist_homes (agent_id, journey_id, address, url, facts_source, facts_as_of, added_by_kind, added_by_label)
+       values ($1,$2,'1 Bad Rd','javascript:alert(1)','x','2026-09-21','agent','A')`, [A, J1], /check/);
+  });
+
+  test("a reaction cannot point at a home on another journey", async (c) => {
+    await refused(c,
+      `insert into rift_home_reactions (agent_id, journey_id, home_id, actor_label, reaction) values ($1,$2,$3,'A','maybe')`,
+      [A, J2, H], /home_on_journey/);
+  });
+});
+
+describe("deletion (first-migration-proposal §deletion compatibility)", () => {
+  test("removing the journeys first lets the relationship go, and takes everything under them", async (c) => {
+    await c.query("begin");
+    await c.query("delete from rift_journeys where origin_lead_id = $1 and agent_id = $2", [A_LEAD, A]);
+    await c.query("delete from rift_leads where id = $1", [A_LEAD]);
+    for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses"]) {
+      const { rows } = await c.query(`select count(*)::int n from ${t} where agent_id = $1`, [A]);
+      expect(rows[0].n, t).toBe(0);
+    }
+    await c.query("rollback");
+  });
+});

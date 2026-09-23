@@ -40,7 +40,7 @@ export function SignIn({ reason }: { reason?: string }) {
       <div className="row gap-2" style={{ marginBottom: 22 }}>
         <Mark size={20} />
         <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
-        <span className="chip chip-out t-2xs">Studio</span>
+        <span className="chip chip-out t-2xs">Operations</span>
       </div>
 
       {state === "sent" ? (

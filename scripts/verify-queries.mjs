@@ -261,6 +261,66 @@ await check("nurture stop check", () => db.from("rift_leads")
 await check("markReplied", () => db.from("rift_leads")
   .select("human_replied_at").eq("id", NIL).maybeSingle());
 
+/* Blueprint v4: journeys, members, the search brief, packages, shortlist. */
+
+await check("journeysFor / buyingJourneys", () => db.from("rift_journeys")
+  .select("id,origin_lead_id,side,label,created_at").eq("agent_id", NIL).eq("side", "buy")
+  .order("created_at", { ascending: false }).limit(5));
+
+await check("membersOf", () => db.from("rift_journey_members")
+  .select("id,email,display_name,role,scopes,invited_at,accepted_at,revoked_at,invite_expires_at")
+  .eq("journey_id", NIL).order("invited_at").limit(5));
+
+await check("memberOf (client gate)", () => db.from("rift_journey_members")
+  .select("id,journey_id,agent_id,role,scopes,display_name,email,accepted_at,revoked_at,invite_expires_at")
+  .eq("auth_user_id", NIL).eq("journey_id", NIL).is("revoked_at", null).maybeSingle());
+
+await check("invitationByToken", () => db.from("rift_journey_members")
+  .select("id,email,journey_id,agent_id,accepted_at,revoked_at,invite_expires_at")
+  .eq("invite_token_hash", "0".repeat(64)).maybeSingle());
+
+await check("search revisions", () => db.from("rift_search_revisions")
+  .select("id,revision,criteria,questions,note,author_kind,author_label,created_at")
+  .eq("journey_id", NIL).order("revision", { ascending: false }).limit(5));
+
+await check("search packages", () => db.from("rift_search_packages")
+  .select("id,revision_id,cadence,package,status,approved_at,approved_by,external_ref,external_url,confirmed_at,confirm_note,ended_at")
+  .eq("journey_id", NIL).order("approved_at", { ascending: false }).limit(5));
+
+await check("searchStatuses packages", () => db.from("rift_search_packages")
+  .select("journey_id,revision_id,status,package").in("journey_id", [NIL])
+  .in("status", ["manual-action-needed", "active-confirmed", "paused"]));
+
+await check("search responses", () => db.from("rift_search_responses")
+  .select("id,revision_id,member_id,response,note,created_at").eq("revision_id", NIL).order("created_at").limit(5));
+
+await check("shortlist homes", () => db.from("rift_shortlist_homes")
+  .select("id,address,url,facts,facts_source,facts_as_of,added_by_label,created_at,withdrawn_at,withdrawn_reason")
+  .eq("journey_id", NIL).order("created_at", { ascending: false }).limit(5));
+
+await check("home reactions", () => db.from("rift_home_reactions")
+  .select("home_id,member_id,actor_label,reaction,reason,created_at").eq("journey_id", NIL).order("created_at").limit(5));
+
+await check("readoutStart", () => db.from("rift_readouts")
+  .select("inputs,created_at,side").eq("assessment_id", NIL).eq("agent_id", NIL)
+  .order("created_at", { ascending: false }).limit(1).maybeSingle());
+
+await check("approve rpc exists (refuses a stranger)", async () => {
+  const r = await db.rpc("rift_approve_search_package", {
+    p_agent: NIL, p_journey: NIL, p_revision: NIL, p_cadence: "daily",
+    p_package: {}, p_hash: "0".repeat(64), p_by: "x", p_request: NIL,
+  });
+  /* The function must be FOUND; "not in your book" is the right refusal. */
+  return r.error && /not in your book/.test(r.error.message) ? { data: null, error: null } : r;
+});
+
+await check("confirm rpc exists (refuses a stranger)", async () => {
+  const r = await db.rpc("rift_confirm_search_package", {
+    p_agent: NIL, p_package: NIL, p_ref: "x", p_url: null, p_note: null, p_request: NIL,
+  });
+  return r.error && /not in your book/.test(r.error.message) ? { data: null, error: null } : r;
+});
+
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);
 }

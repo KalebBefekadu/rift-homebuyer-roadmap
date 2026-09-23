@@ -33,3 +33,8 @@ begin
     execute format('alter table %I disable row level security', t);
   end loop;
 end $$;
+
+-- The search commands (rift_approve_search_package and friends) revoke
+-- EXECUTE from public, so that only the server can call them. `anon` stands in
+-- for the service role here and needs it back.
+grant execute on all functions in schema public to anon;

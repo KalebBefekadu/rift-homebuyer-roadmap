@@ -24,7 +24,7 @@ export default function StudioError({ error, reset }: { error: Error & { digest?
     <main className="shell-w sec" style={{ maxWidth: 560 }}>
       <div className="row gap-2">
         <Ico.alert size={18} className="c-neg" />
-        <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Studio could not draw this.</h1>
+        <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Operations could not draw this.</h1>
       </div>
       <p className="t-sm c-3" style={{ marginTop: 12, lineHeight: 1.65 }}>
         Nothing is lost. This is a screen that failed to render, not data that failed to save.

@@ -3,7 +3,12 @@ import { Ico, Mark } from "@/components/rift/icons";
 import { signOut } from "./actions";
 
 /**
- * The bar across the top of every Studio screen.
+ * The bar across the top of every Operations screen.
+ *
+ * "Operations" is the name the blueprint v4 specification gives this surface
+ * (§2): the agent's view of what needs his judgement. The URLs stay /studio
+ * so nothing bookmarked or linked from an email breaks; renaming routes is a
+ * separate compatibility change.
  *
  * Extracted the moment there was a second screen to put it on. A header
  * duplicated is a header that drifts: the settings badge counting undecided
@@ -16,13 +21,14 @@ import { signOut } from "./actions";
 export function StudioHeader({ agentName, undecided = 0, current }: {
   agentName: string;
   undecided?: number;
-  current: "today" | "clients" | "calendar" | "offers" | "referrals" | "questions" | "settings" | "add";
+  current: "today" | "clients" | "search" | "calendar" | "offers" | "referrals" | "questions" | "settings" | "add";
 }) {
   const nav = [
     { key: "today", href: "/studio", label: "Today" },
-    { key: "clients", href: "/studio/clients", label: "People" },
-    { key: "calendar", href: "/studio/calendar", label: "What’s coming" },
-    { key: "offers", href: "/studio/offers", label: "Offers in" },
+    { key: "clients", href: "/studio/clients", label: "Relationships" },
+    { key: "search", href: "/studio/search", label: "Search" },
+    { key: "offers", href: "/studio/offers", label: "Offers" },
+    { key: "calendar", href: "/studio/calendar", label: "Calendar" },
     { key: "referrals", href: "/studio/referrals", label: "Advocacy" },
   ] as const;
 
@@ -34,9 +40,9 @@ export function StudioHeader({ agentName, undecided = 0, current }: {
             <Mark size={19} />
             <span className="mark-name hide-sm" style={{ fontSize: 18 }}>Rift</span>
           </Link>
-          <span className="chip chip-out t-2xs hide-sm">Studio</span>
+          <span className="chip chip-out t-2xs hide-sm">Operations</span>
 
-          <nav className="row gap-1" style={{ marginLeft: 6 }}>
+          <nav className="row gap-1" style={{ marginLeft: 6, overflowX: "auto", maxWidth: "calc(100vw - 260px)" }} aria-label="Operations">
             {nav.map((n) => (
               <Link key={n.key} href={n.href} className="row" style={{
                 height: 28, padding: "0 10px", borderRadius: 7, fontSize: 13,

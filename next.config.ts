@@ -43,8 +43,14 @@ const SECURITY_HEADERS = [
   },
 ];
 
-/** The pages whose URL is itself private information. */
-const PRIVATE_PAGES = ["/r/:token*", "/buy/results", "/sell/results", "/abroad/results", "/book"];
+/** The pages whose URL is itself private information. `/plan` and `/app` were
+ *  added with the blueprint v4 review (finding: "/plan/:token* is not in the
+ *  no-referrer list"): a plan link and an invitation link are both credentials,
+ *  and a buyer's signed-in pages name their journey in the path. */
+const PRIVATE_PAGES = [
+  "/r/:token*", "/buy/results", "/sell/results", "/abroad/results", "/book",
+  "/plan/:token*", "/app/:path*", "/app",
+];
 
 const nextConfig: NextConfig = {
   /* Stop naming the framework and its major version on every response. It

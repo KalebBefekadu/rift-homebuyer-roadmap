@@ -20,6 +20,11 @@ import { Plan } from "./Plan";
 import { Offers } from "./Offers";
 import { Take } from "./Take";
 import { roomFor } from "@/lib/db/offer-room";
+import { journeysFor } from "@/lib/db/journeys";
+import { searchStatuses } from "@/lib/db/search";
+import { STATUS_LABEL } from "@/lib/core/search";
+import { buyerSearchOn } from "@/lib/core/journey";
+import { Journeys, type JourneySummary } from "./Journeys";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -53,7 +58,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           The database did not answer. Nothing has been lost. This is a read, and the record is
           still there. It has been reported, and the error was: {read.error}
         </p>
-        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Studio</Link>
+        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Operations</Link>
       </main>
     );
   }
@@ -62,7 +67,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       <main className="shell-w" style={{ paddingTop: 60 }}>
         <h1 className="serif" style={{ fontSize: 26 }}>Not available yet.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10 }}>{read.reason}</p>
-        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Studio</Link>
+        <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Operations</Link>
       </main>
     );
   }
@@ -71,7 +76,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   /* Read after the record, not beside it. The record is what the agent came
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
-  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom] = await Promise.all([
+  const searchOn = buyerSearchOn(process.env);
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
@@ -79,6 +85,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     representationOf(id),
     decisionsFor(id),
     read.data.lead.side === "sell" ? roomFor(id) : Promise.resolve(null),
+    searchOn ? journeysFor(id) : Promise.resolve(null),
   ]);
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
@@ -97,10 +104,33 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      "no choice yet" over a seller who may well have chosen. */
   const room = offerRoom && offerRoom.ok && "data" in offerRoom ? offerRoom.data : null;
 
+  /* Journeys, with each buying journey's search status. A failed read says
+     so in the panel rather than rendering "none yet" over journeys that exist. */
+  const journeyList = journeyRead && journeyRead.ok && "data" in journeyRead ? journeyRead.data : [];
+  const statuses = journeyList.some((j) => j.side === "buy")
+    ? await searchStatuses(journeyList.filter((j) => j.side === "buy").map((j) => j.id))
+    : null;
+  const statusMap = statuses && statuses.ok && "data" in statuses ? statuses.data : null;
+  const journeySummaries: JourneySummary[] = journeyList.map((j) => ({
+    id: j.id, side: j.side, label: j.label, createdAt: j.createdAt,
+    statusLabel: j.side === "buy" && statusMap?.get(j.id) ? `Search: ${STATUS_LABEL[statusMap.get(j.id)!.status]}` : null,
+  }));
+  const journeysUnavailable = !searchOn
+    ? "Journeys are switched off on this deployment."
+    : journeyRead && !journeyRead.ok
+      ? `Journeys did not load (${journeyRead.error}). That is not the same as having none.`
+      : journeyRead && "skipped" in journeyRead ? journeyRead.reason : null;
+
   return (
     <>
       <ClientRecord lead={read.data.lead} notes={read.data.notes} />
       <div className="shell-w" style={{ paddingBottom: 40 }}>
+        <Journeys
+          leadId={id}
+          side={read.data.lead.side}
+          journeys={journeySummaries}
+          unavailable={journeysUnavailable}
+        />
         <Plan
           leadId={id}
           items={items}

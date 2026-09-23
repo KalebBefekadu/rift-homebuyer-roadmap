@@ -62,6 +62,8 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     "/abroad/results": "a readout is public by design; that is the product",
     "/book": "public by design",
     "/studio": "behind Supabase auth: app/(studio)/studio/page.tsx",
+    "/plan/": "the token IS the credential: app/(rift)/plan/[token]/page.tsx",
+    "/app": "behind Supabase auth AND a journey membership: lib/db/client.ts memberOf",
   };
 
   for (const path of disallow) {

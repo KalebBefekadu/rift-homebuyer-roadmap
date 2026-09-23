@@ -59,7 +59,7 @@ export default async function QuestionsPage({
           <Link href="/studio" className="row gap-2">
             <Mark size={19} />
             <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-            <span className="chip chip-out t-2xs">Studio</span>
+            <span className="chip chip-out t-2xs">Operations</span>
           </Link>
           <Link href="/studio" className="t-sm c-3">← Today</Link>
         </div>
