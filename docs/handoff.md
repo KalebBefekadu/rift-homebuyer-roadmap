@@ -437,15 +437,15 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | D04 | Accepted | Rift sends nothing. Invitation links are copied and sent by the agent; the only emails are Supabase sign-in links a buyer asks for |
 | Review note on `/plan` referrers | Accepted | `/plan/:token*` and `/app` now send no referrer and are disallowed in robots |
 | Operations naming (spec §2) | Accepted | The agent surface is labelled Operations; `/studio` URLs are unchanged |
-| D05 | Parked | No import or backfill. Journeys are started by hand per client |
-| D06, F13, F14 | Parked | No tours (W06), offer or document pipeline (W08), deadlines (W09). The existing representation gate is unchanged |
-| D07, F17 | Parked | No new notifications, reminders or service promises |
-| D08 | Parked | The old traffic gate is neither declared met nor superseded here |
-| D09 | Parked | Exception handling for unusual transactions waits with W08 and W09 |
-| D11, F08, F09 | Parked | Money contract v2 (W10) not started; "cash to close" and the existing engine are unchanged |
-| D12, F15 | Parked | Advocacy automation not expanded |
+| D05 | Decided 23 Sep | No import. Rift is not in use with real clients yet, so each client is added by hand when they start |
+| D06, F13, F14 | Decided 23 Sep | Today's protections stay exactly as they are. Kaleb gets the broker's written rules (representation, offer presentation, forms, record holds, advertising consent, funds instructions) before W08 starts; nothing that depends on them is built until then |
+| D07, F17 | Decided 23 Sep | Conservative pilot: business hours only, replies the same business day, one daily summary to the agent instead of instant alerts, 3 to 5 buyers, at most $50 a month on AI and integrations. Nothing promised to clients beyond that |
+| D08 | Decided 23 Sep | The old traffic gate is set aside for the buyer journey. Seller expansion (W13) stays behind it until the buyer pilot shows results |
+| D09 | Decided 23 Sep | First release: Georgia residential resale, financed and cash, several buyers on one deal, contracts that fall through and restart, signing done elsewhere. New construction, probate or estate, trusts and short sales are flagged as manual exceptions. To confirm with the broker alongside D06 |
+| D11, F08, F09 | Decided 23 Sep | The specification's ledger and labels are adopted. W10 is built after the buyer pilot starts, keeping every saved readout exactly as it was; the current engine stays until then |
+| D12, F15 | Decided 23 Sep | Review requests stop depending on how the client felt: everyone who closes gets the same neutral request, and an unhappy client gets a separate follow-up that never decides whether they are asked (Google forbids review gating) |
 | F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
-| W07, W11 to W13 | Not started | Depend on the parked decisions above |
+| W07, W11 to W13 | Not started | W07 and W11 can start; W08 and W09 wait for the broker's rules (D06); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
