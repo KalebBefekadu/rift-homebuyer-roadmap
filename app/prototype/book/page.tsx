@@ -58,7 +58,7 @@ function Book() {
             {chosen?.d} the {chosen?.n}th, {slot}.
           </h1>
           <p className="t-md c-2" style={{ marginTop: 12, lineHeight: 1.65 }}>
-            Fifteen minutes. Kaleb calls you — you don&apos;t have to be anywhere. A calendar
+            Fifteen minutes. Kaleb calls you; you don&apos;t have to be anywhere. A calendar
             invite is on its way, and it has a cancel link in it that works right up until the
             minute before.
           </p>
@@ -111,7 +111,7 @@ function Book() {
                     }}>
                     <span className="t-2xs">{d.d}</span>
                     <span className="num" style={{ fontSize: 17 }}>{d.n}</span>
-                    <span className="t-2xs" style={{ opacity: 0.7 }}>{d.slots.length || "—"}</span>
+                    <span className="t-2xs" style={{ opacity: 0.7 }}>{d.slots.length || "0"}</span>
                   </button>
                 ))}
               </div>
@@ -179,7 +179,7 @@ function Book() {
                   </button>
                   <p className="t-xs c-4" style={{ marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>
                     {phone && !consent
-                      ? "Tick the box above, or switch back to email — either works."
+                      ? "Tick the box above, or switch back to email. Either works."
                       : "Cancel any time from the invite. No card, no agreement, no obligation."}
                   </p>
                 </div>

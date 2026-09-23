@@ -2,7 +2,7 @@
 -- The next thing you owe them, and when.
 --
 -- The board says who has gone quiet. It cannot say what you decided to do about
--- it, so the decision lives in the agent's head between sessions — which is
+-- it, so the decision lives in the agent's head between sessions, which is
 -- exactly where it gets lost. "Call Marcus Thursday" is the smallest unit of
 -- account management and there was nowhere to put it.
 --

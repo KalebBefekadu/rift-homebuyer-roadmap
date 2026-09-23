@@ -170,7 +170,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
               <div className="card p-4" style={{ marginTop: 10, background: "var(--sunk)" }}>
                 <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
                   Nothing recorded yet. The first note is usually everything you already know
-                  about them — it is worth two minutes now and unrecoverable later.
+                  about them. It is worth two minutes now and unrecoverable later.
                 </p>
               </div>
             ) : (
@@ -214,7 +214,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
             ) : (
               <>
                 <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-                  Nothing scheduled. One thing at a time — a queue of six things owed to the same
+                  Nothing scheduled. One thing at a time: a queue of six things owed to the same
                   person is a queue nobody works.
                 </p>
                 <input

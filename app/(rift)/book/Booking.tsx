@@ -14,7 +14,7 @@ import { sessionId } from "@/lib/rift/session";
  * Three things this screen does that a generic "book a call" form does not,
  * each of which came out of the specification rather than taste:
  *
- *   1. It names what the call is ABOUT — the computed blocker, carried in the
+ *   1. It names what the call is ABOUT: the computed blocker, carried in the
  *      URL from the readout. A generic slot asks somebody to decide what to
  *      talk about, which is work, and work at the moment of conversion.
  *   2. It says what the call is NOT. The objection that stops most people is
@@ -37,8 +37,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   /* Three visitors reach this page, and two of them arrived without a readout.
      Sending them "back" to one they never had is a link to a stranger's page. */
   const abroad = v === "abroad";
-  /* Carried from the Amharic pages. The form stays English — see the note on
-     book.band.* in lib/core/i18n.ts — but arriving from an Amharic page and
+  /* Carried from the Amharic pages. The form stays English: see the note on
+     book.band.* in lib/core/i18n.ts, but arriving from an Amharic page and
      being handed English with no explanation reads as the product giving up
      on you at the last step. */
   const langParam = q.get("lang");
@@ -114,12 +114,12 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             <Ico.checkCircle size={18} className="c-pos" />
             <span className="t-md w6">
               {live
-                ? `Held — ${slots.find((s) => s.start === slot)?.label ?? "your slot"}.`
+                ? `Held: ${slots.find((s) => s.start === slot)?.label ?? "your slot"}.`
                 : "Got it."}
             </span>
           </div>
           <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            Kaleb confirms by {email ? "email" : "phone"} — usually within a few hours, and
+            Kaleb confirms by {email ? "email" : "phone"}, usually within a few hours, and
             always the same day. If it stops working, say so and it moves; there is nothing to
             cancel and no deposit.
           </p>
@@ -155,7 +155,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
         {abroad ? (
           <p className="t-sm c-3" style={{ marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
             Times below are Atlanta time (Eastern). Tell us your city and Kaleb will work
-            around it — he speaks English and Amharic.
+            around it. He speaks English and Amharic.
           </p>
         ) : null}
         <p className="lede" style={{ marginTop: 14, maxWidth: 560 }}>
@@ -203,14 +203,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
                   className="input"
                   rows={2}
                   style={{ marginTop: 6, resize: "vertical" }}
-                  placeholder="Evenings after 6, or weekends — whatever works"
+                  placeholder="Evenings after 6, or weekends, whatever works"
                   value={slot}
                   onChange={(e) => setSlot(e.target.value)}
                 />
                 <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
                   {source === "error"
                     ? "The calendar is not responding, so we are not going to show you times that might not exist. Tell us roughly when suits and Kaleb comes back with a slot."
-                    : "Live booking is not switched on yet. Tell us roughly when suits and Kaleb comes back with a time — usually the same day."}
+                    : "Live booking is not switched on yet. Tell us roughly when suits and Kaleb comes back with a time, usually the same day."}
                 </p>
               </>
             )}
@@ -228,12 +228,12 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           </label>
 
           <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Phone <span className="c-4 w5">— optional</span></span>
+            <span className="label">Phone <span className="c-4 w5">(optional)</span></span>
             <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(404) 555-0100" />
           </label>
 
           {/* The gate. Unticked, specific, separate, and it blocks the button.
-              Only shown when there is a number for it to govern — an unticked
+              Only shown when there is a number for it to govern: an unticked
               box next to an empty field is noise that teaches people to ignore
               the box that matters. */}
           {phone ? (

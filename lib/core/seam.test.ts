@@ -6,7 +6,7 @@ import type { TrustState } from "./review";
  * The moment a stranger becomes a client.
  *
  * This module is the only place where two systems hold an opinion about the
- * same number — the readout somebody was given for free, and the plan they are
+ * same number: the readout somebody was given for free, and the plan they are
  * given after they sign. The product's whole claim is that those two agree, or
  * that the disagreement is said out loud. Nothing tested it.
  */
@@ -63,7 +63,7 @@ describe("a figure that was below zero to begin with", () => {
   it("reads positive when the client's position improves", () => {
     /* $113,575 short, improved to $50,000 short. Dividing by the signed
        baseline gave -56%, rendered with its sign beside a cause explaining the
-       improvement — the client's screen said their position more than halved
+       improvement: the client's screen said their position more than halved
        for the worse. */
     const d = drift("Net proceeds", -113_575, -50_000, "Payoff statement came in lower than the estimate.");
     expect(d.deltaPct).toBeGreaterThan(0);
@@ -146,7 +146,7 @@ describe("what must be true before a plan goes out", () => {
 
   it("says nothing about the figures when there are none", () => {
     /* `[].every()` is true, so an empty plan asserted that every figure in it
-       was preliminary — a claim about an empty set, on the first screen of a
+       was preliminary: a claim about an empty set, on the first screen of a
        new relationship. */
     expect(canPublish({ ...ok, trustStates: [] }).warns).toEqual([]);
   });

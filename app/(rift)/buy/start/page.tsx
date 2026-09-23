@@ -13,7 +13,7 @@ export const metadata: Metadata = {
  *
  * This page renders the same thing for everybody: the funnel definition. The
  * only per-visitor part is `Assessment`, a client component that reads the
- * URL in the browser — nothing about the server render varies by who is
+ * URL in the browser: nothing about the server render varies by who is
  * asking. It was `force-dynamic` anyway, which cost every visitor a full
  * render on the one page where the product first asks for something: about
  * 1.7 seconds to first byte, against 0.19 for the landing page they arrived

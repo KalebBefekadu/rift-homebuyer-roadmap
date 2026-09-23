@@ -18,7 +18,7 @@ import { firstRefFor, resolveReferrer } from "./attribution";
  *
  * THE SCORE'S ARITHMETIC IS STORED, not just its total. An agent who cannot see
  * why a lead ranks where it does stops trusting the ranking inside a week, and
- * a ranking nobody trusts is worse than none — it still costs attention.
+ * a ranking nobody trusts is worse than none: it still costs attention.
  *
  * CONSENT STORES ITS OWN WORDING. Not a reference to a version, the actual
  * text. Wording changes; what somebody agreed to does not, and the only reason
@@ -27,7 +27,7 @@ import { firstRefFor, resolveReferrer } from "./attribution";
 
 export interface CaptureInput {
   /**
-   * Null when the lead did not come from an assessment — somebody asking for
+   * Null when the lead did not come from an assessment: somebody asking for
    * a readout they were sent, or booking straight from the landing page. An
    * empty string here used to reach Postgres as an invalid uuid and fail the
    * whole capture, losing the lead at the single most valuable moment in the
@@ -38,7 +38,7 @@ export interface CaptureInput {
    * The browser session this capture came from.
    *
    * Carried so that "delete all of it" can find this row. Erasure is keyed on
-   * the session — it is the only handle an anonymous visitor has — and for a
+   * the session (it is the only handle an anonymous visitor has) and for a
    * lead with no assessment behind it there was previously nothing at all
    * joining the two. See the note on `forget` in lib/db/retention.ts.
    */
@@ -61,7 +61,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
   const score = scoreLead(input.lead);
 
   const db = serviceClient();
-  if (!db) return skipped("no database configured — the lead was scored but not stored");
+  if (!db) return skipped("no database configured; the lead was scored but not stored");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
@@ -92,7 +92,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
 
     /* Bounded: the visitor is watching a button spin. A capture that cannot
        finish in six seconds will not finish, and telling them so is better
-       than holding the page — the readout they came for is already theirs. */
+       than holding the page: the readout they came for is already theirs. */
     const send = (body: Record<string, unknown>) =>
       withTimeout(
         Promise.resolve(db.from("rift_leads").insert(body).select("id").single()),
@@ -105,7 +105,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
 
     /* `session_id` arrived with 20260920020000, and migrations here are run by
        hand against production. Deploying this file before that SQL would make
-       PostgREST reject every insert on an unknown column — turning a fix to
+       PostgREST reject every insert on an unknown column: turning a fix to
        the delete button into a total outage of lead capture, which is the one
        write in this product that cannot be retried later because the person
        has closed the tab.
@@ -130,8 +130,8 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
 
        This is the write that did not exist. `referred_by` was added with the
        referral moments migration, read in three places and set by nothing, so
-       "advocacy share of pipeline" — the first of the three metrics
-       docs/vision.md names as mattering most, targeting 30% by month 12 —
+       "advocacy share of pipeline": the first of the three metrics
+       docs/vision.md names as mattering most, targeting 30% by month 12:
        could not become non-zero by any path through the product.
 
        AFTER the lead is stored, never before, and its failure is reported
@@ -175,7 +175,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       });
     }
     if (input.phone && input.phoneConsent) {
-      /* Recorded whether granted or refused. A refusal is evidence too — it is
+      /* Recorded whether granted or refused. A refusal is evidence too: it is
          what proves the number was never called. */
       consents.push({
         agent_id, assessment_id: input.assessmentId || null,
@@ -203,7 +203,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
     /* Enrolled the moment they are captured. A lead that is scored, stored and
        then never followed up is the failure this whole cadence exists to
        prevent, and leaving enrolment to a separate step means it is the step
-       that gets forgotten. Failure to enrol does not fail the capture — the
+       that gets forgotten. Failure to enrol does not fail the capture: the
        relationship is more important than the sequence. */
     const enrolled = await enrol(data.id as string, score.band, Boolean(phone));
     if (!enrolled.ok) {
@@ -220,7 +220,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
  * The score as it stands now, not as it stood at capture.
  *
  * Recency is one of the six signals and it decays. Recomputing on read is what
- * keeps "call today" meaning today — and `capturedScore` is kept beside it,
+ * keeps "call today" meaning today: and `capturedScore` is kept beside it,
  * because the gap between what a lead was worth on arrival and what it is
  * worth now is exactly the thing an agent should be able to see.
  *
@@ -272,7 +272,7 @@ export interface RankedLead {
    * "Who to call" without "what about" is half a tool: the agent opens the
    * phone and then has to go and find the numbers the person is holding. These
    * come from the readout snapshot, so what the agent reads is exactly what is
-   * on the other person's screen — not a fresh computation that has since
+   * on the other person's screen: not a fresh computation that has since
    * moved and would have them talking past each other.
    */
   figures: Record<string, string | number> | null;
@@ -313,14 +313,14 @@ export async function markReplied(
       "the reply",
     );
     if (!marked.ok) return marked;
-    /* boundedWrite never skips — a skip means the product chose not to act, and
-       this one always acts or fails — but the DbResult union includes it. */
+    /* boundedWrite never skips: a skip means the product chose not to act, and
+       this one always acts or fails, but the DbResult union includes it. */
     const data = "data" in marked ? marked.data : null;
 
     if (data?.human_replied_at) return done({ repliedAt: data.human_replied_at as string });
 
     /* Already recorded. Report the original rather than pretending nothing
-       happened — the caller wants to know when, not whether it just changed. */
+       happened: the caller wants to know when, not whether it just changed. */
     const { data: existing } = await db
       .from("rift_leads").select("human_replied_at")
       .eq("id", leadId).eq("agent_id", agentId).maybeSingle();
@@ -344,8 +344,8 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       .from("rift_leads")
       .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
-      /* Inbound only. "Who to call" answers one question — who volunteered
-         their details and has not been answered yet — and a person the agent
+      /* Inbound only. "Who to call" answers one question: who volunteered
+         their details and has not been answered yet, and a person the agent
          typed in himself has, by definition, already been spoken to. Showing
          them here put an existing client under a speed-to-lead countdown with
          an "I have replied" button, in a list whose whole claim is that

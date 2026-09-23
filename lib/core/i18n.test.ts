@@ -40,7 +40,7 @@ describe("two languages", () => {
  * Every Amharic string here is a non-native first pass and is listed as
  * unreviewed, which is honest. Two of them are in a different category: the
  * English was corrected because it claimed the rent figure came from county
- * averages — it does not, and never did — and the Amharic still says so.
+ * averages (it does not, and never did) and the Amharic still says so.
  *
  * Until they are retranslated an Amharic reader is told something about
  * provenance that the product knows to be false, on the one funnel written
@@ -48,7 +48,7 @@ describe("two languages", () => {
  */
 describe("Amharic strings that are now wrong rather than merely unreviewed", () => {
   it("names them, so they are owed rather than forgotten", () => {
-    expect(WRONG_IN_AM.length, "if this list is empty, the two disclosures were retranslated — good")
+    expect(WRONG_IN_AM.length, "if this list is empty, the two disclosures were retranslated, which is good")
       .toBeGreaterThanOrEqual(0);
     for (const key of WRONG_IN_AM) {
       expect(KEYS, `${key} is not a real key`).toContain(key);
@@ -63,7 +63,7 @@ describe("Amharic strings that are now wrong rather than merely unreviewed", () 
 
   it("keeps the English of those keys free of the claim that was corrected", () => {
     /* The reason they are on the list. If somebody puts the English back, the
-       keys should come off it — and this fails first so they notice. */
+       keys should come off it, and this fails first so they notice. */
     const en = dictFor("en") as Record<string, string>;
     for (const key of WRONG_IN_AM) {
       expect(en[key], `${key}'s English has gone back to claiming a source it does not have`)

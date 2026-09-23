@@ -2,13 +2,13 @@
  * Every email this product sends, as a pure function from facts to markup.
  *
  * These lived beside the Brevo client in `lib/db/email.ts`, which is
- * `server-only` — so none of them could be imported by a test, and
+ * `server-only`: so none of them could be imported by a test, and
  * `lib/core/email.test.ts` had resorted to re-implementing `escapeHtml` and
  * asserting against its own copy. That is a test of the test.
  *
  * It is not a hypothetical cost. The seller's readout email was addressed
- * "Buying in DeKalb County takes $0 at the table" — buyer copy, with a zero
- * where the figure should be — because the capture route sent `netProceeds`
+ * "Buying in DeKalb County takes $0 at the table": buyer copy, with a zero
+ * where the figure should be: because the capture route sent `netProceeds`
  * and this file only ever read `cashToClose`. Nothing failed, nothing was
  * typed wrong, and no test could have reached it. Email has never been
  * switched on in production, so nobody received it; it was armed and waiting
@@ -48,9 +48,9 @@ export interface ReadoutEmail {
  * Returns null when the figure this email is *about* is missing, the same rule
  * `buildTouch` already applied and for the same reason: there is no version of
  * this message worth sending with a zero in it. `buildTouch`'s own comment
- * calls that failure "the most damaging possible way" to break trust — "by
+ * calls that failure "the most damaging possible way" to break trust: "by
  * proving nobody is paying attention, to somebody deciding whether to trust us
- * with their finances" — and this function was doing exactly that to every
+ * with their finances": and this function was doing exactly that to every
  * seller, because it read a field the caller never sent.
  */
 export function buildReadout(r: ReadoutEmail): { subject: string; html: string } | null {
@@ -68,13 +68,13 @@ export function buildReadout(r: ReadoutEmail): { subject: string; html: string }
        inbox where it cannot be corrected. */
     if (r.net < 0) {
       subject = `Your numbers: ${money(Math.abs(r.net))} short of your payoff`;
-      lead = `A ${money(r.price)} sale in ${where} does not cover what you owe — you would need
+      lead = `A ${money(r.price)} sale in ${where} does not cover what you owe: you would need
     to bring about <strong>${money(Math.abs(r.net))}</strong> to the closing table. That is a
     conversation with your lender, and it is better had early.`;
     } else {
       subject = `Your numbers: ${money(r.net)} from a sale in ${r.county} County`;
       lead = `Selling in ${where} leaves you about <strong>${money(r.net)}</strong> after the
-    payoff and the cost of selling — not the ${money(r.price)} list price most people plan
+    payoff and the cost of selling, not the ${money(r.price)} list price most people plan
     against.`;
     }
   } else {
@@ -88,7 +88,7 @@ export function buildReadout(r: ReadoutEmail): { subject: string; html: string }
 
     subject = `Your numbers: ${money(r.cashToClose)} to close in ${r.county} County`;
     lead = `Buying in ${where} takes <strong>${money(r.cashToClose)}</strong> at the
-    table — not the down payment figure most people are quoted. ${gapLine}`;
+    table, not the down payment figure most people are quoted. ${gapLine}`;
   }
 
   const html = `
@@ -98,7 +98,7 @@ export function buildReadout(r: ReadoutEmail): { subject: string; html: string }
     ${lead}
   </p>
   <p style="font-size:15px">
-    <a href="${r.shareUrl}" style="color:#e8442a">Your full readout is here</a> — every line of
+    <a href="${r.shareUrl}" style="color:#e8442a">Your full readout is here</a>. Every line of
     that figure${r.side === "buy" ? ", the Georgia programs you may qualify for, and what to ask a lender" : ", what it is worth fixing first, and what you may be able to claim"}.
   </p>
   <p style="font-size:13px;color:#666">
@@ -132,7 +132,7 @@ export interface NewLeadEmail {
   county?: string;
   /** Purchase price or estimated sale price. */
   value: number;
-  /** Where they came from — "abroad" means a different conversation entirely. */
+  /** Where they came from: "abroad" means a different conversation entirely. */
   source: string;
   /** Straight to this person in Studio. */
   studioUrl: string;
@@ -152,7 +152,7 @@ const REPLY_WITHIN: Record<Band, string> = {
  * "Somebody just finished a readout."
  *
  * Nothing told the agent a lead had arrived. Studio ranked them, timed the
- * SLA against them and showed the cadence they were owed — all of which
+ * SLA against them and showed the cadence they were owed: all of which
  * required him to already be looking at the screen. A stranger who handed
  * over their savings balance and their timeline at eleven at night sat
  * invisible until he next opened a browser, while a `now` band lead has a
@@ -183,7 +183,7 @@ export function buildNewLead(l: NewLeadEmail): { subject: string; html: string }
      the two words in the subject line. */
   const abroad = l.source === "abroad";
 
-  const subject = `${BAND_LABEL[l.band]}: ${who}, ${doing}${where}${abroad ? " — from abroad" : ""}`;
+  const subject = `${BAND_LABEL[l.band]}: ${who}, ${doing}${where}${abroad ? ", from abroad" : ""}`;
 
   const top = l.signals
     .slice()
@@ -204,14 +204,14 @@ export function buildNewLead(l: NewLeadEmail): { subject: string; html: string }
   <table style="border-collapse:collapse;width:100%">
     ${row("Who", who)}
     ${reachable.map(([label, value]) => row(label, escapeHtml(value))).join("")}
-    ${row("Doing", `${doing}${where}${abroad ? " — buying from outside the U.S." : ""}`)}
+    ${row("Doing", `${doing}${where}${abroad ? ", buying from outside the U.S." : ""}`)}
     ${l.value > 0 ? row(l.side === "buy" ? "Target price" : "Sale price", money(l.value)) : ""}
     ${l.timing ? row("Their timing", `&ldquo;${escapeHtml(l.timing)}&rdquo;`) : ""}
   </table>
 
   ${top.length ? `<p style="font-size:13px;color:#666;margin:16px 0 6px">What moved the ranking</p>
   <ul style="font-size:13px;color:#444;margin:0;padding-left:18px">
-    ${top.map((s) => `<li>${escapeHtml(s.label)} — ${escapeHtml(s.note)}</li>`).join("")}
+    ${top.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.note)}</li>`).join("")}
   </ul>` : ""}
 
   <p style="font-size:15px;margin:18px 0">
@@ -263,7 +263,7 @@ export function buildOfferChosen(c: OfferChosenEmail): { subject: string; html: 
   const subject = `${c.seller} chose the offer from ${c.from}`;
 
   const netLine = c.net === null
-    ? "No net was shown to them — their payoff is not recorded."
+    ? "No net was shown to them; their payoff is not recorded."
     : `About ${money(c.net)} to them after costs${c.bestNet === true ? ", the best net of the " + c.of : c.bestNet === false ? ", not the best net of the " + c.of : ""}.`;
 
   const html = `
@@ -296,7 +296,7 @@ export interface TouchEmail {
  * One step of the cadence.
  *
  * Each touch sends its OWN content. The runner previously sent the same readout
- * email for every step, with zeroes in place of the person's figures — so a
+ * email for every step, with zeroes in place of the person's figures, so a
  * five-step sequence was five identical messages saying "Buying in your County
  * takes $0 at the table". That breaks the cadence's first and most important
  * rule, that every touch carries something new, and it does it in the most
@@ -321,7 +321,7 @@ export function buildTouch(t: TouchEmail): { subject: string; html: string } | n
     Your readout still says <strong>${money(cash)}</strong> at the table in ${where}${
       gap > 0 ? `, with <strong>${money(gap)}</strong> still to find` : ", and your savings already cover it"
     }.
-    <a href="${t.shareUrl}" style="color:#e8442a">Open it here</a> — it is kept up to date and it stays yours.
+    <a href="${t.shareUrl}" style="color:#e8442a">Open it here</a>. It is kept up to date and it stays yours.
   </p>
   <p style="font-size:13px;color:#666">
     Every figure is a planning estimate, not a lending commitment or approval. Nothing here
@@ -329,7 +329,7 @@ export function buildTouch(t: TouchEmail): { subject: string; html: string } | n
   </p>
   <p style="font-size:12px;color:#888">
     You asked for your readout at Rift. We do not run a newsletter and we do not sell anything
-    on. <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a> — one click, and it stops
+    on. <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a>: one click, and it stops
     everything.
   </p>
 </div>`.trim();
@@ -352,15 +352,15 @@ export interface ResumeEmail {
 /**
  * Recovery, for somebody who started and stopped.
  *
- * A separate email because these people have NO readout — that is the whole
- * reason they are in this sequence — so the ordinary touch, which leads with
+ * A separate email because these people have NO readout: that is the whole
+ * reason they are in this sequence, so the ordinary touch, which leads with
  * their figures, refuses to send and would silently never reach the largest
  * population in the funnel.
  *
  * Recovery, not pursuit. It carries how far they got and a link back, says
  * nothing about what they might be missing, and the closing touch says outright
  * that it is the last one. A list you cannot stop sending to is not a list, it
- * is a liability — and saying so is the only version of this email that earns
+ * is a liability, and saying so is the only version of this email that earns
  * being sent at all.
  */
 export function buildResume(r: ResumeEmail): { subject: string; html: string } {
@@ -372,8 +372,8 @@ export function buildResume(r: ResumeEmail): { subject: string; html: string } {
   <p style="font-size:15px">${escapeHtml(r.body)}</p>
   <p style="font-size:15px">
     You got through ${progress}.
-    <a href="${r.resumeUrl}" style="color:#e8442a">Pick it up where you stopped</a> — about two
-    minutes from here — or don't. Either is fine.
+    <a href="${r.resumeUrl}" style="color:#e8442a">Pick it up where you stopped</a>, about two
+    minutes from here, or don't. Either is fine.
   </p>
   ${r.last ? `<p style="font-size:15px">
     This is the last email we will send about it. If it becomes useful later, the questions are
@@ -382,7 +382,7 @@ export function buildResume(r: ResumeEmail): { subject: string; html: string } {
   <p style="font-size:12px;color:#888">
     You started an assessment at Rift and gave us this address for it. We do not run a
     newsletter and we do not sell anything on.
-    <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a> — one click, and it stops
+    <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a>: one click, and it stops
     everything.
   </p>
 </div>`.trim();

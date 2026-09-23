@@ -80,7 +80,7 @@ export function Q({ topic, q, why, children }: { topic: string; q: string; why?:
 }
 
 /**
- * Picking an option moves you on. The short delay is deliberate — the tick has
+ * Picking an option moves you on. The short delay is deliberate: the tick has
  * to land before the screen changes, or it reads as a glitch rather than an
  * answer. Continue stays available for anyone using a keyboard.
  */
@@ -121,7 +121,7 @@ export function Choices({ opts, value, onPick, advance, name, label }: {
 }
 
 /**
- * A slider alone is a poor mobile input — the thumb is small, the hand covers
+ * A slider alone is a poor mobile input: the thumb is small, the hand covers
  * the value, and a miss costs a whole step. So the value gets a stepper either
  * side of it: coarse dragging for exploration, taps for the last adjustment.
  */
@@ -149,7 +149,7 @@ export function Slider({
             <Ico.minus size={14} />
           </button>
           <span className="num" style={{ fontSize: 26, minWidth: 118, textAlign: "center" }}>
-            {value ? fmt(value) : "—"}
+            {value ? fmt(value) : "Not set"}
           </span>
           <button className="btn btn-s step" onClick={() => nudge(1)} disabled={value >= max} aria-label={`More ${label}`}>
             <Ico.plus size={14} />

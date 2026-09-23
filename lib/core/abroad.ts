@@ -42,7 +42,7 @@ export interface Status {
  * market publish; a lender's own terms decide, and the page says so.
  *
  * The honest version of "as little as 10% down" is that it depends entirely on
- * which of these four you are and whether you will live in the house — which is
+ * which of these four you are and whether you will live in the house, which is
  * a better sales argument than the slogan, because it is checkable.
  */
 export const STATUSES: Status[] = [
@@ -86,7 +86,7 @@ export const STATUSES: Status[] = [
  * Same trust boundary as lib/core/params.ts and for the same reason: the
  * readout is URL-addressable and ungated, so every figure on it comes from a
  * query string a stranger can edit. Anything unrecognised falls back to the
- * strictest honest default rather than being passed through — a made-up status
+ * strictest honest default rather than being passed through: a made-up status
  * would quote a down payment no lender offers.
  */
 export function parseAbroadParams(
@@ -118,14 +118,14 @@ export const statusById = (id: StatusId) => STATUSES.find((s) => s.id === id) ??
  * Said in capitals because the docblock that used to sit here did not say it.
  * It read "rent does not track price evenly across the metro: the counties
  * that have appreciated most have the worst ratios", which is the language of
- * an observation, and these figures are nobody's observation — they were
+ * an observation, and these figures are nobody's observation: they were
  * written to be plausible. The shape is a reasonable guess. The numbers are
  * not data.
  *
  * That mattered because the page told the READER they were: "rent is estimated
  * from county averages". A figure that is merely someone's guess renders
  * exactly like a measured one, and claiming a source it does not have is worse
- * than claiming none — it is the single failure this product cannot survive.
+ * than claiming none: it is the single failure this product cannot survive.
  *
  * They drive the cash-flow figure, the break-even down payment and the
  * headline return. Replacing them takes a rent-to-price ratio per county from
@@ -183,7 +183,7 @@ export const ABROAD_DEFAULTS: AbroadInputs = {
 export const ASSUMPTIONS = {
   /* A starting assumption, overridden by the recorded rate wherever one is
      available. It is the same 6.5% the buyer engine starts from and it is here
-     only so that pure code stays pure — every surface that can reach the
+     only so that pure code stays pure: every surface that can reach the
      database passes the real one in. Leaving it to stand on its own was a
      drift waiting to happen: record a rate, and this page alone keeps quoting
      a number the rest of the product has moved off. */
@@ -241,7 +241,7 @@ export function abroadReturns(i: AbroadInputs, a = ASSUMPTIONS): AbroadResult {
      this metro covers its own mortgage at the minimum down, and a page that
      only ever showed the minimum would be quietly making a promise the market
      is not keeping. Letting them put more in is how they find the point where
-     it does — which is a real answer, and one nobody gives them. */
+     it does, which is a real answer, and one nobody gives them. */
   const downPct = Math.max(i.downPct ?? s.down[i.use], s.down[i.use]);
   const down = (i.price * downPct) / 100;
   const loan = Math.max(i.price - down, 0);
@@ -265,7 +265,7 @@ export function abroadReturns(i: AbroadInputs, a = ASSUMPTIONS): AbroadResult {
   const cashFlow = rent - management - vacancy - maintenance - monthlyTotal;
 
   /* Principal paid in the first twelve payments. Worth separating from cash
-     flow because it is the part nobody counts — it is not spendable, but it is
+     flow because it is the part nobody counts: it is not spendable, but it is
      theirs, and it is usually larger than the cash flow. */
   const r = ratePct / 100 / 12;
   let balance = loan;

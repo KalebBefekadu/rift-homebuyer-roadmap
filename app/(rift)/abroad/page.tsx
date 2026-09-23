@@ -9,7 +9,7 @@ import { Landing } from "./Landing";
 export const metadata: Metadata = {
   title: "Own property in Georgia from anywhere",
   description:
-    "You do not need to be a U.S. citizen, hold a green card, or ever have lived in America to own property in Georgia. See what you would have to send, what it would rent for, and what comes back — free, before you talk to anyone.",
+    "You do not need to be a U.S. citizen, hold a green card, or ever have lived in America to own property in Georgia. See what you would have to send, what it would rent for, and what comes back. Free, before you talk to anyone.",
   /* The Amharic pass is a real, addressable version of this page, not a widget
      on top of the English one. Declaring it means a search engine can offer it
      to somebody searching in Amharic, which is most of the point of having
@@ -40,7 +40,7 @@ export default async function AbroadPage({
 
   /* Resolved here rather than in the browser. When the toggle was the only way
      in, the server always rendered English and the switch happened after
-     hydration — so a crawler saw no Amharic at all, and an Amharic reader
+     hydration, so a crawler saw no Amharic at all, and an Amharic reader
      watched the page load in English and then change under them. */
   const langParam = one("lang");
   const pinned = isLocale(langParam);

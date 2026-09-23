@@ -11,7 +11,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const NOT_NOW = "We could not record that just now. Nothing was sent — please try again in a minute.";
+const NOT_NOW = "We could not record that just now. Nothing was sent. Please try again in a minute.";
 
 /**
  * The seller says which offer they want.
@@ -24,7 +24,7 @@ const NOT_NOW = "We could not record that just now. Nothing was sent — please 
  * sees no confirmation taps again or phones in a panic, so the confirmation
  * is now shown by the page the moment this answers.
  *
- * No session — the plan token IS the authorisation, exactly as for reading the
+ * No session: the plan token IS the authorisation, exactly as for reading the
  * page. It is resolved here from scratch, and the lead it yields is the only
  * one this can write to. Nothing from the browser is trusted beyond "this
  * token, this offer id, these words": the snapshot of what they were shown is

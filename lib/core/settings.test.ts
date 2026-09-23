@@ -7,8 +7,8 @@ import {
 /**
  * The decisions that are the owner's, not engineering's.
  *
- * Each one sat in the code as a literal — "a decision that lives in a constant
- * has been made by whoever typed the constant" — and is now a setting stored
+ * Each one sat in the code as a literal: "a decision that lives in a constant
+ * has been made by whoever typed the constant": and is now a setting stored
  * in the browser. Which means every one of them is read back out of a store
  * that survives a schema change, a half-finished edit, and anything typed into
  * a console.

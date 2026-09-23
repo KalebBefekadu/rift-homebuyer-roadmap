@@ -14,7 +14,7 @@ import { currentVersionId, readWording } from "./funnel";
  * The shape of this file is decided by one rule from docs/schema.md: a readout
  * is an immutable snapshot, not a view. `figures` stores what the person was
  * SHOWN; `inputs` stores what produced it. Recomputing six weeks later gives a
- * different answer — rates move, programmes close — and the promise made was
+ * different answer (rates move, programmes close) and the promise made was
  * "you keep this". A document that silently rewrites itself was never theirs.
  *
  * Both are stored because the plan needs to recompute AND disclose the
@@ -30,13 +30,13 @@ export interface StartInput {
 
 export async function startAssessment(input: StartInput): Promise<DbResult<{ id: string }>> {
   const db = serviceClient();
-  if (!db) return skipped("no database configured — the assessment runs but is not stored");
+  if (!db) return skipped("no database configured; the assessment runs but is not stored");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
   try {
     /* One assessment per session per side. A visitor who reloads is the same
-       attempt, not a new one — counting reloads as starts would inflate every
+       attempt, not a new one: counting reloads as starts would inflate every
        completion rate in the funnel report by an unknowable amount. */
     const read = await boundedRead(
       db.from("rift_assessments")
@@ -51,7 +51,7 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
     const existing = "data" in read ? read.data : null;
     if (existing) return done({ id: existing.id as string });
 
-    /* Pinned to the version they are about to be asked. Contract 4.6 — and it
+    /* Pinned to the version they are about to be asked. Contract 4.6, and it
        has to be recorded now, because no later migration can recover which
        wording somebody actually saw. */
     const funnel_version_id = await currentVersionId(input.side);
@@ -71,7 +71,7 @@ export async function startAssessment(input: StartInput): Promise<DbResult<{ id:
     );
     if (!created.ok) {
       /* Lost the race. The partial unique index refused the second insert,
-         which is exactly what it is for — so read back the row that won rather
+         which is exactly what it is for, so read back the row that won rather
          than reporting a failure the visitor would experience as a broken
          assessment.
          
@@ -145,7 +145,7 @@ export async function completeAssessment(assessmentId: string): Promise<DbResult
 /**
  * An unguessable share token.
  *
- * The readout is URL-addressable and ungated by design — that is the product's
+ * The readout is URL-addressable and ungated by design: that is the product's
  * central promise. Ungated is not the same as enumerable: a sequential id would
  * let anyone walk every stranger's finances. 24 bytes of base64url is not a
  * password, but it is not a number you can count to either.
@@ -164,8 +164,8 @@ export interface SnapshotInput {
    * wrong.
    *
    * Stored as ROWS rather than folded into the blob above, because contract 4.2
-   * is enforced by CHECK constraints on `rift_figures` — assumptions must be
-   * non-empty and a failure mode must be stated — and a constraint on a table
+   * is enforced by CHECK constraints on `rift_figures`: assumptions must be
+   * non-empty and a failure mode must be stated, and a constraint on a table
    * nothing writes to is a decoration. Every customer-facing number went into
    * an unconstrained jsonb column while the guarantee sat next to it, unused.
    *
@@ -187,7 +187,7 @@ export interface TrackedFigure {
 
 export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: string; shareToken: string }>> {
   const db = serviceClient();
-  if (!db) return skipped("no database configured — the readout is shown but not stored");
+  if (!db) return skipped("no database configured; the readout is shown but not stored");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
@@ -257,8 +257,8 @@ export async function readByToken(
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   try {
-    /* A deadline here has no fallback — there is no built-in version of
-       somebody's readout — so it converts a hang into the honest "we cannot
+    /* A deadline here has no fallback: there is no built-in version of
+       somebody's readout: so it converts a hang into the honest "we cannot
        open this right now" the page already knows how to show. Waiting instead
        leaves the recipient on a blank screen with no idea whose fault it is. */
     const query = Promise.resolve(
@@ -329,7 +329,7 @@ export async function readFunnel(side: "buy" | "sell"): Promise<DbResult<{ funne
        This used to look up the rift_funnels row purely to decide whether to
        carry on, and then `readWording` resolved the same funnel and its
        version all over again. Two sequential queries to learn one thing, on
-       the page where a stranger first meets the product — /buy/start was
+       the page where a stranger first meets the product: /buy/start was
        spending about 1.7 seconds before its first byte, and the second query
        was the redundant half of it.
        
@@ -341,7 +341,7 @@ export async function readFunnel(side: "buy" | "sell"): Promise<DbResult<{ funne
 
     /* The agent's own words over the code's own structure. `applyWording`
        takes the title, the note, the field label and the option LABELS, and
-       reads no structural field at all — not the key, not the type, not what
+       reads no structural field at all: not the key, not the type, not what
        it is bound to, not the machine value behind an option. The engine's
        contract is unreachable from anything stored, which is what makes
        reading this safe where the previous note concluded it was not. */

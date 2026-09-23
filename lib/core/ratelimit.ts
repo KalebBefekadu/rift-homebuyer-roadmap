@@ -4,7 +4,7 @@
  * The public endpoints write to the database without an account, which is the
  * product's central promise and also its most obvious abuse surface. Somebody
  * with curl and a loop can fill `rift_events` in an afternoon, and the damage
- * is not the storage bill — it is that the funnel report becomes fiction, and
+ * is not the storage bill: it is that the funnel report becomes fiction, and
  * an agent makes decisions from it without knowing.
  *
  * Deliberately simple, and deliberately honest about what that costs:
@@ -12,7 +12,7 @@
  *   * In-memory, so each serverless instance keeps its own count. The real
  *     limit is therefore the configured one times the number of instances. That
  *     is fine for stopping a script and useless against a distributed attacker,
- *     which is the correct trade at this scale — a Redis dependency to defend
+ *     which is the correct trade at this scale: a Redis dependency to defend
  *     against an adversary nobody has is a worse deal.
  *   * A fixed window rather than a sliding one. A burst can straddle a boundary
  *     and get double the allowance. Also fine, and stated rather than hidden.
@@ -40,7 +40,7 @@ interface Bucket { count: number; resetAt: number }
 const buckets = new Map<string, Bucket>();
 
 /* Bounded, so a flood of unique keys cannot become the memory leak that takes
-   the process down — which would hand an attacker exactly what the limiter
+   the process down, which would hand an attacker exactly what the limiter
    exists to prevent. */
 const MAX_KEYS = 10_000;
 
@@ -90,7 +90,7 @@ export const LIMITS = {
   readout: { max: 10, windowMs: 60_000 },
   forget: { max: 10, windowMs: 60_000 },
   /* Tighter than capture. Each submission writes an offer AND a lead, and
-     every one of them is something a person is expected to read — the cost of
+     every one of them is something a person is expected to read: the cost of
      abuse here is Kaleb's attention, which does not rate-limit itself. */
   offer: { max: 4, windowMs: 60_000 },
   /* Per plan link, not per address. A seller chooses once; the headroom is

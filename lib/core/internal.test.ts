@@ -35,7 +35,7 @@ describe("which surfaces are internal", () => {
  * A drift guard, not a unit test.
  *
  * `robots.ts` is where somebody writes down "this is not for the public". It
- * is also the weaker half of that statement — a disallow keeps a page out of
+ * is also the weaker half of that statement: a disallow keeps a page out of
  * an index and serves it to anybody with the URL. So every non-API path listed
  * there must also be refused in code, and adding a new one to robots without a
  * refusal should fail here rather than on the day somebody finds it.
@@ -55,13 +55,13 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
   /* The ones whose refusal lives somewhere this test cannot see: an auth
      check, a token, or a route that is private by construction. */
   const ELSEWHERE: Record<string, string> = {
-    "/api/": "each route guards itself — see lib/db/guard.ts",
-    "/r/": "the token IS the credential — app/(rift)/r/[token]/page.tsx",
+    "/api/": "each route guards itself; see lib/db/guard.ts",
+    "/r/": "the token IS the credential: app/(rift)/r/[token]/page.tsx",
     "/buy/results": "a readout is public by design; that is the product",
     "/sell/results": "a readout is public by design; that is the product",
     "/abroad/results": "a readout is public by design; that is the product",
     "/book": "public by design",
-    "/studio": "behind Supabase auth — app/(studio)/studio/page.tsx",
+    "/studio": "behind Supabase auth: app/(studio)/studio/page.tsx",
   };
 
   for (const path of disallow) {
@@ -80,7 +80,7 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
 describe("robots and the sitemap agree", () => {
   /* Two lists of public paths, written in two files, that have to say the
      same thing. /privacy was added to the sitemap and not to robots, and
-     nothing noticed because `Allow: /` happens to cover everything — so the
+     nothing noticed because `Allow: /` happens to cover everything: so the
      explicit list quietly became decorative while still looking like policy.
      
      The failure this guards against is the other direction: a page submitted
@@ -122,7 +122,7 @@ describe("robots and the sitemap agree", () => {
     const missing = sitemap.filter((p) => !allowed.includes(p));
     expect(
       missing,
-      "in the sitemap but not in robots' allow list — covered only by the bare `Allow: /`",
+      "in the sitemap but not in robots' allow list, covered only by the bare `Allow: /`",
     ).toEqual([]);
   });
 });

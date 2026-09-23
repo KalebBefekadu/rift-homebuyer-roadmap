@@ -41,7 +41,7 @@ export function Unclaimed({ counties }: { counties: string[] }) {
           <p className="t-lg c-2" style={{ marginTop: 16, lineHeight: 1.6 }}>
             None of this has anything to do with selling. These are exemptions, deadlines and
             reliefs Georgia homeowners routinely miss. Answer four things and we will tell you
-            which are worth a phone call — and exactly who to call.
+            which are worth a phone call, and exactly who to call.
           </p>
         </div>
       </section>
@@ -112,7 +112,7 @@ export function Unclaimed({ counties }: { counties: string[] }) {
               <div className="card p-5" style={{ marginTop: 12 }}>
                 <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
                   On these answers there is nothing we would tell you to go after. That is a real
-                  answer, not an empty one — you have filed what there is to file.
+                  answer, not an empty one: you have filed what there is to file.
                 </p>
               </div>
             ) : (

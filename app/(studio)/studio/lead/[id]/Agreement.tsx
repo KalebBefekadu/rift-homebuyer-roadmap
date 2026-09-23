@@ -8,7 +8,7 @@ import { Ico } from "@/components/rift/icons";
 /**
  * The representation agreement, as a lifecycle state rather than a side channel.
  *
- * Two things this panel is deliberately not. It is not a signing surface —
+ * Two things this panel is deliberately not. It is not a signing surface:
  * Rift never signs and never sends for signature, and docs/vision.md lists
  * both among the actions that never become automatic in any mode. And it is
  * not advice: the gate it describes is a rule the product enforces, not an

@@ -2,8 +2,8 @@
  * A deadline for work that has a fallback.
  *
  * The readout is the revenue path and it renders from a registry read. If that
- * read FAILS the page falls back to the built-in registry — real, verified data
- * — and the visitor gets their numbers. If it HANGS there is no fallback,
+ * read FAILS the page falls back to the built-in registry: real, verified data
+ *, and the visitor gets their numbers. If it HANGS there is no fallback,
  * because nothing has failed yet: the page waits until the platform kills the
  * function and the visitor sees nothing at all.
  *
@@ -38,7 +38,7 @@ export async function withTimeout<T>(
     if (result === "timeout") return { value: fallback, timedOut: true };
     return { value: result as T, timedOut: false };
   } finally {
-    /* The losing promise keeps running — there is no cancelling a query that
+    /* The losing promise keeps running: there is no cancelling a query that
        is already in flight. Clearing the timer stops it holding the event loop
        open, which on a serverless runtime is the difference between a function
        that returns and one that is billed until it is killed. */
@@ -57,7 +57,7 @@ export const READ_DEADLINE_MS = 2_000;
 
 /**
  * Longer than a read, because there is no fallback worth rushing to and the
- * work may genuinely be slow — but bounded, because an unbounded write is a
+ * work may genuinely be slow, but bounded, because an unbounded write is a
  * held-open function rather than a patient one.
  *
  * A miss is reported as a failure, so the caller can surface it and Sentry can
@@ -72,15 +72,15 @@ export const WRITE_DEADLINE_MS = 6_000;
  * than how slow the work is.
  *
  * A read that misses its deadline falls back to a documented answer and the
- * visitor still gets their numbers — the trade is two seconds of patience
+ * visitor still gets their numbers: the trade is two seconds of patience
  * against a slightly worse figure. A session check that misses has no
  * equivalent: it cannot answer "who is asking", so the page either shows the
  * agent a sign-in form he does not need or an apology he does not want. Both
  * are worse than waiting.
  *
  * It also contends for the same event loop as everything else on the page.
- * The deadline is wall-clock, so a heavier screen — the client record runs
- * the record, the plan and the offers at once — makes a fast query look slow.
+ * The deadline is wall-clock, so a heavier screen: the client record runs
+ * the record, the plan and the offers at once: makes a fast query look slow.
  * A record page missed this on roughly one request in three at two seconds,
  * against a local auth endpoint answering in under twenty milliseconds.
  *

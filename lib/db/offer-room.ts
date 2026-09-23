@@ -33,8 +33,8 @@ const CLIENT_COLUMNS =
   "take,approved_at,approved_for,chosen_offer_id,chosen_at,chosen_seen" as const;
 
 /* The table arrives in a migration. A deployment that runs ahead of it must
-   still render the seller's page and the agent's lead page — as a room with
-   nothing in it, which is true — rather than fail them. Same pattern as
+   still render the seller's page and the agent's lead page: as a room with
+   nothing in it, which is true: rather than fail them. Same pattern as
    `hasFollowUp` and `hasRef` elsewhere. */
 const missingTable = (msg: string) =>
   /rift_offer_rooms/.test(msg) && /does not exist|schema cache|Could not find/i.test(msg);
@@ -70,8 +70,8 @@ export async function roomFor(leadId: string): Promise<DbResult<OfferRoom>> {
 }
 
 /**
- * The seller's view. No agent scope — the caller has already resolved the
- * seller from their token, which is the authorisation — and no draft.
+ * The seller's view. No agent scope: the caller has already resolved the
+ * seller from their token, which is the authorisation, and no draft.
  */
 export async function clientRoomFor(leadId: string): Promise<DbResult<OfferRoom>> {
   const db = serviceClient();
@@ -183,7 +183,7 @@ export interface Chosen {
 /**
  * The seller says which offer they want.
  *
- * `leadId` must come from a token the caller has already resolved — this does
+ * `leadId` must come from a token the caller has already resolved: this does
  * not check who is asking, because the token was the check. Everything else is
  * re-derived here: that the offer is released on THIS seller, what they were
  * shown, and whether they have already chosen.
@@ -229,7 +229,7 @@ export async function chooseOffer(leadId: string, offerId: string, note: string 
   };
 
   /* Conditional on nobody having chosen yet, in the WHERE clause. Two taps on
-     a slow phone — or two people on one link — must produce one choice, and a
+     a slow phone (or two people on one link) must produce one choice, and a
      read-then-write check lets both through. */
   const updated = await boundedWrite(
     db.from("rift_offer_rooms").update(choice)

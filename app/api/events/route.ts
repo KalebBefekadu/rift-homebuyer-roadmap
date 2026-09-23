@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  *
  * Batched by the client, because one request per question turns a
  * seven-question assessment into seven blocking network calls on a phone with
- * two bars — and the assessment is the product's revenue path.
+ * two bars, and the assessment is the product's revenue path.
  *
  * Always returns 200 on a well-formed request, even when the database is
  * unconfigured or the write fails. Instrumentation must never break a funnel:

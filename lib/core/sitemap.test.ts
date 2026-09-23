@@ -11,8 +11,8 @@ import { join } from "node:path";
  * search result, and the only way to notice is for somebody to go looking for
  * a thing they have no reason to suspect is missing.
  *
- * That is this product's recurring failure shape — /sitemap.xml already
- * shipped once serving valid XML with zero URLs in it — so the list gets a
+ * That is this product's recurring failure shape: /sitemap.xml already
+ * shipped once serving valid XML with zero URLs in it, so the list gets a
  * guard rather than a note.
  *
  * The rule is derived, not restated. Anything under app/(rift) with a fixed
@@ -50,7 +50,7 @@ const noindex = (src: string) => /index:\s*false|noindex/.test(src);
  * And pages robots.txt already refuses.
  *
  * Read rather than restated. Writing the exceptions out here a second time is
- * how the two lists drift — which is precisely what this file exists to stop,
+ * how the two lists drift, which is precisely what this file exists to stop,
  * and /book is the proof: it is deliberately disallowed, and a guard that did
  * not know that would have demanded it be submitted for indexing.
  */
@@ -62,7 +62,7 @@ const refused = (route: string) => DISALLOWED.some((d) => route === d || route.s
 
 describe("every public page is findable", () => {
   it("finds the routes at all, so an empty sweep cannot pass silently", () => {
-    /* The check above is worthless if `routes()` returns nothing — which is
+    /* The check above is worthless if `routes()` returns nothing: which is
        what a moved directory would produce, and it would read as success. */
     expect(all.length).toBeGreaterThan(8);
   });

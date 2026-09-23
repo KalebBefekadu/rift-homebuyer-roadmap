@@ -75,7 +75,7 @@ describe("reading the published rate", () => {
   });
 
   it("refuses a rate dated in the future", () => {
-    /* Recording one would make the freshness check permanently green — the
+    /* Recording one would make the freshness check permanently green: the
        product would stop asking for a rate it no longer has. */
     const r = readPmms(`${HEADER}\n12/31/2027,6.95,,,,,,,`, on("2026-09-20"));
     expect(r.ok).toBe(false);

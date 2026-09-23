@@ -2,12 +2,12 @@
 -- One live assessment per session, per side.
 --
 -- `startAssessment` checked for an existing row and inserted if it found none.
--- Between the check and the insert, another request can do the same — and the
+-- Between the check and the insert, another request can do the same, and the
 -- assessment page fires this on mount, so a double-render, a fast refresh, or a
 -- flaky connection retrying is enough.
 --
 -- Measured before the fix: six concurrent starts produced six assessments for
--- one visitor. Nothing failed. The consequences are all quiet ones — the agent
+-- one visitor. Nothing failed. The consequences are all quiet ones: the agent
 -- sees six abandoned people where there was one, five sets of answers are
 -- orphaned against ids the client discarded, and any completion rate computed
 -- from assessments is wrong by whatever the retry rate happens to be.
@@ -18,7 +18,7 @@
 
 -- Deduplicate before adding the constraint: keep the oldest live assessment
 -- per session and side, and delete the rest. Answers cascade with them, which
--- is correct — they are attached to rows the client already abandoned.
+-- is correct: they are attached to rows the client already abandoned.
 delete from rift_assessments a
 using rift_assessments b
 where a.completed_at is null

@@ -9,7 +9,7 @@ import { outcomesFrom, weightFor, forecast, evidenceMix, TERMINAL, type Finished
  * `HISTORY` in pipeline.ts is forty-one outcomes written to look like a
  * plausible solo agent's record, and it used to be the DEFAULT argument to
  * `weightFor`, `forecast` and `evidenceMix`. Any caller that forgot to pass
- * real data silently got the fixture — and `BASIS_CHIP` labels a result with
+ * real data silently got the fixture: and `BASIS_CHIP` labels a result with
  * twelve or more outcomes behind it "His own history" on screen.
  *
  * So the real assertion here is not about arithmetic. It is that no production

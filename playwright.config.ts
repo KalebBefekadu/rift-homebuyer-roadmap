@@ -15,7 +15,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Two reasons, and the second is the better one. First, a suite that needs
  * credentials is a suite that does not run in CI on a fork. Second, and more
  * useful: the product's degradation contract says every public page must
- * render without a database — the funnel falls back to the built-in
+ * render without a database: the funnel falls back to the built-in
  * definition, the rate falls back to a labelled starting assumption, the
  * registry withholds rather than invents. That contract has only ever been
  * asserted in unit tests against mocked modules. Running the real funnel
@@ -23,7 +23,7 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * The empty values below are not placeholders. Next does not overwrite a
  * variable that is already set, so an empty string here is what stops a local
- * run from picking up .env.local — which points at PRODUCTION.
+ * run from picking up .env.local, which points at PRODUCTION.
  */
 const BLANK = {
   NEXT_PUBLIC_SUPABASE_URL: "",
@@ -64,13 +64,13 @@ export default defineConfig({
 
   webServer: {
     /* A production build, not `next dev`. The bugs worth catching here are
-       about what the built application serves — a dev server papers over
+       about what the built application serves: a dev server papers over
        static/dynamic differences, and it was a static/dynamic question that
        put a 1.7s first byte on the funnel's front door.
 
        CI has already built, with the same blank environment (see ci.yml), so
        it only starts. Building twice would double the slowest step in the
-       pipeline to prove nothing — and worse, the second build could differ
+       pipeline to prove nothing, and worse, the second build could differ
        from the one whose bundle size CI measured. */
     command: process.env.CI
       ? "npx next start --port 3177 --hostname 127.0.0.1"

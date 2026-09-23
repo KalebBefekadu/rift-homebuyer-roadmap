@@ -9,8 +9,8 @@
  * given as jsonb, so ten megabytes ten times a minute sits inside the rate
  * limit and fills a database quietly.
  *
- * 64KB is far more than any real payload here — the largest is a readout with
- * three tracked figures and a matched programme list, comfortably under 8KB —
+ * 64KB is far more than any real payload here: the largest is a readout with
+ * three tracked figures and a matched programme list, comfortably under 8KB:
  * and far less than anything worth storing by accident.
  *
  * Raising it is an invisible change: nothing breaks, the database just fills.

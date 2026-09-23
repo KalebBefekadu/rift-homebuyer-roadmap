@@ -1,5 +1,5 @@
 /**
- * Rift prototype — the readout.
+ * Rift prototype: the readout.
  *
  * This is the payoff the front end promises. Everything here is DERIVED from
  * answers the person already gave (docs/product.md rule #8, "Front-end value
@@ -8,7 +8,7 @@
  * The readout has a fixed shape on purpose. A person who finishes the
  * assessment should always get: a verdict in one sentence, the single thing
  * standing in their way, what to do next in order, and a question sheet they
- * can carry to anyone — including a lender or agent we have never met.
+ * can carry to anyone: including a lender or agent we have never met.
  */
 
 import {
@@ -45,7 +45,7 @@ export interface Readout {
   /* `figure` is the headline number on its own, carried as data rather than
      recovered from `headline` by string surgery. It was being recovered with
      `headline.split(",")[0]`, which silently truncated every figure over
-     $1,000 to its thousands digits — a $137,145 net proceeds rendered as
+     $1,000 to its thousands digits: a $137,145 net proceeds rendered as
      "$137" beside a body paragraph stating the real number. */
   reframe: {
     headline: string;
@@ -73,7 +73,7 @@ export interface Readout {
  *
  * This was the most valuable thing the assessment collected and then threw
  * away: `timing` was asked, was the strongest single signal in the lead score,
- * was passed into this function — and was never read. Somebody could answer
+ * was passed into this function, and was never read. Somebody could answer
  * "in the next 3 months", be told they are 27 months from closing on savings
  * alone, and never see the two figures put next to each other.
  *
@@ -112,21 +112,21 @@ function horizonOf(timing: string): number | null {
   if (t.startsWith("in the next")) return 3;
   if (t.startsWith("3 to")) return 9;
   if (t.startsWith("9 to")) return 18;
-  return null; /* "Just exploring" — they named no deadline, so there is none to miss */
+  return null; /* "Just exploring": they named no deadline, so there is none to miss */
 }
 
 /**
  * "You said…", only when they did.
  *
- * This block is the product's eleventh rule made visible — a stated timeline
- * compared against the computed one — and it is the only sentence on the page
+ * This block is the product's eleventh rule made visible: a stated timeline
+ * compared against the computed one, and it is the only sentence on the page
  * written in the second person about something the reader told us. So it has
  * to be true that they told us.
  *
  * It was not. `parseReadoutParams` falls back to "3 to 9 months" when the
  * parameter is absent, which is a defensible assumption for the arithmetic and
- * not a quote; and because nothing had been *substituted* — the value was
- * missing, not wrong — no disclosure was shown either. A truncated share link,
+ * not a quote; and because nothing had been *substituted*: the value was
+ * missing, not wrong: no disclosure was shown either. A truncated share link,
  * which is the exact case params.ts was written for, produced a page telling
  * somebody they had said something about their own money that they had not.
  *
@@ -152,7 +152,7 @@ function tensionOf(
       headline: `You have not told us when you want to move. On savings alone the arithmetic says about ${months} month${months === 1 ? "" : "s"}.`,
       body: hasHelp && helpMonths !== null
         ? `With the assistance you matched, if a lender approves it, that becomes about ${helpMonths} month${helpMonths === 1 ? "" : "s"}. Telling us your own timeline is what turns both of those from arithmetic into a plan.`
-        : "Telling us when you want to move is what turns this from arithmetic into a plan — it is the one answer this page cannot work out for you.",
+        : "Telling us when you want to move is what turns this from arithmetic into a plan. It is the one answer this page cannot work out for you.",
     };
   }
 
@@ -160,7 +160,7 @@ function tensionOf(
     return {
       kind: "ahead",
       headline: `You said ${timing.toLowerCase()}, and on the money you already have there is nothing stopping that.`,
-      body: "The remaining work is confirmation, not saving — a lender, a pre-approval, and a decision about what you actually want. That is a much shorter list than most people at this stage expect.",
+      body: "The remaining work is confirmation, not saving: a lender, a pre-approval, and a decision about what you actually want. That is a much shorter list than most people at this stage expect.",
     };
   }
 
@@ -177,7 +177,7 @@ function tensionOf(
   if (months <= want + 1) {
     return {
       kind: "ahead",
-      headline: `You said ${timing.toLowerCase()}, and the arithmetic agrees — about ${months} month${months === 1 ? "" : "s"} on your own.`,
+      headline: `You said ${timing.toLowerCase()}, and the arithmetic agrees: about ${months} month${months === 1 ? "" : "s"} on your own.`,
       body: "Your stated timeline and your actual one are the same timeline, which is rarer than it sounds. The work now is protecting it rather than shortening it.",
     };
   }
@@ -187,12 +187,12 @@ function tensionOf(
     kind: "behind",
     headline: `You said ${timing.toLowerCase()}. On savings alone the arithmetic says about ${months}.`,
     body: helpCloses
-      ? `That is the gap worth talking about — and it may already be closed. If the assistance you matched is approved, ${
+      ? `That is the gap worth talking about, and it may already be closed. If the assistance you matched is approved, ${
           helpMonths === 0
             ? "the gap disappears entirely"
             : `you are back to about ${helpMonths} month${helpMonths === 1 ? "" : "s"}`
         }, inside the window you named. Confirming eligibility is therefore not paperwork, it is the whole timeline.`
-      : `We are showing you both numbers rather than the comfortable one. Closing that distance means moving one of three things — the price, the monthly amount you set aside, or the date — and the section below ranks which of them moves it most for your situation.`,
+      : `We are showing you both numbers rather than the comfortable one. Closing that distance means moving one of three things (the price, the monthly amount you set aside, or the date), and the section below ranks which of them moves it most for your situation.`,
   };
 }
 
@@ -233,9 +233,9 @@ export function buyerReadout(
     own.fullyCovered
       ? "What is left is confirming it with a lender, not saving for it."
     : months === null
-      ? "Without a monthly saving figure we cannot put a date on it — that is the first thing worth deciding."
+      ? "Without a monthly saving figure we cannot put a date on it. That is the first thing worth deciding."
     : helped
-      ? `The ${range(m.openMin, m.openMax)} of assistance you may qualify for would ${helpMonths === 0 ? "close that gap entirely" : `bring it to about ${helpMonths} month${helpMonths === 1 ? "" : "s"}`} — if a lender confirms it.`
+      ? `The ${range(m.openMin, m.openMax)} of assistance you may qualify for would ${helpMonths === 0 ? "close that gap entirely" : `bring it to about ${helpMonths} month${helpMonths === 1 ? "" : "s"}`}, if a lender confirms it.`
       : undefined;
 
   const tension = tensionOf(timing, timingStated, months, helpMonths, hasHelp, own.fullyCovered);
@@ -244,7 +244,7 @@ export function buyerReadout(
     headline: `${money(cash.total)}, not ${money(cash.down)}`,
     figure: money(cash.total),
     contrast: money(cash.down),
-    body: `The ${money(cash.down)} down payment is the figure you were given. The number that actually has to be in an account is ${money(cash.total)} — the difference is closing costs, prepaid escrow and inspections. This gap is the most common reason a purchase falls apart in its last three weeks, and it is entirely avoidable by knowing it now.`,
+    body: `The ${money(cash.down)} down payment is the figure you were given. The number that actually has to be in an account is ${money(cash.total)}. The difference is closing costs, prepaid escrow and inspections. This gap is the most common reason a purchase falls apart in its last three weeks, and it is entirely avoidable by knowing it now.`,
   };
 
   const blocker: Blocker = hasHelp
@@ -258,7 +258,7 @@ export function buyerReadout(
     : own.gap > 0 && i.monthlySaving <= 0
     ? {
         title: "You have no saving rate set",
-        body: `Your gap is ${money(own.gap)}. Without a monthly figure there is no timeline, and without a timeline none of the rest of this can be scheduled. Deciding on a number — even a small one — is what turns this from a wish into a plan.`,
+        body: `Your gap is ${money(own.gap)}. Without a monthly figure there is no timeline, and without a timeline none of the rest of this can be scheduled. Deciding on a number, even a small one, is what turns this from a wish into a plan.`,
         who: "You, this week",
       }
     : own.gap > 0
@@ -313,7 +313,7 @@ export function buyerReadout(
       `Can ${m.matched.length > 1 ? "these programs" : "this program"} be combined with anything else I qualify for?`,
     ] : []),
     `What is my real rate today with my credit profile, and what would a lock cost?`,
-    `What is the total cash I bring to the table on your worksheet — every line, not the down payment?`,
+    `What is the total cash I bring to the table on your worksheet, every line, not the down payment?`,
     `How much could a seller contribute toward my closing costs without breaking a program rule?`,
     `What is your PMI estimate, and at what point does it come off?`,
     `Which documents do you need from me, and how long do they stay valid?`,
@@ -338,7 +338,7 @@ export function sellerReadout(
   /**
    * Owing more than the sale would produce.
    *
-   * `parseSellerParams` deliberately lets a payoff exceed the price — its own
+   * `parseSellerParams` deliberately lets a payoff exceed the price: its own
    * comment says being underwater "is exactly the situation somebody most
    * needs an honest number for", and clamping it "would replace their reality
    * with a cheerful fiction". The arithmetic duly returned a negative number.
@@ -348,8 +348,8 @@ export function sellerReadout(
    * now", a verdict saying they would "walk away with about -$73,575", a rider
    * calling that "thin" equity, a figure labelled "You keep", and a plan whose
    * third step was which repairs pay back. The one fact that decides their
-   * year — that this sale cannot close unless they bring the difference in
-   * cash or their lender agrees to a short sale — appeared nowhere.
+   * year: that this sale cannot close unless they bring the difference in
+   * cash or their lender agrees to a short sale: appeared nowhere.
    *
    * The product's whole claim is that it shows the unflattering number. It
    * showed it and then described it in the vocabulary of good news.
@@ -359,7 +359,7 @@ export function sellerReadout(
 
   /* Underwater outranks the timeline. Status is what the agent sorts the lead
      list by, and somebody who cannot close without finding cash is not "Ready
-     now" however soon they said they wanted to move — they are the person on
+     now" however soon they said they wanted to move: they are the person on
      the list who most needs a call and least needs a listing appointment.
      
      Otherwise: an unstated timeline is "exploring", not whatever the default
@@ -376,19 +376,19 @@ export function sellerReadout(
   const short = money(Math.abs(r.net));
 
   const verdict = underwater
-    ? `At ${money(s.price)} this sale does not cover what you owe — you would need to bring about ${short} to the closing table.`
+    ? `At ${money(s.price)} this sale does not cover what you owe: you would need to bring about ${short} to the closing table.`
     : `On a ${money(s.price)} sale you would walk away with about ${money(r.net)}.`;
 
   const rider = underwater
     ? `${money(s.payoff)} of payoff and ${money(r.totalCosts - s.payoff)} of selling costs against a ${money(s.price)} price. That is not a pricing problem and no listing strategy closes it: the two things that do are cash at closing or your lender agreeing to take less, and the second is a conversation you start, not one that happens to you.`
     : thin
-    ? `That is ${equityPct}% of the price — thin enough that the order you do things in matters more than the price you list at.`
+    ? `That is ${equityPct}% of the price, thin enough that the order you do things in matters more than the price you list at.`
     : `${money(r.totalCosts)} goes to your payoff and the cost of selling. What reaches you is ${equityPct}% of the price.`;
 
   /* The card this fills is headed "The figure that actually matters", and its
      paragraph was written for a number that is positive. Rendered for somebody
      underwater it read: "what survives the payoff, the commission, the
-     concessions, the repairs and the prorations — -$73,575". Nothing survives.
+     concessions, the repairs and the prorations: -$73,575". Nothing survives.
      They owe. This is the same defect as the verdict and the status chip, in
      the one block that was not rewritten with them: the arithmetic is right
      and the sentence around it belongs to a different person's situation. */
@@ -399,25 +399,25 @@ export function sellerReadout(
         figureLabel: "What you would still owe",
         contrast: money(s.price),
         contrastLabel: "on a sale at",
-        body: `Every valuation you have been given is a list price. This sale does not reach the end of your loan: after the payoff, the commission, the concessions, the repairs and the prorations, it leaves about ${short} still owed rather than anything to carry forward. That is not a reason to stop reading — it is a number with two known routes out, both below — but planning the next move against ${money(s.price)} is how sellers find out late that there was no next move to plan.`,
+        body: `Every valuation you have been given is a list price. This sale does not reach the end of your loan: after the payoff, the commission, the concessions, the repairs and the prorations, it leaves about ${short} still owed rather than anything to carry forward. That is not a reason to stop reading. It is a number with two known routes out, both below. But planning the next move against ${money(s.price)} is how sellers find out late that there was no next move to plan.`,
       }
     : {
         headline: `${money(r.net)}, not ${money(s.price)}`,
         figure: money(r.net),
         contrast: money(s.price),
-        body: `Every valuation you have been given is a list price. The figure that decides what you can afford next is what survives the payoff, the commission, the concessions, the repairs and the prorations — ${money(r.net)}. Sellers who plan against the list price are the ones who find out too late that the move does not work.`,
+        body: `Every valuation you have been given is a list price. The figure that decides what you can afford next is what survives the payoff, the commission, the concessions, the repairs and the prorations: ${money(r.net)}. Sellers who plan against the list price are the ones who find out too late that the move does not work.`,
       };
 
   const blocker: Blocker = underwater
     ? {
         title: `This sale is about ${short} short of your payoff`,
         body: `A sale only closes if the lender is paid or agrees not to be. So there are two routes and they are decided by different people: bring about ${short} at closing, or ask your lender to approve a short sale. Both take weeks, both are ordinary, and both start with the same written payoff statement. Waiting is the only option that costs you something.`,
-        who: "Your lender — the payoff department, not the branch",
+        who: "Your lender: the payoff department, not the branch",
       }
     : !s.homesteadFiled
     ? {
         title: "Value you may be losing every year you still own this",
-        body: "Our records question suggests no homestead exemption on this parcel. If this is your primary residence, that is money going out annually whether or not you sell — and it is worth fixing before anything else on this page.",
+        body: "Our records question suggests no homestead exemption on this parcel. If this is your primary residence, that is money going out annually whether or not you sell, and it is worth fixing before anything else on this page.",
         who: "Your county tax commissioner",
       }
     : s.assessedValue > s.price * 0.96

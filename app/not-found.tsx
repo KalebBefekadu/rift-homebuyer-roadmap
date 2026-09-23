@@ -6,7 +6,7 @@ import "./prototype/rift.css";
  *
  * This lives at the root rather than inside the `(rift)` group because Next
  * only uses a group's `not-found` for an explicit `notFound()` call inside that
- * segment. An unmatched URL — which is every real 404 — falls through to here,
+ * segment. An unmatched URL (which is every real 404) falls through to here,
  * and a group-scoped version silently never renders. It was written in the
  * group first, and Next's default grey "This page could not be found" was
  * served instead, which is exactly the sort of thing that ships unnoticed.
@@ -26,7 +26,7 @@ export default function NotFound() {
           That page does not exist.
         </h1>
         <p className="lede" style={{ marginTop: 14, maxWidth: 560 }}>
-          It may have been a shared readout that has since been deleted — they can be removed by
+          It may have been a shared readout that has since been deleted. They can be removed by
           the person who made them at any time.
         </p>
         <div className="row gap-2 wrap" style={{ marginTop: 20 }}>

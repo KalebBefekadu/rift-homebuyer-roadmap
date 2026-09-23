@@ -15,7 +15,7 @@ import { Ico } from "@/components/rift/icons";
 /**
  * Assembling a decision room, and releasing it.
  *
- * The agent sees EXACTLY what the client will see — the same `DecisionRoom`
+ * The agent sees EXACTLY what the client will see: the same `DecisionRoom`
  * component the plan page renders, not a second rendering of the same data.
  * Two renderings of one thing drift, and the one that drifts is always the one
  * nobody is looking at. The seller readout learned this the expensive way: a
@@ -54,7 +54,7 @@ export function Decisions({
       {decisions.length === 0 && !adding ? (
         <div className="card p-4" style={{ marginTop: 10 }}>
           <p className="t-sm c-3" style={{ lineHeight: 1.6, maxWidth: 560 }}>
-            Nothing here yet. A decision room is for the moments somebody actually stalls —
+            Nothing here yet. A decision room is for the moments somebody actually stalls:
             which price to target, which offer nets more, whether to sell first. Two or more
             options, each with its number and its trade-off, and the answer written down once
             it is made.
@@ -120,7 +120,7 @@ function NewRoom({ leadId, onDone }: { leadId: string; onDone: () => void }) {
       </label>
 
       <label className="col gap-1" style={{ marginTop: 12 }}>
-        <span className="t-2xs c-4 w6">Your framing — optional</span>
+        <span className="t-2xs c-4 w6">Your framing (optional)</span>
         <textarea
           className="input"
           rows={2}
@@ -131,7 +131,7 @@ function NewRoom({ leadId, onDone }: { leadId: string; onDone: () => void }) {
       </label>
 
       <label className="col gap-1" style={{ marginTop: 12, maxWidth: 220 }}>
-        <span className="t-2xs c-4 w6">Decide by — optional</span>
+        <span className="t-2xs c-4 w6">Decide by (optional)</span>
         <input type="date" className="input" value={by} onChange={(e) => setBy(e.target.value)} />
       </label>
 
@@ -312,13 +312,13 @@ function NewOption({ leadId, decisionId, onDone }: { leadId: string; decisionId:
       </label>
 
       <label className="col gap-1" style={{ marginTop: 12 }}>
-        <span className="t-2xs c-4 w6">What it means — optional</span>
+        <span className="t-2xs c-4 w6">What it means (optional)</span>
         <textarea className="input" rows={2} value={detail} onChange={(e) => setDetail(e.target.value)} />
       </label>
 
       <div className="row wrap gap-3" style={{ marginTop: 12 }}>
         <label className="col gap-1" style={{ maxWidth: 180 }}>
-          <span className="t-2xs c-4 w6">The figure — optional</span>
+          <span className="t-2xs c-4 w6">The figure (optional)</span>
           <input className="input" inputMode="decimal" value={amount}
             onChange={(e) => setAmount(e.target.value)} placeholder="412300" />
         </label>
@@ -383,7 +383,7 @@ function RecordOutcome({ leadId, decision, onDone }: { leadId: string; decision:
       </div>
 
       <label className="col gap-1" style={{ marginTop: 12 }}>
-        <span className="t-2xs c-4 w6">Why — optional, and they will read it</span>
+        <span className="t-2xs c-4 w6">Why (optional, and they will read it)</span>
         <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </label>
 

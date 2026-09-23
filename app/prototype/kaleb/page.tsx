@@ -47,7 +47,7 @@ export default function Kaleb() {
           </h1>
           <p className="lede" style={{ marginTop: 24, maxWidth: 540 }}>
             I&apos;m an agent in Georgia. I built Rift because the questions people actually
-            have — what does this really cost, what do I actually keep — kept getting answered
+            have (what does this really cost, what do I actually keep) kept getting answered
             three weeks too late, if at all.
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function Kaleb() {
               {[
                 ["I show you the number before I ask you for anything", "The assessment is free and complete. If you never call me, you still keep it."],
                 ["I'll tell you when the answer is no", "Sometimes renting is right. Sometimes the house isn't worth it. Saying so is the job."],
-                ["I don't guess at things I'm not licensed for", "Lending, legal, tax, appraisal — I tell you who actually decides and help you ask them."],
+                ["I don't guess at things I'm not licensed for", "Lending, legal, tax, appraisal: I tell you who actually decides and help you ask them."],
                 ["Nothing gets lost", "Every offer, deadline, and document is recorded. You can always see where things stand."],
               ].map(([t, b]) => (
                 <div key={t} className="row-t gap-3">

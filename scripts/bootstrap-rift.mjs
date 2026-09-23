@@ -2,7 +2,7 @@
 /**
  * Creates the agent row Rift needs before anything can be recorded.
  *
- * Until this runs, every write reports "no agent row exists yet" and skips —
+ * Until this runs, every write reports "no agent row exists yet" and skips:
  * honestly, but completely. This is the one manual step between a fresh
  * database and a working product.
  *
@@ -77,7 +77,7 @@ if (existing) {
 }
 
 /* Business rules are seeded WITHOUT decided_at. A rule nobody has looked at
-   must stay distinguishable from one the owner chose — two of these are the
+   must stay distinguishable from one the owner chose: two of these are the
    broker's call and one has a legal floor. */
 const DEFAULTS = {
   commissionPct: 2.5,
@@ -109,6 +109,6 @@ Next:
   1. Seed the registry if the count above is 0:
        psql "$DATABASE_URL" -f supabase/seed/rift_programs.sql
   2. Decide the six business rules. Two are the broker's call and one has a
-     legal floor — see docs/handoff.md section 8.
+     legal floor; see docs/handoff.md section 8.
   3. Open /studio.
 `);

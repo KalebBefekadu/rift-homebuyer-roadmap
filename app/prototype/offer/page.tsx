@@ -82,7 +82,7 @@ export default function Offer() {
         <div className="card p-5">
           <div style={{ border: "1.5px dashed var(--line)", borderRadius: 12, padding: 34, textAlign: "center" }}>
             <Ico.doc size={22} className="c-3" />
-            <div className="t-md w55" style={{ marginTop: 10 }}>Purchase and Sale Agreement — signed.pdf</div>
+            <div className="t-md w55" style={{ marginTop: 10 }}>Purchase and Sale Agreement, signed.pdf</div>
             <div className="t-xs c-4" style={{ marginTop: 3 }}>7 pages · 2.4 MB</div>
           </div>
           <p className="t-sm c-3" style={{ marginTop: 14, lineHeight: 1.6 }}>
@@ -127,7 +127,7 @@ export default function Offer() {
       {s === 3 ? (
         <div className="card p-5">
           <div className="t-md w6" style={{ marginBottom: 4 }}>Anything else attached?</div>
-          <p className="t-sm c-4" style={{ marginBottom: 16 }}>Optional — an incomplete offer is still accepted, just flagged.</p>
+          <p className="t-sm c-4" style={{ marginBottom: 16 }}>Optional. An incomplete offer is still accepted, just flagged.</p>
           <div className="col gap-2">
             {["Preapproval letter", "Proof of funds", "Additional addenda"].map((d) => (
               <label key={d} className="opt">
@@ -164,7 +164,7 @@ export default function Offer() {
                   <p className="t-sm c-2" style={{ lineHeight: 1.6 }}>
                     Kaleb represents the seller of this property, not you. He can&apos;t advise
                     you, and Rift won&apos;t tell you whether your offer is strong. Your
-                    submission goes straight to him — no automated reply. He&apos;ll contact you
+                    submission goes straight to him, with no automated reply. He&apos;ll contact you
                     to discuss your options, which include finding your own representation.
                   </p>
                 </div>
@@ -192,7 +192,7 @@ export default function Offer() {
               {[
                 "Kaleb sees your offer first. The seller has not seen it.",
                 "He decides to present it, hold it, or decline to present it.",
-                "Whatever he decides, you're told it was received — and it's never discarded.",
+                "Whatever he decides, you're told it was received, and it's never discarded.",
                 "Your original documents are preserved exactly as submitted.",
               ].map((t) => (
                 <div key={t} className="row-t gap-2">

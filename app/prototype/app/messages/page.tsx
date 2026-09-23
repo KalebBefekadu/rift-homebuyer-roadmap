@@ -10,7 +10,7 @@ const THREAD: Msg[] = [
   { from: "you", t: "Wait, is that real? That seems like a lot.", when: "6 Sep, 8:31" },
   { from: "kaleb", t: "It's real, but it's an estimate until Brookhaven confirms your income against the program limits. That's exactly the call I want to have this week.", when: "6 Sep, 8:36" },
   { from: "kaleb", t: "I've sent them both programs. If they come back clean you're looking at 11 months instead of 29.", when: "6 Sep, 8:37" },
-  { from: "you", t: "Devon wants to read the agency agreement before we sign anything — is that okay?", when: "6 Sep, 9:02" },
+  { from: "you", t: "Devon wants to read the agency agreement before we sign anything. Is that okay?", when: "6 Sep, 9:02" },
   { from: "kaleb", t: "Completely fair, and I'd expect it. I'll send it today so you both have it in front of you before we talk.", when: "6 Sep, 9:11" },
 ];
 

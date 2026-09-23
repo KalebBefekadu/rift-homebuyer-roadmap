@@ -1,7 +1,7 @@
 /**
  * What a visit is allowed to record about where it came from.
  *
- * First touch never moves. That is the whole point of first touch — an agent
+ * First touch never moves. That is the whole point of first touch: an agent
  * who re-attributes a referral to the retargeting ad that caught it on the way
  * back will keep buying retargeting and stop asking for referrals, which is
  * exactly backwards for a business whose best channel is people. Immutability
@@ -32,7 +32,7 @@ function tag(raw: string | null): string | undefined {
  *
  * This distinction is the whole module. The browser sends its own host as the
  * referrer for every internal navigation, and a touch recorded from inside the
- * site therefore reports the site as the channel — which is not a small error,
+ * site therefore reports the site as the channel, which is not a small error,
  * it is the report saying every visitor arrived from the page they were
  * already on, and "direct" never occurring at all.
  */
@@ -49,7 +49,7 @@ export function externalReferrer(
 /**
  * A landing path with any capability token removed.
  *
- * `/r/<token>` is a shared readout, and the token IS the credential — that is
+ * `/r/<token>` is a shared readout, and the token IS the credential: that is
  * the entire security model for a document somebody can forward. The query
  * string is already dropped here because it can carry a stranger's answers;
  * this route carries something stronger than answers in the path itself.
@@ -66,7 +66,7 @@ export interface Touch {
   referrer?: string;
   landing?: string;
   /**
-   * The `?r=` handle of whoever sent this visitor — another client's referral
+   * The `?r=` handle of whoever sent this visitor: another client's referral
    * token, or the share token of a readout they forwarded.
    *
    * A REFERRAL IS A FIRST TOUCH. Somebody arrives on a friend's link, reads for
@@ -115,7 +115,7 @@ export function stripToHost(referrer: string | null | undefined): string | undef
 /**
  * @param url       the page the visitor landed on
  * @param referrer  where they came from BEFORE that page, which only the
- *                  browser knows — `document.referrer`, not the Referer header
+ *                  browser knows: `document.referrer`, not the Referer header
  *                  of the call that reports it, which is the landing page
  * @param selfHost  our own host, so an internal navigation is not reported as
  *                  a channel
@@ -134,11 +134,11 @@ export function touchFromRequest(url: URL, referrer: string | null, selfHost?: s
   };
 }
 
-/** How a touch reads in Studio. Never "unknown" — "direct" is a real answer. */
+/** How a touch reads in Studio. Never "unknown": "direct" is a real answer. */
 export function describeTouch(t: Touch): string {
   /* A referral outranks a campaign tag. Somebody who arrives on a client's
-     link with a utm_source still attached — because the client copied the URL
-     out of a newsletter — was sent by the client. */
+     link with a utm_source still attached, because the client copied the URL
+     out of a newsletter: was sent by the client. */
   if (t.ref) return "referral";
   if (t.source) return t.campaign ? `${t.source} · ${t.campaign}` : t.source;
   if (t.referrer) return t.referrer;

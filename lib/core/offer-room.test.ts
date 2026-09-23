@@ -32,7 +32,7 @@ describe("Rift drafts the facts and leaves the judgement blank", () => {
     expect(d).toMatch(/Deel: FHA, conditional on the sale of their home; no preapproval letter attached/);
   });
 
-  it("never writes a recommendation — it ends on the marker", () => {
+  it("never writes a recommendation; it ends on the marker", () => {
     /* The machine's ranking must not reach a seller dressed as their agent's
        advice. Whatever the draft says, the last line is his to write. */
     const d = draftTake([whitfield, deel], costs)!;

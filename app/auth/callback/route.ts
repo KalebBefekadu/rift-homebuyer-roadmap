@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Two things here were left behind by the retired portal MVP and are fixed:
  * it called `claim_my_client_records`, an RPC that belonged to that product's
  * schema and no longer exists, and it redirected failures to `/login`, which
- * has been a 404 since the portal was removed — so a failed sign-in sent the
+ * has been a 404 since the portal was removed, so a failed sign-in sent the
  * one person who uses Studio to a dead page.
  */
 function safeNext(path: string | null): string {

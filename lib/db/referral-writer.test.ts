@@ -6,7 +6,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  *
  * The back half of the writer that `rift_leads.referred_by` never had. What
  * matters here is what it must refuse: another agent's client, somebody
- * crediting themselves, and a handle that does not resolve — the last of which
+ * crediting themselves, and a handle that does not resolve: the last of which
  * must not cost the capture it arrived with, because losing a lead over an
  * unrecorded referral would be an absurd trade.
  */

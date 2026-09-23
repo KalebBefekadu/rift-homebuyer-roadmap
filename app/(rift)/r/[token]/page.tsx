@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 /**
  * A readout, opened by its share token.
  *
- * The snapshot is rendered exactly as it was saved — no recomputation. Six
+ * The snapshot is rendered exactly as it was saved: no recomputation. Six
  * weeks later the arithmetic would give a different answer, and this page
  * exists to show what the person was actually told on the day. A shared
  * document that silently updates itself is not the thing they shared.
@@ -41,8 +41,8 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
      the growth loop arrived as "direct" and was indistinguishable from
      somebody who typed the address in.
 
-     The share token is the handle — `resolveReferrer` looks it up through the
-     readout to the lead behind it — so no new token has to travel and the
+     The share token is the handle: `resolveReferrer` looks it up through the
+     readout to the lead behind it, so no new token has to travel and the
      recipient's URL carries nothing about the sharer beyond a value they
      already have.
 
@@ -56,7 +56,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
   /* A broken query is not an expired link.
      
      Telling the recipient "this never existed" when the database hiccupped
-     says something false about somebody else's document — and the recipient
+     says something false about somebody else's document, and the recipient
      is often a lender or a parent, so the person who shared it is the one who
      looks unreliable. They cannot tell the difference and neither could the
      page, until now. */
@@ -65,7 +65,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
       <main className="shell-w sec buy">
         <h1 className="serif" style={{ fontSize: 28 }}>We cannot open this right now.</h1>
         <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
-          The link is fine — something on our side is not. Try again in a few minutes; nothing
+          The link is fine; something on our side is not. Try again in a few minutes; nothing
           about it has changed or been deleted.
         </p>
         <Link href={start} className="btn btn-g" style={{ marginTop: 16 }}>
@@ -127,7 +127,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
 
         {/* Each figure with how sure anybody is about it.
             
-            The numbers are frozen — that is what a snapshot is. What can change
+            The numbers are frozen: that is what a snapshot is. What can change
             is whether somebody has since been through them, and that is the one
             update a shared readout should carry: it is the difference between
             "we worked this out" and "a person checked it". */}

@@ -42,19 +42,19 @@ export async function enrol(leadId: string, band: Band, phoneConsent: boolean): 
   }
 }
 
-/** Any stop condition. Immediate — the queue is recomputed, not drained. */
+/** Any stop condition. Immediate: the queue is recomputed, not drained. */
 export async function stop(
   leadId: string, reason: StopId, agentId: string,
 ): Promise<DbResult<{ stopped: true }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   /* Scoped to the signed-in agent. Stopping a sequence is irreversible from
-     the product's side — the cadence does not restart — so an unscoped id
+     the product's side (the cadence does not restart) so an unscoped id
      here lets one agent silence another's follow-ups permanently. */
   if (!agentId) return failed("no agent");
   try {
     /* The agent is watching this button, and it is the action behind contract
-       4.11 — a sequence that keeps sending because a stop hung is exactly the
+       4.11: a sequence that keeps sending because a stop hung is exactly the
        failure the contract exists to prevent. */
     const stopped = await boundedWrite(
       db.from("rift_enrolments")
@@ -91,7 +91,7 @@ export interface DueTouch {
    * The figures this person was actually shown, and the link to them.
    *
    * Carried because a touch without them cannot be written. The runner used to
-   * send zeroes — "Buying in your County takes $0 at the table" — which is
+   * send zeroes ("Buying in your County takes $0 at the table") which is
    * worse than sending nothing at all: it is a message that proves nobody is
    * paying attention, delivered to somebody deciding whether to trust us with
    * their finances.
@@ -139,7 +139,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 
     /* How many questions each person actually answered. The recovery touch is
        the only one that needs it, and it is the only touch that can reach the
-       largest population in the funnel — so it is worth the query. */
+       largest population in the funnel, so it is worth the query. */
     const progress = new Map<string, number>();
     if (assessmentIds.length) {
       const { data: ans } = await db
@@ -231,7 +231,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
  * Records that a step went out.
  *
  * Written BEFORE the send, and treated as the lock. If the send then fails the
- * row is updated to `failed` and surfaces as an agent task — which is strictly
+ * row is updated to `failed` and surfaces as an agent task: which is strictly
  * better than the reverse order, where a crash between sending and recording
  * sends the same message again on the next run.
  */

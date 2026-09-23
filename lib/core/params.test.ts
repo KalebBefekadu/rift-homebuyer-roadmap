@@ -8,7 +8,7 @@ import { matchPrograms } from "./registry";
  * The readout's trust boundary.
  *
  * Every figure on an ungated, URL-addressable page is derived from a query
- * string a stranger can edit. These are the adversarial cases — the ones that
+ * string a stranger can edit. These are the adversarial cases: the ones that
  * produce an arithmetically correct absurdity rather than an error, which is
  * the only failure mode this product genuinely cannot survive.
  */
@@ -61,7 +61,7 @@ describe("hostile numbers", () => {
 describe("hostile strings", () => {
   it("falls back for a county we do not serve", () => {
     /* Passing it through would match no programmes and tell somebody there is
-       no help for them — a false claim rather than an empty result. */
+       no help for them: a false claim rather than an empty result. */
     const p = from({ c: "Cook" });
     expect(p.inputs.county).toBe(BUYER_DEFAULTS.county);
     expect(p.substituted).toContain("county");
@@ -105,11 +105,11 @@ describe("the rule that outranks the rest", () => {
 describe("whether the visitor actually named a timeline", () => {
   /**
    * The readout's tension block is the only sentence on the page written in
-   * the second person about something the reader told us — "You said 3 to 9
+   * the second person about something the reader told us: "You said 3 to 9
    * months." It has to be true that they said it.
    *
    * It was not. The default is applied both when the parameter is absent and
-   * when it is unusable, and `substituted` only records the second — so a
+   * when it is unusable, and `substituted` only records the second: so a
    * readout with no `t` at all asserted a statement nobody had made, with no
    * disclosure attached. A truncated share link, which is the case params.ts
    * was written for, produces exactly that.
@@ -120,7 +120,7 @@ describe("whether the visitor actually named a timeline", () => {
   it("is false when nothing was supplied, and the default is still applied", () => {
     const r = parse({ c: "DeKalb" });
     expect(r.timingStated).toBe(false);
-    /* The assumption stays — it is a defensible planning figure. What it must
+    /* The assumption stays: it is a defensible planning figure. What it must
        not do is get quoted back to them. */
     expect(r.timing).toBe("3 to 9 months");
     /* Nothing was substituted, because nothing was supplied. This is precisely
@@ -178,7 +178,7 @@ describe("the readout does not quote a timeline nobody gave", () => {
 
 describe("a seller who owes more than the sale produces", () => {
   /**
-   * `parseSellerParams` deliberately lets a payoff exceed the price — its own
+   * `parseSellerParams` deliberately lets a payoff exceed the price: its own
    * comment says being underwater "is exactly the situation somebody most
    * needs an honest number for", and that clamping it "would replace their
    * reality with a cheerful fiction". The arithmetic returned the negative
@@ -267,7 +267,7 @@ describe("a field nobody supplied is named, not quietly filled", () => {
   });
 
   /* The realistic case this exists for: a messaging app truncates the link
-     after the price, so everything downstream of it silently becomes ours —
+     after the price, so everything downstream of it silently becomes ours:
      and because nothing was WRONG, `substituted` stayed empty and the page
      disclosed nothing. */
   it("names only what was dropped when a link is cut short", () => {

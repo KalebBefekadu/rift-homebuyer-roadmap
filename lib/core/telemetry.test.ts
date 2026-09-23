@@ -12,8 +12,8 @@ import { sanitise, ALLOWED_META } from "./telemetry";
  *
  * The specific failure it was written after: `sanitise` was a blocklist of
  * eleven key names and the database constraint was a blocklist of three. The
- * buyers-abroad landing page sent `status` — citizen, resident, ITIN, or no
- * U.S. status — on every page view, and it was on neither list. Residency
+ * buyers-abroad landing page sent `status`: citizen, resident, ITIN, or no
+ * U.S. status: on every page view, and it was on neither list. Residency
  * status is a close proxy for national origin, which is a protected class
  * under the Fair Housing Act. Nothing failed.
  */
@@ -61,7 +61,7 @@ describe("what telemetry may carry", () => {
     expect(migration, "the allowlist migration should exist").toBeTruthy();
 
     const sql = readFileSync(`${dir}/${migration}`, "utf8");
-    /* The list as the CHECK constraint spells it — the last array in the file,
+    /* The list as the CHECK constraint spells it: the last array in the file,
        which is the one inside `alter table ... add constraint`. */
     const arrays = [...sql.matchAll(/payload - array\[([\s\S]*?)\]/g)];
     expect(arrays.length, "the constraint should subtract an allowlist").toBeGreaterThan(0);

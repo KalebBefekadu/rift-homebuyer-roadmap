@@ -6,7 +6,7 @@ import type { Ownership } from "./funnel";
  * Turning a URL into compute inputs.
  *
  * The readout is URL-addressable and ungated, which is the product's central
- * promise — and it means every number on it is derived from a query string a
+ * promise, and it means every number on it is derived from a query string a
  * stranger can edit. So this is a trust boundary, not a parsing convenience.
  *
  * Two failures it exists to prevent:
@@ -22,7 +22,7 @@ import type { Ownership } from "./funnel";
  *   which is a false claim rather than an empty result.
  *
  * Silently clamping rather than rejecting is deliberate. Somebody who lands on
- * a mangled link — truncated by a messaging app, mangled by an email client —
+ * a mangled link: truncated by a messaging app, mangled by an email client:
  * should see a sensible readout with its assumptions on display, not a refusal.
  * The assumptions are printed beside every figure, so a substituted default is
  * visible rather than hidden.
@@ -50,7 +50,7 @@ export const BOUNDS = {
  * "Built from … $9,000 saved · $650 a month" in the same grey as the figures
  * the reader actually chose, with no way to tell which was which.
  *
- * The defaults stay — a mangled link should still produce a sensible readout,
+ * The defaults stay: a mangled link should still produce a sensible readout,
  * which is this file's whole premise. What changes is that the page can now
  * say which of the numbers on it are ours.
  */
@@ -61,7 +61,7 @@ function given(raw: string | undefined): boolean {
 function num(raw: string | undefined, lo: number, hi: number, fallback: number): number {
   if (raw === undefined || raw.trim() === "") return fallback;
   const n = Number(raw);
-  /* NaN and Infinity both fail this, which is the point — `Number("1e999")` is
+  /* NaN and Infinity both fail this, which is the point: `Number("1e999")` is
      Infinity, and Infinity through the mortgage formula produces NaN on screen. */
   return Number.isFinite(n) && n >= lo && n <= hi ? n : fallback;
 }
@@ -80,7 +80,7 @@ export interface ReadoutParams {
    * not use". This means "you gave us nothing", and the two need different
    * sentences: the readout's tension block is written in the second person
    * about what the reader said, and with no answer it was telling somebody
-   * "You said 3 to 9 months" — a statement they never made, about their own
+   * "You said 3 to 9 months": a statement they never made, about their own
    * money, with no disclosure attached because nothing had been substituted.
    *
    * The default stays: it is a defensible planning assumption for the
@@ -142,7 +142,7 @@ export function parseReadoutParams(get: (key: string) => string | undefined): Re
     ownership,
     timing,
     timingStated: TIMINGS.includes(rawTiming as (typeof TIMINGS)[number]),
-    /* Naming a second decision-maker is a real signal — the person who did not
+    /* Naming a second decision-maker is a real signal: the person who did not
        answer these questions is usually the one who stalls it. */
     coBuyer: Boolean((get("w") ?? "").trim()),
     substituted,

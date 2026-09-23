@@ -14,7 +14,7 @@ export const maxDuration = 30;
  * The rate is the assumption the most figures in this product depend on, and
  * the only one that moves weekly. Recorded by hand it went ten weeks without
  * being recorded at all, during which every monthly payment shown to every
- * visitor used a 6.5% starting assumption — correctly labelled as one, and
+ * visitor used a 6.5% starting assumption: correctly labelled as one, and
  * still not the market.
  *
  * Freddie Mac publishes the primary mortgage market survey as a CSV, so this
@@ -103,7 +103,7 @@ async function run(req: Request) {
   });
 }
 
-/* Both verbs — Vercel's scheduler sends GET. See lib/core/cron.ts for what
+/* Both verbs: Vercel's scheduler sends GET. See lib/core/cron.ts for what
    exporting only POST cost this product last time. */
 export const GET = run;
 export const POST = run;

@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
  *
  * Two things only: the leads the readout produced, ranked by what their answers
  * say rather than by when they arrived, and the funnel's own drop-off. Not the
- * whole of Studio — the board, offers, calendar and client records are phase 5,
+ * whole of Studio: the board, offers, calendar and client records are phase 5,
  * and building them now would mean building against guesses, because there is
  * no live traffic yet for them to operate on.
  *
@@ -45,7 +45,7 @@ export default async function StudioToday() {
 
   /* A session check that did not answer is not a signed-out visitor. Today is
      the first thing the agent opens in the morning, which is the request most
-     likely to pay for a cold start — and telling him to sign in when his
+     likely to pay for a cold start, and telling him to sign in when his
      cookie is fine says his session expired. See lib/db/session.ts. */
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
 
@@ -69,7 +69,7 @@ export default async function StudioToday() {
 
   /* One round, not two. None of these depends on another, and splitting them
      made the page wait for the slowest of the first five before starting the
-     last two — for no reason beyond the order they were written in. Studio is
+     last two: for no reason beyond the order they were written in. Studio is
      the screen the agent opens first thing, so its latency is the product's
      felt speed. */
   /* His own re-check window, before the reads that depend on it. One extra
@@ -114,7 +114,7 @@ export default async function StudioToday() {
   /* Three states, not two.
      
      "Nobody has arrived" and "nothing is being recorded" were already held
-     apart. A query that FAILED was falling into neither — it produced an empty
+     apart. A query that FAILED was falling into neither: it produced an empty
      list, so a database error rendered "No leads yet" alongside copy assuring
      the agent that the readout is live and instrumented. That is the product
      telling him a comforting thing it cannot know. */
@@ -127,7 +127,7 @@ export default async function StudioToday() {
 
   /* No cast. The previous version fabricated the input and cast it to `never`,
      which hid a missing `contactable` and made every lead report as unbreached
-     — an indicator that read as "doing well" because it could not fire. */
+    : an indicator that read as "doing well" because it could not fire. */
   const slaOf = (l: (typeof leads)[number]) =>
     sla(
       {
@@ -160,7 +160,7 @@ export default async function StudioToday() {
             </div>
             <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
               What is missing below is missing because a query broke, not because it is not
-              there. Treat every empty section on this screen as unknown rather than as zero —
+              there. Treat every empty section on this screen as unknown rather than as zero:
               it has been reported, and the first one said: {failures[0]}
             </p>
           </div>
@@ -172,7 +172,7 @@ export default async function StudioToday() {
             </div>
             <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
               The database is not reachable, so this screen is empty because nothing is being
-              stored — not because nobody has arrived. Those are different problems and this one
+              stored, not because nobody has arrived. Those are different problems and this one
               is yours to fix.
             </p>
           </div>
@@ -180,7 +180,7 @@ export default async function StudioToday() {
 
         {/* The rate is the assumption the most figures depend on and the only
             one that moves weekly. Recording it is a manual habit, so the one
-            thing that must not happen is nobody noticing it has lapsed —
+            thing that must not happen is nobody noticing it has lapsed:
             every monthly figure in the product quietly drifts with it. */}
         {rate.freshness !== "fresh" ? (
           <div className="card p-4" style={{ marginTop: 16 }}>
@@ -327,8 +327,8 @@ export default async function StudioToday() {
         {/* Sellers who chose an offer.
 
             Above the agreements, because an offer carries a response deadline
-            measured in hours. The alert email may not have arrived — email is
-            the one integration this product has never been able to prove —
+            measured in hours. The alert email may not have arrived: email is
+            the one integration this product has never been able to prove:
             so the choice is here whether or not it did. */}
         {choices.length ? (
           <section style={{ marginTop: 32 }}>
@@ -336,7 +336,7 @@ export default async function StudioToday() {
               Sellers who chose an offer
             </h2>
             <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-              From their plan page, in the last week. A choice is not an acceptance — the next
+              From their plan page, in the last week. A choice is not an acceptance; the next
               step is the paperwork, before the buyer&rsquo;s deadline.
             </p>
             <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
@@ -370,7 +370,7 @@ export default async function StudioToday() {
             docs/product.md: "Expiration is a monitored deadline that raises
             attention before it lapses, not after." High on the page because an
             agreement that lapses uncovers everything it covered from the day
-            it ran out, not from the day somebody noticed — and the notice is
+            it ran out, not from the day somebody noticed, and the notice is
             the only thing standing between those two dates. */}
         {lapsing.length ? (
           <section style={{ marginTop: 32 }}>
@@ -418,7 +418,7 @@ export default async function StudioToday() {
             <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
               The largest source of lost leads in this product, and a normal state rather than a
               failure. Most of these people have given no way to reach them, which is the correct
-              outcome — a resumable link goes only to somebody who gave an address for that
+              outcome: a resumable link goes only to somebody who gave an address for that
               purpose.
             </p>
             <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
@@ -506,7 +506,7 @@ export default async function StudioToday() {
           </div>
           <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
             Ordered by how long they have sat where they are, not by when they arrived. A
-            relationship rarely dies of a decision — it dies of forty quiet days, and this list
+            relationship rarely dies of a decision; it dies of forty quiet days, and this list
             is sorted to put those at the top.
           </p>
 
@@ -558,7 +558,7 @@ export default async function StudioToday() {
           </h2>
           <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
             The last {report?.days ?? 90} days, counted in distinct sessions rather than page
-            views — a person who backs up and re-reads a question is one person. Bounded in time
+            views: a person who backs up and re-reads a question is one person. Bounded in time
             on purpose: the point of measuring drop-off is to change a question and see whether it
             helped, and averaged against a year of the old wording it never would.
           </p>

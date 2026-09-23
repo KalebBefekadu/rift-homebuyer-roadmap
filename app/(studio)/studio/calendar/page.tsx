@@ -76,7 +76,7 @@ export default async function CalendarPage() {
           <div className="card p-4" style={{ marginTop: 20 }}>
             <p className="t-sm c-3">
               Nothing has a date on it. Dates come from the one thing you owe somebody next, and
-              from the steps on their plan — both are set on a person&rsquo;s record.
+              from the steps on their plan. Both are set on a person&rsquo;s record.
             </p>
             <Link href="/studio/clients" className="btn btn-p btn-sm" style={{ marginTop: 12 }}>
               Find someone
@@ -144,7 +144,7 @@ export default async function CalendarPage() {
             his appointments here. */}
         <p className="t-xs c-4" style={{ marginTop: 26, lineHeight: 1.6, maxWidth: 560 }}>
           Booked calls are not here. Booking runs through Cal.com and this deployment has no key
-          for it, so nothing in the product can see them yet — and a calendar that quietly
+          for it, so nothing in the product can see them yet, and a calendar that quietly
           omitted half of them would be worse than one that says so.
         </p>
       </main>

@@ -7,7 +7,7 @@ import { join } from "node:path";
  *
  * `.row` and `.row-t` are `display: flex`. Every direct child of one becomes a
  * column. With an icon and a single run of text that is exactly what is wanted
- * — icon in one column, prose in the other, prose wrapping normally inside its
+ *: icon in one column, prose in the other, prose wrapping normally inside its
  * own column.
  *
  * Put an inline link in the middle of the prose and it stops being one run.
@@ -92,7 +92,7 @@ describe("flex paragraphs do not shatter their own sentences", () => {
     expect(
       broken,
       "these paragraphs are flex containers with an inline link, so their text renders as " +
-        "side-by-side columns on a narrow screen — wrap the prose in a <span>",
+        "side-by-side columns on a narrow screen; wrap the prose in a <span>",
     ).toEqual([]);
   });
 });

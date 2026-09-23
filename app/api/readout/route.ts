@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Saves the snapshot and returns a share link.
  *
  * The figures are sent by the client because the client has just been shown
- * them, and the snapshot's whole job is to record *what was shown* — not what
+ * them, and the snapshot's whole job is to record *what was shown*: not what
  * the server would compute again a moment later. That is the one case in this
  * codebase where trusting the client is correct rather than lazy: a snapshot
  * the server recomputed would not be a snapshot.
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   }
 
   /* Validated here rather than trusted, because these rows carry the product's
-     central claim — every figure states what it assumes and where it could be
+     central claim: every figure states what it assumes and where it could be
      wrong. A row that cannot say both is rejected by the database; sending one
      that will be rejected is a bug worth catching before the round trip. */
   const tracked = (Array.isArray(b.trackedFigures) ? b.trackedFigures : [])

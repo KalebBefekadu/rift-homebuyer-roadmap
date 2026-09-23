@@ -12,7 +12,7 @@ import { money, netProceeds, SELLER_DEFAULTS, type SellerInputs } from "@/lib/co
  *
  * The mirror of the buyer thesis: the down payment is not the number, and the
  * list price is not the number either. Three sliders, and the figure moves as
- * they move — a seller who drags their payoff and watches what they keep fall
+ * they move: a seller who drags their payoff and watches what they keep fall
  * has learnt the product's entire argument without reading a word of it.
  *
  * Deliberately shorter than the buyer page. A seller arrives with one question
@@ -33,7 +33,7 @@ export function Landing({ counties }: { counties: string[] }) {
   const r = useMemo(() => netProceeds(s), [s]);
   const pct = Math.round((r.net / s.price) * 100);
   /* The payoff slider reaches $700,000 and the price slider starts at
-     $150,000, so this panel can be — and was — asked to describe a sale that
+     $150,000, so this panel can be (and was) asked to describe a sale that
      does not cover the loan. It answered "What you'd actually walk away with:
      -$566,000", at -377% of the price. The readout was rewritten for this case
      last week; the front door, which is where a seller meets the product, was
@@ -88,7 +88,7 @@ export function Landing({ counties }: { counties: string[] }) {
                       <span className="num t-sm">{money(s[k])}</span>
                     </div>
                     {/* Without valuetext a screen reader reads the raw
-                        number — "four hundred twenty thousand" as digits, with
+                        number: "four hundred twenty thousand" as digits, with
                         no currency. The visible label already says money. */}
                     <input className="rng" type="range" min={min} max={max} step={step} value={s[k]}
                       aria-valuetext={money(s[k])}
@@ -187,7 +187,7 @@ export function Landing({ counties }: { counties: string[] }) {
               </div>
               <p className="t-xs c-4" style={{ marginTop: 14, lineHeight: 1.6 }}>
                 We&apos;re not tax advisors or attorneys. We notice the question is worth asking
-                and tell you exactly who decides — your county, your lender, or a tax
+                and tell you exactly who decides: your county, your lender, or a tax
                 professional.
               </p>
               <Link href="/sell/unclaimed" className="btn btn-brand" style={{ marginTop: 18 }}>
@@ -205,7 +205,7 @@ export function Landing({ counties }: { counties: string[] }) {
             </h3>
             <p style={{ marginTop: 12, color: "rgba(255,255,255,.62)", fontSize: 15, lineHeight: 1.6, maxWidth: 520 }}>
               Net proceeds, unclaimed value, what&apos;s worth fixing, when to list, and a dated
-              plan — yours whether or not we ever speak.
+              plan, yours whether or not we ever speak.
             </p>
             <div className="g3 gap-3" style={{ marginTop: 26 }}>
               {[

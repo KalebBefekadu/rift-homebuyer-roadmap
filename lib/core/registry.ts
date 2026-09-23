@@ -1,5 +1,5 @@
 /**
- * Rift prototype — verified program registry.
+ * Rift prototype: verified program registry.
  *
  * Product rule (docs/product.md, "Keeping the program data honest"):
  * every program carries a last-verified date and its source. A program not
@@ -7,7 +7,7 @@
  * raised to the agent as a task. Suppression is silent to the customer.
  *
  * Amounts are RANGES with eligibility conditions attached, never single
- * figures, and never an approval. Demonstration data — amounts and terms are
+ * figures, and never an approval. Demonstration data: amounts and terms are
  * illustrative and would be verified against each administrator in reality.
  */
 
@@ -85,7 +85,7 @@ export const PROGRAMS: AssistanceProgram[] = [
     priceCapNote: "Property must be inside the City of Atlanta limits.",
     conditions: [
       "Property must be within City of Atlanta boundaries",
-      "Forgiven over a residency period — leaving early can trigger repayment",
+      "Forgiven over a residency period; leaving early can trigger repayment",
       "Buyer contribution required from own funds",
       "Homebuyer education required",
     ],
@@ -168,7 +168,7 @@ export const PROGRAMS: AssistanceProgram[] = [
     priceCapNote: "No separate price cap; lender underwriting applies.",
     conditions: [
       "Must be originated through a participating FHLB member lender",
-      "Matched savings requirement — buyer funds are matched at a set ratio",
+      "Matched savings requirement: buyer funds are matched at a set ratio",
       "Retention period applies",
       "Funds are released on a first-come basis each program year",
     ],
@@ -195,7 +195,7 @@ export const PROGRAMS: AssistanceProgram[] = [
     ],
     verifiedOn: "2026-06-02",
     verifiedBy: "Kaleb",
-    source: "Lender guidance — general",
+    source: "Lender guidance, general",
   },
   {
     id: "stale-example",
@@ -256,7 +256,7 @@ export interface MatchResult {
 /**
  * Match is deterministic and conservative: a program is shown only if it is
  * verified recently enough and its geography and first-time status fit.
- * Closed and waitlisted programs are shown WITH their state, never hidden —
+ * Closed and waitlisted programs are shown WITH their state, never hidden:
  * "funding exhaustion is a first-class state".
  */
 export function matchPrograms({ county, firstTimeBuyer, programs = PROGRAMS, today = PROTO_TODAY }: MatchInput): MatchResult {
@@ -287,7 +287,7 @@ export const FUNDING_LABEL: Record<FundingState, string> = {
 };
 
 export const TYPE_LABEL: Record<ProgramType, string> = {
-  grant: "Grant — not repaid",
+  grant: "Grant, not repaid",
   forgivable: "Forgivable over time",
   deferred: "Deferred second loan",
   "second-lien": "Second lien",

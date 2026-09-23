@@ -11,7 +11,7 @@ export { refFrom };
 /**
  * Whether the referral columns exist yet.
  *
- * Schema and code ship separately here — the migration is applied by hand —
+ * Schema and code ship separately here: the migration is applied by hand:
  * and a deploy landing first would otherwise insert a column PostgREST does
  * not know about and fail EVERY attribution write. That is not a degraded
  * report; it is the first touch of every visitor lost for as long as the two
@@ -28,7 +28,7 @@ const isMissingColumn = (e: unknown) =>
 /**
  * First-touch attribution.
  *
- * First touch never moves. That is the whole point of first touch — an agent
+ * First touch never moves. That is the whole point of first touch: an agent
  * who re-attributes a referral to the retargeting ad that caught it on the way
  * back will keep buying retargeting and stop asking for referrals, which is
  * exactly backwards for a business whose best channel is people.
@@ -44,7 +44,7 @@ const isMissingColumn = (e: unknown) =>
 
 export async function captureTouch(sessionId: string, touch: Touch): Promise<DbResult<{ first: boolean; visits: number }>> {
   const db = serviceClient();
-  if (!db) return skipped("no database configured — attribution is not being recorded");
+  if (!db) return skipped("no database configured; attribution is not being recorded");
 
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
@@ -112,7 +112,7 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
       visits,
     };
     /* `last_ref` only when there is one. A second visit arriving directly must
-       not blank the referral off the last touch — "they came back on their own"
+       not blank the referral off the last touch: "they came back on their own"
        is a fact about this visit, not a correction to the previous one. */
     if (hasRef !== false && touch.ref) patch.last_ref = touch.ref;
 
@@ -163,19 +163,19 @@ export async function firstRefFor(sessionId: string): Promise<string | null> {
  *
  * Two kinds of handle reach here and both are legitimate referrals:
  *
- *   A REFERRAL TOKEN on rift_leads — a past or current client passing the
+ *   A REFERRAL TOKEN on rift_leads: a past or current client passing the
  *   product to somebody, which is the advocacy loop docs/vision.md is built
  *   around.
  *
- *   A SHARE TOKEN on rift_readouts — somebody forwarding their own readout to
+ *   A SHARE TOKEN on rift_readouts: somebody forwarding their own readout to
  *   a friend, who then runs their own. product.md calls this "the most natural
  *   referral there is" and says the recipient is credited to the sharer
  *   exactly like a referral. It had no implementation: /r/<token> sent every
  *   recipient to a bare /buy/start.
  *
  * Returns null for anything unrecognised. A handle that does not resolve is
- * not an error — links get truncated, retyped and passed through trackers that
- * mangle query strings — and the capture must go ahead regardless. Losing the
+ * not an error: links get truncated, retyped and passed through trackers that
+ * mangle query strings, and the capture must go ahead regardless. Losing the
  * credit is bad; losing the lead over it would be absurd.
  */
 export async function resolveReferrer(
@@ -226,8 +226,8 @@ export async function resolveReferrer(
 /**
  * Somebody re-running the assessment from their own link is not a referral.
  *
- * It happens constantly and innocently — a buyer opens the readout they were
- * sent, changes a number and fills the form again — and without this the
+ * It happens constantly and innocently: a buyer opens the readout they were
+ * sent, changes a number and fills the form again, and without this the
  * advocacy figure quietly fills up with people who referred themselves. The
  * database check only catches the exact-same-row case; this catches the one
  * that actually occurs, which is a second lead row from the same browser.

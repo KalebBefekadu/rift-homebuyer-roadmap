@@ -4,7 +4,7 @@
  * Prototype persistence for funnel edits.
  *
  * localStorage stands in for what would be a per-tenant row in the real thing.
- * It is here so the editor in Studio actually changes the live funnel — an
+ * It is here so the editor in Studio actually changes the live funnel: an
  * editor whose changes you cannot go and look at is a mock, not a prototype.
  */
 
@@ -42,7 +42,7 @@ export function writeFunnel(f: Funnel, what = "Edited") {
     window.dispatchEvent(new CustomEvent("rift:funnel", { detail: f.side }));
     return next;
   } catch {
-    return f; /* storage unavailable — the default funnel still works */
+    return f; /* storage unavailable: the default funnel still works */
   }
 }
 

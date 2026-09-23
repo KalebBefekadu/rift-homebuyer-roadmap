@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 export async function createClient() {
   /* SUPABASE_URL first. NEXT_PUBLIC_ variables are inlined at build time, so a
      server reading one is pinned to whatever project the bundle was compiled
-     against — the runtime environment cannot move it. The same bug was fixed
+     against: the runtime environment cannot move it. The same bug was fixed
      in lib/db/service.ts; it was here too, in the auth path, where the symptom
      is worse: sign-in silently checked against the wrong project. */
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,7 +26,7 @@ export async function createClient() {
             cookieStore.set(name, value, options),
           );
         } catch {
-          // Called from a Server Component — ignore if middleware will refresh session.
+          // Called from a Server Component: ignore if middleware will refresh session.
         }
       },
     },

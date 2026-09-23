@@ -11,8 +11,8 @@ export const metadata: Metadata = {
  * Deliberately bare.
  *
  * The previous root layout wrapped every route in an `AuthProvider` that
- * belonged to the retired portal MVP. Nothing consumes a session yet — the
- * prototype has no accounts by design — so wrapping the tree in a provider
+ * belonged to the retired portal MVP. Nothing consumes a session yet: the
+ * prototype has no accounts by design, so wrapping the tree in a provider
  * that nothing reads is a dependency pretending to be a decision.
  *
  * `lib/auth/*` is intact and working. Re-introduce a session provider here in

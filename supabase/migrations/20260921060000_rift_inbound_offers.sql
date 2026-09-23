@@ -33,7 +33,7 @@ alter table rift_offers add column if not exists property_address text;
 --
 -- docs/privacy: the phone number given to deliver ONE offer is passed on with
 -- it and never stored beyond the offer's own retention. These live on the
--- offer row rather than on a lead deliberately — the submitter is a third
+-- offer row rather than on a lead deliberately: the submitter is a third
 -- party until they choose to become a relationship.
 alter table rift_offers add column if not exists submitted_email text;
 alter table rift_offers add column if not exists submitted_phone text;

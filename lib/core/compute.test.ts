@@ -121,7 +121,7 @@ describe("the gap", () => {
  *
  * Guards the thing the assessment was collecting and discarding: the buyer's
  * stated timing was asked, was the strongest signal in the lead score, was
- * passed into `buyerReadout` — and was never read. Somebody could say "in the
+ * passed into `buyerReadout`: and was never read. Somebody could say "in the
  * next 3 months", be told they were 18 months out, and never see the two
  * numbers put next to each other.
  * ------------------------------------------------------------------ */
@@ -170,7 +170,7 @@ describe("timing tension", () => {
 
   it("never folds assistance into the headline it compares against", () => {
     /* The comparison is savings-only, like every other headline figure.
-       Assistance may appear in the body as conditional upside — never above. */
+       Assistance may appear in the body as conditional upside: never above. */
     const t = readout({ savings: 9_000, monthlySaving: 650 }, "In the next 3 months").tension;
     expect(t?.headline).toContain("On savings alone");
   });

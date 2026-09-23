@@ -6,14 +6,14 @@ import {
 
 /**
  * `capture.test.ts` already tested these functions and they passed, because it
- * fed `touchFromRequest` a referrer like "https://l.facebook.com/" — which is
+ * fed `touchFromRequest` a referrer like "https://l.facebook.com/": which is
  * what the module is for and not what its caller ever produced.
  *
  * The caller is a fetch from the landing page to /api/attribution. The Referer
  * header on that call is the landing page. So the referrer handed to this
  * function was always our own host, every row recorded rift as the channel
- * that sent a visitor to rift, and "direct" — which `describeTouch` calls "a
- * real answer" — could not occur. A green test sat over it the whole time.
+ * that sent a visitor to rift, and "direct": which `describeTouch` calls "a
+ * real answer": could not occur. A green test sat over it the whole time.
  *
  * So these tests use the inputs the route actually produces.
  */
@@ -76,7 +76,7 @@ describe("a utm tag is whatever a stranger typed into a link", () => {
 
 describe("the landing path never carries a credential", () => {
   it("redacts a shared readout's token", () => {
-    /* /r/<token> is unguessable on purpose — the token IS the credential for a
+    /* /r/<token> is unguessable on purpose: the token IS the credential for a
        document somebody can forward. The query string was already dropped for
        carrying answers; this path carries something stronger. */
     expect(safeLanding("/r/2f9c1a8b4d")).toBe("/r/[token]");

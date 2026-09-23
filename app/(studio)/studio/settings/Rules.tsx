@@ -10,7 +10,7 @@ import { decideRule, undecideRule } from "../actions";
  *
  * No "Save all" button. Each of these is a separate judgement with a separate
  * owner and a separate consequence, and a form that commits six of them at
- * once invites the agent to accept five defaults in order to change one —
+ * once invites the agent to accept five defaults in order to change one:
  * which is precisely how a default becomes a policy without anybody choosing
  * it.
  *
@@ -59,7 +59,7 @@ function Row({ k, value, isDefault, provenance }: {
   const save = (v: number | boolean | string) => {
     setError("");
     start(async () => {
-      /* The server validates too, and its answer is the one that counts —
+      /* The server validates too, and its answer is the one that counts:
          this is a second opinion, not the check. */
       const r = await decideRule(k, v as never);
       if (!r.ok) setError(r.error);
@@ -100,7 +100,7 @@ function Row({ k, value, isDefault, provenance }: {
           </p>
           {/* Said out loud, per rule. Five of these six currently change
               nothing a person can see, and a page of dials that quietly go
-              nowhere is exactly the failure this product keeps having —
+              nowhere is exactly the failure this product keeps having:
               except built deliberately. A recorded decision is still worth
               having; pretending it is in force is not. */}
           <p className={`t-xs row-t gap-2 ${RULE_REACH[k].live ? "c-4" : "c-warn"}`} style={{ marginTop: 5, lineHeight: 1.55, maxWidth: 460 }}>

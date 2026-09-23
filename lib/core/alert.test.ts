@@ -114,7 +114,7 @@ describe("what the body has to carry", () => {
   it("shows the three strongest signals, by magnitude", () => {
     const html = render()!.html;
     expect(html).toContain("Wants to move in under three months");
-    /* Negative points are as informative as positive ones — a named
+    /* Negative points are as informative as positive ones: a named
        co-decider changes the first call. */
     expect(html).toContain("Named someone else who decides");
   });

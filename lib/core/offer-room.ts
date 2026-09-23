@@ -4,12 +4,12 @@
  * Benchmark 2.2 is "Rift prepares consequential work; the agent approves; the
  * difference is visible and recorded". The offers already rank themselves by
  * net. What was missing is the two halves a seller actually needs at that
- * table — what their agent thinks, and a way to say "this one" that is
+ * table: what their agent thinks, and a way to say "this one" that is
  * recorded alongside the numbers they were looking at when they said it.
  *
  * RIFT DRAFTS THE FACTS AND LEAVES THE JUDGEMENT BLANK. The draft states what
- * is computable — which offer is highest, which leaves the seller most, what
- * paperwork is missing — and ends with a marker the agent must replace with
+ * is computable, which offer is highest, which leaves the seller most, what
+ * paperwork is missing, and ends with a marker the agent must replace with
  * his own recommendation. `canApprove` refuses a take that still contains it.
  * Software that writes "I'd take Whitfield" in the agent's voice and waits for
  * a click has made the recommendation; the click is not approval, it is
@@ -32,7 +32,7 @@ import { money } from "./compute";
 import { rankOffers, headlineTrap, gapsIn, FINANCING_LABEL, type Offer, type SellerCosts } from "./offers";
 
 /** Where the agent's own recommendation goes. Approval is refused while it is still here. */
-export const RECOMMENDATION_MARKER = "[What you would do, and why — in your own words]";
+export const RECOMMENDATION_MARKER = "[What you would do, and why, in your own words]";
 
 export const TAKE_MAX = 2000;
 export const CLIENT_NOTE_MAX = 1000;
@@ -109,10 +109,10 @@ export function draftTake(released: Offer[], costs: SellerCosts | null): string 
 /** Why a take cannot be approved, or null when it can. */
 export function canApprove(take: string, released: Offer[]): string | null {
   const t = take.trim();
-  if (released.length === 0) return "Release at least one offer first — a take about nothing the seller can see is not advice";
+  if (released.length === 0) return "Release at least one offer first. A take about nothing the seller can see is not advice";
   if (!t) return "Write something first";
-  if (t.includes(RECOMMENDATION_MARKER)) return "Replace the bracketed line with what you would do — that part is yours to write, not Rift's";
-  if (t.length > TAKE_MAX) return `Keep it under ${TAKE_MAX} characters — it is read on a phone`;
+  if (t.includes(RECOMMENDATION_MARKER)) return "Replace the bracketed line with what you would do. That part is yours to write, not Rift's";
+  if (t.length > TAKE_MAX) return `Keep it under ${TAKE_MAX} characters; it is read on a phone`;
   return null;
 }
 

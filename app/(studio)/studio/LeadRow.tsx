@@ -13,7 +13,7 @@ import { stopSequence, markRepliedTo } from "./actions";
  * "A reply stops the sequence immediately" is contract 4.11, and until this
  * existed nothing in the product could actually do it. A rule with no control
  * behind it is enforceable only by whoever remembers it, which in practice
- * means the first busy week breaks it — and the person on the other end
+ * means the first busy week breaks it, and the person on the other end
  * receives a scheduled email two days after a real conversation.
  *
  * Every stop names its reason, because "stopped, and nobody recorded why" is
@@ -99,7 +99,7 @@ export function LeadRow({ lead, last }: {
       </div>
 
       {/* What they are actually looking at. The agent should not have to go
-          and find the numbers the person on the phone is holding — and these
+          and find the numbers the person on the phone is holding, and these
           come from the snapshot, so they are the same figures rather than a
           fresh computation that has moved since. */}
       {lead.figures ? (

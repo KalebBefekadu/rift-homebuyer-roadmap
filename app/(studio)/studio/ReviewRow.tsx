@@ -69,7 +69,7 @@ export function ReviewRow({ item, last }: {
       {/* What the figure itself assumes, and where it could be wrong.
           
           He is being asked to stand behind a number. Showing the request
-          without these asks him to do it from memory — which is the situation
+          without these asks him to do it from memory, which is the situation
           contract 4.2 exists to prevent on the customer's side, and there is
           no reason his side should be worse. */}
       {item.figure ? (
@@ -119,7 +119,7 @@ export function ReviewRow({ item, last }: {
             {to === "reviewed" ? "I have been through it" : to === "verified" ? "A lender confirmed it" : "Send for review"}
           </button>
           {to === "verified" ? (
-            <span className="t-2xs c-4">Needs a name — an unsigned verification is still an estimate.</span>
+            <span className="t-2xs c-4">Needs a name. An unsigned verification is still an estimate.</span>
           ) : null}
         </div>
       ) : (

@@ -7,7 +7,7 @@ import { buildReadout, buildTouch, buildResume, escapeHtml } from "./email";
  * This file used to re-implement `escapeHtml` and assert against its own copy,
  * because the builders lived inside a `server-only` module and could not be
  * imported. A test of the test. Moving them into the domain layer is what
- * makes the rest of this file possible — and the defect below is what made it
+ * makes the rest of this file possible, and the defect below is what made it
  * worth doing.
  */
 
@@ -30,8 +30,8 @@ describe("email escaping", () => {
 
 describe("the seller's readout email", () => {
   /**
-   * It did not exist. `buildReadout` had one body — "Buying in {county} County
-   * takes {cashToClose} at the table" — and the capture route fed it
+   * It did not exist. `buildReadout` had one body: "Buying in {county} County
+   * takes {cashToClose} at the table": and the capture route fed it
    * `cashToClose` from a payload the seller page never sent, so
    * `Number(undefined) || 0` made it zero.
    *

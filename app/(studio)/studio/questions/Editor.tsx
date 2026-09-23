@@ -9,7 +9,7 @@ import { publishQuestions } from "../actions";
  * Editing the words, and nothing else.
  *
  * There is no control here for a question's key, its type, what it feeds,
- * whether it is required, or the machine value behind an option — not because
+ * whether it is required, or the machine value behind an option: not because
  * they are hidden, but because the server rebuilds every question from
  * `lib/core/funnel.ts` and applies only the words on top. Sending one would
  * achieve nothing. That is worth stating in the interface rather than leaving
@@ -18,7 +18,7 @@ import { publishQuestions } from "../actions";
  *
  * The diff before publishing is the important part. A form that saves silently
  * makes it possible to change the first question a stranger ever reads without
- * having looked at the change — and the old and new words side by side is the
+ * having looked at the change, and the old and new words side by side is the
  * only way to notice that "What have you saved?" became something that reads
  * like an accusation.
  */
@@ -35,7 +35,7 @@ export function Editor({ side, funnel, stored }: {
 
   /* Against the code's own definition, so the list is "what a visitor will
      read that is different from what shipped" rather than a diff against the
-     last save — which would call a published change no change at all. */
+     last save, which would call a published change no change at all. */
   const changes = useMemo(() => wordingChanges(funnel, draft), [funnel, draft]);
   const preview = useMemo(() => applyWording(funnel, draft), [funnel, draft]);
 
@@ -66,7 +66,7 @@ export function Editor({ side, funnel, stored }: {
                       rename this and not remove it. */}
                   {q.bound
                     ? <>Feeds <code>{q.bound}</code> · wording only</>
-                    : <>Asks only — feeds no figure</>}
+                    : <>Asks only, feeds no figure</>}
                 </span>
               </div>
 
@@ -92,7 +92,7 @@ export function Editor({ side, funnel, stored }: {
               {q.options?.length ? (
                 <>
                   <div className="t-2xs c-4" style={{ marginTop: 12 }}>
-                    The answers — you can rename them, and what each one means stays put
+                    The answers: you can rename them, and what each one means stays put
                   </div>
                   <div className="col gap-2" style={{ marginTop: 6 }}>
                     {q.options.map((o, n) => (

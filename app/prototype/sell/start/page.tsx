@@ -43,7 +43,7 @@ function SellStart() {
   const ok = !q?.required || answered;
   const last = n === QS.length - 1;
 
-  /* Instrumentation. Question ids and timings only — never the answer. */
+  /* Instrumentation. Question ids and timings only: never the answer. */
   const src = useRef<string | undefined>(undefined);
   useEffect(() => { src.current = readAttribution()?.first.source; }, []);
   useTrack({ name: "assessment_start", side: "sell", fv: funnel.version, meta: { prefilled: QS.length !== funnel.questions.length } });

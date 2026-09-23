@@ -7,7 +7,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  * This is the one job in the product that destroys data on a timer, with
  * nobody watching, against a promise printed at the bottom of every readout.
  * It has never been tested beyond "it does not throw when there is no
- * database" — and the last time a foreign key changed underneath this family
+ * database": and the last time a foreign key changed underneath this family
  * of code, `forget()` went on reporting success while leaving the person's
  * name, email and phone in place for the life of the migration.
  *
@@ -92,7 +92,7 @@ describe("what the sweep refuses to delete", () => {
 
   it("does not touch clients or consents, and says why", async () => {
     /* The client record has a legal floor set by Georgia licence law, and the
-       consent record is what proves the contact was lawful — it has to outlive
+       consent record is what proves the contact was lawful: it has to outlive
        the relationship it documents. Both are stated in the result so the
        refusal is visible rather than an absence. */
     build();

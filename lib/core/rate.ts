@@ -1,7 +1,7 @@
 /**
  * How old a rate is allowed to be, and what to say when it is older.
  *
- * Pure, so the rule can be tested without a database — and because the rule is
+ * Pure, so the rule can be tested without a database, and because the rule is
  * the interesting part, not the fetch.
  *
  * The product's whole argument is that every figure carries its assumptions.
@@ -36,7 +36,7 @@ export const RATE_STALE_DAYS = 21;
  */
 export const FALLBACK_RATE = {
   pct: 6.5,
-  source: "Starting assumption — no rate has been recorded",
+  source: "Starting assumption: no rate has been recorded",
 } as const;
 
 export function describeRate(pct: number, source: string, asOf: string | null, today = new Date()): RateAssumption {
@@ -57,7 +57,7 @@ export function describeRate(pct: number, source: string, asOf: string | null, t
     asOf: asOf ?? "",
     ageDays,
     freshness,
-    label: `${pct.toFixed(2)}% — ${source}, ${when}`,
+    label: `${pct.toFixed(2)}%, ${source}, ${when}`,
     note:
       freshness === "fresh"
         ? "Rates move weekly. Your own rate depends on credit, loan type, and the day you lock."

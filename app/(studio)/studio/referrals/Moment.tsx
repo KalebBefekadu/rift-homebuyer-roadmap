@@ -10,7 +10,7 @@ import { decideMoment, setMood } from "../actions";
  *
  * Drawn as one component because they are one thought. Splitting the mood
  * buttons away from the moments they gate would let a screen render the ask
- * without the question — and the whole rule is that the question comes first.
+ * without the question, and the whole rule is that the question comes first.
  */
 
 const MOOD_LABEL: Record<"good" | "mixed" | "bad", string> = {
@@ -38,7 +38,7 @@ export function MoodCheck({ leadId, mood, name }: { leadId: string; mood: Mood; 
           <div className="t-sm w6">Have you asked {name} how it went?</div>
           <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>
             In private, and before anything public. Nobody is asked to say something in
-            public who has not first been asked, quietly, whether they are happy — and
+            public who has not first been asked, quietly, whether they are happy, and
             somebody who says they are not is never then asked for a rating.
           </p>
 

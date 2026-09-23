@@ -14,12 +14,12 @@ import { readRules, DEFAULT_RULES } from "@/lib/core/settings";
 import { money } from "@/lib/core/compute";
 
 const SOURCES = [
-  { s: "Referral", leads: 14, consults: 9, clients: 6, spend: 0, per: "—" },
+  { s: "Referral", leads: 14, consults: 9, clients: 6, spend: 0, per: "None" },
   { s: "Paid social", leads: 62, consults: 21, clients: 4, spend: 2340, per: "$585" },
-  { s: "Organic search", leads: 38, consults: 9, clients: 3, spend: 0, per: "—" },
+  { s: "Organic search", leads: 38, consults: 9, clients: 3, spend: 0, per: "None" },
   { s: "Open house", leads: 19, consults: 11, clients: 4, spend: 620, per: "$155" },
   { s: "Workshop", leads: 24, consults: 14, clients: 3, spend: 410, per: "$137" },
-  { s: "Rift Offer", leads: 11, consults: 2, clients: 1, spend: 0, per: "—" },
+  { s: "Rift Offer", leads: 11, consults: 2, clients: 1, spend: 0, per: "None" },
 ];
 
 /**
@@ -127,7 +127,7 @@ export default function Clients() {
               </div>
               <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: 1.6, maxWidth: 700 }}>
                 An inbox makes everyone look equally urgent, which is the same as making nobody
-                urgent. Open any row to see the arithmetic — a ranking you can&apos;t audit is one
+                urgent. Open any row to see the arithmetic: a ranking you can&apos;t audit is one
                 you stop trusting by the second week. Nothing here uses anything but the answers
                 they gave.
               </p>
@@ -145,7 +145,7 @@ export default function Clients() {
                 <div className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55 }}>
                   Live capture, not a fixture. Open a public page with{" "}
                   <span className="mono">?utm_source=facebook&amp;utm_campaign=dpa-help-aug</span> and come
-                  back — first touch will not move, which is the entire point of first touch.
+                  back, and first touch will not move, which is the entire point of first touch.
                 </div>
               </div>
             ) : null}
@@ -241,7 +241,7 @@ export default function Clients() {
                             </div>
                             <div className="t-xs c-4" style={{ marginTop: 5, lineHeight: 1.55 }}>
                               {sla(l, sc.band).humanLabel}. The clock that matters most already
-                              stopped — they have their numbers either way.
+                              stopped. They have their numbers either way.
                             </div>
                           </div>
 
@@ -345,7 +345,7 @@ export default function Clients() {
                           return (
                             <td key={m.id}>
                               {st ? <span className={`chip ${STATE_CHIP[st].c}`}>{STATE_CHIP[st].l}</span>
-                                  : <span className="t-xs c-4">—</span>}
+                                  : <span className="t-xs c-4">None</span>}
                             </td>
                           );
                         })}
@@ -354,7 +354,7 @@ export default function Clients() {
                             <div key={x.who} className="t-xs" style={{ whiteSpace: "nowrap" }}>
                               {x.who} <span className="c-4">· {x.outcome}</span>
                             </div>
-                          )) : <span className="t-xs c-4">—</span>}
+                          )) : <span className="t-xs c-4">None</span>}
                         </td>
                       </tr>
                     ))}
@@ -365,7 +365,7 @@ export default function Clients() {
 
             <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6, maxWidth: 720 }}>
               Nothing public is ever requested before a private check. Someone who says the move
-              went badly is routed to you and is not asked for a rating — then or later. That is
+              went badly is routed to you and is not asked for a rating, then or later. That is
               not rating management; it is that a complaint deserves an answer rather than a form.
             </p>
           </>
@@ -465,7 +465,7 @@ export default function Clients() {
                           <span className="t-xs c-4">of {b.count}</span>
                         </div>
                         <div className="t-xs c-3" style={{ marginTop: 3 }}>
-                          {b.weightedValue ? money(Math.round(commissionOn(b.weightedValue, pct))) : "—"}
+                          {b.weightedValue ? money(Math.round(commissionOn(b.weightedValue, pct))) : "Unpriced"}
                         </div>
                         <div className="t-2xs c-4 trunc" style={{ marginTop: 4 }}>
                           {b.names.length ? b.names.join(", ") : "Nothing expected"}
@@ -486,7 +486,7 @@ export default function Clients() {
                     </p>
                     <p className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55 }}>
                       These odds used to be assumptions dressed up as his numbers. They now shrink
-                      toward his own closed history and are labelled with what is behind them —
+                      toward his own closed history and are labelled with what is behind them:
                       <span className="w6"> {mix.observed} from his history, {mix.blended} part-observed,
                       {" "}{mix.assumed} still assumed</span>. A stage needs twelve of his own outcomes
                       before it stops borrowing ours, because a solo agent forecasting from three
@@ -535,7 +535,7 @@ export default function Clients() {
                             const st = stallOf(c.stage, DAYS_IN_STAGE[c.id] ?? 0, c.flag, c.nextDue);
                             return (
                               <div className="row gap-1 wrap" style={{ marginTop: 8 }}>
-                                <span className={`chip ${STALL_CHIP[st.level].c}`} title={`${st.reason} — ${st.unstick}`}>
+                                <span className={`chip ${STALL_CHIP[st.level].c}`} title={`${st.reason}. ${st.unstick}`}>
                                   {st.level === "moving" ? <Ico.check size={10} /> : <Ico.clock size={10} />}
                                   {STALL_CHIP[st.level].l}
                                 </span>
@@ -617,8 +617,8 @@ export default function Clients() {
                         <td className="num-c num">{x.leads}</td>
                         <td className="num-c num">{x.consults}</td>
                         <td className="num-c num">{x.clients}</td>
-                        <td className="num-c num c-4">{x.spend ? `$${x.spend.toLocaleString()}` : "—"}</td>
-                        <td className="num-c num w6" style={{ paddingRight: 16, color: x.per === "—" ? "var(--pos)" : undefined }}>{x.per}</td>
+                        <td className="num-c num c-4">{x.spend ? `$${x.spend.toLocaleString()}` : "None"}</td>
+                        <td className="num-c num w6" style={{ paddingRight: 16, color: x.per === "None" ? "var(--pos)" : undefined }}>{x.per}</td>
                       </tr>
                     ))}
                   </tbody>

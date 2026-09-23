@@ -14,8 +14,8 @@
   --paper: #f8faf6;
   --panel: #eef3ec;
   /* The dark ground belonged to the retired portal MVP, which is deleted. It
-     survived as the body background, so every Rift page — which paints its own
-     light canvas inside .rift — flashed dark green on overscroll, and any page
+     survived as the body background, so every Rift page, which paints its own
+     light canvas inside .rift: flashed dark green on overscroll, and any page
      that set text colour without a background rendered dark-on-dark. Matched
      to .rift's --canvas so there is one ground colour in the product. */
   --app-bg: #fbfaf8;
@@ -92,7 +92,7 @@ textarea {
  * in this file, and one of them did damage: a dark-ground `.chip`, which
  * collides with the live `.chip` in prototype/rift.css. Which one won depended
  * on the order Next happened to emit two stylesheets, so a selected filter on
- * Studio's People screen rendered as unselected — correct markup, correct
+ * Studio's People screen rendered as unselected: correct markup, correct
  * class, correct aria-pressed, wrong colour.
  *
  * The element rules above stay: they are what an unstyled page outside `.rift`

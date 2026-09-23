@@ -11,7 +11,7 @@ import { siteUrl } from "@/lib/core/site";
  *
  * Every field here is something the product already says on screen, and
  * nothing is asserted that cannot be checked. The licence number and telephone
- * are deliberately absent rather than invented — they are not recorded on the
+ * are deliberately absent rather than invented: they are not recorded on the
  * agent row yet, and a structured-data block is exactly the wrong place to
  * guess. Add them here when they exist.
  */
@@ -50,14 +50,14 @@ export function AgentSchema() {
  * A page's questions, in the form a search engine reads.
  *
  * The buyers-abroad page answers six questions a foreign national actually
- * types — whether you can buy without a green card, what a lender wants, what
+ * types, whether you can buy without a green card, what a lender wants, what
  * happens at sale. Those answers are already on the page, written and checked;
  * declaring them costs nothing and is the difference between the page being
  * found by somebody asking the question and being found by nobody.
  *
  * TAKES THE PAGE'S OWN TEXT. Not a second copy written for crawlers. Google's
  * guidance is that structured data must match what the visitor sees, and a
- * duplicate maintained separately drifts from the page within a release — at
+ * duplicate maintained separately drifts from the page within a release: at
  * which point the product is making two different claims about the same thing,
  * one of them invisible.
  *
@@ -70,7 +70,7 @@ export function FaqSchema({ items, locale = "en" }: {
   locale?: string;
 }) {
   /* Nothing is emitted for nothing. An empty FAQPage is invalid structured
-     data, which is ignored silently — the worst of both outcomes. */
+     data, which is ignored silently: the worst of both outcomes. */
   const usable = items.filter((i) => i.q.trim() && i.a.trim());
   if (usable.length === 0) return null;
 

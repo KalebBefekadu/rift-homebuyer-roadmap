@@ -18,7 +18,7 @@ const AT = (iso: string) => new Date(iso).toLocaleString("en-US", {
  * The offer room, from the agent's side: his take, and the seller's choice.
  *
  * Rift drafts what it can compute and stops at the judgement. The bracketed
- * line is his to write and approval is refused while it is still there — see
+ * line is his to write and approval is refused while it is still there: see
  * lib/core/offer-room.ts for why a machine's ranking must never reach a seller
  * dressed as their agent's advice.
  *
@@ -61,11 +61,11 @@ export function Take({ leadId, offers, costs, room }: {
 
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
 
-      {/* The seller's choice first, when there is one — it is the thing with a
+      {/* The seller's choice first, when there is one: it is the thing with a
           deadline attached. */}
       {room === null ? (
         <p className="t-xs c-4" style={{ marginTop: 12 }}>
-          The offer room did not load. That is not the same as the seller not having chosen —
+          The offer room did not load. That is not the same as the seller not having chosen:
           reload before telling anybody anything.
         </p>
       ) : chosen && room.chosenAt ? (
@@ -76,7 +76,7 @@ export function Take({ leadId, offers, costs, room }: {
               <p className="t-xs c-2" style={{ marginTop: 4, lineHeight: 1.6 }}>
                 Shown {money(chosen.price)} offered
                 {chosen.net !== null ? `, about ${money(chosen.net)} to them` : ", no net (payoff not recorded)"}
-                {chosen.bestNet === true ? ` — the best net of ${chosen.of}` : chosen.bestNet === false ? ` — not the best net of ${chosen.of}` : ""}.
+                {chosen.bestNet === true ? `, the best net of ${chosen.of}` : chosen.bestNet === false ? `, not the best net of ${chosen.of}` : ""}.
                 {" "}{chosen.take ? "Your take was on the page." : "No take of yours was on the page."}
               </p>
               {room.clientNote ? (
@@ -109,7 +109,7 @@ export function Take({ leadId, offers, costs, room }: {
             {current ? (
               <span className="chip chip-pos t-2xs"><Ico.check size={10} />Seller sees this · {AT(room!.approvedAt!)}</span>
             ) : stale ? (
-              <span className="chip chip-warn t-2xs"><Ico.alert size={10} />Hidden — the offers changed since you approved it</span>
+              <span className="chip chip-warn t-2xs"><Ico.alert size={10} />Hidden: the offers changed since you approved it</span>
             ) : (
               <span className="chip t-2xs">Not shown to the seller</span>
             )}

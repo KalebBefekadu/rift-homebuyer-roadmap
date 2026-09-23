@@ -1,5 +1,5 @@
 /**
- * Rift prototype — the seam between a free readout and a published plan.
+ * Rift prototype: the seam between a free readout and a published plan.
  *
  * The gap this closes: the readout and the plan were both built, and what
  * happens *between* them was never defined. That is the most expensive kind of
@@ -15,7 +15,7 @@
  *
  *   1. THE READOUT IS A SNAPSHOT AND IT IS IMMUTABLE. It is kept, verbatim,
  *      forever, as the thing this person was actually shown on the day they
- *      were shown it. Not because it stays accurate — it does not — but because
+ *      were shown it. Not because it stays accurate (it does not) but because
  *      the promise was "you keep this", and a document that silently rewrites
  *      itself was never theirs.
  *
@@ -65,7 +65,7 @@ export const CROSSINGS: Crossing[] = [
   {
     field: "The readout as they saw it",
     carry: "snapshot",
-    why: "Kept verbatim and dated. This is the promise — they keep it whether or not they ever became a client.",
+    why: "Kept verbatim and dated. This is the promise: they keep it whether or not they ever became a client.",
   },
   {
     field: "Matched assistance programmes",
@@ -75,7 +75,7 @@ export const CROSSINGS: Crossing[] = [
   {
     field: "Trust state of each figure",
     carry: "snapshot",
-    why: "Preliminary stays preliminary. Publishing changes who is looking at a number, not how sure anybody is about it — nothing a button does makes a lender more likely to say yes.",
+    why: "Preliminary stays preliminary. Publishing changes who is looking at a number, not how sure anybody is about it. Nothing a button does makes a lender more likely to say yes.",
   },
   {
     field: "Core question answers",
@@ -98,7 +98,7 @@ export const CROSSINGS: Crossing[] = [
     why: "It was a triage instrument for deciding who to call. Once they are a client it has no job, and keeping a person ranked after they have hired you is indefensible if they ever see it.",
   },
   {
-    field: "Attribution — first touch",
+    field: "Attribution: first touch",
     carry: "snapshot",
     why: "Immutable by definition. It is how Kaleb learns which channel produced a client, and re-attributing it later destroys the only lesson it holds.",
   },
@@ -137,8 +137,8 @@ export function drift(field: string, was: number, now: number, cause: string): D
    * Dividing by a signed baseline inverts the sign whenever that baseline is
    * negative, and one figure here is routinely negative: a seller whose payoff
    * exceeds their price has net proceeds below zero. A client $113,575 short
-   * whose position improved to $50,000 short would have been shown "-56%" —
-   * rendered with its sign, next to a cause explaining the improvement — which
+   * whose position improved to $50,000 short would have been shown "-56%":
+   * rendered with its sign, next to a cause explaining the improvement, which
    * reads as the situation getting worse by more than half.
    *
    * With the magnitude as the divisor, a figure moving up always reads
@@ -199,7 +199,7 @@ export function canPublish(input: {
   }
 
   /* `[].every()` is true, so a plan carrying no figures at all warned that
-     "every figure in this plan is still a preliminary estimate" — a claim
+     "every figure in this plan is still a preliminary estimate": a claim
      about an empty set, printed on the first screen of a new relationship. */
   if (input.trustStates.length > 0 && input.trustStates.every((s) => s === "preliminary")) {
     warns.push("Every figure in this plan is still a preliminary estimate. Publishable, but say so on the first screen rather than letting the plan imply otherwise.");

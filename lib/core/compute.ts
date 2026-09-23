@@ -1,5 +1,5 @@
 /**
- * Rift prototype — deterministic value engine.
+ * Rift prototype: deterministic value engine.
  *
  * Product rule (docs/product.md, "Rules for front-end value" #8):
  * front-end value is COMPUTED, never generated. Every figure a visitor sees
@@ -8,7 +8,7 @@
  *
  * Every exported result carries the assumptions that produced it so the
  * `<Figure>` component can render them. A figure without assumptions cannot
- * render — see components/prototype/Figure.tsx.
+ * render: see components/prototype/Figure.tsx.
  */
 
 export type Assumption = { label: string; value: string };
@@ -114,7 +114,7 @@ export function monthlyComputed(i: BuyerInputs): Computed & { parts: MonthlyBrea
       { label: "Term", value: `${i.termYears} years` },
       { label: "Property tax", value: `${pct(i.taxPct)} of price per year` },
       { label: "Insurance", value: `${money(i.insuranceYr)} per year` },
-      { label: "PMI", value: i.downPct < 20 ? `${pct(i.pmiPct, 2)} of loan per year` : "None — 20% or more down" },
+      { label: "PMI", value: i.downPct < 20 ? `${pct(i.pmiPct, 2)} of loan per year` : "None, 20% or more down" },
       { label: "HOA", value: i.hoaMo > 0 ? `${money(i.hoaMo)} per month` : "None assumed" },
     ],
     couldBeWrong:
@@ -123,7 +123,7 @@ export function monthlyComputed(i: BuyerInputs): Computed & { parts: MonthlyBrea
 }
 
 /**
- * True cash to close — the number that misleads almost every first-time buyer,
+ * True cash to close: the number that misleads almost every first-time buyer,
  * because they have only been told the down payment.
  */
 export interface CashLine {
@@ -144,11 +144,11 @@ export function cashToClose(i: BuyerInputs) {
 
   const lines: CashLine[] = [
     { label: "Down payment", amount: down, note: `${pct(i.downPct)} of the purchase price` },
-    { label: "Closing costs", amount: closing, note: `${pct(i.closingPct)} estimate — lender, title, attorney, recording` },
+    { label: "Closing costs", amount: closing, note: `${pct(i.closingPct)} estimate: lender, title, attorney, recording` },
     { label: "Prepaids and escrow", amount: prepaids, note: "First-year insurance plus about three months of taxes held in escrow" },
     { label: "Inspection", amount: inspection, note: "Paid before closing, not refundable if you walk" },
     { label: "Appraisal", amount: appraisal, note: "Usually collected by the lender up front" },
-    { label: "Moving", amount: moving, note: "Local move estimate — the cost buyers forget most often" },
+    { label: "Moving", amount: moving, note: "Local move estimate, the cost buyers forget most often" },
     { label: "Earnest money", amount: earnest, note: "Paid at contract, credited back to you at closing", credited: true },
   ];
 
@@ -318,11 +318,11 @@ export interface ProceedLine {
 }
 
 /**
- * Georgia transfer tax: $1.00 per $1,000 of consideration — 0.1%.
+ * Georgia transfer tax: $1.00 per $1,000 of consideration: 0.1%.
  *
  * O.C.G.A. § 48-6-1: "$1.00 for the first $1,000.00 … and 10 cents for each
  * additional $100.00", which is one tenth of a percent. This said "$1.00 per
- * $500 — 0.2%" until September 2026, which charged every seller double: about
+ * $500: 0.2%" until September 2026, which charged every seller double: about
  * $400 too little reaching them on a $400,000 sale, on every readout and in
  * every offer comparison. Found while checking an offer-room draft by hand.
  * Readouts already issued are snapshots and keep the figure they showed.
@@ -343,7 +343,7 @@ export function netProceeds(s: SellerInputs) {
   const costs: ProceedLine[] = [
     { label: "Mortgage payoff", amount: s.payoff, note: "Principal balance plus interest to the closing date" },
     { label: "Commission", amount: commission, note: `${pct(s.commissionPct)} total, split as negotiated` },
-    { label: "Seller concessions", amount: concessions, note: `${pct(s.concessionsPct)} allowance — common ask in the current market` },
+    { label: "Seller concessions", amount: concessions, note: `${pct(s.concessionsPct)} allowance, a common ask in the current market` },
     { label: "Georgia transfer tax", amount: transferTax, note: "$1.00 per $1,000 of the sale price" },
     { label: "Settlement and recording", amount: settlement, note: "Closing attorney, deed preparation, recording fees" },
     { label: "Prorated property tax", amount: proratedTax, note: "Your share of the tax year up to closing" },
@@ -372,7 +372,7 @@ export function netProceeds(s: SellerInputs) {
   };
 }
 
-/** Repair return triage — what pays back, what does not, what is only for photographs. */
+/** Repair return triage: what pays back, what does not, what is only for photographs. */
 export interface RepairItem {
   item: string;
   cost: number;
@@ -395,7 +395,7 @@ export function repairTriage(price: number): RepairItem[] {
   return base;
 }
 
-/** Unclaimed value — the seller-side equivalent of the assistance match. */
+/** Unclaimed value: the seller-side equivalent of the assistance match. */
 export interface UnclaimedItem {
   title: string;
   estimate: string;
@@ -433,7 +433,7 @@ export function unclaimedValue(s: SellerInputs): UnclaimedItem[] {
     out.push({
       title: "Your assessment looks high relative to likely sale price",
       estimate: `${money(Math.round((over * 0.011) / 100) * 100)} – ${money(Math.round((over * 0.018) / 100) * 100)} per year`,
-      detail: `The county has this parcel at ${money(s.assessedValue)}. If the home realistically sells nearer ${money(s.price)}, the assessment may be worth appealing — and a successful appeal helps whether or not you sell.`,
+      detail: `The county has this parcel at ${money(s.assessedValue)}. If the home realistically sells nearer ${money(s.price)}, the assessment may be worth appealing, and a successful appeal helps whether or not you sell.`,
       decidedBy: "Your county board of assessors",
       urgency: "Appeal windows after the annual notice are short and strictly enforced.",
     });
@@ -443,7 +443,7 @@ export function unclaimedValue(s: SellerInputs): UnclaimedItem[] {
     out.push({
       title: "Primary-residence capital gains exclusion likely available",
       estimate: "Up to $250,000 single / $500,000 married",
-      detail: `You have owned this home about ${s.yearsOwned} years. If you also lived in it for two of the last five, the gain may be excluded — but the arithmetic and the exceptions are real and worth checking before you commit to a timeline.`,
+      detail: `You have owned this home about ${s.yearsOwned} years. If you also lived in it for two of the last five, the gain may be excluded, but the arithmetic and the exceptions are real and worth checking before you commit to a timeline.`,
       decidedBy: "A tax professional",
     });
   }

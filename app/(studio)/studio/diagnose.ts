@@ -24,7 +24,7 @@ export function diagnose(s: StepStat): { label: string; tone: string; advice: st
     return {
       label: "Too personal",
       tone: "chip-neg",
-      advice: "They read it and chose not to answer. Say why it is being asked, or make it optional — rewording a question people understood will not help.",
+      advice: "They read it and chose not to answer. Say why it is being asked, or make it optional. Rewording a question people understood will not help.",
     };
   }
   if (s.medianSec < 4) {

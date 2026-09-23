@@ -8,7 +8,7 @@ import { sessionId } from "@/lib/rift/session";
 import { ETHIOPIC_STACK, type Locale } from "@/lib/core/i18n";
 
 /**
- * The abroad readout, made durable — and deletable.
+ * The abroad readout, made durable, and deletable.
  *
  * This page could not produce a lead. Every other readout in the product can
  * send itself to somebody; this one offered a call and nothing else, so the
@@ -21,7 +21,7 @@ import { ETHIOPIC_STACK, type Locale } from "@/lib/core/i18n";
  *
  * No share token and no snapshot, unlike the buyer readout. This page is pure
  * arithmetic on four URL parameters, so its own address IS the durable
- * document — there is nothing to freeze that the link does not already carry.
+ * document: there is nothing to freeze that the link does not already carry.
  */
 export function Keep({
   locale, t, shareUrl, county, cashIn,
@@ -56,7 +56,7 @@ export function Keep({
             side: "buy",
             /* Their own words are on the landing page, not here. Completion is
                1 because this readout is the end of that funnel, not a partial
-               answer — and `source` is what tells Studio that a lead needs a
+               answer: and `source` is what tells Studio that a lead needs a
                conversation about ITINs and wire transfers rather than about
                Georgia Dream, which this person cannot use. */
             completion: 1,

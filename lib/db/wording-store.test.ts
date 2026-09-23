@@ -8,7 +8,7 @@ import { BUY_FUNNEL, applyWording } from "@/lib/core/funnel";
  * `applyWording` is proved safe in lib/core/wording.test.ts. These assert the
  * two places that could bypass it: the publish path, which writes rows, and
  * the read path, which builds the funnel a visitor sees. Both have to go
- * through the merge rather than around it — a publish that wrote the caller's
+ * through the merge rather than around it: a publish that wrote the caller's
  * questions directly would put a payload-controlled `bound` or `type` into the
  * database, and every safety property would then be one read away from gone.
  */
@@ -106,13 +106,13 @@ describe("the round trip", () => {
 });
 
 describe("publishing invalidates the page it changes", () => {
-  /* /buy/start and /sell/start are cached now — they render the same funnel
+  /* /buy/start and /sell/start are cached now: they render the same funnel
      for everybody, and paying a dynamic render on the page where the product
      first asks for something cost about 1.7 seconds against 0.19 for the
      landing page people arrive from.
      
      That trade is only safe because publishing revalidates them. Without this
-     call the editor appears to work, reports success, writes the version —
+     call the editor appears to work, reports success, writes the version:
      and the questions a visitor reads keep saying the old thing for five
      minutes, which is exactly long enough for the agent to conclude the
      feature is broken, or worse, to not notice. */

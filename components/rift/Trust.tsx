@@ -10,7 +10,7 @@ import { askReview, type TrustState } from "@/lib/core/review";
  * Rift's whole model rests on a person being able to tell, at a glance, whether
  * a figure is something we worked out, something Kaleb has looked at, or
  * something a lender has committed to. That distinction lived in
- * `REVIEW_LABEL` and was never once put on screen — which meant a computed
+ * `REVIEW_LABEL` and was never once put on screen: which meant a computed
  * estimate and a lender-confirmed figure looked identical, and the product was
  * quietly making the exact claim it promised never to make.
  *
@@ -98,7 +98,7 @@ export function TrustLadder({ at, ask }: {
               {/* A step already passed is set back in ink rather than faded.
                   At 0.5 its label and its meaning both fell under AA, on the
                   component that exists to tell somebody how far a number can
-                  be trusted — which is not a thing to make hard to read. The
+                  be trusted, which is not a thing to make hard to read. The
                   current step is already marked three other ways: a sunk
                   ground, an accent icon, and a chip saying "You are here". */}
               <div className="row gap-2">
@@ -117,7 +117,7 @@ export function TrustLadder({ at, ask }: {
               <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none" }} />
               <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
                 It is with Kaleb. He aims to come back inside a day. Until he does, the number
-                on this page is still an estimate — asking does not make it truer, it just
+                on this page is still an estimate. Asking does not make it truer, it just
                 gets a person looking at it.
               </p>
             </div>

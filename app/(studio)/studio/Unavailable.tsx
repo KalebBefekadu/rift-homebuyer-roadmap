@@ -6,7 +6,7 @@ import { Ico } from "@/components/rift/icons";
  *
  * The page an agent sees instead of a sign-in form when the session check did
  * not answer. The distinction is the whole point: a sign-in form tells him his
- * session expired, and it had not — the cookie is still in his browser and the
+ * session expired, and it had not: the cookie is still in his browser and the
  * next request will almost certainly work.
  *
  * It matters most on the request most likely to be slow. A cold start plus a
@@ -23,7 +23,7 @@ export function Unavailable({ reason }: { reason: string }) {
         </h1>
       </div>
       <p className="t-sm c-3" style={{ marginTop: 12, lineHeight: 1.65 }}>
-        This is not the same as being signed out — you almost certainly still are. Something on
+        This is not the same as being signed out; you almost certainly still are. Something on
         our side did not answer in time, which usually clears on the next try.
       </p>
       <p className="t-xs c-4" style={{ marginTop: 10 }}>{reason}.</p>

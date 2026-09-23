@@ -8,7 +8,7 @@ import {
  * The next five weeks, across everybody.
  *
  * Today's screen answers "what do I do now". This answers "what does the
- * month look like", and the difference that matters is not the date range —
+ * month look like", and the difference that matters is not the date range:
  * it is that a plan step is something a CLIENT can see he promised them, on a
  * page they may have open, and a next action is a note to himself.
  */

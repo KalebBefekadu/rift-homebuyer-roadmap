@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Is this address a sender Brevo will actually send from — and if not, ask
+ * Is this address a sender Brevo will actually send from, and if not, ask
  * Brevo to verify it.
  *
  * Usage:
@@ -9,8 +9,8 @@
  * Exists because BREVO_FROM_EMAIL being SET is not the same as email WORKING.
  * /api/health reported "configured" the moment the variable existed, and Brevo
  * refuses to send from any address that has not been verified in the account.
- * That is the exact shape of this codebase's recurring bug — a check that
- * asserts configuration rather than outcome — so this script asks Brevo the
+ * That is the exact shape of this codebase's recurring bug: a check that
+ * asserts configuration rather than outcome, so this script asks Brevo the
  * real question.
  *
  * Creating a sender makes Brevo email a verification link to that address. It

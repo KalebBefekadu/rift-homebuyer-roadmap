@@ -9,7 +9,7 @@ import {
 export const metadata: Metadata = {
   title: "Know the real number before you talk to anyone",
   description:
-    "Buying or selling a home in Georgia. A complete, computed readout of what it actually takes — free, no account, and yours to keep whether or not you ever speak to us.",
+    "Buying or selling a home in Georgia. A complete, computed readout of what it actually takes. Free, no account, and yours to keep whether or not you ever speak to us.",
 };
 
 /* Both figures are arithmetic on published Georgia rates, so a day is safe. */
@@ -18,7 +18,7 @@ export const revalidate = 86400;
 /**
  * The front door.
  *
- * Until now `/` served the development index — a page that opened with "this is
+ * Until now `/` served the development index: a page that opened with "this is
  * the development root, not the product" and linked to the specification. Every
  * person who typed the bare domain landed on it.
  *
@@ -62,7 +62,7 @@ export default function HomePage() {
           </h1>
           <p className="t-lg c-2" style={{ marginTop: 20, lineHeight: 1.6, maxWidth: 660 }}>
             Most people find out what a move actually costs in the last three weeks, from a
-            settlement statement. This works it out first — free, with no account, and yours to
+            settlement statement. This works it out first: free, with no account, and yours to
             keep whether or not you ever speak to us.
           </p>
         </div>
@@ -73,7 +73,7 @@ export default function HomePage() {
             kicker="I'm buying"
             title="The down payment is not the number."
             figure={money(buy.total)}
-            caption={`is what has to be in an account on a ${money(BUYER_DEFAULTS.price)} home — not the ${money(buy.down)} down payment.`}
+            caption={`is what has to be in an account on a ${money(BUYER_DEFAULTS.price)} home, not the ${money(buy.down)} down payment.`}
             cta="See what buying takes"
             secondary={{ href: "/buy", label: "How this works for buyers" }}
           />

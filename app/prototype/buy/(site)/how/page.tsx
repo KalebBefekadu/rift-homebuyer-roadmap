@@ -73,7 +73,7 @@ export default function How() {
               {["Nothing held back to force a sign-up",
                 "Every number shows its assumptions and how it could be wrong",
                 "We never show a program we haven't verified in 90 days",
-                "We never say you qualify — only that you may"].map((x) => (
+                "We never say you qualify, only that you may"].map((x) => (
                 <li key={x} className="row-t gap-2">
                   <Ico.check size={14} className="c-brand" style={{ marginTop: 3, flex: "none" }} />
                   <span className="t-sm c-2">{x}</span>

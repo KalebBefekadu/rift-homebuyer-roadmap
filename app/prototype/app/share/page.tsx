@@ -75,7 +75,7 @@ export default function Share() {
               <div>
                 <div className="kicker" style={{ marginBottom: 9 }}>They never see</div>
                 {a.hidden.length === 0 ? (
-                  <span className="t-sm c-4">Nothing withheld — a co-buyer sees it all.</span>
+                  <span className="t-sm c-4">Nothing withheld. A co-buyer sees it all.</span>
                 ) : (
                   <div className="col gap-2">
                     {a.hidden.map((s) => (

@@ -4,15 +4,15 @@
 -- `lib/core/referral.ts` has described eight moments, their triggers and the
 -- private satisfaction gate since before any of this was built, and until now
 -- nothing read it. docs/benchmark.md gives referral and retention a weight of
--- 15 out of 100 — a seventh of the product's own grade — and the shipped
+-- 15 out of 100 (a seventh of the product's own grade) and the shipped
 -- product scored approximately nothing on it, because a closing produced a
 -- commission and no next relationship.
 --
 -- THE RULE THIS SCHEMA EXISTS TO ENFORCE.
 --
 -- Nothing public is asked for before a private check. Every moment that would
--- put a client in front of strangers — the closing-day review, the six-month
--- ask, the anniversary — is gated behind one private question, and an unhappy
+-- put a client in front of strangers: the closing-day review, the six-month
+-- ask, the anniversary: is gated behind one private question, and an unhappy
 -- client is routed to Kaleb rather than to a review form. That is not review
 -- gating to manufacture ratings: somebody who says they are unhappy is never
 -- asked for a public rating at all, and the private route exists so the
@@ -20,7 +20,7 @@
 --
 -- `mood` is the column that check writes to, and it is deliberately nullable
 -- with no default. Unanswered is its own state and must not be mistaken for
--- fine — a default of 'good' would ask the entire back catalogue for reviews
+-- fine: a default of 'good' would ask the entire back catalogue for reviews
 -- on the first deployment.
 -- ============================================================================
 
@@ -30,14 +30,14 @@ alter table rift_leads add column if not exists mood text
 alter table rift_leads add column if not exists mood_at timestamptz;
 
 comment on column rift_leads.mood is
-  'Answer to the private satisfaction check. NULL means unasked, which is not the same as fine — no public ask may go out on a NULL. See gate() in lib/core/referral.ts.';
+  'Answer to the private satisfaction check. NULL means unasked, which is not the same as fine: no public ask may go out on a NULL. See gate() in lib/core/referral.ts.';
 
 -- The closing date, as its own fact.
 --
 -- `stage_since` was nearly good enough: a lead sitting in 'Closed' entered it
 -- on the closing day. Nearly, because stage_since is rewritten by any later
--- stage change, and the whole post-closing cadence — thirty days, six months,
--- every anniversary indefinitely — is counted from this date. A correction to
+-- stage change, and the whole post-closing cadence: thirty days, six months,
+-- every anniversary indefinitely: is counted from this date. A correction to
 -- somebody's stage two years later would silently move all of their
 -- anniversaries, and the only visible symptom would be a message arriving on
 -- the wrong day.
@@ -50,7 +50,7 @@ comment on column rift_leads.closed_on is
 -- visible and countable. One column, self-referencing.
 --
 -- ON DELETE SET NULL rather than CASCADE. Somebody exercising their right to
--- be forgotten must not take the people they referred with them — those are
+-- be forgotten must not take the people they referred with them: those are
 -- separate relationships who consented separately, and deleting them would be
 -- doing a second thing to a third party on the strength of one person's
 -- request. The referred lead survives with no referrer, which is the honest
@@ -77,7 +77,7 @@ create table if not exists rift_referral_moments (
   --
   -- The anniversary repeats every year on the closing date, indefinitely. A
   -- record keyed on the moment alone would mark the first anniversary sent and
-  -- then suppress every anniversary after it — a cadence that quietly stops
+  -- then suppress every anniversary after it: a cadence that quietly stops
   -- after year one while every screen goes on showing it as running. That is
   -- this product's recurring failure shape, and one integer removes it.
   occurrence  integer not null default 0 check (occurrence >= 0),

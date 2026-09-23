@@ -69,7 +69,7 @@ export default function How() {
           <Ico.scale size={18} className="c-brand" />
           <h3 className="t-xl w6" style={{ marginTop: 12 }}>When offers come in, you see them properly</h3>
           <p className="t-md c-2" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            Every offer reaches Kaleb first, and he decides whether to present it — that decision
+            Every offer reaches Kaleb first, and he decides whether to present it; that decision
             is recorded either way, and nothing is ever discarded. What reaches you is a
             comparison on net proceeds, terms, timing and risk. The highest price is very often
             not the most money.

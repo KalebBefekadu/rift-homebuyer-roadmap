@@ -151,7 +151,7 @@ export default function OfferDetail({ params }: { params: Promise<{ id: string }
                         <span className="t-sm c-2 grow">{x.label}</span>
                         <span className="t-sm w55">{x.value}</span>
                         <span className={`chip ${CONF[x.confidence].c}`} style={{ flex: "none" }}>{CONF[x.confidence].l}</span>
-                        <span className="t-2xs c-4 num" style={{ width: 26, textAlign: "right", flex: "none" }}>{x.page > 0 ? `p${x.page}` : "—"}</span>
+                        <span className="t-2xs c-4 num" style={{ width: 26, textAlign: "right", flex: "none" }}>{x.page > 0 ? `p${x.page}` : ""}</span>
                       </div>
                     ))}
                   </div>

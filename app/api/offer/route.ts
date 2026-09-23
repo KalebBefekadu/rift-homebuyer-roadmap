@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * An offer, from somebody with no account.
  *
  * The reading the submitter came for is computed in the browser from pure
- * arithmetic and is theirs before this endpoint is called — so this route is
+ * arithmetic and is theirs before this endpoint is called, so this route is
  * only ever the delivery, never the value. That ordering is deliberate: if
  * this fails, they still have what they came for, and the page says plainly
  * that the offer did not get through rather than implying it did.
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   if (!r.ok) {
     captureOpError(new Error(r.error), { op: "offer.submit" });
     return NextResponse.json(
-      { ok: false, error: "We could not pass this on. Nothing was lost on your side — please send it to Kaleb directly." },
+      { ok: false, error: "We could not pass this on. Nothing was lost on your side. Please send it to Kaleb directly." },
       { status: 502 },
     );
   }

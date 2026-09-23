@@ -9,7 +9,7 @@
  * down, a repair credit and who pays closing costs all come out of the same
  * number, and the offer that looked $8,000 higher can arrive $3,000 lower.
  *
- * What this file does NOT do is decide. Risk is not a number — a cash offer
+ * What this file does NOT do is decide. Risk is not a number: a cash offer
  * closing in fourteen days and a financed one closing in forty-five are not
  * comparable on a single axis, and a product that collapses them into a score
  * has made somebody's decision for them while pretending to inform it. So the
@@ -40,7 +40,7 @@ export interface Offer {
   /** Repairs the buyer wants done or credited before closing. */
   repairCredit: number;
   financing: Financing;
-  /** Earnest money. Not netted — it is applied at closing, not extra. */
+  /** Earnest money. Not netted: it is applied at closing, not extra. */
   earnest: number;
   /** ISO date. */
   closeOn: string | null;
@@ -104,7 +104,7 @@ export function netOf(offer: Offer, costs: SellerCosts): Omit<OfferNet, "behindB
 /**
  * Every offer, ranked by what reaches the seller.
  *
- * Ties keep their input order rather than being broken by price — a tie on net
+ * Ties keep their input order rather than being broken by price: a tie on net
  * is a genuine tie, and quietly ranking one above the other on a number that
  * does not reach them is the exact substitution this file exists to expose.
  */

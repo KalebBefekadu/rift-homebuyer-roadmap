@@ -8,7 +8,7 @@
 --     share link, having never taken the assessment themselves;
 --   * somebody who books a call from the landing page.
 --
--- The capture failed outright rather than storing the lead without the link —
+-- The capture failed outright rather than storing the lead without the link:
 -- so the most valuable moment in the funnel, a stranger volunteering their
 -- address, lost the lead entirely.
 -- ============================================================================

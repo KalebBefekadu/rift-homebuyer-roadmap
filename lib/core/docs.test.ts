@@ -13,15 +13,15 @@ import { MOMENTS } from "./referral";
 /**
  * The documentation drift guard.
  *
- * A review found six places where the docs and the code had quietly diverged —
+ * A review found six places where the docs and the code had quietly diverged:
  * a test count, two retention periods, a suppression window described as fixed
  * after it became configurable, and a phase gate that required a screen the
  * scope did not include. None were hard to fix. All six were found by a person
  * reading carefully, which is not a mechanism.
  *
  * The expensive one was retention: `docs/schema.md` said funnel telemetry was
- * kept 13 months while `privacy.ts` — the array actually rendered to the
- * customer at the bottom of every readout — said 24. An engineer implementing
+ * kept 13 months while `privacy.ts`: the array actually rendered to the
+ * customer at the bottom of every readout: said 24. An engineer implementing
  * the deletion job from the schema document would have built a product that
  * breaks a promise made on screen, and nothing would have failed.
  *
@@ -31,7 +31,7 @@ import { MOMENTS } from "./referral";
  * rather than a confusing sentence.
  *
  * When one of these fails, the code is the source of truth and the document is
- * what needs changing — unless the code is genuinely wrong, in which case fix
+ * what needs changing, unless the code is genuinely wrong, in which case fix
  * it and the document together.
  */
 
@@ -105,7 +105,7 @@ describe("docs match the code they describe", () => {
        week two rather than maintain. Counts in prose go stale by design.
 
        What does not go stale is where the tests live, and a moved file was the
-       first thing that actually broke — so that is what is asserted now. */
+       first thing that actually broke, so that is what is asserted now. */
     const dirs = ["lib/core", "lib/db"];
     let suites = 0;
     for (const d of dirs) {

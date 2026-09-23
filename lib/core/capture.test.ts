@@ -59,7 +59,7 @@ describe("attribution", () => {
 
   it("stores nothing when the referrer is not a URL", () => {
     /* Rather than store an arbitrary string that might be a path with a query
-       — which is where the personal data would be. */
+      , which is where the personal data would be. */
     expect(stripToHost("android-app://com.example")).toBeUndefined();
     expect(stripToHost("")).toBeUndefined();
     expect(stripToHost(null)).toBeUndefined();
@@ -72,7 +72,7 @@ describe("attribution", () => {
     );
     expect(t).toMatchObject({ source: "facebook", campaign: "dpa-help-sep", landing: "/buy" });
     expect(t.referrer).toBe("l.facebook.com");
-    /* The landing must not carry the query — a stranger's answers can end up
+    /* The landing must not carry the query: a stranger's answers can end up
        there, and attribution has no use for them. */
     expect(t.landing).not.toContain("savings");
   });

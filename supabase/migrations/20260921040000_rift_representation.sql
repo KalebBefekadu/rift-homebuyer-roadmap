@@ -1,7 +1,7 @@
 -- Representation: the gate between a lead and a client.
 --
 -- docs/product.md requires this to be "a visible lifecycle state rather than
--- an offline side channel". It was neither — there was no column at all, which
+-- an offline side channel". It was neither: there was no column at all, which
 -- is why canPublish() in lib/core/seam.ts was called with `hasAgreement: true`
 -- as a literal. The one precondition in the product that was asserted rather
 -- than read, inside the function whose entire job is refusing to publish when
@@ -18,7 +18,7 @@ alter table rift_leads add column if not exists representation_expires_on date;
 
 -- The vocabulary is closed, and it matches STATUSES in
 -- lib/core/representation.ts exactly. A status outside this list does not
--- error anywhere — it simply fails `isCovered`, so the journey silently stops
+-- error anywhere: it simply fails `isCovered`, so the journey silently stops
 -- advancing and nobody can see why.
 do $$
 begin
@@ -71,7 +71,7 @@ begin
 end $$;
 
 comment on column rift_leads.representation is
-  'none | prepared | sent | signed | expired | declined. Matches STATUSES in lib/core/representation.ts. NOTE: a stored ''signed'' with a past expiry reads as expired — standingOf() derives that rather than writing it back, because a derived truth stored twice is two truths.';
+  'none | prepared | sent | signed | expired | declined. Matches STATUSES in lib/core/representation.ts. NOTE: a stored ''signed'' with a past expiry reads as expired: standingOf() derives that rather than writing it back, because a derived truth stored twice is two truths.';
 
 comment on column rift_leads.representation_expires_on is
   'Monitored deadline. docs/product.md: expiration "raises attention before it lapses, not after".';

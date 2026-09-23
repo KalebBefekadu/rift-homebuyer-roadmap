@@ -23,7 +23,7 @@ const CONTINGENCIES = ["Inspection", "Appraisal", "Financing", "Sale of buyer's 
  *
  * Nothing is sent to compute the reading. The moment there is an address and a
  * price the page can already say what the offer is worth to a seller, and it
- * keeps saying it whether or not the submitter ever presses send — which is
+ * keeps saying it whether or not the submitter ever presses send, which is
  * the product's central bargain, applied to the one funnel that did not have
  * a front end at all.
  */
@@ -60,7 +60,7 @@ export function Form() {
   };
 
   /* Read against the real parser, so the page cannot show a figure the
-     endpoint would reject — the two used to be a validation function and a
+     endpoint would reject: the two used to be a validation function and a
      form that agreed by coincidence. */
   const draft = useMemo(() => ({
     address: address || "placeholder address",
@@ -203,7 +203,7 @@ export function Form() {
                 <p className="t-sm c-2" style={{ marginTop: 10, lineHeight: 1.65 }}>
                   A dollar asked back is not a dollar off the price. Commission and transfer tax
                   are charged on the headline, so the seller loses the {money(reading.askedBack)}{" "}
-                  you are asking for in full — while a price cut costs them only what is left
+                  you are asking for in full, while a price cut costs them only what is left
                   after those percentages come off it.
                 </p>
                 <div className="card p-4" style={{ marginTop: 12, background: "var(--paper)" }}>
@@ -212,7 +212,7 @@ export function Form() {
                     <span className="num t-lg">{money(reading.equivalentCleanPrice)}</span>
                   </div>
                   <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.55 }}>
-                    A clean offer at {money(reading.equivalentCleanPrice)} — nothing asked back —
+                    A clean offer at {money(reading.equivalentCleanPrice)}, nothing asked back,
                     leaves them exactly where yours does. Your headline overstates it by{" "}
                     <strong>{money(reading.headlineOverstatesBy)}</strong>, and every dollar you
                     ask back costs you <strong>${reading.costPerDollarBack.toFixed(2)}</strong> of
@@ -224,7 +224,7 @@ export function Form() {
               <p className="t-sm c-2" style={{ marginTop: 10, lineHeight: 1.65 }}>
                 Nothing is being asked back, so the headline is the headline: at{" "}
                 {money(reading.equivalentCleanPrice)} there is no gap between what your offer
-                says and what it is worth to them. That is worth more than it sounds — most
+                says and what it is worth to them. That is worth more than it sounds: most
                 offers at this price do have a gap.
               </p>
             )}
@@ -240,7 +240,7 @@ export function Form() {
                   const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
                   setCommissionPct(Number.isFinite(n) ? Math.min(MAX_COMMISSION_PCT, Math.max(MIN_COMMISSION_PCT, n)) : 0);
                 }} />
-              <span className="t-xs c-3">% commission. We do not know their arrangement — change it.</span>
+              <span className="t-xs c-3">% commission. We do not know their arrangement, so change it.</span>
             </div>
 
             {reading.gaps.length ? (
@@ -321,7 +321,7 @@ export function Form() {
               {failedToSend ? (
                 <div className="card p-3" style={{ marginTop: 10, background: "var(--sunk)" }}>
                   <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
-                    Your terms are still on this page and the arithmetic above is still yours —
+                    Your terms are still on this page and the arithmetic above is still yours;
                     nothing was lost. The quickest way through is{" "}
                     <Link href="/book?v=offer" className="u">fifteen minutes with Kaleb</Link>,
                     which does not depend on whatever just failed here.

@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  *
  *   The referrer was NOT client-supplied, and that was the worse bug. This
  *   endpoint is called by a fetch from the landing page, so the Referer header
- *   on it is the landing page — our own host. Every row written since the
+ *   on it is the landing page: our own host. Every row written since the
  *   deployment therefore recorded rift as the channel that sent the visitor to
  *   rift, and "direct", which the code calls "a real answer", could not occur.
  *

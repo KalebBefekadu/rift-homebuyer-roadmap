@@ -4,7 +4,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
 /**
  * The other way into the client list.
  *
- * `board()` answers "who have I left alone too long" — only people with a
+ * `board()` answers "who have I left alone too long": only people with a
  * stage, sorted by neglect. It cannot answer "somebody just rang and said
  * their name", which is the question an agent actually asks under pressure.
  *
@@ -77,7 +77,7 @@ describe("the search box", () => {
 
   it("does not let a typed comma become part of the query", async () => {
     /* PostgREST's `or` is comma-separated and parenthesised. A name with a
-       comma in it would otherwise be read as a second condition — at best an
+       comma in it would otherwise be read as a second condition: at best an
        error, at worst a filter nobody wrote. */
     build();
     await roster({ q: "O'Brien, Sara (Mrs)" });
@@ -143,7 +143,7 @@ describe("ordering", () => {
     expect(db.calls[0]!.filters).toContain("order:created_at desc");
 
     /* Only the ORDER is asserted on. `score` is in the select list, as it must
-       be — the row shows the band. Grepping the whole filter list for it would
+       be: the row shows the band. Grepping the whole filter list for it would
        pass or fail on which columns are fetched, which is not what this test
        is about. */
     const orders = db.calls[0]!.filters.filter((f) => f.startsWith("order:"));
@@ -153,7 +153,7 @@ describe("ordering", () => {
 
 describe("what it reports back", () => {
   it("echoes the filters it actually applied", async () => {
-    /* So the page cannot describe a search it did not run — including the
+    /* So the page cannot describe a search it did not run: including the
        search text after it has been stripped. */
     build();
     const r = await roster({ q: "sa,ra", filter: "working", side: "sell" });

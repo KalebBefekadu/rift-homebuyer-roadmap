@@ -27,7 +27,7 @@ export type { Representation, Standing, RepStatus };
  *
  * The rest of lib/db serves the funnel: somebody arrives, is scored, and is
  * followed up automatically. This module serves the other half of the job,
- * which came first in practice and second in the build — the ten relationships
+ * which came first in practice and second in the build: the ten relationships
  * that already exist and have never been near a form.
  *
  * Two rules hold this together:
@@ -50,7 +50,7 @@ export interface NewLead {
   stage: Stage;
   /** Why this person can be contacted. Required, never inferred. */
   contactBasis: string;
-  /** Optional opening note — usually everything the agent already knows. */
+  /** Optional opening note: usually everything the agent already knows. */
   note?: string;
 }
 
@@ -89,7 +89,7 @@ const SELECT_BASE =
 /**
  * Whether the follow-up columns exist yet.
  *
- * Schema and code ship separately here — the migration is applied by hand in
+ * Schema and code ship separately here: the migration is applied by hand in
  * the Supabase dashboard, and a deploy that lands first would otherwise select
  * columns that do not exist and fail EVERY read on this module, taking the
  * board and the client record down with it over a feature nobody had used yet.
@@ -224,7 +224,7 @@ export async function addNote(
  *
  * Reads the current stage first so the note can record what it moved FROM.
  * A history of destinations with no origins cannot answer the one question an
- * agent asks it — "how long was this stuck before I noticed?"
+ * agent asks it: "how long was this stuck before I noticed?"
  */
 export async function setStage(leadId: string, stage: Stage, why?: string): Promise<DbResult<{ stage: Stage }>> {
   const db = serviceClient();
@@ -247,7 +247,7 @@ export async function setStage(leadId: string, stage: Stage, why?: string): Prom
 
      docs/product.md: a buyer journey cannot advance past "Ready to shop", and
      a seller's past pricing and launch, while representation is anything other
-     than signed — and Rift "blocks the advance and explains why rather than
+     than signed: and Rift "blocks the advance and explains why rather than
      silently allowing it".
 
      Enforced on the write, not in the component that calls it. A gate that
@@ -300,7 +300,7 @@ export async function archiveLead(leadId: string, reason: string): Promise<DbRes
     "archiving them",
   );
   if (!res.ok || !("data" in res)) return res as DbResult<{ id: string }>;
-  await addNote(leadId, "note", `Archived — ${reason.trim()}`);
+  await addNote(leadId, "note", `Archived: ${reason.trim()}`);
   return done({ id: leadId });
 }
 
@@ -396,7 +396,7 @@ export async function setNextAction(
   if (!agent_id) return skipped("no agent row exists yet");
 
   const clearing = !action?.trim();
-  if (!clearing && !due) return failed("a date is required — an action with no date is a wish");
+  if (!clearing && !due) return failed("a date is required; an action with no date is a wish");
 
   const res = await boundedWrite(
     db.from("rift_leads")
@@ -417,7 +417,7 @@ export async function setNextAction(
  * Everything owed, soonest first, overdue included.
  *
  * Not limited to today. An action that came due on Tuesday does not stop being
- * owed on Wednesday, and a list that silently drops it is worse than no list —
+ * owed on Wednesday, and a list that silently drops it is worse than no list:
  * it reads as "nothing outstanding" to somebody who is in fact late.
  */
 export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead[]>> {
@@ -437,7 +437,7 @@ export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead
 
   /* No readLeads retry here: this query FILTERS on next_due, not merely
      selects it, so a narrower select cannot rescue it. A missing column means
-     the feature is not migrated, which means nothing can be due — an empty
+     the feature is not migrated, which means nothing can be due: an empty
      list is the truthful answer, not an error. */
   const res = await boundedRead(
     db.from("rift_leads").select(selectFor())
@@ -489,11 +489,11 @@ const escapeForOr = (s: string) => s.replace(/[(),*"\\]/g, " ").trim();
  * Today's screen ranks people by what the product thinks is urgent, which is
  * the right default and the wrong tool when somebody rings up and says their
  * name. `board()` cannot answer that: it returns only people who have been
- * given a stage, sorted by neglect, capped at two hundred — so a lead who
+ * given a stage, sorted by neglect, capped at two hundred, so a lead who
  * arrived through the funnel and has not been picked up yet is not in it, and
  * neither is anybody archived.
  *
- * This is deliberately the unranked view. No scoring, no urgency, no opinion —
+ * This is deliberately the unranked view. No scoring, no urgency, no opinion:
  * a list, in the order a person would expect, that can be searched.
  */
 export async function roster(query: RosterQuery = {}, now = new Date()): Promise<DbResult<Roster>> {
@@ -548,7 +548,7 @@ export async function roster(query: RosterQuery = {}, now = new Date()): Promise
  *
  * This is what turns the forward view from an industry assumption into his
  * number. `weightFor` shrinks toward the assumption until there are twelve
- * outcomes in a stage, so early on this changes very little — which is the
+ * outcomes in a stage, so early on this changes very little, which is the
  * intended behaviour, not a limitation. What it must never do is return
  * something invented: an empty array here means the forecast correctly reports
  * "assumed" on every stage, and that is a true statement about a new book of
@@ -641,8 +641,8 @@ export async function representationOf(leadId: string): Promise<DbResult<Represe
   if (!row) return failed("no such person");
 
   /* An unrecognised status is read as `none`, which REFUSES rather than
-     permits. The alternative — passing an unknown string through to
-     `isCovered` — also refuses, but silently and with a chip reading whatever
+     permits. The alternative: passing an unknown string through to
+     `isCovered`: also refuses, but silently and with a chip reading whatever
      the database happened to contain. */
   const raw = (row.representation as string | null) ?? "none";
   const status = (STATUSES as readonly string[]).includes(raw) ? (raw as RepStatus) : "none";
@@ -679,7 +679,7 @@ export async function setRepresentation(
 
   const signed = status === "signed";
   if (signed && !dates.signedOn) {
-    return failed("a signed agreement needs the date it was signed — that is the part anyone would ask for");
+    return failed("a signed agreement needs the date it was signed. That is the part anyone would ask for");
   }
 
   const patch = {
@@ -775,7 +775,7 @@ export interface Live {
  *
  * `valueKnown` travels with the number because a forecast that shows $0 and a
  * forecast that shows a real $340,000 look identical once they are summed. A
- * relationship nobody has priced is still a relationship expected to close —
+ * relationship nobody has priced is still a relationship expected to close:
  * it just cannot contribute to a dollar figure, and the screen has to be able
  * to say how many of those there are.
  */
@@ -801,7 +801,7 @@ export async function liveRelationships(): Promise<DbResult<Live[]>> {
     const input = (r.lead_input ?? null) as { value?: unknown } | null;
     const raw = input?.value;
     /* Finite and positive. A jsonb null reaches here as null, and `Number(null)`
-       is 0 — which would render as a priced deal worth nothing rather than an
+       is 0, which would render as a priced deal worth nothing rather than an
        unpriced one. The distinction is the whole reason `valueKnown` exists. */
     const known = typeof raw === "number" && Number.isFinite(raw) && raw > 0;
     return {

@@ -26,8 +26,8 @@ test.describe("nothing spills off the side of a phone", () => {
       await page.waitForLoadState("networkidle");
 
       /* The page itself must not scroll sideways. This is the assertion that
-         matters — a reader on a phone discovering that the article moves under
-         their thumb — and it is one number rather than a walk of the tree. */
+         matters: a reader on a phone discovering that the article moves under
+         their thumb, and it is one number rather than a walk of the tree. */
       const doc = await page.evaluate(() => ({
         scroll: document.documentElement.scrollWidth,
         client: document.documentElement.clientWidth,
@@ -41,7 +41,7 @@ test.describe("nothing spills off the side of a phone", () => {
         /* Anything inside a deliberate horizontal scroller is exempt. The
            seller readout puts a four-column repair table in one on purpose,
            and reporting it would train whoever reads this to ignore the
-           check — which costs more than the check is worth. */
+           check, which costs more than the check is worth. */
         const inScroller = (el: HTMLElement) => {
           for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
             const o = getComputedStyle(p).overflowX;
@@ -89,7 +89,7 @@ test.describe("a sentence stays a sentence", () => {
 
           /* A sentence cut into pieces: several siblings on one line, each
              holding a fragment that ends mid-thought. A row of buttons or
-             stats is not this — its children are short BECAUSE they are
+             stats is not this: its children are short BECAUSE they are
              labels, and they do not run on into each other. */
           const texts = kids.map((k) => (k.textContent ?? "").trim());
           const wordy = texts.filter((t) => t.split(/\s+/).length >= 3).length;
@@ -116,7 +116,7 @@ test("the funnel can be completed with a thumb", async ({ page }) => {
   /* Every control the funnel needs has to be reachable and big enough to hit.
      24 CSS pixels is well under any guideline and still catches a control
      that has collapsed. */
-  /* Each slider has its own range, so one value cannot serve all three — a
+  /* Each slider has its own range, so one value cannot serve all three: a
      range input refuses anything outside its own min and max. */
   for (const [label, value] of [["Target price", "350000"], ["Saved so far", "12000"], ["Each month", "600"]] as const) {
     const slider = page.getByLabel(label, { exact: true });
@@ -136,7 +136,7 @@ test("the funnel can be completed with a thumb", async ({ page }) => {
 
 test.describe("on the narrowest phone still in use", () => {
   /* 320 CSS pixels. Not a device anyone tests on, and the width at which an
-     unbreakable element gives itself away — the chip that took the seller
+     unbreakable element gives itself away: the chip that took the seller
      readout sideways was 390px wide and invisible at 412. */
   test.use({ viewport: { width: 320, height: 640 } });
 

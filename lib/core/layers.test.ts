@@ -8,7 +8,7 @@ import { join } from "node:path";
  * Dependencies point one way: components import from lib/prototype and
  * lib/core, never the reverse. This is not style. `TrustState` once lived in a
  * React component that two domain modules imported, and when the component came
- * to need one of them back, the readout page stopped hydrating — with no error
+ * to need one of them back, the readout page stopped hydrating: with no error
  * anywhere, no failed request, and a page that rendered perfectly and responded
  * to nothing. It cost an afternoon to find and the fix was thirty seconds.
  *
@@ -56,7 +56,7 @@ describe("layer boundaries", () => {
 
   it("the data layer is server-only", () => {
     /* Without the directive, importing one of these from a client component is
-       a runtime surprise instead of a build error — and the thing that leaks is
+       a runtime surprise instead of a build error, and the thing that leaks is
        the service-role key's reach. */
     const missing = sources("lib/db").filter((f) => !read(f).includes('import "server-only"'));
     expect(missing, "every lib/db module needs the server-only import").toEqual([]);

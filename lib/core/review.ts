@@ -1,9 +1,9 @@
 /**
- * Rift prototype — the review queue, and the thing that finally produces
+ * Rift prototype: the review queue, and the thing that finally produces
  * `pending-review`.
  *
  * The gap this closes: the trust ladder had four rungs and only three of them
- * could ever occur. `pending-review` was rendered, explained, and unreachable —
+ * could ever occur. `pending-review` was rendered, explained, and unreachable:
  * which meant the middle of the ladder was decoration, and a person had no way
  * to ask for the one thing the ladder implies they can ask for.
  *
@@ -34,12 +34,12 @@
  * This type lives here, in the domain layer, rather than in the component that
  * draws it. It used to live in `components/rift/Trust.tsx`, which meant this
  * module and `seam.ts` both reached up into a React component for a piece of
- * product vocabulary — and once `Trust.tsx` needed `askReview()` from here,
+ * product vocabulary: and once `Trust.tsx` needed `askReview()` from here,
  * that became an import cycle that silently stopped the entire readout page
  * from hydrating. No error, no failed request: the page rendered perfectly and
  * nothing on it responded to a click.
  *
- * The rule it broke is already written down — the domain layer does not depend
+ * The rule it broke is already written down: the domain layer does not depend
  * on the framework. Keep the dependency pointing one way: components import
  * from `lib/prototype`, never the reverse.
  */
@@ -72,7 +72,7 @@ export interface ReviewItem {
   waitingHours: number;
   /** What must actually be true for this to advance. */
   toAdvance: string;
-  /** Present once verified: who confirmed it. Required — see the naming rule. */
+  /** Present once verified: who confirmed it. Required: see the naming rule. */
   confirmedBy?: string;
 }
 
@@ -100,14 +100,14 @@ export function ceilingNote(i: ReviewItem): string | null {
 }
 
 /**
- * Promotion. `verified` requires a named party — the guard is here rather than
+ * Promotion. `verified` requires a named party: the guard is here rather than
  * in the UI so a second surface cannot skip it.
  */
 export function promote(i: ReviewItem, to: TrustState, confirmedBy?: string): { ok: true; item: ReviewItem } | { ok: false; why: string } {
   const next = nextRung(i);
   if (!next) return { ok: false, why: ceilingNote(i) ?? "At its ceiling." };
   /* This read `to === "verified" ? "review" : next`, so the one case it was
-     written for — somebody reaching straight for `verified` — was told "Next
+     written for (somebody reaching straight for `verified`) was told "Next
      is review", a rung that does not exist in the vocabulary, while the actual
      next rung went unmentioned. The refusal is the only place the operator
      learns what to do instead, so it has to name the real one. */
@@ -150,7 +150,7 @@ export function askReview(input: { who: string; whoId: string; kind: ReviewKind;
     const all: ReviewItem[] = raw ? JSON.parse(raw) : [];
     window.localStorage.setItem(KEY, JSON.stringify([item, ...all].slice(0, 40)));
     window.dispatchEvent(new CustomEvent("rift:review"));
-  } catch { /* storage unavailable — the request still returns for this session */ }
+  } catch { /* storage unavailable: the request still returns for this session */ }
   return item;
 }
 
@@ -167,7 +167,7 @@ export function clearAsked() {
 }
 
 /* ------------------------------------------------------------------ *
- * Seeded queue — what the agent's morning actually looks like
+ * Seeded queue: what the agent's morning actually looks like
  * ------------------------------------------------------------------ */
 
 export const SEEDED: ReviewItem[] = [
@@ -179,7 +179,7 @@ export const SEEDED: ReviewItem[] = [
   },
   {
     id: "rv2", who: "Maya Ellison", whoId: "maya", kind: "program",
-    what: "Georgia Dream eligibility", claim: "Matched — $10,000", state: "pending-review", ceiling: "verified",
+    what: "Georgia Dream eligibility", claim: "Matched: $10,000", state: "pending-review", ceiling: "verified",
     raisedBy: "system", raisedAt: "2026-09-04", waitingHours: 44,
     toAdvance: "Income limit changed on 1 Sep. Re-run her household against the new table.",
   },
@@ -187,7 +187,7 @@ export const SEEDED: ReviewItem[] = [
     id: "rv3", who: "Harold & Ruth Vance", whoId: "vance", kind: "figure",
     what: "Repair budget before listing", claim: "$8,400", state: "pending-review", ceiling: "reviewed",
     raisedBy: "client", raisedAt: "2026-09-06", waitingHours: 4,
-    toAdvance: "Two quotes in, one outstanding. Reviewed is the ceiling — nobody certifies a repair estimate.",
+    toAdvance: "Two quotes in, one outstanding. Reviewed is the ceiling; nobody certifies a repair estimate.",
   },
   {
     id: "rv4", who: "Nadia & Chris Okafor", whoId: "okafor", kind: "figure",
@@ -203,7 +203,7 @@ export const SEEDED: ReviewItem[] = [
   },
 ];
 
-/** Oldest wait first — a review queue sorted by anything else is a to-do list. */
+/** Oldest wait first: a review queue sorted by anything else is a to-do list. */
 export const openItems = (rows: ReviewItem[]) =>
   rows.filter((i) => i.state === "pending-review").sort((a, b) => b.waitingHours - a.waitingHours);
 

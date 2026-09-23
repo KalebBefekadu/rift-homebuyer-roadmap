@@ -118,7 +118,7 @@ export function FunnelEditor() {
         </div>
         <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6, maxWidth: 700 }}>
           {rep?.thin
-            ? `Only ${rep?.starts ?? 0} starts recorded on this device. Nothing below is worth acting on until there are twenty — a drop-off computed from four people is noise wearing a percentage sign.`
+            ? `Only ${rep?.starts ?? 0} starts recorded on this device. Nothing below is worth acting on until there are twenty. A drop-off computed from four people is noise wearing a percentage sign.`
             : rep?.worst
             ? `The question losing most people is "${rep.worst.qid}", at ${rep.worst.dropPct}%.`
             : "Numbers appear per question below as traffic arrives."}
@@ -131,7 +131,7 @@ export function FunnelEditor() {
           <span className="t-sm w6">Two kinds of question, and only one of them is safe to invent</span>
         </div>
         <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 720 }}>
-          <b>Bound</b> questions feed the calculations — cash to close, your gap, the assistance
+          <b>Bound</b> questions feed the calculations: cash to close, your gap, the assistance
           match. You can reword them, reorder them and rewrite the answer labels. You cannot delete
           a required one, because that would leave the maths guessing instead of stopping.
           <b> Your own</b> questions are captured onto the lead and shown to you here, and never
@@ -140,7 +140,7 @@ export function FunnelEditor() {
         <div className="row gap-3 wrap" style={{ marginTop: 12 }}>
           <span className="chip"><Ico.bolt size={12} />{live} questions live</span>
           <span className="chip">{funnel.questions.filter((q) => q.kind === "custom").length} of your own</span>
-          {dirty ? <span className="chip chip-pos"><Ico.check size={12} />Saved — live now</span> : null}
+          {dirty ? <span className="chip chip-pos"><Ico.check size={12} />Saved, live now</span> : null}
         </div>
       </div>
 
@@ -218,7 +218,7 @@ export function FunnelEditor() {
                   </label>
                 </div>
                 <label className="field" style={{ marginTop: 12 }}>
-                  <span className="label">Why you&apos;re asking — shown under the question</span>
+                  <span className="label">Why you&apos;re asking (shown under the question)</span>
                   <textarea className="input ta" rows={2} value={q.description ?? ""}
                     onChange={(e) => patch(q.id, { description: e.target.value })}
                     placeholder="Optional. People answer honestly far more often when they know why." />
@@ -258,7 +258,7 @@ export function FunnelEditor() {
                                 : x),
                             })} />
                           {q.kind === "core" ? (
-                            <span className="chip mono" style={{ flex: "none" }} title="Locked — the calculations read this">
+                            <span className="chip mono" style={{ flex: "none" }} title="Locked: the calculations read this">
                               <Ico.lock size={11} />{o.value}
                             </span>
                           ) : (
@@ -278,7 +278,7 @@ export function FunnelEditor() {
                     ) : (
                       <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.55 }}>
                         Reword these freely. The locked value beside each one is what the calculations
-                        read, so it stays put — otherwise a rename would quietly change someone&apos;s numbers.
+                        read, so it stays put; otherwise a rename would quietly change someone&apos;s numbers.
                       </p>
                     )}
                   </div>
@@ -309,7 +309,7 @@ export function FunnelEditor() {
       </button>
       <p className="t-xs c-4" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 620 }}>
         Every question you add is one more thing between a stranger and their answer. The funnels
-        ship at {live} because that is roughly where completion starts falling — worth remembering
+        ship at {live} because that is roughly where completion starts falling, worth remembering
         before the eighth.
       </p>
     </>

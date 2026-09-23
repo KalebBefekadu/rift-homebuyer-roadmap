@@ -22,7 +22,7 @@ export const metadata: Metadata = {
  * outside is the same as not having one.
  *
  * Every figure here is rendered from the module that enforces it rather than
- * retyped — RETENTION, ALLOWED_META, the consent wording, the version. A
+ * retyped: RETENTION, ALLOWED_META, the consent wording, the version. A
  * privacy policy that is prose drifts from the code within one change, and
  * then the document that exists to be relied upon is the least reliable thing
  * on the site. `lib/core/docs.test.ts` already fails when the markdown drifts
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
         <Block title="The short version">
           <ul>
             <li>No account, ever. Nothing here requires you to make one.</li>
-            <li>We never store what you typed into a question next to who you are — those are two separate records with two separate lifetimes.</li>
+            <li>We never store what you typed into a question next to who you are. Those are two separate records with two separate lifetimes.</li>
             <li>We never ask for a credit score, a social security number, or a bank login.</li>
             <li>Nothing is sold, shared for advertising, or given to a data broker. There is no advertising on this site.</li>
             <li>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           <p>
             <strong>Your answers.</strong> The county, the price you are aiming at, what you have
             saved, what you owe, when you want to move. These produce your readout. They are
-            stored against a random session id, not against your name — until and unless you
+            stored against a random session id, not against your name, until and unless you
             give us contact details.
           </p>
           <p>
@@ -80,8 +80,8 @@ export default function PrivacyPage() {
             is only stored if you tick the box quoted below. Tick nothing and we store nothing.
           </p>
           <p>
-            <strong>A record of what you agreed to</strong> — the exact wording, not a reference
-            to it — so that we cannot quietly change the terms after the fact, and so there is
+            <strong>A record of what you agreed to</strong> (the exact wording, not a reference
+            to it), so that we cannot quietly change the terms after the fact, and so there is
             evidence that contacting you was allowed.
           </p>
           <p>
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
             </p>
           </div>
           <p>
-            This used to be written the other way round — a list of things to block — and a
+            This used to be written the other way round (a list of things to block), and a
             blocklist lets through everything nobody thought of. It did. The buyers-abroad page
             logged a visitor&rsquo;s residency situation on every view for as long as that page
             existed, because &ldquo;status&rdquo; was not on anybody&rsquo;s list of dangerous
@@ -203,7 +203,7 @@ export default function PrivacyPage() {
                  the note on CONTACT_EMAIL in lib/core/privacy.ts. */
               <>
                 Reply to any email we have sent you and it reaches Kaleb directly. If we have
-                never emailed you, then we are not holding an address for you — and the delete
+                never emailed you, then we are not holding an address for you, and the delete
                 button on your readout works without contacting anyone at all.
               </>
             )}

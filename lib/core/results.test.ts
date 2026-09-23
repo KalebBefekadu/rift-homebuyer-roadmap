@@ -7,12 +7,12 @@ import { buyerReadout, sellerReadout, type Readout } from "./results";
  * The 459 lines that write what a stranger actually reads had no tests.
  *
  * Every defect found in this module so far was found by loading the deployed
- * page and reading it — "You'm a U.S. citizen", "You said 3 to 9 months" to
+ * page and reading it: "You'm a U.S. citizen", "You said 3 to 9 months" to
  * somebody who said nothing, a seller $73,575 short told they would "walk
  * away with about -$73,575" under a chip reading "Ready now". None of them
  * threw. None of them failed a test, because there were none to fail.
  *
- * So these are not unit tests of arithmetic — `compute.test.ts` owns that.
+ * So these are not unit tests of arithmetic: `compute.test.ts` owns that.
  * They are assertions about the SENTENCES: that the prose wrapped around a
  * number belongs to the person whose number it is.
  */
@@ -64,7 +64,7 @@ describe("no readout, for anyone, leaks the shape of its own arithmetic", () => 
     it(`${name}: the headline figure survives intact`, () => {
       /* `figure` exists because it was being recovered from `headline` with
          `.split(",")[0]`, which truncated every figure over $1,000 to its
-         thousands digits — $137,145 rendered as "$137" beside a paragraph
+         thousands digits: $137,145 rendered as "$137" beside a paragraph
          stating the real number. Anything ending in a bare comma is that bug. */
       expect(r.reframe.figure).toMatch(/^-?\$[\d,]+$/);
       expect(r.reframe.figure).not.toMatch(/,$/);
@@ -187,7 +187,7 @@ describe("the seller who owes more than the sale produces", () => {
   const r = sellerReadout(s, "In the next 3 months", true);
   const net = netProceeds(s).net;
 
-  it("is a real case, not a contrived one — the parser permits it deliberately", () => {
+  it("is a real case, not a contrived one; the parser permits it deliberately", () => {
     expect(net).toBeLessThan(0);
   });
 

@@ -32,7 +32,7 @@ export type BrevoSyncResult =
 /**
  * Upsert contact + attributes into Brevo.
  * No-ops cleanly when BREVO_API_KEY is missing (local/dev).
- * Failures are never silent — captured in Sentry.
+ * Failures are never silent: captured in Sentry.
  */
 export async function syncContactToBrevo(payload: BrevoSyncPayload): Promise<BrevoSyncResult> {
   const apiKey = process.env.BREVO_API_KEY;

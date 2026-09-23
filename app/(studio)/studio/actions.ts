@@ -33,7 +33,7 @@ import type { Mood, MomentId, MomentState } from "@/lib/core/referral";
  * Studio's write actions.
  *
  * Every one re-checks the session. A server action is a public HTTP endpoint
- * with a generated name — it is not protected by the page that renders the
+ * with a generated name: it is not protected by the page that renders the
  * button, and treating it as if it were is how an action ends up callable by
  * anybody who reads the network tab.
  *
@@ -61,7 +61,7 @@ export async function advanceReview(id: string, confirmedBy?: string) {
  * "I have replied to this."
  *
  * Stops the clock and stops the sequence in one action, because they are the
- * same event from the agent's side — and asking him to do two things after one
+ * same event from the agent's side, and asking him to do two things after one
  * conversation is how the second one stops happening.
  */
 export async function markRepliedTo(leadId: string) {
@@ -95,7 +95,7 @@ export async function stopSequence(leadId: string, reason: StopId) {
  *
  * Studio lists strangers' finances, and the agent works from a laptop that
  * leaves the house. Being able to end a session is not a courtesy on a surface
- * like this — and a product that can be signed into and not out of is one
+ * like this, and a product that can be signed into and not out of is one
  * people stay signed into on shared machines.
  */
 export async function signOut() {
@@ -222,7 +222,7 @@ export async function deleteOffer(leadId: string, offerId: string) {
   const r = await removeOffer(offerId);
   revalidatePath(`/studio/lead/${leadId}`);
 
-  /* The database refuses to delete an offer the seller chose — a recorded
+  /* The database refuses to delete an offer the seller chose: a recorded
      choice pointing at nothing is a record of nothing. Said in English. */
   if (!r.ok && /rift_offer_rooms_chosen_is_theirs/.test(r.error)) {
     return { ok: false as const, error: "The seller chose this offer. Reopen their choice before deleting it" };
@@ -236,8 +236,8 @@ export async function deleteOffer(leadId: string, offerId: string) {
  * The offer room: approve the take, withdraw it, reopen the seller's choice.
  *
  * Approval takes only the words. The draft it is recorded against and the set
- * of offers it covers are recomputed on the server — see lib/db/offer-room.ts
- * — so the audit trail is what Rift actually drafted, not what a form posted.
+ * of offers it covers are recomputed on the server: see lib/db/offer-room.ts
+ *, so the audit trail is what Rift actually drafted, not what a form posted.
  */
 export async function approveOfferTake(leadId: string, take: string) {
   const agent = await currentAgent();
@@ -282,7 +282,7 @@ export async function reopenOfferChoice(leadId: string) {
  *
  * Asked for rather than assumed. A comparison run against a payoff of zero
  * ranks the offers correctly and reports a net out by the size of somebody's
- * mortgage — and it reads perfectly.
+ * mortgage, and it reads perfectly.
  */
 export async function saveSellerCosts(leadId: string, payoff: number, commissionPct: number) {
   const agent = await currentAgent();
@@ -315,17 +315,17 @@ export async function saveSellerCosts(leadId: string, payoff: number, commission
  * recomputes, and it says so when it disagrees. Somebody who was shown "you
  * need $27,875" has told their partner that number, written it down, and
  * organised their saving around it. A plan that opens showing $29,400 with no
- * explanation is not a correction — it is the product changing its story on
+ * explanation is not a correction: it is the product changing its story on
  * the first day of the relationship, and the client has no way to tell whether
  * the first number was wrong or the second one is.
  *
  * So publishing is blocked while a material drift is undisclosed. `disclosed`
- * is the agent saying "I have seen what moved and I am telling them" — passing
+ * is the agent saying "I have seen what moved and I am telling them": passing
  * it is a deliberate act on a screen that has just listed the changes, not a
  * default.
  *
- * Note which way this fails. If the comparison cannot be made at all — no
- * database, a read that timed out — it does NOT wave the plan through. It
+ * Note which way this fails. If the comparison cannot be made at all: no
+ * database, a read that timed out: it does NOT wave the plan through. It
  * returns the reason, because "we could not check whether their numbers moved"
  * and "their numbers did not move" are different facts, and only one of them
  * is a reason to publish.
@@ -341,14 +341,14 @@ export async function openClientPlan(leadId: string, disclosed = false) {
 
   /* Representation, read rather than asserted.
 
-     This was `hasAgreement: true` — a literal, inside the one function in the
+     This was `hasAgreement: true`: a literal, inside the one function in the
      product whose entire job is refusing to publish when something is not
      true. The comment above it said the column did not exist, which was
      accurate and is no longer.
 
      A read that FAILED does not block. "We could not check whether an
      agreement exists" and "no agreement exists" are different facts, exactly
-     as the docblock above says of drift — and only one of them is a reason to
+     as the docblock above says of drift, and only one of them is a reason to
      refuse. A database blip must not read to the agent as a compliance
      problem, because he cannot tell them apart from the message. */
   const rep = await representationOf(leadId);
@@ -457,8 +457,8 @@ export async function dropStep(leadId: string, itemId: string) {
  * pipeline into money and it ran on a default Kaleb could not see.
  *
  * The decider's name is recorded with the value. Two of the six are not his
- * to decide alone — client retention has a legal floor the broker sets, and
- * marketing to an unrepresented counterparty is a conflict question — and a
+ * to decide alone: client retention has a legal floor the broker sets, and
+ * marketing to an unrepresented counterparty is a conflict question, and a
  * settings table that cannot distinguish "the broker confirmed this" from
  * "nobody has ever touched it" converts a default into a policy in silence.
  */
@@ -494,7 +494,7 @@ export async function undecideRule(key: keyof BusinessRules) {
 /**
  * The agent's own words, published as a new version.
  *
- * Wording only, and the server does not trust the client about that — it
+ * Wording only, and the server does not trust the client about that: it
  * rebuilds the questions from `lib/core/funnel.ts` and applies the words on
  * top. A payload claiming to change a question's type or what it is bound to
  * gets its title applied and everything else ignored.
@@ -548,7 +548,7 @@ export async function setMood(leadId: string, mood: Mood) {
  * `occurrence` is carried from the screen rather than recomputed here, so the
  * decision lands on the moment the agent was actually looking at. Recomputing
  * it would attach a decision taken on the second anniversary to whichever
- * anniversary the clock says it is by the time the action runs — which is the
+ * anniversary the clock says it is by the time the action runs, which is the
  * same year in every case that matters and the wrong one on the day it is not.
  */
 export async function decideMoment(
@@ -574,7 +574,7 @@ export async function decideMoment(
  * Record the closing date, which is what starts the post-closing cadence.
  *
  * Deliberately not a side effect of moving somebody to the Closed stage. The
- * two are usually the same day and occasionally are not — a stage corrected
+ * two are usually the same day and occasionally are not: a stage corrected
  * weeks later would otherwise move every anniversary that person will ever
  * have, and the only visible symptom is a message arriving on the wrong day.
  */
@@ -598,7 +598,7 @@ export async function setClosingDate(leadId: string, closedOn: string | null) {
 /**
  * Record where the representation agreement stands.
  *
- * Rift never signs and never sends for signature — docs/vision.md is explicit
+ * Rift never signs and never sends for signature: docs/vision.md is explicit
  * that those are among the actions which never become automatic in any mode.
  * This records a paper event that happened elsewhere, which is the whole of
  * what a product is entitled to do here.

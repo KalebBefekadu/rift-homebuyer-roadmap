@@ -5,7 +5,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  * The gate, at the layer that actually talks to the database.
  *
  * `lib/core/referral-moments.test.ts` proves the rule holds in the arithmetic.
- * This proves the arithmetic is what the database layer runs — that a mood
+ * This proves the arithmetic is what the database layer runs: that a mood
  * column arriving as NULL, or missing entirely, does not quietly become
  * permission to ask somebody for a public review.
  *

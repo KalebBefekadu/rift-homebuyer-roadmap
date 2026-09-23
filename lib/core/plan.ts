@@ -1,5 +1,5 @@
 /**
- * A client's plan — the shape of it, and the rules about what it may say.
+ * A client's plan: the shape of it, and the rules about what it may say.
  *
  * Pure, so the rules can be tested without a database, and because the rules
  * are the interesting part. Two of them decide whether this surface is worth
@@ -11,7 +11,7 @@
  * there is no "unassigned".
  *
  * NOTHING IS OVERDUE UNTIL IT IS. A plan that marks things late by guessing is
- * a plan the client stops opening. An item with no date cannot be late —
+ * a plan the client stops opening. An item with no date cannot be late:
  * saying otherwise would punish the agent for not inventing a deadline, which
  * is the behaviour worth encouraging.
  */
@@ -36,7 +36,7 @@ export interface PlanItem {
  * `reader` is required and has no default, because this renders in the SECOND
  * PERSON and the second person is a different human on each of the two pages
  * that call it. Written with only the agent's name to work from, it labelled
- * a step owed by the client as "You" — correct on their page, and on the
+ * a step owed by the client as "You": correct on their page, and on the
  * agent's panel a line telling him he owes something he does not.
  *
  * The same family as the readout that once printed "You'm a U.S. citizen
@@ -121,7 +121,7 @@ export function groupPlan(items: PlanItem[], today = new Date()): PlanSection[] 
     const list = by.get(bucket);
     if (!list?.length) return [];
     /* Within a bucket: the agent's order, then the date, then arrival. Done
-       items run newest first — the most recent thing achieved is the one worth
+       items run newest first: the most recent thing achieved is the one worth
        seeing. */
     const sorted = [...list].sort((a, b2) =>
       bucket === "done"
@@ -162,14 +162,14 @@ export function headline(s: PlanSummary): string {
 
   const late = s.overdue === 1 ? "one is past its date" : `${s.overdue} are past its date`;
 
-  /* Nothing on them. Said without mentioning a count of zero — "0 things are
+  /* Nothing on them. Said without mentioning a count of zero: "0 things are
      waiting on you" is how a page tells somebody it is generated rather than
      written. Overdue items owned by the agent still get named, because the
      client is entitled to know the hold-up is at this end. */
   if (s.onYou === 0) {
     return s.overdue === 0
       ? "Nothing is waiting on you right now."
-      : `Nothing is waiting on you — but ${late}.`;
+      : `Nothing is waiting on you, but ${late}.`;
   }
 
   const you = s.onYou === 1 ? "One thing is waiting on you" : `${s.onYou} things are waiting on you`;
@@ -186,7 +186,7 @@ export function headline(s: PlanSummary): string {
  * me, what is approaching, and where do I ask for help.
  *
  * This page answered the first and the last. The middle three are below, and
- * they are derived rather than stored — there is no appointments table and no
+ * they are derived rather than stored: there is no appointments table and no
  * documents table, so inventing a surface for either would mean a heading that
  * is permanently empty. What can honestly be answered from plan items is
  * answered from plan items, and the rest is not claimed.
@@ -216,7 +216,7 @@ export interface NextUp {
  * sentence. Returns null when nothing is owed by them, which is a real and
  * common state and must read as one.
  *
- * Order: the latest overdue item first — not the most recently overdue, the
+ * Order: the latest overdue item first: not the most recently overdue, the
  * one that has been late longest, because that is the one quietly holding
  * everything else up. Then the soonest dated. Then the agent's own ordering
  * among items nobody has dated.
@@ -259,7 +259,7 @@ export interface Elsewhere {
  *
  * Two halves, because "what is your agent doing" has two honest answers and
  * they are different: what is outstanding at his end, and what has actually
- * been finished lately. The second is the one that builds trust — a client who
+ * been finished lately. The second is the one that builds trust: a client who
  * can see three things completed in the last fortnight stops asking whether
  * anything is happening, which is the entire mechanism behind the "inbound
  * status questions under one per month" target in docs/benchmark.md.
@@ -306,7 +306,7 @@ export interface Approaching {
  * Everything with a date coming up, whoever owns it.
  *
  * Deliberately not filtered to the client's own items. "What is approaching"
- * is a question about the transaction, not about their homework — a client
+ * is a question about the transaction, not about their homework: a client
  * whose appraisal is on Thursday needs to know that even though there is
  * nothing for them to do about it.
  *

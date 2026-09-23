@@ -89,11 +89,11 @@ describe("ranking", () => {
 
   it("keeps a genuine tie in the order it was given", () => {
     /* Breaking a tie on price is the exact substitution this file exists to
-       expose — the higher sticker would quietly win on a number that does not
+       expose: the higher sticker would quietly win on a number that does not
        reach the seller. */
     const first = offer({ id: "first", price: 400_000 });
     /* Built from the rate rather than a literal, so the tie survives the next
-       time a statutory rate is corrected — the last literal did not. */
+       time a statutory rate is corrected: the last literal did not. */
     const second = offer({ id: "second", price: 410_000, concessions: 10_000 - 500 - 10_000 * GA_TRANSFER_TAX_RATE });
 
     const ranked = rankOffers([first, second], costs);
@@ -183,8 +183,8 @@ describe("release", () => {
 /**
  * The same facts reach both readers.
  *
- * `gapsIn` was on the agent's screen only. The facts it states — "no
- * preapproval letter attached" — are material to the person actually
+ * `gapsIn` was on the agent's screen only. The facts it states: "no
+ * preapproval letter attached": are material to the person actually
  * deciding, and keeping them from the seller would be withholding something
  * from the one reader who lives with the answer. That is the opposite of what
  * the rest of this product does.
@@ -203,7 +203,7 @@ describe("what both pages show", () => {
 
   it("shows the seller only offers the agent released", () => {
     /* The page reads plan.offers, which lib/db/plan.ts fills from
-       releasedOffersFor — filtered in the query. Asserted here so a future
+       releasedOffersFor: filtered in the query. Asserted here so a future
        edit cannot reach for the unfiltered list that sits next to it. */
     expect(src).not.toMatch(/offersFor\(/);
   });

@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
  * The client tells us whether the box was ticked; the server decides what the
  * box said.
  *
- * A phone number arriving without consent is dropped rather than stored — see
+ * A phone number arriving without consent is dropped rather than stored: see
  * lib/db/leads.ts. That is deliberate and it is not merely conservative: a
  * number you may not lawfully call cannot be used, and still has to be
  * disclosed, secured and deleted. It is cost with no upside.
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const b = read.body as Record<string, unknown>;
 
   /* Empty means "no assessment behind this lead", which is a real case rather
-     than a mistake — a share-link visitor, or somebody booking from the
+     than a mistake: a share-link visitor, or somebody booking from the
      landing page. It must not reach the database as an empty uuid. */
   const assessmentId = typeof b.assessmentId === "string" && b.assessmentId.trim()
     ? b.assessmentId.trim()
@@ -105,15 +105,15 @@ export async function POST(req: Request) {
   }
   /* Delivery is attempted after the lead is safely stored, and its outcome is
      reported separately. Failing the whole capture because an email bounced
-     would lose the relationship over the least important part of it — the
+     would lose the relationship over the least important part of it: the
      readout is already on their screen and already has a URL. */
   /* Holding the slot happens after the lead is stored and is reported
-     separately. A calendar outage must not lose the relationship — the readout
+     separately. A calendar outage must not lose the relationship: the readout
      and the contact details are the durable part; a time can be rearranged. */
   /* The agent finds out.
      
      Nothing did this. Studio ranked leads, timed an SLA against them and
-     computed the cadence they were owed — all of which needed Kaleb to be
+     computed the cadence they were owed: all of which needed Kaleb to be
      looking at the screen already. A `now` band lead carries a fifteen-minute
      reply target, and the only thing that could start that clock ticking in
      his awareness was him happening to open a browser.
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
      rather than raised: the relationship is the durable thing here and an
      unsent alert must not cost it. Awaited rather than fired and forgotten,
      because on a serverless runtime the response ends the invocation and a
-     floating promise is simply dropped — which would have made this exactly
+     floating promise is simply dropped, which would have made this exactly
      the kind of thing that looks wired up and never runs. */
   let alerted: string | undefined;
   if (!("skipped" in r)) {
@@ -144,7 +144,7 @@ export async function POST(req: Request) {
         signals: r.data.score.signals,
         timing: scored.timing,
         /* From wherever the caller put it. The buyer readout sends it inside
-           `deliver`, the seller readout inside `lead`, and /book not at all —
+           `deliver`, the seller readout inside `lead`, and /book not at all:
            reading only a top-level `b.county` would have produced an alert
            subject with the county silently missing from every one of them. */
         county: county || undefined,
@@ -180,7 +180,7 @@ export async function POST(req: Request) {
   if (email && wants && typeof wants.shareUrl === "string") {
     /* The seller half of this was missing. The seller readout posts
        `netProceeds`, this read `cashToClose`, and `Number(undefined) || 0` is
-       0 — so every seller who asked for their readout by email was queued a
+       0, so every seller who asked for their readout by email was queued a
        message reading "Buying in DeKalb County takes $0 at the table". Email
        has never been switched on in production, so it was armed rather than
        fired. The builder refuses to send without the figure now, so the
@@ -208,7 +208,7 @@ export async function POST(req: Request) {
   /* `stored` says, in one word, whether the person's details now exist on our
      side. `skipped` alone did not: the forms read `ok: true` and rendered
      "Noted, but email is not switched on yet" over a capture that had stored
-     nothing — which happened on every cold start, while the agent lookup was
+     nothing, which happened on every cold start, while the agent lookup was
      timing out and being remembered as absent. A form may say "noted" only
      when this is true. */
   if ("skipped" in r) {

@@ -7,7 +7,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
  * Follows the degradation rule exactly: no API key means every send returns
  * `{ ok: true, skipped: true, reason }` and nothing is silently swallowed. The
  * caller can always tell "sent" from "not configured", which a bare try/catch
- * loses — and losing it is how a product ends up never emailing anyone in
+ * loses, and losing it is how a product ends up never emailing anyone in
  * production while every local run looks fine.
  *
  * One rule beyond delivery: a bounce is not a logging event, it is an agent
@@ -32,9 +32,9 @@ const FROM = { name: "Rift", email: FROM_EMAIL ?? "" };
 
 async function send(payload: Record<string, unknown>, op: string): Promise<SendResult> {
   const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) return { ok: true, skipped: true, reason: "BREVO_API_KEY not set — nothing was sent" };
+  if (!apiKey) return { ok: true, skipped: true, reason: "BREVO_API_KEY not set, so nothing was sent" };
   if (!FROM_EMAIL) {
-    return { ok: true, skipped: true, reason: "BREVO_FROM_EMAIL not set — Brevo rejects any send without a verified sender" };
+    return { ok: true, skipped: true, reason: "BREVO_FROM_EMAIL not set; Brevo rejects any send without a verified sender" };
   }
 
   try {
@@ -67,7 +67,7 @@ export {
 };
 
 /**
- * Sending. The building is in lib/core/email.ts, where it can be tested —
+ * Sending. The building is in lib/core/email.ts, where it can be tested:
  * see the note at the top of that file for what living here cost it.
  *
  * Every one of these refuses rather than sends when the builder returns null.
@@ -78,7 +78,7 @@ export {
 export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
   const built = buildReadout(r);
   if (!built) {
-    return { ok: true, skipped: true, reason: "no figures for this readout — nothing worth sending" };
+    return { ok: true, skipped: true, reason: "no figures for this readout, so nothing worth sending" };
   }
   return send({
     to: [{ email: r.to, ...(r.name ? { name: r.name } : {}) }],
@@ -91,7 +91,7 @@ export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
 export async function sendTouch(t: TouchEmail): Promise<SendResult> {
   const built = buildTouch(t);
   if (!built) {
-    return { ok: true, skipped: true, reason: "no readout figures for this lead — nothing worth sending" };
+    return { ok: true, skipped: true, reason: "no readout figures for this lead, so nothing worth sending" };
   }
   return send({
     to: [{ email: t.to, ...(t.name ? { name: t.name } : {}) }],
@@ -115,7 +115,7 @@ export async function sendResume(r: ResumeEmail): Promise<SendResult> {
  * The alert to the agent.
  *
  * Tagged separately so that the day this becomes noisy, it can be silenced
- * without touching anything a client receives — and so a bounce on Kaleb's own
+ * without touching anything a client receives, and so a bounce on Kaleb's own
  * address is distinguishable from a bounce on a stranger's, which is a very
  * different problem.
  *
@@ -126,7 +126,7 @@ export async function sendResume(r: ResumeEmail): Promise<SendResult> {
 export async function sendNewLead(l: NewLeadEmail): Promise<SendResult> {
   const built = buildNewLead(l);
   if (!built) {
-    return { ok: true, skipped: true, reason: "no way to reach this person — an alert with no action in it" };
+    return { ok: true, skipped: true, reason: "no way to reach this person; an alert with no action in it" };
   }
   return send({
     to: [{ email: l.to, name: "Kaleb" }],

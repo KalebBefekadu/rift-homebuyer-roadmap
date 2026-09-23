@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
      
      On a deadline, and failures are swallowed on purpose. This runs on every
      matched request, so a slow or unreachable auth server would hang all of
-     them — and the only thing lost by skipping it is a token refresh, which
+     them, and the only thing lost by skipping it is a token refresh, which
      the next request retries. A page that needs a session checks for itself;
      middleware refreshing one is an optimisation, and an optimisation must
      never be able to take the site down. */

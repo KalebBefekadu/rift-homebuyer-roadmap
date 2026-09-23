@@ -95,7 +95,7 @@ describe("parsing an abroad link", () => {
  * What the page is allowed to claim about where the rent figure came from.
  *
  * The rent ratios are engineering's own guesses. The page said "rent is
- * estimated from county averages", which named a source that does not exist —
+ * estimated from county averages", which named a source that does not exist:
  * and a guessed figure renders exactly like a measured one, so nothing about
  * the screen could have told anybody.
  *
@@ -137,7 +137,7 @@ describe("what the rent figure claims about itself", () => {
 
   it("names a source when there is one to name", () => {
     /* The other half. Once somebody supplies real ratios, `basis` becomes
-       "published" and a source has to be named with them — otherwise the
+       "published" and a source has to be named with them: otherwise the
        upgrade is just as unverifiable as the guess it replaced. */
     if (RENT_RATIO_SOURCE.basis === "published") {
       expect(RENT_RATIO_SOURCE.name, "published ratios must name their source").toBeTruthy();

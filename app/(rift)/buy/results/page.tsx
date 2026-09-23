@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  *
  * Every figure is computed HERE, on the server, from the same engine and the
  * same registry read the landing page used. The browser receives numbers, never
- * the arithmetic — which matters for one reason above all others: this page is
+ * the arithmetic, which matters for one reason above all others: this page is
  * shareable and URL-addressable, and a figure computed in the browser from
  * query parameters is a figure anybody can edit. "My readout says I need
  * $4,000" has to be false.
@@ -38,7 +38,7 @@ export default async function ResultsPage({
 
   /* Parsed and bounded in lib/core/params.ts, where it is tested adversarially.
      Every figure on this page comes from a query string a stranger can edit, so
-     this is a trust boundary rather than a parsing convenience — and the
+     this is a trust boundary rather than a parsing convenience, and the
      failure it prevents is an arithmetically correct absurdity, which is worse
      than an error page because an error page cannot be screenshotted as
      something this product said. */

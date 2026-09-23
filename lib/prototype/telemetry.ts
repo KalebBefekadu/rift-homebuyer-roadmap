@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Rift prototype — instrumentation.
+ * Rift prototype: instrumentation.
  *
  * benchmark.md carries a rule: no score above 84 is validated until field
  * metrics exist. This file is what turns that from an aspiration into a
@@ -22,7 +22,7 @@
  * Point 3 is the one that pays for the whole file. A funnel that only reports
  * "62% dropped out" tells you to panic. One that reports "41% of the loss is on
  * the savings question, and the median dwell there is 34 seconds" tells you the
- * question is intrusive rather than unclear — which is the difference between
+ * question is intrusive rather than unclear, which is the difference between
  * deleting it and rewriting it.
  *
  * PRIVACY: events carry the question id and timings, never the answer. We know
@@ -72,7 +72,7 @@ const KEY = "rift.events";
 const SID_KEY = "rift.sid";
 const CAP = 800;
 
-/** One id per browser session. Not an identity — it dies with the tab. */
+/** One id per browser session. Not an identity: it dies with the tab. */
 export function sessionId(): string {
   if (typeof window === "undefined") return "ssr";
   try {

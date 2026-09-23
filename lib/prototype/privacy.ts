@@ -3,8 +3,8 @@
 /**
  * Client-side privacy actions.
  *
- * The policy itself — what is kept, for how long, and the exact consent wording
- * — lives in `lib/core/privacy.ts`, because the server writes that text to the
+ * The policy itself: what is kept, for how long, and the exact consent wording
+ *: lives in `lib/core/privacy.ts`, because the server writes that text to the
  * consent record and the browser renders it, and a promise shown to somebody
  * must be the same string that is stored as evidence of it.
  *

@@ -20,7 +20,7 @@ import {
  * moment is DUE is derived on every read from the lifecycle and the clock, so
  * a relationship that closed six months ago starts surfacing its six-month ask
  * without anything having run, and nothing can go stale in the way a stored
- * queue goes stale — the failure where a cadence looks fine on screen because
+ * queue goes stale: the failure where a cadence looks fine on screen because
  * the rows are all still there, and the job that writes them stopped in March.
  */
 
@@ -58,7 +58,7 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
   return {
     stage: (row.stage as string | null) ?? "",
     closedOn: (row.closed_on as string | null) ?? null,
-    /* Whether a readout exists for their assessment — it is what the
+    /* Whether a readout exists for their assessment: it is what the
        assessment produced and what the person was shown.
 
        This asked for `rift_leads.figure_id`, WHICH DOES NOT EXIST. `figure_id`
@@ -70,7 +70,7 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
        the screen had never been opened against a real schema.
 
        `scripts/verify-queries.mjs` caught it the first time these queries were
-       added to it. That is the entire reason that script exists — a column list
+       added to it. That is the entire reason that script exists: a column list
        is a STRING, and neither TypeScript nor the build can check one. */
     readoutDelivered: assessmentId != null && withReadout.has(assessmentId),
     planPublished: row.client_token != null,
@@ -132,7 +132,7 @@ export async function momentsForLead(
 
   /* The moments render even if the decisions do not. Losing them means every
      moment reads as undecided, which overstates the work rather than hiding
-     it — the safe direction for a list whose job is to be complete. */
+     it: the safe direction for a list whose job is to be complete. */
   const recorded = decided.ok && "data" in decided
     ? (decided.data as Record<string, unknown>[]).map(shapeRecorded)
     : [];
@@ -328,7 +328,7 @@ export interface ReferralLinks {
  * for two cases that do exist: a row created while the deploy was ahead of the
  * migration, and anything the backfill missed.
  *
- * Twelve random bytes as hex. Not guessable, and it does not need to be — the
+ * Twelve random bytes as hex. Not guessable, and it does not need to be: the
  * token authorises nothing. Somebody who guessed one could credit a referral
  * to a stranger, which is worth about as much as it sounds.
  */

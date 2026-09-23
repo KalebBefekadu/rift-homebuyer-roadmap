@@ -24,7 +24,7 @@ const CH_ICON: Record<Channel, React.ComponentType<{ size?: number; className?: 
 
 /* Enrolments stand in for what the real build derives from the lead record and
    the sequence log. Deliberately mixed: two live, one stopped, one downgraded
-   for want of phone consent — the three states an agent actually sees. */
+   for want of phone consent: the three states an agent actually sees. */
 const ENROLLED: Enrolment[] = [
   { leadId: "l1", name: "Tomas Reyes", band: "now", daysIn: 3, stopped: null, phoneConsent: true, done: ["n1", "n2"] },
   { leadId: "l2", name: "Alina Whitfield", band: "soon", daysIn: 11, stopped: null, phoneConsent: false, done: ["s1", "s2"] },
@@ -85,7 +85,7 @@ function Cadence() {
         <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: 1.6, maxWidth: 720 }}>
           Most of a solo agent&apos;s revenue is sitting in people who weren&apos;t ready the week
           they arrived and were never spoken to again. Every touch below has to carry something
-          new — if a step has nothing to give, it shouldn&apos;t exist. A reply stops the whole
+          new. If a step has nothing to give, it shouldn&apos;t exist. A reply stops the whole
           sequence on the spot, because software that keeps sending after somebody answered
           proves there was never a person on this end.
         </p>
@@ -161,8 +161,8 @@ function Cadence() {
                   </div>
                   <p className="t-xs c-3" style={{ marginTop: 4 }}>
                     {e.stopped
-                      ? <><span className="w6">Stopped — {stopLabel(e.stopped).label}.</span> {stopLabel(e.stopped).why}</>
-                      : nxt ? <>Next in {nxt.inDays} day{nxt.inDays === 1 ? "" : "s"} — {nxt.step.says}</>
+                      ? <><span className="w6">Stopped: {stopLabel(e.stopped).label}.</span> {stopLabel(e.stopped).why}</>
+                      : nxt ? <>Next in {nxt.inDays} day{nxt.inDays === 1 ? "" : "s"}: {nxt.step.says}</>
                       : seq.ends}
                   </p>
                 </div>
@@ -236,7 +236,7 @@ function Cadence() {
 }
 
 /* ================================================================== *
- * Review — the surface that finally produces `pending-review`
+ * Review: the surface that finally produces `pending-review`
  * ================================================================== */
 
 function Review() {
@@ -279,7 +279,7 @@ function Review() {
         </div>
         <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: 1.6, maxWidth: 720 }}>
           Every readout now carries a control that says <em>ask Kaleb to check this</em>, and it
-          lands here. A figure moves up by an event, never by time passing — and not everything
+          lands here. A figure moves up by an event, never by time passing, and not everything
           can reach the top. A lender&apos;s pre-approval can be verified. His opinion of a
           repair budget cannot be, ever, so the product does not offer a button that pretends
           otherwise.
@@ -333,7 +333,7 @@ function Review() {
                   <button className="btn btn-p btn-sm" onClick={() => (to === "verified" ? setNaming(i.id) : bump(i))}>
                     {to === "reviewed" ? "I have been through it" : to === "verified" ? "A lender confirmed it" : "Send for review"}
                   </button>
-                  {to === "verified" ? <span className="t-2xs c-4">Needs a name — an unsigned verification is still an estimate.</span> : null}
+                  {to === "verified" ? <span className="t-2xs c-4">Needs a name. An unsigned verification is still an estimate.</span> : null}
                 </div>
               ) : (
                 <p className="t-xs c-4 row gap-2" style={{ marginTop: 8 }}><Ico.info size={11} />{cap}</p>
@@ -358,7 +358,7 @@ function Review() {
 }
 
 /* ================================================================== *
- * Publishing — the readout → plan seam
+ * Publishing: the readout → plan seam
  * ================================================================== */
 
 const DRIFTS = [
@@ -387,7 +387,7 @@ function Publishing() {
           This was the undefined moment, and it is the expensive one: it is where a stranger
           becomes a client, and the only place two systems hold an opinion about the same number.
           The readout they were given is frozen and kept forever, because a document that
-          rewrites itself was never theirs. The plan recalculates — and when it disagrees with
+          rewrites itself was never theirs. The plan recalculates, and when it disagrees with
           what they were shown, it has to say so out loud.
         </p>
       </div>

@@ -7,7 +7,7 @@ import { done, failed, skipped, type DbResult } from "./result";
  *
  * Most people who start will not finish in one sitting, and that population is
  * the single largest source of lost leads in this product. Rift treats
- * abandonment as a normal state rather than a failure — the rows are
+ * abandonment as a normal state rather than a failure: the rows are
  * first-class, not rows somebody forgot to delete.
  *
  * The recovery rule that matters, and the one most products get wrong: a
@@ -32,7 +32,7 @@ export interface Abandoned {
 /**
  * Assessments started, not completed, and quiet for a while.
  *
- * The quiet period is not politeness — somebody who stepped away for ten
+ * The quiet period is not politeness: somebody who stepped away for ten
  * minutes has not abandoned anything, and mailing them mid-session is the
  * clearest possible way to say a machine is watching them fill in a form.
  */

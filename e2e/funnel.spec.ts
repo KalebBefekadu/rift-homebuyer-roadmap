@@ -4,7 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
  * The buyer funnel, walked the way a stranger walks it.
  *
  * This is the path the whole product is built around: a landing page, seven
- * questions, and a readout with real money on it — no account anywhere. If it
+ * questions, and a readout with real money on it: no account anywhere. If it
  * breaks, nothing else matters.
  *
  * Runs against a production build with NO database configured, which is
@@ -18,7 +18,7 @@ async function choose(page: Page, label: string) {
   await page.getByRole("button", { name: label, exact: true }).click();
 }
 
-/** Sets a slider by typing into it rather than dragging — dragging is flaky
+/** Sets a slider by typing into it rather than dragging: dragging is flaky
  *  and tests the mouse, not the product. */
 async function setSlider(page: Page, label: string, value: number) {
   const input = page.getByLabel(label, { exact: true });
@@ -74,7 +74,7 @@ test.describe("a stranger gets their numbers", () => {
 
     /* Not "a page loaded". The readout's job is to put a specific number in
        front of somebody, and a readout that renders with the money missing is
-       this product's characteristic failure — it looks completely fine. */
+       this product's characteristic failure: it looks completely fine. */
     await expect(body).toContainText(/\$[\d,]{4,}/);
 
     /* The rate assumption must be printed. A monthly figure without the rate
@@ -82,7 +82,7 @@ test.describe("a stranger gets their numbers", () => {
        product exists not to do. */
     await expect(body).toContainText(/%/);
 
-    /* With nothing configured the rate falls back — and says so rather than
+    /* With nothing configured the rate falls back, and says so rather than
        presenting 6.5% as an observation. */
     await expect(body).toContainText(/assumption/i);
   });
@@ -104,7 +104,7 @@ test.describe("a stranger gets their numbers", () => {
     expect(money(tampered)).toBe(money(honest));
 
     /* The guard that makes this test able to fail. The readout substitutes
-       typical Georgia figures for anything it was not told and says so — so a
+       typical Georgia figures for anything it was not told and says so, so a
        test that gets the parameter NAMES wrong exercises the defaults path and
        passes, having compared two pages that both ignored it. That is how the
        first draft of this file passed. */

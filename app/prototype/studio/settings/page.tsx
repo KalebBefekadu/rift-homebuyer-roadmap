@@ -142,7 +142,7 @@ export default function Settings() {
             <div style={{ marginBottom: 20 }}>
               <h2 className="t-xl w6">The questions people are asked</h2>
               <p className="t-sm c-3" style={{ marginTop: 5, lineHeight: 1.6, maxWidth: 640 }}>
-                These are the public funnels. Edits are live the moment you make them — there is no
+                These are the public funnels. Edits are live the moment you make them; there is no
                 publish step, because a draft nobody ships is worse than a change you can undo.
               </p>
             </div>
@@ -329,7 +329,7 @@ export default function Settings() {
  * ================================================================== */
 
 function Rules() {
-  /* DEFAULTS on the first render, not storage — reading localStorage here would
+  /* DEFAULTS on the first render, not storage: reading localStorage here would
      make the client's first paint disagree with the server's HTML. */
   const [r, setR] = useState<BusinessRules>(DEFAULT_RULES);
   const [open, setOpen] = useState<(keyof BusinessRules)[]>([]);
@@ -379,7 +379,7 @@ function Rules() {
         </div>
         <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: 1.6, maxWidth: 720 }}>
           Each of these was a constant in a file. Touching one below records it as
-          <em> chosen</em> rather than inherited — the distinction matters, because two of them
+          <em> chosen</em> rather than inherited. The distinction matters, because two of them
           are the broker&apos;s to make and one of them has a legal floor.
         </p>
       </div>
@@ -408,7 +408,7 @@ function Rules() {
 
           <Row k="marketUnrepresented">
             <div className="col gap-2">
-              {([[false, "No — leave them alone"], [true, "Yes, after the transaction closes"]] as const).map(([v, t]) => (
+              {([[false, "No, leave them alone"], [true, "Yes, after the transaction closes"]] as const).map(([v, t]) => (
                 <label key={String(v)} className="opt" data-on={r.marketUnrepresented.value === v}>
                   <input type="radio" checked={r.marketUnrepresented.value === v} onChange={() => set("marketUnrepresented", v)} />
                   <span className="t-sm">{t}</span>

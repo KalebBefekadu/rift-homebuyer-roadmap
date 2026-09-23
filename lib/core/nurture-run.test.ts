@@ -11,7 +11,7 @@ import { runOptions, DEFAULT_MAX_PER_RUN } from "@/lib/core/nurture";
  *
  * That is the dangerous shape: the cohort accumulates while sending is off, so
  * the moment it is switched on the FIRST run is the largest one this product
- * will ever do — through a path that has never sent a real message.
+ * will ever do: through a path that has never sent a real message.
  */
 describe("what one nurture run is allowed to do", () => {
   const url = (q: string) => `https://rift.example/api/nurture/run${q}`;
@@ -82,7 +82,7 @@ describe("a dry run cannot reach anybody", () => {
     const open = src.indexOf("if (dry) {");
     expect(open, "the dry branch").toBeGreaterThan(-1);
 
-    /* Walk braces rather than matching a closing one by eye — a nested block
+    /* Walk braces rather than matching a closing one by eye: a nested block
        inside would otherwise end the search early and the guard would pass on
        code it never read. */
     let depth = 0, end = -1;
@@ -101,7 +101,7 @@ describe("a dry run cannot reach anybody", () => {
 
   it("decides the budget before it claims anything", () => {
     /* The cap has to be checked ahead of the claim. Claiming and then declining
-       to send marks a step as done that nobody was told about — the step is
+       to send marks a step as done that nobody was told about: the step is
        then never sent at all, which is worse than sending it late. */
     const budget = src.indexOf(">= max");
     expect(budget).toBeGreaterThan(-1);

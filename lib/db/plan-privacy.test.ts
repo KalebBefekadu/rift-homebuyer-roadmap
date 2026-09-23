@@ -9,7 +9,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  * who is not the agent and has no session. The token is the whole
  * authorisation, and the row it lands on is the agent's working record of a
  * person: a score, a band, why they may lawfully be contacted, the signals
- * that produced their ranking, and — if it ever comes to it — the reason he
+ * that produced their ranking, and (if it ever comes to it) the reason he
  * archived them.
  *
  * None of that was written to be read by the person it is about. A `select("*")`
@@ -247,7 +247,7 @@ describe("what the page says when there is no plan to show", () => {
 
   it("treats a skipped read as an outage, not as a closed link", () => {
     /* `skipped` is ok:true with no data, so a page that only checks `!read.ok`
-       falls straight through to "no longer open" — which is what the first
+       falls straight through to "no longer open": which is what the first
        draft of this page did, on every deployment with no database. */
     expect(src, "the page must branch on skipped before it decides the link is gone")
       .toMatch(/!read\.ok \|\| "skipped" in read/);

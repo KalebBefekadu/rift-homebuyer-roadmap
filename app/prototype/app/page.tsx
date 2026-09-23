@@ -41,7 +41,7 @@ export default function ClientHome() {
         <Link href="/prototype/app/plan" className="btn btn-s">View full plan <Ico.arrowR size={15} /></Link>
       </div>
 
-      {/* active decision — surfaced only when there is one */}
+      {/* active decision: surfaced only when there is one */}
       <Link href="/prototype/app/decisions" className="card lift" style={{
         display: "block", padding: 18, marginBottom: 16,
         borderColor: "var(--accent-line)", background: "var(--accent-wash)",
@@ -52,7 +52,7 @@ export default function ClientHome() {
             <div>
               <div className="t-md w6 c-acc">Kaleb prepared a decision for you</div>
               <div className="t-sm c-2" style={{ marginTop: 2 }}>
-                Which price to actually target — three options, costed out.
+                Which price to actually target: three options, costed out.
               </div>
             </div>
           </div>
@@ -61,7 +61,7 @@ export default function ClientHome() {
       </Link>
 
       {/* The referral moment for where Maya actually is. Her plan was just
-          published, so the correct ask is sharing — not a name, and not a
+          published, so the correct ask is sharing: not a name, and not a
           review she has nothing to review yet. */}
       <div className="card p-4" style={{ marginBottom: 16 }}>
         <div className="between wrap gap-3">
@@ -70,8 +70,8 @@ export default function ClientHome() {
             <div>
               <div className="t-md w6">{MOMENTS.find((m) => m.id === "plan_published")!.ask}</div>
               <p className="t-sm c-3" style={{ marginTop: 3, lineHeight: 1.55, maxWidth: 520 }}>
-                Devon and anyone helping with the gift can see the parts they need — the cash
-                figure and what a gift letter requires — and none of your income or savings.
+                Devon and anyone helping with the gift can see the parts they need (the cash
+                figure and what a gift letter requires) and none of your income or savings.
               </p>
             </div>
           </div>

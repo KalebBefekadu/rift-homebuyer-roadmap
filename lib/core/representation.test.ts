@@ -9,7 +9,7 @@ import {
  * The gate between a lead and a client.
  *
  * docs/benchmark.md scores representation capture at 1 in production against 3
- * in the prototype, with the note that there is no column — "which is why
+ * in the prototype, with the note that there is no column: "which is why
  * canPublish has to assume the agreement exists rather than check it". That
  * assumption was a literal `hasAgreement: true` inside the one function whose
  * whole job is refusing to publish when something is not true.

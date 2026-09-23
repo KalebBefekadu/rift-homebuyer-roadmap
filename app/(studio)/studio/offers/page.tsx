@@ -19,7 +19,7 @@ const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
  * This screen is the reason the feature is allowed to exist. /offer tells a
  * stranger their offer has been delivered, on a document with a deadline
  * attached to it, and an offer sitting in a table nobody opens would make the
- * whole thing worse than not having it — a promise kept by the database and
+ * whole thing worse than not having it: a promise kept by the database and
  * broken by the product.
  *
  * Each one is read the same way the submitter's own page read it, from the
@@ -48,7 +48,7 @@ export default async function OffersInPage() {
         </h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 600, lineHeight: 1.6 }}>
           Submitted at <Link href="/offer" className="u">/offer</Link> by people with no account.
-          Each one is also a relationship — somebody writing offers in Georgia is somebody worth
+          Each one is also a relationship: somebody writing offers in Georgia is somebody worth
           knowing whether or not this one lands.
         </p>
 
@@ -145,7 +145,7 @@ export default async function OffersInPage() {
                     {o.submitterLeadId ? (
                       <Link href={`/studio/lead/${o.submitterLeadId}`} className="t-xs u">Their record</Link>
                     ) : (
-                      <span className="t-xs c-4">No relationship record — the lead write did not land.</span>
+                      <span className="t-xs c-4">No relationship record. The lead write did not land.</span>
                     )}
                   </div>
                 </article>

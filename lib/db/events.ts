@@ -27,10 +27,10 @@ export async function recordEvents(events: EventInput[]): Promise<DbResult<{ wri
   if (!events.length) return done({ written: 0 });
 
   const db = serviceClient();
-  if (!db) return skipped("no database configured — events are not being recorded");
+  if (!db) return skipped("no database configured; events are not being recorded");
 
   const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet — run the bootstrap before collecting traffic");
+  if (!agent_id) return skipped("no agent row exists yet. Run the bootstrap before collecting traffic");
 
   try {
     const rows = events.map((e) => ({
@@ -45,7 +45,7 @@ export async function recordEvents(events: EventInput[]): Promise<DbResult<{ wri
 
     /* Bounded. Telemetry must never break a funnel, and an unbounded insert
        against a hung database holds the visitor's request open until the
-       platform kills it — which is a worse outcome than losing the events. */
+       platform kills it, which is a worse outcome than losing the events. */
     const { value: result, timedOut } = await withTimeout(
       Promise.resolve(db.from("rift_events").insert(rows)),
       WRITE_DEADLINE_MS,
@@ -83,12 +83,12 @@ export interface StepStat {
  * Per-question drop-off, aggregated in the database.
  *
  * It used to fetch every matching event and count distinct sessions in
- * JavaScript — 45,000 rows over the wire to produce seven numbers, on every
+ * JavaScript: 45,000 rows over the wire to produce seven numbers, on every
  * Studio load. At five years of traffic that is a page that times out, and the
  * failure would arrive exactly when the data finally meant something.
  *
  * The window matters more than the speed. There was no time bound, so the
- * report mixed last year's funnel with this week's — and the point of measuring
+ * report mixed last year's funnel with this week's, and the point of measuring
  * drop-off is to change a question and see whether it helped. Averaged against
  * twelve months of the old wording, it never would.
  */
@@ -124,8 +124,8 @@ export async function funnelReport(
       questionKey: r.question_key,
       reached: r.reached,
       answered: r.answered,
-      /* Floored at zero. More answers than views is possible in the data —
-         a resumed session answers a question it never viewed in this window —
+      /* Floored at zero. More answers than views is possible in the data:
+         a resumed session answers a question it never viewed in this window:
          and a negative drop-off rendered as "-3%" reads as a bug rather than
          as the edge case it is. */
       dropPct: r.reached ? Math.max(0, Math.round(((r.reached - r.answered) / r.reached) * 100)) : 0,

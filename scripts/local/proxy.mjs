@@ -4,7 +4,7 @@
  * supabase-js builds every URL as `${SUPABASE_URL}/rest/v1/<table>`; PostgREST
  * serves at the root. Rewriting the path here rather than hand-writing URLs in
  * a test keeps the REAL query builder in the loop, which is the only version
- * worth verifying — building those URLs is the part that goes wrong.
+ * worth verifying: building those URLs is the part that goes wrong.
  */
 import http from "node:http";
 
@@ -15,7 +15,7 @@ const PORT = Number(process.env.PROXY_PORT ?? 3002);
  * A minimal stand-in for GoTrue's /auth/v1/user.
  *
  * Studio is the only surface behind a login, and without this it could never be
- * seen with real data locally — everything behind the session was unit- and
+ * seen with real data locally: everything behind the session was unit- and
  * query-tested, and the rendering was not. That is the gap this closes.
  *
  * It answers with a fixed user whose id matches the agent row the local stack
@@ -42,7 +42,7 @@ http.createServer(async (req, res) => {
     return;
   }
   if (path.startsWith("/auth/v1/")) {
-    /* Everything else GoTrue would serve — token refresh, OTP — is not needed
+    /* Everything else GoTrue would serve (token refresh, OTP) is not needed
        to render Studio, and answering it plausibly would invite somebody to
        trust this thing further than it deserves. */
     res.writeHead(501, { "content-type": "application/json" });

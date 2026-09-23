@@ -55,7 +55,7 @@ export function StudioHeader({ agentName, undecided = 0, current }: {
           </Link>
           {/* Carries its own warning. Six decisions the product cannot make for
               him, and until he has made them this badge is the only thing that
-              says so — on every screen, now, rather than on one of them. */}
+              says so: on every screen, now, rather than on one of them. */}
           <Link href="/studio/settings" className="btn btn-g btn-sm" title="Your decisions">
             <Ico.set size={14} />
             {undecided ? <span className="chip chip-warn t-2xs">{undecided}</span> : null}

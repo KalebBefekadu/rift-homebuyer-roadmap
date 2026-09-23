@@ -1,5 +1,5 @@
 -- ============================================================================
--- Rift core schema — phase 1
+-- Rift core schema: phase 1
 --
 -- Additive. The retired portal MVP's tables (clients, roadmaps, dpa_programs,
 -- agents_settings) are applied to this project and are left alone; Rift's
@@ -132,7 +132,7 @@ create table if not exists rift_answers (
 
 -- Telemetry lives apart from answers, permanently, with its own retention.
 -- The moment one query can join an event to the value that was typed, funnel
--- analytics becomes a dossier — so the payload is forbidden from carrying one.
+-- analytics becomes a dossier, so the payload is forbidden from carrying one.
 create table if not exists rift_events (
   id             bigserial primary key,
   agent_id       uuid not null references rift_agents(id) on delete cascade,
@@ -154,7 +154,7 @@ create index if not exists rift_events_question_idx on rift_events (question_key
 -- First touch never moves. Enforced by trigger rather than by application
 -- code: an agent who re-attributes a referral to the retargeting ad that
 -- caught it on the way back will keep buying retargeting and stop asking for
--- referrals. Referring HOST only — no path, no IP, no fingerprint.
+-- referrals. Referring HOST only: no path, no IP, no fingerprint.
 create table if not exists rift_attributions (
   session_id        text primary key,
   agent_id          uuid not null references rift_agents(id) on delete cascade,

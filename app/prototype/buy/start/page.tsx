@@ -44,7 +44,7 @@ function BuyStart() {
   const ok = !q?.required || answered;
   const last = n === QS.length - 1;
 
-  /* Instrumentation. Question ids and timings only — never the answer. */
+  /* Instrumentation. Question ids and timings only: never the answer. */
   const src = useRef<string | undefined>(undefined);
   useEffect(() => { src.current = readAttribution()?.first.source; }, []);
   useTrack({ name: "assessment_start", side: "buy", fv: funnel.version, meta: { prefilled: QS.length !== funnel.questions.length } });
@@ -68,7 +68,7 @@ function BuyStart() {
     ...BUYER_DEFAULTS, county,
     price: Number(a.price) || 0, savings: Number(a.savings) || 0,
     monthlySaving: Number(a.monthlySaving) || 0,
-    /* Zero on purpose — see buyerReadout. Assistance is upside, not a balance. */
+    /* Zero on purpose: see buyerReadout. Assistance is upside, not a balance. */
     assistance: 0,
   }), [a, county]);
 
@@ -105,7 +105,7 @@ function BuyStart() {
     q.id === "price" ? (
       <button className="btn btn-g btn-sm" style={{ paddingLeft: 0, marginTop: 6 }}
         onClick={() => { set("price", 325_000); setTouched((t) => [...t, "price"]); }}>
-        I don&apos;t know — use a typical starter price
+        I don&apos;t know, use a typical starter price
       </button>
     ) : q.id === "who" ? (
       <button className="btn btn-g btn-sm" style={{ paddingLeft: 0, marginTop: 8 }}
@@ -140,13 +140,13 @@ function BuyStart() {
             {ownership === "investment" ? (
               <div className="card p-3" style={{ background: "var(--warn-wash)", borderColor: "var(--warn-line)" }}>
                 <div className="t-xs c-2" style={{ lineHeight: 1.55 }}>
-                  Matched as first-time — an investment property usually doesn&apos;t count. A lender confirms it.
+                  Matched as first-time. An investment property usually doesn&apos;t count. A lender confirms it.
                 </div>
               </div>
             ) : null}
             {Number(a.price) > 0 ? (
               <LiveCard label="Cash you'd actually need" value={money(cash.total)}
-                note={`Not ${money(cash.down)} — that's just the down payment`} />
+                note={`Not ${money(cash.down)}, that's just the down payment`} />
             ) : null}
             {Number(a.price) > 0 ? <LiveCard label="All-in monthly" value={money(mo.value)} /> : null}
             {Number(a.price) > 0 && Number(a.savings) > 0 ? (

@@ -11,7 +11,7 @@ import { failed, type DbResult } from "./result";
  * last of those is the failure this whole idea exists to prevent, so the
  * wrapping should happen in one place.
  *
- * `Promise.resolve` is not decoration — supabase-js returns a thenable builder
+ * `Promise.resolve` is not decoration: supabase-js returns a thenable builder
  * rather than a real Promise, and `Promise.race` will not accept one.
  */
 type Query<T> = PromiseLike<{ data: T; error: { message: string } | null }>;

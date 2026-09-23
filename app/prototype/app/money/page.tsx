@@ -92,7 +92,7 @@ export default function Money() {
               <div className="row gap-2">
                 <Ico.info size={14} className="c-4" style={{ flex: "none", marginTop: 1 }} />
                 <span className="t-xs c-3" style={{ lineHeight: 1.55 }}>
-                  Most people are only told the down payment — {money(cash.down)} here. The gap
+                  Most people are only told the down payment ({money(cash.down)} here). The gap
                   between that and {money(cash.total)} is what usually breaks a purchase late.
                 </span>
               </div>
@@ -168,7 +168,7 @@ export default function Money() {
 
           <div className="card p-4">
             <div className="t-xs c-4" style={{ lineHeight: 1.6 }}>
-              Planning estimates based on the assumptions above — not a loan approval, rate
+              Planning estimates based on the assumptions above, not a loan approval, rate
               quote or lending commitment. Your lender is the authority on final figures.
             </div>
             <Link href="/prototype/app/plan" className="btn btn-g btn-sm" style={{ paddingLeft: 0, marginTop: 8 }}>

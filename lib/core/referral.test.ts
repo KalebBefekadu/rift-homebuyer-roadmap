@@ -13,7 +13,7 @@ import {
  * private, whether they are happy.
  *
  * The moments are now derived from real lifecycle data rather than a fixture
- * — see referral-moments.test.ts, which walks every combination of mood and
+ *: see referral-moments.test.ts, which walks every combination of mood and
  * gate rather than the five clients somebody happened to invent.
  */
 

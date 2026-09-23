@@ -26,7 +26,7 @@ function Results() {
   const savings = Number(q.get("s")) || 14_000;
   const monthlySaving = Number(q.get("r")) || 700;
   const timing = q.get("t") || "3 to 9 months";
-  /* The default is a planning assumption, not a quote — the readout's tension
+  /* The default is a planning assumption, not a quote: the readout's tension
      block says "You said…" and must only do so when they did. */
   const timingStated = Boolean(q.get("t"));
   const who = q.get("w") || "none";
@@ -90,7 +90,7 @@ function Results() {
 
         <Sec n={2}
           title={m.matched.length ? `${m.matched.length} Georgia programs may fit your answers` : "No verified program matches these answers today"}
-          sub={m.matched.length ? "Named, with what each one asks of you. Estimated ranges, never approvals." : "That is not the same as nothing existing — only that we will not show you a number we cannot stand behind."}>
+          sub={m.matched.length ? "Named, with what each one asks of you. Estimated ranges, never approvals." : "That is not the same as nothing existing, only that we will not show you a number we cannot stand behind."}>
           {m.matched.length ? (
             <div className="col gap-2">
               {m.matched.map((p) => (

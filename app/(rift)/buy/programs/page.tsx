@@ -11,7 +11,7 @@ import { currentAgentId } from "@/lib/db/service";
 export const metadata: Metadata = {
   title: "Georgia homebuyer assistance programs",
   description:
-    "Every Georgia down-payment assistance program Rift tracks, with what each one asks of you, who administers it, and when it was last verified — including the ones that are closed.",
+    "Every Georgia down-payment assistance program Rift tracks, with what each one asks of you, who administers it, and when it was last verified, including the ones that are closed.",
 };
 
 export const revalidate = 3600;
@@ -19,7 +19,7 @@ export const revalidate = 3600;
 /**
  * The whole registry, including what is closed and what is stale.
  *
- * This is the "just show me the programs" door — the visitor who is not ready
+ * This is the "just show me the programs" door: the visitor who is not ready
  * to answer seven questions but is ready to read. Sending that person into an
  * assessment is how you lose them.
  *
@@ -31,7 +31,7 @@ export const revalidate = 3600;
  */
 export default async function ProgramsPage() {
   /* The agent's own re-check window rather than the default. A stranger has
-     no session, so the id comes from the single-agent lookup — the same one
+     no session, so the id comes from the single-agent lookup: the same one
      every other public write uses. */
   const { rules } = await rulesOrDefaults(await currentAgentId());
   const read = await readRegistry(new Date(), rules.registryDays.value);
@@ -67,7 +67,7 @@ export default async function ProgramsPage() {
         </h1>
         <p className="lede" style={{ marginTop: 14, maxWidth: 620 }}>
           {all.length} programs, {open.length} currently open. Amounts are estimated ranges with
-          conditions attached — never approvals. A participating lender is the only party who
+          conditions attached, never approvals. A participating lender is the only party who
           can confirm what you actually qualify for.
         </p>
 
@@ -77,7 +77,7 @@ export default async function ProgramsPage() {
             const age = daysSinceVerified(p, new Date());
             /* A stale programme is set back with a ground, not with opacity.
                Fading the card took its name, its amount and its own explanation
-               down with it — 0.72 put four separate elements below AA, including
+               down with it: 0.72 put four separate elements below AA, including
                the figure, on the one card whose whole purpose is to show
                somebody what is being withheld from their match and why. The chip
                and the sentence at the foot of the card already say it in

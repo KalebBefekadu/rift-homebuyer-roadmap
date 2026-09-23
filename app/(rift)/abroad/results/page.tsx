@@ -30,13 +30,13 @@ export const dynamic = "force-dynamic";
  *
  * It exists because the buyer readout is the wrong document for this person.
  * That one is built around closing a cash gap by saving, and it names Georgia
- * Dream and the other assistance programmes throughout — every one of which
+ * Dream and the other assistance programmes throughout: every one of which
  * requires the buyer to occupy the house, and most of which require a Social
  * Security number. Sending a foreign national there was the same false promise
  * this page's hero was built to avoid, reintroduced one click later.
  *
  * No questions of its own. The landing page already asked the four that matter
- * and they travel in the URL, so this renders immediately — and, like every
+ * and they travel in the URL, so this renders immediately, and, like every
  * other readout here, it is addressable, ungated, and keeps working if the
  * person never speaks to anyone.
  *
@@ -59,7 +59,7 @@ export default async function AbroadResults({
 
   /* Carried from the landing page's toggle. Until this read existed the
      language travelled in the URL and was then ignored, so switching to
-     Amharic and tapping through landed on a wall of English — the click-through
+     Amharic and tapping through landed on a wall of English: the click-through
      was the moment the product stopped speaking to them. */
   const langParam = one("lang");
   const locale: Locale = isLocale(langParam) ? langParam : "en";
@@ -81,7 +81,7 @@ export default async function AbroadResults({
   const back = `/abroad?${q}&lang=${locale}`;
 
   /* Which of the four blockers applies. Worked out once so the heading and the
-     sentence under it cannot disagree — they are two halves of one claim. */
+     sentence under it cannot disagree: they are two halves of one claim. */
   const blocker = i.use === "live" ? "live"
     : r.cashFlow >= 0 ? "tenant"
       : breakEven !== null ? "under" : "never";
@@ -326,7 +326,7 @@ export default async function AbroadResults({
         {/* The two things every other readout in the product has had and this
             one did not: a way to keep it, and a way to destroy it. The page is
             pure arithmetic on its own query string, so the address IS the
-            durable document — there is no snapshot to take. */}
+            durable document: there is no snapshot to take. */}
         <Keep
           locale={locale}
           t={{

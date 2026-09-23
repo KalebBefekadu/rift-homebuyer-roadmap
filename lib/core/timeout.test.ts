@@ -23,7 +23,7 @@ describe("deadlines", () => {
   });
 
   it("lets a rejection through rather than swallowing it into the fallback", async () => {
-    /* A failure has its own handling — a reported error and a documented
+    /* A failure has its own handling: a reported error and a documented
        fallback. Converting it to a timeout would lose the reason. */
     await expect(withTimeout(Promise.reject(new Error("boom")), 50, "fallback")).rejects.toThrow("boom");
   });
@@ -40,7 +40,7 @@ describe("deadlines", () => {
  *
  * Not a style question. A read that misses falls back to a documented answer
  * and the visitor still gets their numbers. A session check that misses has no
- * equivalent — it cannot answer "who is asking", so the page shows the agent
+ * equivalent: it cannot answer "who is asking", so the page shows the agent
  * either a sign-in form he does not need or an apology he does not want.
  */
 describe("the three deadlines", () => {
@@ -57,7 +57,7 @@ describe("the three deadlines", () => {
     for (const [name, ms] of Object.entries({ READ_DEADLINE_MS, WRITE_DEADLINE_MS, AUTH_DEADLINE_MS })) {
       expect(ms, `${name} is not a number of milliseconds`).toBeGreaterThan(0);
       /* Vercel's default function ceiling. A deadline past it is not a
-         deadline — the platform kills the request first and the fallback
+         deadline: the platform kills the request first and the fallback
          never runs. */
       expect(ms, `${name} is longer than the platform will wait anyway`).toBeLessThan(10_000);
     }

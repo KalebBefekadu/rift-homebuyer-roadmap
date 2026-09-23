@@ -1,14 +1,14 @@
 /**
- * Rift prototype — stall detection and the forward view.
+ * Rift prototype: stall detection and the forward view.
  *
  * A board tells an agent where everyone is. It does not tell him who has
- * stopped moving, and stopping is the thing that actually costs money — a
+ * stopped moving, and stopping is the thing that actually costs money: a
  * relationship does not usually die of a decision, it dies of forty quiet days.
  *
  * Two readings, both computed rather than judged:
  *
  *   STALL   Every stage has a normal dwell. Past it, something is wrong, and
- *           the cause is almost always identifiable from the record — an unsent
+ *           the cause is almost always identifiable from the record: an unsent
  *           agreement, an unanswered lender, a decision nobody made.
  *
  *   FORWARD Expected closings by month, weighted by stage. Weighted, because an
@@ -17,7 +17,7 @@
  *
  * The weights below started as assumptions, which was a stated gap: they were
  * industry-shaped guesses being presented as this agent's odds. They now shrink
- * toward whatever his own closed history actually shows — see `weightFor`. A
+ * toward whatever his own closed history actually shows: see `weightFor`. A
  * weight is labelled with its basis everywhere it is displayed, so nobody has
  * to remember which of these numbers has evidence behind it.
  */
@@ -81,7 +81,7 @@ export function stallOf(stage: string, daysInStage: number, flag?: string, nextD
 
   const unstick =
     level === "moving" ? "Nothing needed."
-    : overdue ? "Clear the overdue action first — it is the dependency."
+    : overdue ? "Clear the overdue action first. It is the dependency."
     : flag ? "Resolve the blocker on the record."
     : "One call. A stage that stalls without a recorded cause is nearly always waiting on a conversation.";
 
@@ -101,8 +101,8 @@ export const TERMINAL = ["Closed", "Lost"] as const;
 /**
  * A relationship that has finished, and every stage it went through.
  *
- * `through` comes from the append-only note history — a stage change writes its
- * own note carrying both ends of the move — so this is the record of what
+ * `through` comes from the append-only note history: a stage change writes its
+ * own note carrying both ends of the move, so this is the record of what
  * actually happened rather than a second copy of it that could drift.
  */
 export interface Finished {
@@ -117,7 +117,7 @@ export interface Finished {
  * through.
  *
  * The question a forecast weight answers is "somebody is sitting in Searching
- * today — how often does that end in a closing?", so a relationship that went
+ * today: how often does that end in a closing?", so a relationship that went
  * Exploring → Searching → Under contract → Closed is evidence about all three
  * of those stages, not only the last one. Counting only the final stage would
  * make every closed deal evidence that Closing converts at 100% and teach the
@@ -158,8 +158,8 @@ export interface Weight {
  * his history outweighs the starting assumption, and the two are blended in
  * proportion until then.
  *
- * The alternative — switching to observed the moment there is any history at
- * all — is how a solo agent ends up forecasting from three closings and
+ * The alternative: switching to observed the moment there is any history at
+ * all: is how a solo agent ends up forecasting from three closings and
  * believing a stage converts at 100%. Small samples do not deserve full
  * confidence, and this is the arithmetic that says so.
  */
@@ -173,7 +173,7 @@ const MINIMUM = 4;
 /**
  * `history` is REQUIRED, and that is the point.
  *
- * It used to default to `HISTORY` below — forty-one invented outcomes seeded to
+ * It used to default to `HISTORY` below: forty-one invented outcomes seeded to
  * look like a plausible solo agent's record. Any caller that forgot to pass real
  * data got the fixture, and `BASIS_CHIP` then labelled the result "His own
  * history" on screen. A forecast built from somebody else's imaginary closings,
@@ -192,7 +192,7 @@ export function weightFor(stage: string, history: Outcome[]): Weight {
       weight: assumed, basis: "assumed", n,
       note: n === 0
         ? "No closed history in this stage yet. This is a starting assumption, not his number."
-        : `Only ${n} outcome${n === 1 ? "" : "s"} so far — too few to move the assumption.`,
+        : `Only ${n} outcome${n === 1 ? "" : "s"} so far, too few to move the assumption.`,
     };
   }
 
@@ -214,7 +214,7 @@ export const BASIS_CHIP: Record<Basis, { l: string; c: string }> = {
 
 /**
  * Seeded history for the PROTOTYPE ONLY. Deliberately thin and uneven, because
- * a solo agent's is — plenty of contract-stage outcomes, almost nothing at the
+ * a solo agent's is: plenty of contract-stage outcomes, almost nothing at the
  * top of the funnel, which is exactly the shape that makes an unshrunk average
  * dangerous.
  *
@@ -277,7 +277,7 @@ export function forecast(
      *
      * This was `new Date(from); d.setMonth(d.getMonth() + i)`, which rolls
      * over whenever the source day does not exist in the target month. Run on
-     * 31 January the four buckets came out "Jan, Mar, Mar, May" — February and
+     * 31 January the four buckets came out "Jan, Mar, Mar, May": February and
      * April gone, March twice. `idx` below is computed from the year and month
      * directly and so was still correct, which made it worse: February's
      * deals landed in the first bucket labelled "Mar" and March's in the
@@ -319,7 +319,7 @@ export function forecast(
 
 /**
  * Gross commission at a stated rate. Stated, because assuming it is how
- * forecasts lie — and now settable, because it was previously a literal in this
+ * forecasts lie, and now settable, because it was previously a literal in this
  * file pretending to be a business decision somebody had made.
  */
 export const COMMISSION_PCT = DEFAULT_RULES.commissionPct.value;
@@ -334,7 +334,7 @@ export const commissionOn = (value: number, pct = COMMISSION_PCT) => (value * pc
  * itself does not forecast from.
  *
  * It lives in core rather than beside the queries because the client components
- * that render stage buttons cannot import lib/db — it is `server-only`, and
+ * that render stage buttons cannot import lib/db: it is `server-only`, and
  * lib/core/layers.test.ts exists to keep that true. A stage list is domain
  * knowledge, not data access, so this is where it belonged anyway.
  */

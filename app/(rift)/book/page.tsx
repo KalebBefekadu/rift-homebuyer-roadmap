@@ -24,7 +24,7 @@ export default async function BookPage() {
 
   /* Three states, three screens. "No real availability configured" and "the
      agent has no free time" are different facts, and inventing four plausible
-     times to paper over either of them is a promise the product cannot keep —
+     times to paper over either of them is a promise the product cannot keep:
      discovered by the person only after they have chosen one. */
   const slots = avail.ok ? avail.slots : [];
   const source = avail.ok ? ("source" in avail ? avail.source : "calendar") : "error";

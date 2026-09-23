@@ -14,7 +14,7 @@ import type { Financing, Offer, SellerCosts } from "@/lib/core/offers";
  *
  * Nothing the seller can read is returned by anything except
  * `releasedOffersFor`, which filters on `released_at` in the query rather than
- * after it — a filter applied in JavaScript is one refactor away from being
+ * after it: a filter applied in JavaScript is one refactor away from being
  * dropped, and what it is protecting is an unreviewed offer landing in front
  * of somebody while the agent is driving.
  */
@@ -121,7 +121,7 @@ export async function offersFor(leadId: string): Promise<DbResult<{ offers: Offe
 
   /* Null rather than a default. A comparison run against an assumed payoff of
      zero would rank offers correctly and report a net that is out by the size
-     of somebody's mortgage — and it would look entirely reasonable. */
+     of somebody's mortgage, and it would look entirely reasonable. */
   const l = lead.ok && "data" in lead ? (lead.data as { payoff_cents: number | null; commission_pct: number | null } | null) : null;
   const costs: SellerCosts | null =
     l && l.payoff_cents !== null && l.commission_pct !== null

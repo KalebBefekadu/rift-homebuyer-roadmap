@@ -203,7 +203,7 @@ fi
 
 echo "Pushing migrations..."
 "${SB[@]}" db push --include-all --yes 2>&1 | tee /tmp/sb_db_push.log || {
-  echo "DB_PUSH_FAILED — trying SQL via Management API execute"
+  echo "DB_PUSH_FAILED: trying SQL via Management API execute"
   python3 - <<'PY'
 import json, os, urllib.request, pathlib
 token=os.environ["SUPABASE_ACCESS_TOKEN"]

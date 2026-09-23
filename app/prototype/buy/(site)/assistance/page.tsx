@@ -86,7 +86,7 @@ export default function Assistance() {
           Is there money available to you?
         </h1>
         <p className="lede" style={{ marginTop: 16, maxWidth: 540 }}>
-          Two questions. Every program below has been verified by hand — anything we
+          Two questions. Every program below has been verified by hand; anything we
           can&apos;t currently stand behind isn&apos;t shown at all.
         </p>
       </div>
@@ -123,7 +123,7 @@ export default function Assistance() {
             <Ico.info size={22} className="c-4" />
             <p className="t-lg w55" style={{ marginTop: 12 }}>Nothing matches those answers today.</p>
             <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 420, margin: "6px auto 0" }}>
-              That doesn&apos;t mean nothing exists — it means nothing we can currently
+              That doesn&apos;t mean nothing exists; it means nothing we can currently
               verify. Kaleb reviews this list continuously.
             </p>
           </div>
@@ -154,7 +154,7 @@ export default function Assistance() {
                 <Ico.info size={13} style={{ color: "rgba(255,255,255,.4)" }} />
                 <span style={{ fontSize: 12, color: "rgba(255,255,255,.45)", lineHeight: 1.5 }}>
                   Estimated ranges, not approvals. Income limits, purchase-price caps and
-                  funding availability decide what you can actually use — your lender and the
+                  funding availability decide what you can actually use; your lender and the
                   program confirm it.
                 </span>
               </div>

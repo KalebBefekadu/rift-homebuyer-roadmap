@@ -6,7 +6,7 @@ import { Landing } from "./Landing";
 export const metadata: Metadata = {
   title: "Know what buying actually takes",
   description:
-    "The down payment is not the number. See the real cash to close, the Georgia assistance you may qualify for, and how far away you actually are — free, before you talk to anyone.",
+    "The down payment is not the number. See the real cash to close, the Georgia assistance you may qualify for, and how far away you actually are. Free, before you talk to anyone.",
 };
 
 /* Rates and programme data move. A landing page cached for a day would quote
@@ -25,7 +25,7 @@ export const revalidate = 3600;
  *   2. It is a claim about money. Computing it on the server means it comes
  *      from the same registry read the readout uses, so the range promised on
  *      the landing page and the range shown after the assessment cannot
- *      disagree — which they would, sooner or later, if the browser computed
+ *      disagree, which they would, sooner or later, if the browser computed
  *      one of them.
  */
 export default async function BuyLanding() {

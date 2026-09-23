@@ -14,7 +14,7 @@ import { sessionId } from "@/lib/rift/session";
  * The assessment.
  *
  * Everything here follows from one measurement: paid traffic is mostly phones,
- * and a phone is where a long form dies. So —
+ * and a phone is where a long form dies. So:
  *
  *   * One question per screen. Choosing an option advances on its own; making
  *     somebody tap an answer and then tap Next is asking twice.
@@ -25,8 +25,8 @@ import { sessionId } from "@/lib/rift/session";
  *   * Questions already answered on the landing page are not asked again.
  */
 
-/* Scoped by side. This was the single key "rift.buy.draft" — named for the
-   only funnel that existed when it was written — and it kept serving both once
+/* Scoped by side. This was the single key "rift.buy.draft": named for the
+   only funnel that existed when it was written, and it kept serving both once
    this component was generalised. A visitor who looked at the seller
    assessment and later opened the buyer one had the seller's county, price and
    payoff restored into it, and reached a buyer readout computed from a
@@ -41,8 +41,8 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
   const [answers, setAnswers] = useState<Answers>({});
   /* Which questions the PERSON answered, as opposed to which have a seeded
      default sitting in them. Without this distinction the seeded sliders would
-     count as progress and the abandonment event — the most valuable one in the
-     funnel — would never fire. */
+     count as progress and the abandonment event: the most valuable one in the
+     funnel: would never fire. */
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [i, setI] = useState(0);
   const [ready, setReady] = useState(false);
@@ -55,7 +55,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
 
   /* Lifted out of `funnel` so the effects below can depend on it honestly.
      They all read `funnel.side` and none of them listed `funnel` as a
-     dependency — correct in practice, because the funnel is a server prop that
+     dependency: correct in practice, because the funnel is a server prop that
      cannot change under a mounted assessment, and a lie all the same. The
      linter was right to say so: the day that stops being true, the drafts get
      written under the wrong key and the telemetry is filed against the wrong
@@ -71,10 +71,10 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     try {
       const raw = window.localStorage.getItem(draftKey(side));
       if (raw) restored = JSON.parse(raw) as Answers;
-    } catch { /* storage unavailable — start clean */ }
+    } catch { /* storage unavailable: start clean */ }
 
     /* Every question the hero can ask, by the short key it travels under.
-       The hero is not decoration — it is the first two or three questions of
+       The hero is not decoration: it is the first two or three questions of
        this same funnel, answered somewhere else. Anything it collects and this
        does not read is a question the visitor gets asked twice, which is the
        clearest signal a form is not listening. */
@@ -96,12 +96,12 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
        computes with.
 
        Without this the price slider rendered "$0" while the panel beside it
-       said $26,188 — a figure derived from a $325,000 price the visitor could
+       said $26,188: a figure derived from a $325,000 price the visitor could
        not see and had never given. Somebody who pressed Next without touching
        the slider would then get a readout built on $325,000 having been shown
        $0. Shown and used must be the same number; that is the whole product. */
     /* Per side. Seeding the seller funnel from BUYER_DEFAULTS put $325,000 in
-       the price slider — the buyer default — while the panel beside it computed
+       the price slider (the buyer default) while the panel beside it computed
        from the seller ones, and left `payoff` and `yearsOwned` unseeded
        entirely because no such buyer default exists. That is the same
        shown-vs-used split described above, reintroduced on the other side the
@@ -117,7 +117,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     /* An answer is stored under two keys: the question's own id, which the
        controls read, and the bound name, which the engine reads. The hero only
        knows the bound name, so without this the seller's price arrived in the
-       computation while the slider beside it still showed the default — the
+       computation while the slider beside it still showed the default: the
        shown-vs-used split again, entering by the one door still open to it. */
     for (const question of questions) {
       if (question.bound && question.bound in fromLanding) {
@@ -211,7 +211,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
             detail: gap.monthsToClose !== null ? `about ${gap.monthsToClose} months at your rate` : "tell us a saving rate for a date",
           }
         : { text: "Covered on savings alone", tone: "c-pos", detail: "" },
-      foot: "Updating as you answer. Assistance is not counted here — it is upside, and only",
+      foot: "Updating as you answer. Assistance is not counted here: it is upside, and only",
     };
   }, [answers, side]);
 
@@ -260,7 +260,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
     }
     /* The readout is reached by URL, so the answers travel as query
        parameters rather than in a store. Each side carries the inputs its own
-       compute engine needs — the keys differ because the questions do.
+       compute engine needs: the keys differ because the questions do.
 
        Note "o" means ownership for a buyer and payoff for a seller. They never
        share a page, and each is parsed by its own side's parser. */
@@ -281,7 +281,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
           t: String(answers.timing ?? "3 to 9 months"),
           o: String(answers.ownership ?? "none"),
           /* Carries the co-buyer answer so the readout can score it. Their name
-             is not needed and is not sent — only that somebody else is in the
+             is not needed and is not sent: only that somebody else is in the
              decision. */
           w: answers.who ? "1" : "",
         });
@@ -292,7 +292,7 @@ export function Assessment({ funnel }: { funnel: Funnel }) {
      event in the funnel. It is recorded on the way out, not inferred later.
      
      Once per session, not once per visibility change. Abandonment is a STATE,
-     not a repeated occurrence — and a phone user who switches apps four times
+     not a repeated occurrence, and a phone user who switches apps four times
      while thinking about a question was emitting four abandonments, which
      would have made the single most important metric in the product read
      several times worse than reality. Found by looking at what a real run
@@ -410,7 +410,7 @@ function Field({ q, value, onChange, onAdvance }: {
 
      Resolving it here was missing entirely. The county question rendered a
      select containing nothing but "Choose one", and county is question two of
-     both funnels and required — so NOBODY could complete an assessment on
+     both funnels and required, so NOBODY could complete an assessment on
      either side. It failed the way the worst bugs in this product fail: the
      page rendered, nothing errored, and the control was simply empty. */
   const options = optionsFor(q);

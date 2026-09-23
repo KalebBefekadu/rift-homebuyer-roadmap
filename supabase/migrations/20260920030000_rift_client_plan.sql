@@ -6,14 +6,14 @@
 -- frozen readout at /r/<token> and nothing after it. From the moment somebody
 -- becomes a client, the product they were sold goes dark.
 --
--- This is the first surface that points the other way — a plan they can open
+-- This is the first surface that points the other way: a plan they can open
 -- and read: what has been agreed, who owes what, and by when.
 --
 -- TWO DECISIONS WORTH STATING.
 --
 -- No accounts. The whole funnel works without one and it would be strange to
 -- demand a password at the moment somebody starts trusting you. Reached by an
--- unguessable token, like the shared readout, and the page is noindex — a link
+-- unguessable token, like the shared readout, and the page is noindex: a link
 -- unguessable to a person is trivially findable by a crawler given it.
 --
 -- The agent's notes are NOT here and must never be. rift_lead_notes is his
@@ -64,7 +64,7 @@ create index if not exists rift_plan_items_lead_idx
   on rift_plan_items (lead_id, sort, created_at);
 
 comment on table rift_plan_items is
-  'One step of a client''s plan, written to be read by them. Not the agent''s notes — see rift_lead_notes, which stays private.';
+  'One step of a client''s plan, written to be read by them. Not the agent''s notes: see rift_lead_notes, which stays private.';
 
 alter table rift_plan_items enable row level security;
 

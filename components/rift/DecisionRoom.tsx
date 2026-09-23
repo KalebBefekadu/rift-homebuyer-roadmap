@@ -13,9 +13,9 @@ import { Ico } from "@/components/rift/icons";
  *
  * WHAT THIS COMPONENT REFUSES TO DO is as important as what it renders. It
  * does not order by amount, it does not mark one option as best, and it does
- * not compute a recommendation. The largest number is not the best option —
+ * not compute a recommendation. The largest number is not the best option:
  * `headlineTrap` in lib/core/offers.ts exists because that is the single most
- * expensive misreading in this business — and a comparison that sorts by value
+ * expensive misreading in this business, and a comparison that sorts by value
  * has made the choice on the reader's behalf without telling them.
  */
 export function DecisionRoom({
@@ -143,8 +143,8 @@ export function DecisionRoom({
         ) : decision.chosenOptionId ? (
           /* The database now refuses to delete an option a decision names, so
              this should not occur through the product. It is kept because the
-             constraint is deferrable and because the alternative — rendering a
-             decided room as undecided — is the kind of quiet wrongness this
+             constraint is deferrable and because the alternative: rendering a
+             decided room as undecided: is the kind of quiet wrongness this
              product exists to not produce. An impossible state that says so is
              better than an impossible state that lies. */
           <p className="t-xs c-3" style={{ lineHeight: 1.6 }}>

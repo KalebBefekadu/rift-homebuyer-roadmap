@@ -25,7 +25,7 @@ import { FIXED_SELLER_COSTS, gapsIn, type Financing, type Offer } from "./offers
  * tax are charged on the headline, so a seller giving back $8,000 in
  * concessions loses $8,000 flat, while dropping the price by $8,000 costs them
  * only what is left after the percentage-based costs come off it. The ratio is
- * 1/(1 − k) where k is commission plus transfer tax — at a 6% commission in
+ * 1/(1 − k) where k is commission plus transfer tax: at a 6% commission in
  * Georgia, about $1.06 of price for every $1 asked back.
  *
  * So the same offer, restated as a clean price, is a lower number than its
@@ -73,7 +73,7 @@ export interface Reading {
   /** Commission and transfer tax on the headline, at the stated assumption. */
   proportionalCosts: number;
   /**
-   * The clean price — nothing asked back — that leaves the seller exactly
+   * The clean price (nothing asked back) that leaves the seller exactly
    * where this offer does. Lower than the headline whenever anything is asked
    * back, and that difference is the whole point of the page.
    */
@@ -102,7 +102,7 @@ export const isFinancing = (v: unknown): v is Financing =>
  * Read the submission, refusing rather than repairing.
  *
  * A price of zero, a missing address or an unparseable email are not things to
- * guess at — an offer is a document somebody may act on, and a submission
+ * guess at: an offer is a document somebody may act on, and a submission
  * silently corrected into something the sender did not write is worse than one
  * refused with a reason.
  */
@@ -110,7 +110,7 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
   const errors: string[] = [];
 
   const address = String(raw.address ?? "").trim();
-  if (address.length < 6) errors.push("A property address is needed — street, city and state.");
+  if (address.length < 6) errors.push("A property address is needed: street, city and state.");
   if (address.length > 200) errors.push("That address is too long to be one.");
 
   const price = Number(raw.price);
@@ -119,7 +119,7 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
   }
 
   const from = String(raw.from ?? "").trim();
-  if (from.length < 2 || from.length > 120) errors.push("A name is needed — the one the seller should see.");
+  if (from.length < 2 || from.length > 120) errors.push("A name is needed, the one the seller should see.");
 
   const email = String(raw.email ?? "").trim().toLowerCase();
   /* Deliberately loose. The only thing worth rejecting here is something that
@@ -192,7 +192,7 @@ export function asOffer(s: Submission): Offer {
  * What this offer is actually worth to a seller, without knowing their payoff.
  *
  * The payoff is the same constant under every offer on the same house, so it
- * cancels out of every comparison — which is why this can say something true
+ * cancels out of every comparison, which is why this can say something true
  * while knowing nothing private.
  */
 export function read(s: Submission, commissionPct = ASSUMED_COMMISSION_PCT): Reading {
@@ -202,8 +202,8 @@ export function read(s: Submission, commissionPct = ASSUMED_COMMISSION_PCT): Rea
   const askedBack = s.concessions + s.repairCredit;
   const proportionalCosts = s.price * k;
 
-  /* P(1 − k) = price(1 − k) − askedBack, solved for P. `k` cannot reach 1 —
-     it is capped at 10% commission plus 0.1% transfer tax — so this cannot
+  /* P(1 − k) = price(1 − k) − askedBack, solved for P. `k` cannot reach 1:
+     it is capped at 10% commission plus 0.1% transfer tax, so this cannot
      divide by zero however the assumption is set. */
   const costPerDollarBack = 1 / (1 - k);
   const equivalentCleanPrice = Math.round(s.price - askedBack * costPerDollarBack);

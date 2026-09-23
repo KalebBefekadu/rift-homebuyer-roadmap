@@ -5,7 +5,7 @@ import { refFrom, touchFromRequest, describeTouch, MAX_REF } from "./attribution
  * The handle that says who sent somebody.
  *
  * `rift_leads.referred_by` was added, read in three places, and written by
- * nothing — so "advocacy share of pipeline", the first of the three metrics
+ * nothing: so "advocacy share of pipeline", the first of the three metrics
  * docs/vision.md names as mattering most, could not become non-zero by any
  * path through the product. This is the front half of the writer.
  *
@@ -68,7 +68,7 @@ describe("the touch carries it", () => {
   });
 
   it("does not put the handle in the stored landing path", () => {
-    /* `safeLanding` drops the query, and it must go on doing so — the landing
+    /* `safeLanding` drops the query, and it must go on doing so: the landing
        column is a path, and a referral that also appeared there would be a
        second copy nothing keeps in step with the first. */
     const t = at("https://rift.test/buy/start?r=abc123&utm_source=fb");

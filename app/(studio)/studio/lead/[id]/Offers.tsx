@@ -14,7 +14,7 @@ import { recordOffer, releaseOffer, deleteOffer, saveSellerCosts } from "../../a
  *
  * Ranked by what reaches the seller, never by the sticker. When the highest
  * offer is not the best one, that is said in a sentence at the top rather than
- * left for somebody to notice in a column — it is the single most useful thing
+ * left for somebody to notice in a column: it is the single most useful thing
  * this product can tell a seller, and noticing it is the job.
  *
  * Release is a separate, deliberate act. An offer arrives while the agent is
@@ -78,7 +78,7 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
       {error ? <p className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
 
       {/* Without these two figures the comparison is not wrong, it is
-          meaningless — and a net computed against an assumed payoff of zero
+          meaningless, and a net computed against an assumed payoff of zero
           would look entirely reasonable while being out by the size of
           somebody's mortgage. So it refuses rather than assumes. */}
       {!costs ? (
@@ -86,7 +86,7 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
           <div className="t-sm w6">Two figures first.</div>
           <p className="t-xs c-4" style={{ marginTop: 4, lineHeight: 1.6, maxWidth: 480 }}>
             Net to seller cannot be worked out without what they still owe and the total
-            commission. Nothing is guessed here — a net computed against an assumed payoff
+            commission. Nothing is guessed here: a net computed against an assumed payoff
             reads perfectly and is wrong by the size of a mortgage.
           </p>
           <div className="row gap-2 wrap" style={{ marginTop: 12 }}>

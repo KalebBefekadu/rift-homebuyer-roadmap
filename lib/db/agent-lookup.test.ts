@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * It used to remember a TIMEOUT as "no agent exists" for ten seconds. The
  * first query on a fresh serverless instance pays for the connection and
  * routinely overran the two-second deadline, so every cold start opened with a
- * window in which leads, offers and bookings were skipped — and the booking
+ * window in which leads, offers and bookings were skipped, and the booking
  * form rendered "done" over a request that reached nobody. Found on
  * production by a health check returning 503 once and then 200 eight times.
  */

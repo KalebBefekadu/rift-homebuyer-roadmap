@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
  * comment rather than a property.
  *
  * The rule, stated in docs/integrations.md and in a dozen docblocks: a missing
- * integration returns `{ ok: true, skipped: true, reason }` — never a throw,
+ * integration returns `{ ok: true, skipped: true, reason }`: never a throw,
  * and never a bare success. The whole `DbResult` discriminated union exists to
  * make "it worked", "it failed" and "there was nothing to work with" three
  * different answers, because collapsing the third into either of the others is
@@ -27,7 +27,7 @@ const REAL = { ...process.env };
 
 beforeAll(() => {
   /* No database, no keys. The shape a deployment has before anybody has
-     configured it — and the shape /prototype runs in on purpose. */
+     configured it, and the shape /prototype runs in on purpose. */
   for (const k of [
     "SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY",
     "SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -78,7 +78,7 @@ describe("with nothing configured at all", () => {
     expect(contract("rankedLeads", await rankedLeads(5))).toBe("skipped");
     expect(contract("captureTouch", await captureTouch("s", {}))).toBe("skipped");
     /* A real event, not an empty array. `recordEvents([])` correctly reports
-       `done({ written: 0 })` — nothing was skipped for want of a database,
+       `done({ written: 0 })`: nothing was skipped for want of a database,
        there was simply nothing to write, and those are different facts. */
     expect(contract("recordEvents", await recordEvents([
       { sessionId: "s", name: "readout_view", side: "buy" },
@@ -204,7 +204,7 @@ describe("the calendar with no credentials", () => {
        about a person's availability.
        
        Its own shape rather than DbResult, because a caller rendering a list
-       of times needs an empty list it can still map over — so the honesty
+       of times needs an empty list it can still map over, so the honesty
        lives in `source` instead of in `skipped`. Asserted on its own terms. */
     const { availability } = await import("./calendar");
     const a = await availability();

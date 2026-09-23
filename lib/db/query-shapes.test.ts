@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
  * of `npm test` or `npm run verify`. It was a thing somebody had to remember.
  *
  * On 21 September 2026 nobody remembered, and `lib/db/referral.ts` shipped
- * asking for `rift_leads.figure_id` — a column that exists on
+ * asking for `rift_leads.figure_id`: a column that exists on
  * rift_review_items and has never existed on rift_leads. PostgREST answers an
  * unknown column with an error about a schema cache, so every read in that
  * module failed and /studio/referrals was broken from the moment its migration
@@ -16,8 +16,8 @@ import { execFileSync } from "node:child_process";
  * database they run against does not validate column names, and neither
  * TypeScript nor the build can check a string.
  *
- * So the script is now a test. It SKIPS when no PostgREST is reachable — a
- * contributor without Docker should still get a meaningful `npm test` — and
+ * So the script is now a test. It SKIPS when no PostgREST is reachable: a
+ * contributor without Docker should still get a meaningful `npm test`: and
  * fails loudly when one is reachable and a query is broken. Skipping silently
  * on a reachable-but-wrong database is the failure this whole file is about,
  * so the two cases are distinguished rather than collapsed.
@@ -52,7 +52,7 @@ describe("PostgREST query shapes", () => {
       });
     } catch (e) {
       /* The script exits non-zero when a path is broken, and its stdout names
-         which one. Surfacing that is the entire value — "the verifier failed"
+         which one. Surfacing that is the entire value: "the verifier failed"
          would send somebody to read a script instead of a column list. */
       const err = e as { stdout?: Buffer | string; message?: string };
       out = String(err.stdout ?? err.message ?? e);

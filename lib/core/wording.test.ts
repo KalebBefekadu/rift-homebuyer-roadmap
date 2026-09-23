@@ -13,7 +13,7 @@ import { BUY_FUNNEL, SELL_FUNNEL, applyWording, wordingChanges, type Wording } f
  * around. `own` decides first-time-buyer eligibility, which decides which
  * assistance programmes somebody is shown. An editor that could drop one of
  * those, or change the machine value behind "No, I haven't owned anything",
- * would not throw. It would produce a readout computed against a default —
+ * would not throw. It would produce a readout computed against a default:
  * perfectly rendered, and about nobody.
  */
 
@@ -48,7 +48,7 @@ describe("what it changes", () => {
 
 describe("what it cannot change, whatever it is handed", () => {
   /* Every one of these is a structural field. None is readable from the
-     input by construction — these assert that the construction holds. */
+     input by construction: these assert that the construction holds. */
   const hostile = {
     county: {
       title: "Still fine to rename",
@@ -79,7 +79,7 @@ describe("what it cannot change, whatever it is handed", () => {
 
   it("still applies the part that was allowed", () => {
     /* A hostile payload is not a reason to discard the legitimate edit inside
-       it — the rule is that structure is unreachable, not that a suspicious
+       it: the rule is that structure is unreachable, not that a suspicious
        object is rejected wholesale. */
     expect(after.title).toBe("Still fine to rename");
   });
@@ -139,7 +139,7 @@ describe("the diff the agent reads before publishing", () => {
   it("does not report an edit that resolved back to the original", () => {
     const county = q(BUY_FUNNEL, "county");
     expect(wordingChanges(BUY_FUNNEL, { county: { title: county.title } })).toEqual([]);
-    /* Blank is not a change either — it falls back to the same words. */
+    /* Blank is not a change either: it falls back to the same words. */
     expect(wordingChanges(BUY_FUNNEL, { county: { title: "  " } })).toEqual([]);
   });
 });

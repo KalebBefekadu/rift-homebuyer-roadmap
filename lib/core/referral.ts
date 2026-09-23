@@ -2,21 +2,21 @@
  * The referral engine.
  *
  * Referral was a page. A page is the wrong shape for it, because referral is
- * not a thing you ask for once at the end — it is a set of MOMENTS, each with
+ * not a thing you ask for once at the end: it is a set of MOMENTS, each with
  * its own trigger, its own ask, and its own reason the ask is reasonable then
  * and unreasonable a week either side.
  *
  * Two rules the design enforces:
  *
  *   1. The ask scales with what they have received. Right after a readout the
- *      ask is "send this to someone it would help" — a tool, not a person. On
+ *      ask is "send this to someone it would help": a tool, not a person. On
  *      closing day it can be a name. Asking for a name at moment one is how
  *      you spend goodwill you have not earned.
  *
  *   2. NOTHING PUBLIC IS ASKED FOR BEFORE A PRIVATE CHECK. Every public review
  *      request is gated behind one private question. An unhappy client is
  *      routed to the agent, never to a review form. This is not review-gating
- *      to manufacture ratings — the private route exists so the complaint gets
+ *      to manufacture ratings: the private route exists so the complaint gets
  *      answered, and someone who says they are unhappy is never then asked for
  *      a public rating anyway. If they are happy, they are asked plainly and
  *      once.
@@ -53,13 +53,13 @@ export const MOMENTS: Moment[] = [
   {
     id: "plan_published", label: "Plan published", trigger: "Kaleb reviewed and published their plan",
     ask: "Share the plan with anyone helping you",
-    why: "Sharing is genuinely useful to them at this point — a gifting parent or a co-buyer needs it. Reach is a side effect of a real need.",
+    why: "Sharing is genuinely useful to them at this point: a gifting parent or a co-buyer needs it. Reach is a side effect of a real need.",
     gated: false, strength: 2,
   },
   {
     id: "financing_secured", label: "Financing secured", trigger: "Pre-approval or assistance confirmed in writing",
     ask: "Would a friend in the same spot want the assistance check?",
-    why: "The single most quotable moment for a first-time buyer — they just found out the money is real. Specific, and specific asks travel.",
+    why: "The single most quotable moment for a first-time buyer. They just found out the money is real. Specific, and specific asks travel.",
     gated: false, strength: 4,
   },
   {
@@ -89,7 +89,7 @@ export const MOMENTS: Moment[] = [
   {
     id: "anniversary", label: "Anniversary", trigger: "Every year on the closing date, indefinitely",
     ask: "Here's what your home did this year. Anyone you'd send my way?",
-    why: "Carries value first — an equity and tax update they did not ask for — so the ask arrives attached to something.",
+    why: "Carries value first (an equity and tax update they did not ask for), so the ask arrives attached to something.",
     gated: true, strength: 3,
   },
 ];
@@ -145,7 +145,7 @@ export function gate(mood: Mood): GateResult {
  * What the database can actually see about a relationship.
  *
  * Deliberately narrow, and every field is something a query can answer. A
- * trigger that cannot be observed does not get guessed at — see
+ * trigger that cannot be observed does not get guessed at: see
  * `OBSERVABLE` below, which is the whole design of this section.
  */
 export interface Lifecycle {
@@ -166,7 +166,7 @@ export interface Lifecycle {
  * `occurrence` matters for exactly one moment and is the reason it is here at
  * all. The anniversary repeats "every year on the closing date, indefinitely",
  * so a record keyed on the moment alone would mark the first anniversary sent
- * and then suppress every anniversary after it — a follow-up cadence that
+ * and then suppress every anniversary after it: a follow-up cadence that
  * quietly stops after year one and looks, from every screen, exactly like one
  * that is running. Non-recurring moments use 0.
  */
@@ -180,8 +180,8 @@ export interface RecordedMoment {
  * Which triggers the data can actually answer.
  *
  * `financing_secured` is absent on purpose. "Pre-approval or assistance
- * confirmed in writing" is not a column — it is a document in somebody's
- * inbox — and the honest options were to leave the moment waiting until a
+ * confirmed in writing" is not a column: it is a document in somebody's
+ * inbox, and the honest options were to leave the moment waiting until a
  * human says otherwise, or to infer it from the stage having moved past
  * Financing. The second is a guess, and this is the strongest ungated ask in
  * the set: firing it at somebody whose pre-approval actually fell through is
@@ -327,7 +327,7 @@ export function momentsFor(
  * Whether a public ask may go out for this moment, right now.
  *
  * The one function any sending code must call. It answers false for every
- * gated moment whose private check did not come back good — including the
+ * gated moment whose private check did not come back good: including the
  * unanswered case, which is the one a truthy check on `mood` would get wrong.
  */
 export function mayAskPublicly(status: MomentStatus, mood: Mood): boolean {
@@ -342,7 +342,7 @@ export function mayAskPublicly(status: MomentStatus, mood: Mood): boolean {
  * `under_contract` is filtered out, and that is the point of it. Its ask is
  * "Nothing. Say congratulations and go quiet", so a queue that listed it as
  * work would be inviting exactly the contact the moment exists to prevent. It
- * is still returned by `momentsFor` — the agent should be able to see that the
+ * is still returned by `momentsFor`: the agent should be able to see that the
  * restraint is deliberate rather than an omission.
  */
 export const SILENT_MOMENTS: MomentId[] = ["under_contract"];

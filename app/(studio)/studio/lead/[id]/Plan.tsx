@@ -11,7 +11,7 @@ import type { Drift } from "@/lib/core/seam";
  *
  * Two things, kept apart on purpose.
  *
- * The LINK is a decision — opening one means somebody outside this product can
+ * The LINK is a decision: opening one means somebody outside this product can
  * read a page about themselves, and closing it breaks every copy at once. It
  * is not a toggle to flick past on the way to something else, so closing asks.
  *
@@ -24,7 +24,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
   leadId: string;
   items: PlanItem[];
   token: string | null;
-  /** Null when NEXT_PUBLIC_SITE_URL is unset — there is then no link to give out. */
+  /** Null when NEXT_PUBLIC_SITE_URL is unset: there is then no link to give out. */
   origin: string | null;
   agentFirst: string;
   /* Both names, because ownerLabel renders in the second person and "You"
@@ -68,7 +68,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
     } catch {
       /* Clipboard access can be refused, and a button that says "Copied" when
          nothing was copied is how somebody pastes an empty message. */
-      setError("Could not copy — select the link and copy it by hand.");
+      setError("Could not copy. Select the link and copy it by hand.");
     }
   };
 
@@ -88,7 +88,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
               const r = await openClientPlan(leadId, false);
               if (r.ok) { setLink(r.token); setWarns(r.warns ?? []); setDrifts([]); setError(null); return; }
               /* A refusal because figures moved is not an error to print above
-                 the panel that is about to list them — printing both says the
+                 the panel that is about to list them: printing both says the
                  same thing twice and buries the part he can act on. */
               const moved = r.drifts ?? [];
               setDrifts(moved);
@@ -101,7 +101,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
 
       {error ? <p className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
 
-      {/* The disclosure. Publishing stops here until he has seen what moved —
+      {/* The disclosure. Publishing stops here until he has seen what moved:
           not as a warning he can scroll past, but as the thing standing
           between him and the button. A client who was shown one number and
           opens a plan showing another has no way to know which was wrong, and
@@ -127,7 +127,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
                     {" → "}
                     <span className="num w6">${d.now.toLocaleString()}</span>{" "}
                     <span className="c-3">
-                      ({d.deltaPct > 0 ? "+" : ""}{d.deltaPct}% — {d.cause})
+                      ({d.deltaPct > 0 ? "+" : ""}{d.deltaPct}%, {d.cause})
                     </span>
                   </div>
                 ))}
@@ -139,7 +139,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
                   if (r.ok) { setLink(r.token); setWarns(r.warns ?? []); setDrifts([]); }
                   return r;
                 })}>
-                I have told them — publish
+                I have told them, publish
               </button>
             </div>
           </div>
@@ -185,7 +185,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
             ) : (
               <span className="row gap-2">
                 {/* Asked, because it cannot be undone for anybody holding the
-                    old link — including people they forwarded it to. */}
+                    old link: including people they forwarded it to. */}
                 <span className="t-xs c-3">Break every copy of this link?</span>
                 <button className="btn btn-g btn-sm" onClick={() => setConfirmClose(false)}>No</button>
                 <button className="btn btn-s btn-sm" disabled={pending}
@@ -203,7 +203,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
         </p>
       )}
 
-      {/* The steps. Visible whether or not a link is open — writing the plan
+      {/* The steps. Visible whether or not a link is open: writing the plan
           and deciding to share it are separate decisions. */}
       <div className="col gap-1" style={{ marginTop: 18 }}>
         {items.length === 0 ? (

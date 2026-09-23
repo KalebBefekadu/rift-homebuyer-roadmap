@@ -10,7 +10,7 @@ import { diagnose } from "./diagnose";
  * does not help, and attaching a reason to a question people bounced off does
  * not either.
  *
- * Verified against 26 seeded sessions before these were written — `savings`
+ * Verified against 26 seeded sessions before these were written: `savings`
  * dropped 54% at 26s and `rate` dropped 50% at 4.2s, and the two came out with
  * different advice. These pin that so it survives a threshold being nudged.
  */
@@ -28,7 +28,7 @@ describe("drop-off diagnosis", () => {
   it("a long dwell means they read it and declined", () => {
     const d = diagnose(step({ dropPct: 54, medianSec: 26 }))!;
     expect(d.label).toBe("Too personal");
-    expect(d.advice).toContain("rewording a question people understood will not help");
+    expect(d.advice).toContain("Rewording a question people understood will not help");
   });
 
   it("a short dwell means they bounced off it", () => {
@@ -47,7 +47,7 @@ describe("drop-off diagnosis", () => {
   });
 
   it("does not guess when the dwell is ordinary", () => {
-    /* Between the two, the honest answer is that we do not know — so it says
+    /* Between the two, the honest answer is that we do not know, so it says
        to read the question aloud rather than inventing a cause. */
     const d = diagnose(step({ dropPct: 50, medianSec: 6 }))!;
     expect(d.label).toBe("Losing people");

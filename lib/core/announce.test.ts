@@ -5,14 +5,14 @@ import { SELLER_DEFAULTS, netProceeds } from "./compute";
 /**
  * Source guards for what a landing says when nobody is looking at it.
  *
- * These are not unit tests — they read the three landing components and assert
+ * These are not unit tests: they read the three landing components and assert
  * two properties that are invisible in review and invisible on screen.
  *
  * The first is that each landing has a live region. All three answer in place:
  * change a select or move a slider and the dark panel recomputes. There was no
  * `aria-live` anywhere in the codebase, so for anybody not watching the panel
- * nothing happened at all, and the front-door promise — a real number before
- * you give up anything — was being kept visually and only visually.
+ * nothing happened at all, and the front-door promise: a real number before
+ * you give up anything: was being kept visually and only visually.
  *
  * The second is the seller's payoff. The sliders let a visitor put $700,000 of
  * payoff against a $150,000 price, and the panel described that as
@@ -70,7 +70,7 @@ describe("the seller's front door handles a sale that does not cover the loan", 
   it("branches on it rather than printing a negative under a positive label", () => {
     expect(src).toMatch(/const underwater = r\.net < 0;/);
     expect(src).toContain("bring to the closing table");
-    /* The panel must not reach `money(r.net)` unguarded — that is the string
+    /* The panel must not reach `money(r.net)` unguarded: that is the string
        that rendered "-$566,000" beside "What you'd actually walk away with". */
     expect(src).toMatch(/underwater \? short : money\(r\.net\)/);
   });
@@ -87,7 +87,7 @@ describe("the seller's front door handles a sale that does not cover the loan", 
  * The underwater case was fixed once, in the verdict and the status chip, and
  * the fix did not travel. Three more places went on describing a debt in the
  * vocabulary of a gain: the reframe card, the section heading above it, the
- * last row of the proceeds table — and the landing page, a click earlier. Each
+ * last row of the proceeds table, and the landing page, a click earlier. Each
  * was found by rendering the page and reading it, one at a time.
  *
  * So this asserts the property rather than the instances: no phrase that only
@@ -125,7 +125,7 @@ describe("no seller surface describes a shortfall as a gain", () => {
       const at = src.indexOf(phrase);
       if (at === -1) continue;
       it(`${file}: "${phrase}" is behind that check`, () => {
-        /* The branch has to be near the phrase — a check 200 lines away is
+        /* The branch has to be near the phrase: a check 200 lines away is
            not guarding this string. */
         expect(src.slice(Math.max(0, at - 320), at + 60)).toContain("underwater");
       });

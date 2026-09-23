@@ -72,8 +72,8 @@ export function Readout(p: Props) {
   /**
    * Stores the readout once, and hands back its share token.
    *
-   * Owned by the page because three things need it — the share link, the email,
-   * and the review request — and each creating its own would produce several
+   * Owned by the page because three things need it: the share link, the email,
+   * and the review request, and each creating its own would produce several
    * snapshots of a single visit. The in-flight promise is what makes it once
    * rather than once per rapid click.
    */
@@ -83,7 +83,7 @@ export function Readout(p: Props) {
 
     inFlight.current = (async () => {
       try {
-        /* The assessment id is not held on this page — it belongs to the run
+        /* The assessment id is not held on this page: it belongs to the run
            that produced these numbers. Reattaching by session keeps the
            snapshot tied to the right attempt without putting an id in a
            shareable URL. */
@@ -183,7 +183,7 @@ export function Readout(p: Props) {
             <p className="t-xs c-3 row-t gap-2" style={{ marginTop: 14, maxWidth: 560, lineHeight: 1.55 }}>
               <Ico.info size={12} style={{ flex: "none", marginTop: 2 }} />
               {/* Said out loud rather than quietly substituted. A link mangled
-                  by a messaging app should still produce a sensible readout —
+                  by a messaging app should still produce a sensible readout:
                   but the person is entitled to know which figures are ours
                   rather than theirs. */}
               {/* One span, not three loose children. `.row` is flex, so every
@@ -250,7 +250,7 @@ export function Readout(p: Props) {
         </section>
 
         <div className="shell-w">
-          {/* 1 — the reframe */}
+          {/* 1: the reframe */}
           <Sec n={1} title="The number nobody gave you" sub="Down payment is the figure people quote. It is not the figure that has to exist.">
             <div className="ans">
               <div className="ans-out">
@@ -269,8 +269,8 @@ export function Readout(p: Props) {
                     {l.credited ? <span className="chip chip-brand">back at closing</span> : null}
                   </div>
                   {/* De-emphasised with ink rather than opacity. `opacity: 0.4`
-                      dropped a real dollar figure to 2.65:1 — under the AA
-                      floor — and it was doing so on the one line the reader is
+                      dropped a real dollar figure to 2.65:1: under the AA
+                      floor, and it was doing so on the one line the reader is
                       most likely to want to check, because a credited cost is
                       the surprising kind. The "back at closing" chip beside it
                       already carries the meaning; the fade was never the thing
@@ -287,7 +287,7 @@ export function Readout(p: Props) {
             <RateNote rate={p.rate} />
           </Sec>
 
-          {/* 2 — programmes */}
+          {/* 2: programmes */}
           <Sec
             n={2}
             title={match.matched.length
@@ -295,7 +295,7 @@ export function Readout(p: Props) {
               : "No verified program matches these answers today"}
             sub={match.matched.length
               ? "Named, with what each one asks of you. Estimated ranges, never approvals."
-              : "That is not the same as nothing existing — only that we will not show you a number we cannot stand behind."}
+              : "That is not the same as nothing existing, only that we will not show you a number we cannot stand behind."}
           >
             <div className="col gap-2">
               {match.matched.map((prog) => (
@@ -343,19 +343,19 @@ export function Readout(p: Props) {
             </div>
           </Sec>
 
-          {/* 3 — the blocker */}
+          {/* 3: the blocker */}
           <Sec n={3} title="The one thing in the way" sub="Not a list of everything. The thing that actually decides your date.">
             <div className="card p-5">
               <div className="t-md w6">{r.blocker.title}</div>
               <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.65 }}>{r.blocker.body}</p>
               <Link href={bookHref} className="btn btn-p btn-line" style={{ marginTop: 16 }}
                 onClick={() => track({ name: "booking_start", side: "buy", meta: { from: "blocker" } })}>
-                Talk this through — 20 minutes, no obligation<Ico.arrowR size={14} />
+                Talk this through: 20 minutes, no obligation<Ico.arrowR size={14} />
               </Link>
             </div>
           </Sec>
 
-          {/* 4 — the steps */}
+          {/* 4: the steps */}
           <Sec n={4} title="What to do next, in order" sub="Ordered by what unblocks the most.">
             <div className="card" style={{ overflow: "hidden" }}>
               {r.steps.map((s, ix) => (
@@ -380,7 +380,7 @@ export function Readout(p: Props) {
             </div>
           </Sec>
 
-          {/* 5 — the question sheet */}
+          {/* 5: the question sheet */}
           <Sec n={5} title="What to ask a lender" sub="So the first call is not the one where you learn what you did not know to ask.">
             <div className="card p-5">
               <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -400,7 +400,7 @@ export function Readout(p: Props) {
             gapAmount={gap.gap}
             bookHref={bookHref}
             /* Each figure with what it assumes and where it could be wrong.
-               The database rejects a figure that cannot state both — contract
+               The database rejects a figure that cannot state both: contract
                4.2, finally enforced on rows that exist rather than on a table
                nothing ever wrote to. */
             link={shareLink}
@@ -408,7 +408,7 @@ export function Readout(p: Props) {
             assessmentRef={assessmentId}
             lead={{
               timing: p.timing,
-              /* Months on savings alone — the same figure the readout leads
+              /* Months on savings alone: the same figure the readout leads
                  with, and null when no saving rate was given rather than 0,
                  which would read as "ready today". */
               monthsToReady: gap.gap <= 0 ? 0 : gap.monthsToClose,
@@ -537,7 +537,7 @@ function Keep({ side, county, cashToClose, gapAmount, bookHref, lead, link, ensu
    * The page's assessment ref, filled by ensureReadout.
    *
    * Passed down rather than re-declared here. Keep had its own, left behind by
-   * the refactor that moved readout creation to the page — so it stayed null
+   * the refactor that moved readout creation to the page, so it stayed null
    * forever and every lead captured from the readout email would have been
    * stored unlinked again, silently, because the column is nullable.
    */
@@ -548,7 +548,7 @@ function Keep({ side, county, cashToClose, gapAmount, bookHref, lead, link, ensu
    * This carried three of the six signals and passed cash-to-close where the
    * model expects the purchase price. A lead captured here therefore scored
    * well below what its own answers justified, and the ranking an agent is
-   * asked to trust would have been built on partial, partly wrong inputs —
+   * asked to trust would have been built on partial, partly wrong inputs:
    * the fastest way to make a ranking worth ignoring.
    */
   lead: { timing: string; monthsToReady: number | null; value: number; coBuyer: boolean };
@@ -614,7 +614,7 @@ function Keep({ side, county, cashToClose, gapAmount, bookHref, lead, link, ensu
           ) : state === "unavailable" ? (
             <p className="t-xs c-3 row gap-2" style={{ marginTop: 12 }}>
               <Ico.alert size={12} className="c-warn" style={{ flex: "none", marginTop: 2 }} />
-              Sharing is briefly unavailable. Your readout still works — this page stays at the
+              Sharing is briefly unavailable. Your readout still works, and this page stays at the
               same address.
             </p>
           ) : (
@@ -640,7 +640,7 @@ function Keep({ side, county, cashToClose, gapAmount, bookHref, lead, link, ensu
             lead={lead}
             /* A ref rather than state: it is filled in by makeLink, and the
                capture reads whatever is there at the moment it runs. Empty is
-               a legitimate answer — a share-link visitor has no assessment of
+               a legitimate answer: a share-link visitor has no assessment of
                their own. */
             assessmentRef={assessmentRef}
           />
@@ -666,7 +666,7 @@ function Keep({ side, county, cashToClose, gapAmount, bookHref, lead, link, ensu
  * Email capture on the readout.
  *
  * The address buys them a durable copy; it does not buy them the readout,
- * which they already have. That ordering is the whole product — asking for an
+ * which they already have. That ordering is the whole product: asking for an
  * email to unlock what somebody is already looking at would turn a gift into a
  * toll booth, and people can tell.
  *
@@ -708,12 +708,12 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
       }).then((x) => x.json());
 
       if (res?.error) { setState("error"); return; }
-      /* Stored nothing. "Noted" would be a lie — see `stored` in /api/capture. */
+      /* Stored nothing. "Noted" would be a lie: see `stored` in /api/capture. */
       if (res?.stored === false) { setState("error"); return; }
       track({ name: "email_capture", side, meta: { delivered: res?.delivery === "sent" } });
       /* Three outcomes, three messages. "Check your inbox" for a message that
          was never sent is the kind of small lie that costs more than the
-         feature is worth — and "not switched on yet" for a send that actually
+         feature is worth: and "not switched on yet" for a send that actually
          failed is the same lie pointing the other way. */
       if (res?.delivery === "sent") setState("sent");
       else if (res?.delivery === "failed") setState("error");
@@ -736,7 +736,7 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
     return (
       <p className="t-sm c-3 row gap-2" style={{ marginTop: 12 }}>
         <Ico.info size={14} className="c-4" style={{ flex: "none", marginTop: 2 }} />
-        Noted, but email is not switched on yet — so nothing has been sent. Keep the link above;
+        Noted, but email is not switched on yet, so nothing has been sent. Keep the link above;
         it is the same document.
       </p>
     );
@@ -770,8 +770,8 @@ function EmailIt({ side, county, cashToClose, gap, ensureLink, link, lead, asses
               "the link above" over an empty space was found by a failure drill;
               the page's own address carries every answer and is always here. */}
           {link
-            ? "We could not send that. Your readout is unaffected — keep the share link above, which is the same document."
-            : "We could not send that. Your readout is unaffected — this page’s address is the readout itself, so bookmark it or copy it from the address bar."}
+            ? "We could not send that. Your readout is unaffected. Keep the share link above, which is the same document."
+            : "We could not send that. Your readout is unaffected. This page’s address is the readout itself, so bookmark it or copy it from the address bar."}
         </p>
       ) : null}
     </div>
@@ -828,7 +828,7 @@ function AskReview({ what, claim, figureLabel, shareToken, ensureReadout }: {
             <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
             <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
               It is with Kaleb. He aims to come back inside a day. Until he does, the number on
-              this page is still an estimate — asking does not make it truer, it just gets a
+              this page is still an estimate. Asking does not make it truer, it just gets a
               person looking at it.
             </p>
           </div>
@@ -859,7 +859,7 @@ function AskReview({ what, claim, figureLabel, shareToken, ensureReadout }: {
  *
  * At the top of the retention panel rather than buried under it. A deletion
  * control that is harder to find than the policy explaining it is a policy
- * pretending to be a control — and this product's whole argument is that it
+ * pretending to be a control, and this product's whole argument is that it
  * shows people the truth before asking them for anything.
  *
  * It clears the browser first and the server second, in that order, so that a
@@ -870,7 +870,7 @@ function AskReview({ what, claim, figureLabel, shareToken, ensureReadout }: {
  *
  * Every monthly figure on this page depends on it and it is the only
  * assumption here that moves weekly. Shown beside the figures rather than in a
- * footnote, and stated as stale when it is — a rate that is quietly four
+ * footnote, and stated as stale when it is: a rate that is quietly four
  * months old produces arithmetic that is correct and an answer that is wrong,
  * which is the one failure this product is built to prevent.
  */

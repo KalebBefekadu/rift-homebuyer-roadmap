@@ -14,7 +14,7 @@
 --
 -- Money is stored in CENTS. Every other money column in this schema is numeric
 -- and that has been survivable, but an offer comparison subtracts six figures
--- from six figures and then ranks the differences — which is precisely where a
+-- from six figures and then ranks the differences, which is precisely where a
 -- binary float puts a dollar in the wrong place and changes which offer wins.
 -- ============================================================================
 

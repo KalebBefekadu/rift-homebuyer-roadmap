@@ -31,7 +31,7 @@ const WHEN = (iso: string | null) => {
  *
  * Today's screen is the right default and the wrong tool for one job: somebody
  * rings up and says their name. It ranks by what the answers imply is urgent,
- * shows only who has been given a stage, and caps at what fits — so a lead who
+ * shows only who has been given a stage, and caps at what fits, so a lead who
  * came through the funnel this morning and has not been picked up is not on it.
  *
  * This is deliberately the unranked view. No scoring order, no urgency, no
@@ -47,7 +47,7 @@ export default async function ClientsPage({
      "unknown" shows a sign-in form to somebody whose cookie is perfectly
      fine, which says something false about what just happened.
 
-     Genuinely signed out, it redirects rather than explaining — matching
+     Genuinely signed out, it redirects rather than explaining: matching
      settings, questions, add and the client record. /studio itself is the
      front door and keeps its explanation for somebody who arrived by
      accident, but an inner page reached without a session is somebody whose
@@ -62,7 +62,7 @@ export default async function ClientsPage({
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
 
   /* One round. None of these depends on another, and the forward view must not
-     make the list of people wait — if the forecast query is the slow one, the
+     make the list of people wait: if the forecast query is the slow one, the
      thing the agent actually came here for is still the roster. */
   const [list, rules, live, finished] = await Promise.all([
     roster({
@@ -81,7 +81,7 @@ export default async function ClientsPage({
 
   /* A failed or skipped read is not an empty book of business.
 
-     `finished` falling back to [] is safe and correct — it means every stage
+     `finished` falling back to [] is safe and correct: it means every stage
      reports "assumed", which is exactly what the screen should say when it
      cannot read the history. `live` falling back to [] is NOT safe in the same
      way: it renders "Nothing to forecast yet" to an agent with eleven live
@@ -112,8 +112,8 @@ export default async function ClientsPage({
               finished={historyRows}
               commissionPct={rules.rules.commissionPct.value}
               /* Whether that percentage is his decision or our default. A
-                 forecast quoting a commission nobody chose is the house bug —
-                 a dial connected to nothing — and the money line here is the
+                 forecast quoting a commission nobody chose is the house bug:
+                 a dial connected to nothing, and the money line here is the
                  most quotable number on the screen. */
               commissionDecided={!rules.undecided.includes("commissionPct")}
             />
@@ -135,7 +135,7 @@ export default async function ClientsPage({
               <span className="t-sm w6">The list could not be read.</span>
             </div>
             <p className="t-sm c-3" style={{ marginTop: 8 }}>
-              {list.error} — this is not an empty list, it is a list we could not fetch.
+              {list.error}. This is not an empty list, it is a list we could not fetch.
             </p>
           </div>
         ) : "skipped" in list ? (
@@ -167,7 +167,7 @@ export default async function ClientsPage({
               >
                 <div className="col" style={{ gap: 3, minWidth: 0 }}>
                   <div className="row gap-2 wrap">
-                    {/* The name, or an honest stand-in. A row reading "—" is
+                    {/* The name, or an honest stand-in. A row reading only a dash is
                         somebody who left an email and no name, and pretending
                         otherwise makes him look for a record that is not
                         missing. */}
@@ -191,7 +191,7 @@ export default async function ClientsPage({
                   {p.nextAction ? (
                     <div className="t-xs c-3" style={{ marginTop: 2 }}>
                       <Ico.clock size={11} style={{ marginRight: 5 }} />
-                      {p.nextAction}{p.nextDue ? ` — ${p.nextDue}` : ""}
+                      {p.nextAction}{p.nextDue ? `, ${p.nextDue}` : ""}
                     </div>
                   ) : null}
                 </div>

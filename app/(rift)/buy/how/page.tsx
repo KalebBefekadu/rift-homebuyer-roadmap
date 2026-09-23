@@ -12,7 +12,7 @@ export const metadata: Metadata = {
  * The third door: "just tell me how this works".
  *
  * Written for the sceptical reader, because the sceptical reader is the one
- * worth converting — somebody who wants to know how a free tool makes money
+ * worth converting: somebody who wants to know how a free tool makes money
  * before they use it is somebody who will still be a client in five years.
  *
  * It says how Rift is paid in plain terms. A page about trust that avoids the
@@ -59,7 +59,7 @@ export default function HowPage() {
           <p>
             Nothing here costs you anything, and none of it is a trial. Kaleb is a licensed
             Georgia agent and is paid a commission when somebody he represents buys or sells a
-            home — the ordinary way agents are paid, disclosed in a written agreement before it
+            home: the ordinary way agents are paid, disclosed in a written agreement before it
             applies to you.
           </p>
           <p>
@@ -73,11 +73,11 @@ export default function HowPage() {
           <p>
             Your answers, so your readout still works when you come back, and which questions
             people stop on, so the questions can be improved. Never what you typed against those
-            questions — those are two different records with two different lifetimes.
+            questions. Those are two different records with two different lifetimes.
           </p>
           <ul>
             {RETENTION.map((r) => (
-              <li key={r.id}><strong>{r.what}</strong> — {r.keptFor.toLowerCase()}. {r.why}</li>
+              <li key={r.id}><strong>{r.what}</strong>: {r.keptFor.toLowerCase()}. {r.why}</li>
             ))}
           </ul>
           <p>

@@ -8,11 +8,11 @@
 --   approved; `take` is what he approved; `approved_for` is the set of released
 --   offers it was written about. Stored together so the difference between
 --   what the software drafted and what the agent said is a recorded fact
---   rather than a claim — which is what 2.2 asks for.
+--   rather than a claim, which is what 2.2 asks for.
 --
 --   THE CHOICE. Which released offer the seller said they want, when, and a
 --   snapshot of what they were shown (computed on the server, never sent by
---   the browser). Not an acceptance — the page says so — but a record that
+--   the browser). Not an acceptance (the page says so) but a record that
 --   survives the question "which one did they tell you they wanted?"
 -- ============================================================================
 
@@ -62,7 +62,7 @@ begin
   -- COMPOSITE, and NO ACTION rather than SET NULL or RESTRICT.
   --
   -- Composite so the choice cannot name an offer on somebody else's house.
-  -- Not SET NULL, because on a composite key that nulls every column in it —
+  -- Not SET NULL, because on a composite key that nulls every column in it:
   -- including lead_id, the primary key (the decisions migration learned that).
   -- Not RESTRICT, which is checked mid-cascade: forgetting a seller deletes
   -- both their offers and this row, and RESTRICT can fire between the two.

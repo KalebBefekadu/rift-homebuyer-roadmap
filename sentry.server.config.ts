@@ -23,14 +23,14 @@ Sentry.init({
    * measured against production it cost a flat ~1.6s on EVERY dynamic page:
    * the buyer readout took 1.9s to first byte, and so did a plan page whose
    * entire output is one paragraph saying the link is closed. Page size,
-   * county, and database work made no difference, which is what gave it away —
+   * county, and database work made no difference, which is what gave it away:
    * a fixed tax on executing JavaScript, not on doing work.
    *
    * The readout is the page the product's whole argument rests on: a stranger
    * types five answers and gets their real numbers. Nearly two seconds of dead
    * air before the first byte, to make a hypothetical stack trace richer, is
    * the wrong trade. Stack traces, breadcrumbs, traces and logs are all
-   * unaffected — only the local-variable snapshot goes.
+   * unaffected: only the local-variable snapshot goes.
    *
    * Kept in development, where the inspector costs nothing that matters and a
    * crash with values in it is genuinely faster to read.

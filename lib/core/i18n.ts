@@ -7,7 +7,7 @@
  *
  * Every string lives here rather than beside the markup it appears in. That is
  * the only arrangement in which a native speaker can review the whole
- * translation in one sitting without reading React — and this translation needs
+ * translation in one sitting without reading React, and this translation needs
  * exactly that before it meets real traffic.
  *
  * Amharic below is a first pass by a non-native writer. It is structurally
@@ -31,7 +31,7 @@ export const LOCALES: { id: Locale; label: string; native: string }[] = [
    
    The variable is set by next/font in app/(rift)/layout.tsx, which self-hosts
    the face. The named fallbacks after it are what carries the page if that
-   variable is ever missing — on a surface outside the rift shell, or in a
+   variable is ever missing: on a surface outside the rift shell, or in a
    preview where the build-time fetch did not happen. */
 export const ETHIOPIC_STACK =
   "var(--font-ethiopic), 'Noto Sans Ethiopic', 'Abyssinica SIL', sans-serif";
@@ -45,7 +45,7 @@ const en: Dict = {
 
   "hero.h1": "You don't need a green card to own property in Georgia.",
   "hero.lede":
-    "No citizenship, no visa, no U.S. address, and no requirement to have set foot here. What you do need is a real number before you send anyone a document — and the honest one depends on which of these you are.",
+    "No citizenship, no visa, no U.S. address, and no requirement to have set foot here. What you do need is a real number before you send anyone a document, and the honest one depends on which of these you are.",
 
   "ask.status": "Where you stand today",
 
@@ -85,25 +85,25 @@ const en: Dict = {
   "out.ofSent": "of what you sent",
   "out.cta": "Work this out properly",
   "out.liveNote":
-    "Held empty for your own use it earns nothing — but the principal in your first year's payments is yours, not the bank's.",
+    "Held empty for your own use it earns nothing, but the principal in your first year's payments is yours, not the bank's.",
 
   "down.floor": "is the least a lender will take in your situation.",
   "down.breakEven": "the rent covers everything and the house pays for itself.",
   "down.never":
-    "At this price no down payment makes the rent cover the costs — a cheaper house or a different county will.",
+    "At this price no down payment makes the rent cover the costs; a cheaper house or a different county will.",
 
   "lender.title": "What a lender will ask you for",
 
   "why.kicker": "Why Georgia, and why now",
   "why.h2": "One asset, priced in dollars, that four things pay you at once.",
   "why.lede":
-    "Money sent home is spent once. A house keeps paying — in rent, in a loan someone else is retiring, and in a price that is not set in your local currency.",
+    "Money sent home is spent once. A house keeps paying: in rent, in a loan someone else is retiring, and in a price that is not set in your local currency.",
   "bar.rent": "Rent",
   "bar.principal": "Loan paid down",
   "bar.appreciation": "Appreciation",
   "why.1": "A tenant pays the loan down",
   "why.1.body":
-    "About {principal} of the first year's payments is principal. You didn't pay it — the rent did — and it's yours.",
+    "About {principal} of the first year's payments is principal. You didn't pay it; the rent did, and it's yours.",
   "why.2": "Appreciation on the whole house, not your share",
   "why.2.body":
     "At {rate} the house gains about {gain} a year. You put in {cash}. The gain is on {price}.",
@@ -120,7 +120,7 @@ const en: Dict = {
     "No. Closings are done remotely through a Georgia closing attorney, with documents notarised at a U.S. embassy or consulate, or by an approved remote notary. Plenty of owners have never seen the house.",
   "faq.q2": "Who looks after it when I'm far away?",
   "faq.a2":
-    "A licensed property manager, at about {pct} of rent — already taken out of the figure above. They screen the tenant, collect the rent, and handle the 2 a.m. call.",
+    "A licensed property manager, at about {pct} of rent, already taken out of the figure above. They screen the tenant, collect the rent, and handle the 2 a.m. call.",
   "faq.q3": "What about U.S. tax?",
   "faq.a3":
     "You file a U.S. return on the rental income, and depreciation usually shelters most of it in the early years. When you sell, a withholding rule called FIRPTA applies. Neither is a reason not to do this, and both need a cross-border accountant, not an agent.",
@@ -138,7 +138,7 @@ const en: Dict = {
   "doors.lede": "No account, no passport scan, and nothing sent to a lender until you decide to.",
   "doors.1": "See the whole thing",
   "doors.1.body":
-    "The full readout — every cost, the first year broken down, and the one thing in your way. No more questions.",
+    "The full readout: every cost, the first year broken down, and the one thing in your way. No more questions.",
   "doors.1.cta": "Show me",
   "doors.2": "Talk to someone who's done it",
   "doors.2.body": "Fifteen minutes with Kaleb, in Amharic or English, at a time that works where you are.",
@@ -148,7 +148,7 @@ const en: Dict = {
   "doors.3.cta": "Buying to live here",
 
   "disc.hero":
-    "Planning estimates, not a loan approval or a rent guarantee. Down payments and rates come from what lenders in this market publish for each situation — your own lender's terms decide. The rent figure is our own working assumption for this county, not a measured average and not a quote for a specific property.",
+    "Planning estimates, not a loan approval or a rent guarantee. Down payments and rates come from what lenders in this market publish for each situation; your own lender's terms decide. The rent figure is our own working assumption for this county, not a measured average and not a quote for a specific property.",
   "foot.note":
     "Rift for buyers abroad. Guided by Kaleb Befekadu, a licensed agent in Georgia. Every figure is a planning estimate, not a lending commitment, approval, or valuation. We are not tax advisors or immigration attorneys, and we tell you when a question belongs to one.",
   "foot.fair":
@@ -157,7 +157,7 @@ const en: Dict = {
   /* Second person, written out rather than derived.
 
      The readout used to turn the first-person label above into "you" with a
-     regular expression — `^I('m| have| live)` → `You$1` — which produced
+     regular expression (`^I('m| have| live)` → `You$1`) which produced
      "You'm a U.S. citizen living abroad" on the live page for a quarter of
      readers. It could never have worked in Amharic either, where the change is
      a verb ending rather than a prefix. Grammar is not a string operation. */
@@ -167,7 +167,7 @@ const en: Dict = {
   "status.foreign.you": "You live abroad with no U.S. status",
 
   /* The readout. Same voice as the landing page, because it is the same
-     conversation — somebody switched to Amharic, tapped through, and used to
+     conversation: somebody switched to Amharic, tapped through, and used to
      land on a wall of English. */
   /* The booking page is English, and says so here rather than pretending
      otherwise. The form is not translated on purpose: the consent wording
@@ -175,9 +175,9 @@ const en: Dict = {
      showing one language while storing another would make that record false.
      Translating it means translating the stored wording too, which is a legal
      review rather than a commit. Until then, this band says what is going on
-     and promises the call itself in Amharic — which is the part that matters. */
+     and promises the call itself in Amharic, which is the part that matters. */
   "book.band.h": "ካሌብ አማርኛ ይናገራል።",
-  "book.band.b": "ንግግሩ በአማርኛ ይሆናል። ከታች ያለው ቅጽ ግን በእንግሊዝኛ ነው — ስምዎን፣ ኢሜይልዎን ወይም ስልክዎን ብቻ ነው የሚጠይቀው።",
+  "book.band.b": "ንግግሩ በአማርኛ ይሆናል። ከታች ያለው ቅጽ ግን በእንግሊዝኛ ነው፤ ስምዎን፣ ኢሜይልዎን ወይም ስልክዎን ብቻ ነው የሚጠይቀው።",
   "book.back": "ወደ ቁጥሮቼ ልመለስ",
   "res.title": "What this would take from where you are",
   "res.change": "Change my answers",
@@ -185,15 +185,15 @@ const en: Dict = {
   "res.kicker.rent": "rented out",
   "res.kicker.live": "kept for your own use",
   "res.h1.covers": "It covers itself, and three other things pay you.",
-  "res.h1.short": "It runs {amount} a month short — and still returns {pct}%.",
+  "res.h1.short": "It runs {amount} a month short, and still returns {pct}%.",
   "res.h1.live": "You'd send {amount} and own it outright in thirty years.",
 
   "res.send.title": "What you'd have to send",
   "res.send.downChip": "{pct}% down",
   "res.send.down": "Down payment",
-  "res.send.down.note": "{pct}% — the least a lender takes in your situation",
+  "res.send.down.note": "{pct}%, the least a lender takes in your situation",
   "res.send.closing": "Closing costs",
-  "res.send.closing.note": "{pct}% — attorney, title, recording, lender fees",
+  "res.send.closing.note": "{pct}%: attorney, title, recording, lender fees",
   "res.send.total": "Before you own it",
 
   "res.month.title": "Every month",
@@ -201,11 +201,11 @@ const en: Dict = {
   "res.month.tax": "Property tax",
   "res.month.ins": "Insurance",
   "res.month.mgmt": "Management",
-  "res.month.mgmt.note": "{pct}% — someone local, because you are not",
+  "res.month.mgmt.note": "{pct}%, someone local, because you are not",
   "res.month.vac": "Vacancy set-aside",
-  "res.month.vac.note": "{pct}% — about a month a year between tenants",
+  "res.month.vac.note": "{pct}%, about a month a year between tenants",
   "res.month.maint": "Maintenance set-aside",
-  "res.month.maint.note": "{pct}% — repairs and turnover",
+  "res.month.maint.note": "{pct}%: repairs and turnover",
   "res.month.left": "Left over",
   "res.month.short": "Short",
   "res.month.costs": "Costs you, each month",
@@ -226,23 +226,23 @@ const en: Dict = {
   "res.block.kicker": "The one thing in your way",
   "res.block.live": "It earns nothing while you hold it",
   "res.block.live.body":
-    "Held empty it costs {monthly} a month. {principal} of the first year is principal, so it is not lost — but it is not income either.",
+    "Held empty it costs {monthly} a month. {principal} of the first year is principal, so it is not lost, but it is not income either.",
   "res.block.tenant": "Finding a tenant who stays",
   "res.block.tenant.body":
     "The figures assume about a month empty a year. Two months empty turns {flow} a month into roughly {worse}.",
   "res.block.under": "At {pct}% down it does not cover itself",
   "res.block.under.body":
-    "You would need {breakEven}% down — {needed} instead of {have} — for the rent to cover everything. A cheaper house in the same county gets there with less.",
+    "You would need {breakEven}% down ({needed} instead of {have}) for the rent to cover everything. A cheaper house in the same county gets there with less.",
   "res.block.never": "At this price nothing covers itself",
   "res.block.never.body":
     "No down payment makes the rent cover the costs at {price} in {county}. A cheaper house, or a county with a better rent-to-price ratio, will.",
 
   "res.lender.rate": "Rate shown is {rate}% plus about {premium} points for this paper. {source}.",
   /* The only rate provenance this file can translate. A recorded source is the
-     name of an institution — "Freddie Mac PMMS" — and a proper noun stays in
+     name of an institution ("Freddie Mac PMMS") and a proper noun stays in
      its own script in any language. The fallback is our own sentence, so it
      does not get to stay English on an Amharic page. */
-  "res.rate.assumption": "No rate has been recorded — this is the starting assumption",
+  "res.rate.assumption": "No rate has been recorded; this is the starting assumption",
 
   "res.keep.h3": "This page keeps working whether or not you call.",
   "res.keep.body":
@@ -262,7 +262,7 @@ const en: Dict = {
   "res.email.cta": "Send it to me",
   "res.email.sent": "On its way. It carries the link, so it works on any device.",
   "res.email.off":
-    "Noted — but email is not switched on yet, so nothing has been sent. Keep this page's address; it is the same document.",
+    "Noted, but email is not switched on yet, so nothing has been sent. Keep this page's address; it is the same document.",
   "res.email.bad": "That email address does not look right.",
   "res.email.err": "That did not go through. This page and its address still work.",
 
@@ -276,7 +276,7 @@ const en: Dict = {
   "res.forget.done":
     "Deleted. Nothing about this visit is left on this device or on our side.",
   "res.forget.partial":
-    "Cleared from this device. Nothing was stored on our side to remove \u2014 or the request did not reach us, in which case the schedule removes it on its own.",
+    "Cleared from this device. Nothing was stored on our side to remove, or the request did not reach us, in which case the schedule removes it on its own.",
 };
 
 const am: Dict = {
@@ -286,7 +286,7 @@ const am: Dict = {
 
   "hero.h1": "በጆርጂያ ንብረት ለመግዛት ግሪን ካርድ አያስፈልግዎትም።",
   "hero.lede":
-    "ዜግነት አያስፈልግም፣ ቪዛ አያስፈልግም፣ የአሜሪካ አድራሻ አያስፈልግም፣ እና አንድ ቀን እንኳ አሜሪካ መርገጥ አያስፈልግም። የሚያስፈልግዎት ለማንም ሰው ሰነድ ከመላክዎ በፊት ትክክለኛውን ቁጥር ማወቅ ነው — እውነተኛው ቁጥር ደግሞ ከእነዚህ ውስጥ የትኛው እንደሆኑ ይወስናል።",
+    "ዜግነት አያስፈልግም፣ ቪዛ አያስፈልግም፣ የአሜሪካ አድራሻ አያስፈልግም፣ እና አንድ ቀን እንኳ አሜሪካ መርገጥ አያስፈልግም። የሚያስፈልግዎት ለማንም ሰው ሰነድ ከመላክዎ በፊት ትክክለኛውን ቁጥር ማወቅ ነው። እውነተኛው ቁጥር ደግሞ ከእነዚህ ውስጥ የትኛው እንደሆኑ ይወስናል።",
 
   "ask.status": "ዛሬ ያሉበት ሁኔታ",
 
@@ -326,31 +326,31 @@ const am: Dict = {
   "out.ofSent": "ከላኩት ገንዘብ",
   "out.cta": "በዝርዝር አስሉልኝ",
   "out.liveNote":
-    "ለራስዎ ይዘውት ባዶ ከቆየ ገቢ አያመጣም — ነገር ግን በመጀመሪያው ዓመት ክፍያዎ ውስጥ ያለው የዋናው ብድር ክፍል የእርስዎ ነው፣ የባንኩ አይደለም።",
+    "ለራስዎ ይዘውት ባዶ ከቆየ ገቢ አያመጣም፤ ነገር ግን በመጀመሪያው ዓመት ክፍያዎ ውስጥ ያለው የዋናው ብድር ክፍል የእርስዎ ነው፣ የባንኩ አይደለም።",
 
   "down.floor": "አበዳሪዎች በእርስዎ ሁኔታ የሚቀበሉት ዝቅተኛው ነው።",
   "down.breakEven": "ኪራዩ ሁሉንም ወጪ ይሸፍናል፤ ቤቱ ራሱን ይከፍላል።",
   "down.never":
-    "በዚህ ዋጋ ምንም ያህል ቅድመ ክፍያ ቢከፍሉ ኪራዩ ወጪውን አይሸፍንም — ርካሽ ቤት ወይም ሌላ ካውንቲ ግን ይሸፍናል።",
+    "በዚህ ዋጋ ምንም ያህል ቅድመ ክፍያ ቢከፍሉ ኪራዩ ወጪውን አይሸፍንም፤ ርካሽ ቤት ወይም ሌላ ካውንቲ ግን ይሸፍናል።",
 
   "lender.title": "አበዳሪው የሚጠይቅዎት ነገር",
 
   "why.kicker": "ለምን ጆርጂያ፣ ለምን አሁን",
   "why.h2": "በዶላር የተተመነ አንድ ንብረት፤ በአራት መንገድ ይከፍልዎታል።",
   "why.lede":
-    "ወደ አገር ቤት የተላከ ገንዘብ አንድ ጊዜ ወጪ ሆኖ ያልቃል። ቤት ግን መክፈሉን ይቀጥላል — በኪራይ፣ ሌላ ሰው በሚከፍለው ብድር፣ እና በአካባቢዎ ምንዛሬ ባልተወሰነ ዋጋ።",
+    "ወደ አገር ቤት የተላከ ገንዘብ አንድ ጊዜ ወጪ ሆኖ ያልቃል። ቤት ግን መክፈሉን ይቀጥላል፦ በኪራይ፣ ሌላ ሰው በሚከፍለው ብድር፣ እና በአካባቢዎ ምንዛሬ ባልተወሰነ ዋጋ።",
   "bar.rent": "ኪራይ",
   "bar.principal": "የተከፈለ ብድር",
   "bar.appreciation": "የዋጋ ጭማሪ",
   "why.1": "ተከራዩ ብድሩን ይከፍላል",
   "why.1.body":
-    "በመጀመሪያው ዓመት ከሚከፈለው ክፍያ ውስጥ {principal} የሚሆነው ዋናውን ብድር የሚቀንስ ነው። የከፈሉት እርስዎ አይደሉም — ኪራዩ ነው — ገንዘቡ ግን የእርስዎ ነው።",
+    "በመጀመሪያው ዓመት ከሚከፈለው ክፍያ ውስጥ {principal} የሚሆነው ዋናውን ብድር የሚቀንስ ነው። የከፈሉት እርስዎ አይደሉም፤ ኪራዩ ነው። ገንዘቡ ግን የእርስዎ ነው።",
   "why.2": "ዋጋው የሚጨምረው በሙሉ ቤቱ ላይ ነው፣ በከፈሉት ድርሻ ላይ ብቻ አይደለም",
   "why.2.body":
     "በ{rate} ስሌት ቤቱ በዓመት {gain} ያህል ይጨምራል። እርስዎ ያስገቡት {cash} ነው። ጭማሪው ግን በሙሉ {price} ላይ ነው።",
   "why.3": "ሊከፈሉበት በሚፈልጉት ምንዛሬ የሚመጣ ገቢ",
   "why.3.body":
-    "ኪራዩ በየወሩ በዶላር፣ ወደ አሜሪካ የባንክ ሂሳብ ይገባል — እርስዎ በሚኖሩበት አገር ምንዛሬ ላይ ምንም ይሁን ምን።",
+    "ኪራዩ በየወሩ በዶላር፣ ወደ አሜሪካ የባንክ ሂሳብ ይገባል፤ እርስዎ በሚኖሩበት አገር ምንዛሬ ላይ ምንም ይሁን ምን።",
   "why.4": "በማንም ትውውቅ ላይ የማይመሰረት ባለቤትነት",
   "why.4.body":
     "በጆርጂያ የቤት ባለቤትነት ሰነድ ይፋዊ መዝገብ ነው፤ ማንም ሊያረጋግጠው ይችላል። ባለቤትነት ሰነድ ነው፣ ከውጭ ሆነው መጠበቅ ያለብዎት ግንኙነት አይደለም።",
@@ -378,7 +378,7 @@ const am: Dict = {
   "doors.h3": "እዚህ ምንም ነገር እስኪመዘገቡ ድረስ አልተያዘም።",
   "doors.lede": "መለያ አያስፈልግም፣ የፓስፖርት ቅጂ አያስፈልግም፣ እርስዎ እስኪወስኑ ድረስ ወደ አበዳሪ የሚላክ ነገር የለም።",
   "doors.1": "ሙሉውን አሳየኝ",
-  "doors.1.body": "ሙሉ ዝርዝር — እያንዳንዱ ወጪ፣ የመጀመሪያው ዓመት በዝርዝር፣ እና እንቅፋት የሆነብዎት ነገር። ተጨማሪ ጥያቄ የለም።",
+  "doors.1.body": "ሙሉ ዝርዝር፦ እያንዳንዱ ወጪ፣ የመጀመሪያው ዓመት በዝርዝር፣ እና እንቅፋት የሆነብዎት ነገር። ተጨማሪ ጥያቄ የለም።",
   "doors.1.cta": "አሳየኝ",
   "doors.2": "ያደረገውን ሰው ያናግሩ",
   "doors.2.body": "ከካሌብ ጋር አሥራ አምስት ደቂቃ፣ በአማርኛ ወይም በእንግሊዝኛ፣ እርስዎ ባሉበት ሰዓት።",
@@ -388,7 +388,7 @@ const am: Dict = {
   "doors.3.cta": "እዚህ ለመኖር መግዛት",
 
   "disc.hero":
-    "እነዚህ የዕቅድ ግምቶች ናቸው፤ የብድር ፈቃድ ወይም የኪራይ ዋስትና አይደሉም። የቅድመ ክፍያና የወለድ መጠኖች አበዳሪዎች ለእያንዳንዱ ሁኔታ ካወጡት መረጃ የተወሰዱ ናቸው — የሚወስነው የራስዎ አበዳሪ ነው። ኪራዩ ከካውንቲ አማካይ የተሰላ ነው፤ ከአንድ የተወሰነ ቤት አይደለም።",
+    "እነዚህ የዕቅድ ግምቶች ናቸው፤ የብድር ፈቃድ ወይም የኪራይ ዋስትና አይደሉም። የቅድመ ክፍያና የወለድ መጠኖች አበዳሪዎች ለእያንዳንዱ ሁኔታ ካወጡት መረጃ የተወሰዱ ናቸው፤ የሚወስነው የራስዎ አበዳሪ ነው። ኪራዩ ከካውንቲ አማካይ የተሰላ ነው፤ ከአንድ የተወሰነ ቤት አይደለም።",
   "foot.note":
     "Rift ለውጭ አገር ገዢዎች። በጆርጂያ ፈቃድ ባለው ደላላ በካሌብ በፈቃዱ የሚመራ። እያንዳንዱ ቁጥር የዕቅድ ግምት ነው፤ የብድር ቃል፣ ፈቃድ ወይም ግምገማ አይደለም። የግብር አማካሪዎች ወይም የኢሚግሬሽን ጠበቆች አይደለንም፤ ጥያቄው የእነሱ ሲሆን እንነግርዎታለን።",
   "foot.fair":
@@ -400,7 +400,7 @@ const am: Dict = {
   "status.foreign.you": "ከአሜሪካ ውጭ ይኖራሉ፤ ምንም የአሜሪካ ሁኔታ የለዎትም",
 
   "book.band.h": "ካሌብ አማርኛ ይናገራል።",
-  "book.band.b": "ንግግሩ በአማርኛ ይሆናል። ከታች ያለው ቅጽ ግን በእንግሊዝኛ ነው — ስምዎን፣ ኢሜይልዎን ወይም ስልክዎን ብቻ ነው የሚጠይቀው።",
+  "book.band.b": "ንግግሩ በአማርኛ ይሆናል። ከታች ያለው ቅጽ ግን በእንግሊዝኛ ነው፤ ስምዎን፣ ኢሜይልዎን ወይም ስልክዎን ብቻ ነው የሚጠይቀው።",
   "book.back": "ወደ ቁጥሮቼ ልመለስ",
   "res.title": "ካሉበት ሆነው ይህ ምን ያህል እንደሚጠይቅዎት",
   "res.change": "መልሶቼን ልቀይር",
@@ -408,15 +408,15 @@ const am: Dict = {
   "res.kicker.rent": "ተከራይቶ",
   "res.kicker.live": "ለራስዎ ተይዞ",
   "res.h1.covers": "ራሱን ይሸፍናል፤ ሌሎች ሦስት ነገሮችም ይከፍሉዎታል።",
-  "res.h1.short": "በየወሩ {amount} ይጎድላል — ቢሆንም {pct}% ይመልሳል።",
+  "res.h1.short": "በየወሩ {amount} ይጎድላል፤ ቢሆንም {pct}% ይመልሳል።",
   "res.h1.live": "{amount} ይልካሉ፤ በሠላሳ ዓመትም ሙሉ በሙሉ የእርስዎ ይሆናል።",
 
   "res.send.title": "መላክ ያለብዎት",
   "res.send.downChip": "{pct}% ቅድመ ክፍያ",
   "res.send.down": "ቅድመ ክፍያ",
-  "res.send.down.note": "{pct}% — በእርስዎ ሁኔታ አበዳሪ የሚቀበለው ዝቅተኛው",
+  "res.send.down.note": "{pct}%፣ በእርስዎ ሁኔታ አበዳሪ የሚቀበለው ዝቅተኛው",
   "res.send.closing": "የዝግጅት ወጪ",
-  "res.send.closing.note": "{pct}% — ጠበቃ፣ የባለቤትነት ማረጋገጫ፣ ምዝገባ፣ የአበዳሪ ክፍያ",
+  "res.send.closing.note": "{pct}%፦ ጠበቃ፣ የባለቤትነት ማረጋገጫ፣ ምዝገባ፣ የአበዳሪ ክፍያ",
   "res.send.total": "ባለቤት ከመሆንዎ በፊት",
 
   "res.month.title": "በየወሩ",
@@ -424,11 +424,11 @@ const am: Dict = {
   "res.month.tax": "የንብረት ግብር",
   "res.month.ins": "ኢንሹራንስ",
   "res.month.mgmt": "አስተዳደር",
-  "res.month.mgmt.note": "{pct}% — እርስዎ እዚያ ስለሌሉ የአካባቢው ሰው",
+  "res.month.mgmt.note": "{pct}%፣ እርስዎ እዚያ ስለሌሉ የአካባቢው ሰው",
   "res.month.vac": "ለክፍት ጊዜ የሚቀመጥ",
-  "res.month.vac.note": "{pct}% — በዓመት አንድ ወር ገደማ በተከራዮች መካከል",
+  "res.month.vac.note": "{pct}%፣ በዓመት አንድ ወር ገደማ በተከራዮች መካከል",
   "res.month.maint": "ለጥገና የሚቀመጥ",
-  "res.month.maint.note": "{pct}% — ጥገናና የተከራይ ለውጥ",
+  "res.month.maint.note": "{pct}%፦ ጥገናና የተከራይ ለውጥ",
   "res.month.left": "የሚተርፍ",
   "res.month.short": "የሚጎድል",
   "res.month.costs": "በየወሩ የሚያስወጣዎት",
@@ -449,19 +449,19 @@ const am: Dict = {
   "res.block.kicker": "መንገድዎን የሚዘጋው አንድ ነገር",
   "res.block.live": "ይዘውት እስካሉ ድረስ ምንም አያመጣም",
   "res.block.live.body":
-    "ባዶ ሆኖ ከቆየ በየወሩ {monthly} ያስወጣዎታል። ከመጀመሪያው ዓመት {principal} የብድር ዋና ነው፤ ስለዚህ አልጠፋም — ገቢም ግን አይደለም።",
+    "ባዶ ሆኖ ከቆየ በየወሩ {monthly} ያስወጣዎታል። ከመጀመሪያው ዓመት {principal} የብድር ዋና ነው፤ ስለዚህ አልጠፋም፤ ገቢም ግን አይደለም።",
   "res.block.tenant": "ረጅም ጊዜ የሚቆይ ተከራይ ማግኘት",
   "res.block.tenant.body":
     "ቁጥሮቹ በዓመት አንድ ወር ገደማ ክፍት እንደሚሆን ይገምታሉ። ሁለት ወር ክፍት ከሆነ በየወሩ {flow} የነበረው ወደ {worse} ገደማ ይወርዳል።",
   "res.block.under": "በ{pct}% ቅድመ ክፍያ ራሱን አይሸፍንም",
   "res.block.under.body":
-    "ኪራዩ ሁሉንም እንዲሸፍን {breakEven}% ቅድመ ክፍያ ያስፈልጋል — ከ{have} ይልቅ {needed}። በዚያው ካውንቲ ውስጥ ርካሽ ቤት በዚህ ያነሰ ይደርሳል።",
+    "ኪራዩ ሁሉንም እንዲሸፍን {breakEven}% ቅድመ ክፍያ ያስፈልጋል፤ ከ{have} ይልቅ {needed}። በዚያው ካውንቲ ውስጥ ርካሽ ቤት በዚህ ያነሰ ይደርሳል።",
   "res.block.never": "በዚህ ዋጋ ምንም ራሱን አይሸፍንም",
   "res.block.never.body":
     "በ{county} ውስጥ በ{price} ኪራዩ ወጪውን እንዲሸፍን የሚያደርግ ምንም ቅድመ ክፍያ የለም። ርካሽ ቤት፣ ወይም የተሻለ የኪራይ-ወደ-ዋጋ ጥምርታ ያለው ካውንቲ ያደርገዋል።",
 
   "res.lender.rate": "የሚታየው ወለድ {rate}% ሲሆን ለዚህ ዓይነት ብድር {premium} ነጥብ ገደማ ይጨመርበታል። {source}።",
-  "res.rate.assumption": "እስካሁን የተመዘገበ የወለድ መጠን የለም — ይህ የመነሻ ግምት ነው",
+  "res.rate.assumption": "እስካሁን የተመዘገበ የወለድ መጠን የለም፤ ይህ የመነሻ ግምት ነው",
 
   "res.keep.h3": "ይህ ገጽ ቢደውሉም ባይደውሉም መስራቱን ይቀጥላል።",
   "res.keep.body":
@@ -477,7 +477,7 @@ const am: Dict = {
   "res.email.cta": "ይላኩልኝ",
   "res.email.sent": "በመንገድ ላይ ነው። አገናኙን ስለያዘ በማንኛውም መሣሪያ ይሠራል።",
   "res.email.off":
-    "ተመዝግቧል — ነገር ግን ኢሜይል ገና አልተከፈተም፤ ስለዚህ ምንም አልተላከም። የዚህን ገጽ አድራሻ ያስቀምጡ፤ ተመሳሳይ ሰነድ ነው።",
+    "ተመዝግቧል፤ ነገር ግን ኢሜይል ገና አልተከፈተም፤ ስለዚህ ምንም አልተላከም። የዚህን ገጽ አድራሻ ያስቀምጡ፤ ተመሳሳይ ሰነድ ነው።",
   "res.email.bad": "ያ የኢሜይል አድራሻ ትክክል አይመስልም።",
   "res.email.err": "አልተሳካም። ይህ ገጽና አድራሻው አሁንም ይሠራሉ።",
 
@@ -489,7 +489,7 @@ const am: Dict = {
   "res.forget.done":
     "ተሰርዟል። ስለዚህ ጉብኝት በዚህ መሣሪያም ሆነ በእኛ በኩል ምንም አልቀረም።",
   "res.forget.partial":
-    "ከዚህ መሣሪያ ጸድቷል። በእኛ በኩል የሚወገድ ምንም አልተከማቸም ነበር \u2014 ወይም ጥያቄው አልደረሰንም፤ በዚያ ሁኔታ የጊዜ ሰሌዳው በራሱ ያስወግደዋል።",
+    "ከዚህ መሣሪያ ጸድቷል። በእኛ በኩል የሚወገድ ምንም አልተከማቸም ነበር፤ ወይም ጥያቄው አልደረሰንም፤ በዚያ ሁኔታ የጊዜ ሰሌዳው በራሱ ያስወግደዋል።",
 };
 
 const DICTS: Record<Locale, Dict> = { en, am };
@@ -497,7 +497,7 @@ const DICTS: Record<Locale, Dict> = { en, am };
 /**
  * Falls back to English rather than showing a key, which is never anyone's
  * language. Values may carry {named} slots so a sentence keeps its own word
- * order in each language — Amharic puts the verb last, and a translation
+ * order in each language: Amharic puts the verb last, and a translation
  * assembled by concatenating fragments cannot.
  */
 export function translator(locale: Locale) {
@@ -516,7 +516,7 @@ export const isLocale = (v: unknown): v is Locale => v === "en" || v === "am";
  *
  * Empty, and that is the honest state: every value in `am` is a first pass by
  * a non-native writer. The docblock at the top of this file has said so since
- * it was written, which helps nobody decide what to do about it — a note in a
+ * it was written, which helps nobody decide what to do about it: a note in a
  * comment does not produce a worklist, and "the Amharic needs reviewing" has
  * sat on a list for weeks precisely because it has no edge.
  *
@@ -531,7 +531,7 @@ export const REVIEWED_AM: string[] = [];
  * Keys whose Amharic is not merely unreviewed but now says something FALSE.
  *
  * A different and more urgent thing than the list below. Everything is
- * unreviewed — that means "a non-native first pass, tone unchecked". These
+ * unreviewed: that means "a non-native first pass, tone unchecked". These
  * mean "the English was corrected and the Amharic still carries the claim that
  * was wrong", so an Amharic reader is being told something the English reader
  * is no longer told.
@@ -540,7 +540,7 @@ export const REVIEWED_AM: string[] = [];
  * averages. It does not: the ratios in lib/core/abroad.ts are engineering's
  * own assumptions and always were. The English now says so. Until these two
  * are retranslated, the Amharic page makes a claim about provenance that the
- * product knows to be untrue — which is worse than an unpolished sentence,
+ * product knows to be untrue, which is worse than an unpolished sentence,
  * because it is exactly the promise this audience is being asked to trust.
  *
  * Empty this list by retranslating, not by deleting it.

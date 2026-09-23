@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * The questions, in the agent's own words.
  *
  * The funnel definition has always lived in code, and `readFunnel` read a row
- * from the database and then deliberately ignored it — with a note saying that
+ * from the database and then deliberately ignored it: with a note saying that
  * reading a stored copy "would only add a way for the stored copy to drift
  * from the engine".
  *
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
  * to read; it is to make drift impossible. Only the words are stored: the
  * title, the note beneath it, the field label, and the LABEL on each option.
  * The key, the field type, what it is bound to, the machine value behind an
- * option, whether it is required — all of those come from
+ * option, whether it is required: all of those come from
  * `lib/core/funnel.ts`, and nothing on this page can reach them.
  *
  * So the worst an edit here can do is produce a badly worded question. It
@@ -38,7 +38,7 @@ export default async function QuestionsPage({
   const session = await agentSession();
   /* A blip is not an expired session. Redirecting on "unknown" shows the
      agent a sign-in form when his cookie is fine, which says something false
-     about what just happened — see lib/db/session.ts. */
+     about what just happened: see lib/db/session.ts. */
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/studio/sign-in");
   /* The session is the gate; nothing on this page needs the agent's name. */
@@ -71,7 +71,7 @@ export default async function QuestionsPage({
         </h1>
         <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 580 }}>
           The wording a stranger reads, in your voice rather than ours. What each question
-          <em> does</em> is fixed — these feed the arithmetic, and a question that stopped
+          <em> does</em> is fixed: these feed the arithmetic, and a question that stopped
           collecting what it collects would produce a readout about nobody.
         </p>
 
@@ -104,7 +104,7 @@ export default async function QuestionsPage({
             <Ico.shield size={14} className="c-3" style={{ flex: "none", marginTop: 3 }} />
             <p className="t-xs c-3" style={{ lineHeight: 1.6 }}>
               Publishing creates a new version. Anybody who already answered stays pinned to the
-              words they actually read — their readout does not quietly start describing questions
+              words they actually read; their readout does not quietly start describing questions
               they were never asked.
             </p>
           </div>

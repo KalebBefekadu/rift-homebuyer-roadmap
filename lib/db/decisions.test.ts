@@ -99,7 +99,7 @@ describe("the agent's read", () => {
   it("does not filter on released, because drafts are his to see", async () => {
     build({ "select rift_decisions": { data: [] } });
     await decisionsFor("lead-1");
-    /* The column is selected — he needs to know which rooms are out. What
+    /* The column is selected: he needs to know which rooms are out. What
        must not be here is a FILTER on it. Asserting on the whole string
        matched the select list and failed for the wrong reason. */
     const filters = db.calls[0]!.filters.filter((f) => !f.startsWith("select:"));

@@ -10,8 +10,8 @@ import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
  * The current rate assumption.
  *
  * Never throws and never returns nothing: a missing rate falls back to the
- * documented starting assumption, clearly labelled as one. The alternative —
- * refusing to compute — would take the product down over a number it can
+ * documented starting assumption, clearly labelled as one. The alternative:
+ * refusing to compute: would take the product down over a number it can
  * reasonably estimate, and the fallback is the same 6.5% the engine used
  * before this table existed.
  *

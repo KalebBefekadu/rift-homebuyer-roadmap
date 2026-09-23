@@ -149,7 +149,7 @@ describe("who owes it, and who is reading", () => {
 
   it("says 'You' to the client for their own step, and names them to the agent", () => {
     /* The bug this replaced: ownerLabel knew only the agent's name, so a step
-       owed by the client rendered as "You" on BOTH pages — correct on theirs,
+       owed by the client rendered as "You" on BOTH pages: correct on theirs,
        and on his a line telling him he owes something he does not. Same family
        as the readout that printed "You'm a U.S. citizen living abroad": a
        pronoun produced without knowing who is being addressed. */

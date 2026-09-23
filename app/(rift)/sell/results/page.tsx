@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  * Same discipline as the buyer side: every figure is computed on the server
  * from the same engine, and the browser receives numbers rather than the
  * arithmetic. The page is URL-addressable and shareable, so a figure computed
- * in the browser from query parameters is a figure anybody can edit — and
+ * in the browser from query parameters is a figure anybody can edit, and
  * "Rift says I clear $180,000" has to be false.
  *
  * Unlike the buyer readout this needs no registry and no rate: net proceeds are

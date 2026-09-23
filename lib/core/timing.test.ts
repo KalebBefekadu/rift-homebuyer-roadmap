@@ -13,7 +13,7 @@ import { scoreLead } from "./lead";
  *
  * The drift is silent and expensive in a specific way. Change "In the next 3
  * months" in the funnel and `params.ts` stops recognising the answer people
- * actually give — it substitutes "3 to 9 months", which is a real value, so
+ * actually give: it substitutes "3 to 9 months", which is a real value, so
  * the readout renders a plausible timeline for somebody who said something
  * else. Then `scoreLead` sees a string that matches none of its prefixes and
  * awards 2 points instead of 32 on the strongest signal it has, so every
@@ -41,8 +41,8 @@ describe("the four answers are the same four everywhere", () => {
   });
 
   it("matches the seller funnel's own options", () => {
-    /* The seller question reads differently — "When would you like to have
-       sold?" — but the VALUES have to be the same, because one parser and
+    /* The seller question reads differently: "When would you like to have
+       sold?": but the VALUES have to be the same, because one parser and
        one scorer serve both. */
     expect(declared).toEqual(timingOptions(SELL_FUNNEL));
   });

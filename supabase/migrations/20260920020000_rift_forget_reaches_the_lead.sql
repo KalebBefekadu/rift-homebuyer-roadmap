@@ -8,7 +8,7 @@
 -- assessment took the lead with it.
 --
 -- 20260908000000 changed that cascade to SET NULL, for a good and carefully
--- argued reason — the retention sweep was destroying relationships the agent
+-- argued reason: the retention sweep was destroying relationships the agent
 -- was still working, as a side effect of a foreign key default. That fix is
 -- right and stays. What nobody noticed is that `forget()` shares the
 -- mechanism: from that migration onwards, a person clicking "Delete all of
@@ -20,8 +20,8 @@
 --
 -- Two problems here, and this file is the half that needs the database:
 --
---   1. A lead captured with no assessment — from the abroad readout, or from
---      /book on a landing page — has no link to a session at all, so nothing
+--   1. A lead captured with no assessment: from the abroad readout, or from
+--      /book on a landing page: has no link to a session at all, so nothing
 --      could find it even after the code is fixed. rift_leads gets its own
 --      session_id.
 --
@@ -30,7 +30,7 @@
 --
 -- Nullable, because every lead already in the table predates this and there
 -- is no honest value to backfill. A null session_id means "captured before
--- this existed, or captured by something that had no session" — and the one
+-- this existed, or captured by something that had no session": and the one
 -- thing that must never happen is inventing a session id that would make an
 -- unrelated person's delete request destroy this row.
 -- ============================================================================

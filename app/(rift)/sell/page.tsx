@@ -5,7 +5,7 @@ import { Landing } from "./Landing";
 export const metadata: Metadata = {
   title: "Know what selling actually leaves you",
   description:
-    "Every valuation you have been given is a list price. See what actually reaches you after payoff, commission, concessions and Georgia transfer tax — free, before you talk to anyone.",
+    "Every valuation you have been given is a list price. See what actually reaches you after payoff, commission, concessions and Georgia transfer tax. Free, before you talk to anyone.",
 };
 
 /* Nothing on this page depends on programme data or a rate, so it can be

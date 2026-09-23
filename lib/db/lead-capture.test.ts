@@ -10,7 +10,7 @@ import type { LeadInput } from "@/lib/core/lead";
  * liability: a phone number, a consent record, and somebody's finances.
  *
  * Two properties matter more than the rest and neither was tested. A number
- * held without consent is pure liability — it cannot lawfully be called, and
+ * held without consent is pure liability: it cannot lawfully be called, and
  * it still has to be disclosed and deleted. And a refusal has to be recorded,
  * because a refusal is the evidence that proves the number was never called.
  */
@@ -77,7 +77,7 @@ describe("the phone number", () => {
 describe("the consent record", () => {
   it("records a REFUSAL as well as a grant", async () => {
     /* The refusal is the evidence. Without the row there is nothing proving
-       the number was never called — only the absence of a call. */
+       the number was never called: only the absence of a call. */
     build();
     await captureLead({
       ...base, phone: "404-555-0100",
@@ -158,7 +158,7 @@ describe("before the session_id migration has run", () => {
   it("saves the lead without the column rather than losing it", async () => {
     /* Migrations here are applied by hand against production. Deploying this
        file first would make PostgREST reject every insert on an unknown
-       column — turning a fix to the delete button into a total outage of the
+       column: turning a fix to the delete button into a total outage of the
        one write that cannot be retried. */
     build({
       "insert rift_leads": (_c, nth) =>

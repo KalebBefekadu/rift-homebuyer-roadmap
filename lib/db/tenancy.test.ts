@@ -7,9 +7,9 @@ import { Client } from "pg";
  *
  * `lib/db/rls.test.ts` proves the policies work. This file exists because the
  * application never asks them. Every write in Rift goes through the
- * service-role client, which bypasses RLS entirely — that is deliberate and
+ * service-role client, which bypasses RLS entirely: that is deliberate and
  * necessary, since a stranger filling in the funnel has no session for a
- * policy to key on — but it means the only thing scoping a Studio write to the
+ * policy to key on, but it means the only thing scoping a Studio write to the
  * right agent is the `.eq("agent_id", …)` somebody remembered to type.
  *
  * Three of them had not. `promoteItem`, `markReplied` and `stop` matched on id
@@ -18,10 +18,10 @@ import { Client } from "pg";
  * was signed in; nothing checked that the record was theirs.
  *
  * There is one agent today, so nothing was exposed. The reason to fix it now
- * is that all three writes are effectively irreversible — `markReplied` refuses
+ * is that all three writes are effectively irreversible: `markReplied` refuses
  * to be re-set because speed-to-lead must not be retroactively flattered, a
  * stopped sequence does not restart, and a figure promoted to `verified` has
- * had a name attached to it in writing — so the discovery would come long
+ * had a name attached to it in writing, so the discovery would come long
  * after the damage.
  *
  * These assert the QUERY SHAPE against a real Postgres: the same filters the
@@ -107,7 +107,7 @@ describe("a second agent cannot reach the first agent's records", () => {
     const asB = await c.query(
       "update rift_enrolments set stopped_at = now(), stop_reason = 'replied' where lead_id = $1 and agent_id = $2 and stopped_at is null returning id",
       [A_LEAD, B_AGENT]);
-    expect(asB.rowCount, "a stopped sequence does not restart — this must not be reachable").toBe(0);
+    expect(asB.rowCount, "a stopped sequence does not restart; this must not be reachable").toBe(0);
 
     const asA = await c.query(
       "update rift_enrolments set stopped_at = now(), stop_reason = 'replied' where lead_id = $1 and agent_id = $2 and stopped_at is null returning id",
@@ -140,15 +140,15 @@ describe("a second agent cannot reach the first agent's records", () => {
 
 describe("the data layer still asks the way these tests assume", () => {
   /* The suite above proves the FILTER works. It cannot notice somebody
-     deleting the filter, which is the way this actually regresses — the code
+     deleting the filter, which is the way this actually regresses: the code
      keeps compiling, every test keeps passing, and the scope is simply gone.
      So the source is read directly. Not elegant; it is the only thing between
      a one-line deletion and a silent cross-agent write.
      
      What it catches: the scoping disappearing from a function entirely, and
      the parameter going back to being resolved inside rather than passed in.
-     What it does NOT catch: `markReplied` scopes in two places — the update
-     and the re-read that follows it — and removing one of the two still
+     What it does NOT catch: `markReplied` scopes in two places: the update
+     and the re-read that follows it, and removing one of the two still
      passes this. Said out loud so nobody reads a green tick here as more
      assurance than it is. */
   const scoped: [string, string][] = [
@@ -170,7 +170,7 @@ describe("the data layer still asks the way these tests assume", () => {
 
       expect(body, `${fn} must accept the signed-in agent, not resolve one`)
         .toMatch(/agentId: string/);
-      expect(body, `${fn} must scope its write — it runs on the service-role client, which RLS never sees`)
+      expect(body, `${fn} must scope its write: it runs on the service-role client, which RLS never sees`)
         .toMatch(/\.eq\("agent_id", agentId\)/);
     });
   }

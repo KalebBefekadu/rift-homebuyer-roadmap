@@ -7,7 +7,7 @@ export const contentType = "image/png";
  * The home-screen icon, as a PNG.
  *
  * iOS ignores an SVG `apple-touch-icon` and falls back to a screenshot of the
- * page, so `app/icon.svg` — which every other browser is happy with — is not
+ * page, so `app/icon.svg` (which every other browser is happy with) is not
  * enough on the one platform where somebody is most likely to save this to a
  * home screen and come back to it.
  *

@@ -1,4 +1,4 @@
-/* Rift — scoped to .rift so it never touches the production palette. */
+/* Rift: scoped to .rift so it never touches the production palette. */
 
 .rift {
   /* The ink ramp is contrast-checked, and two of its steps moved to get there.
@@ -6,7 +6,7 @@
      contrast failures on one page; 33 of them were --ink-4 at #969ba4, which
      lands at 2.79:1 on paper and 2.49:1 on --sunk where AA asks for 4.5:1. It
      was carrying the assumption lines, the "built from" provenance line, and
-     most of the small print under the figures — which is to say, the parts of
+     most of the small print under the figures, which is to say, the parts of
      a readout that exist precisely so a reader can check the numbers.
 
      Solving --ink-4 for 4.5:1 lands it on #6a6f7a, which was --ink-3 to
@@ -26,7 +26,7 @@
   --ink-3: #565b64;
   --ink-4: #6a6f7a;
   /* Borders and rules only. It is not a text colour and there is no value of
-     this step that could be one — a divider that met 4.5:1 would read as a
+     this step that could be one: a divider that met 4.5:1 would read as a
      line drawn in body text. */
   --ink-5: #c3c6cb;
 
@@ -44,7 +44,7 @@
      separate token from --accent. The brand red is 3.97:1 against white: it is
      the right colour for a rule, an icon or a line of art, and it is not dark
      enough to carry text. That gap put the primary call to action on both
-     public landing pages below AA — the one button the entire funnel depends
+     public landing pages below AA: the one button the entire funnel depends
      on somebody pressing. --accent-2 gives the same red at 5.49:1. */
   --accent-solid: #c2351e;
   --accent-solid-2: #a32b18;
@@ -86,24 +86,24 @@
 /* Same specificity trap as the button reset below: `.rift a` is (0,1,1) and
    `.btn-p` is (0,1,0), so `color: inherit` beat the button classes and every
    <a class="btn btn-p"> rendered its label in the inherited ink ON the ink
-   background — an invisible label on a solid black rectangle. That was the
+   background: an invisible label on a solid black rectangle. That was the
    primary call to action on both public landing pages. */
 .rift a { text-decoration: none; }
 .rift a:not([class~="btn"]) { color: inherit; }
 /* `:where()`, so this reset has ZERO specificity and every class beats it.
  *
- * It was written as `.rift button:not([class~="btn"])` — (0,2,1) — which
+ * It was written as `.rift button:not([class~="btn"])` ((0,2,1)) which
  * out-specified every visual class in the product and had to name its
  * exceptions. It caught `.btn` first: a <button class="btn btn-p"> rendered as
  * bare text with no fill while the identical <a class="btn btn-p"> looked
  * right, because links were never matched. That was fixed by adding the `btn`
- * exemption, and the fix was the wrong shape — a filter pill written as
+ * exemption, and the fix was the wrong shape: a filter pill written as
  * <button class="chip chip-ink"> hit exactly the same wall later, with correct
  * markup, the correct class and the correct aria-pressed, rendering as plain
  * text. The list of exemptions was always going to be one behind.
  *
- * At zero specificity it does what it is actually for — make a BARE button
- * behave like text — and needs no exemptions at all. Unlayered, so it still
+ * At zero specificity it does what it is actually for: make a BARE button
+ * behave like text, and needs no exemptions at all. Unlayered, so it still
  * beats Tailwind's preflight in @layer base. */
 .rift button { cursor: pointer; }
 :where(.rift button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
@@ -200,7 +200,7 @@
 /* A button whose label is a SENTENCE.
 
    `.btn` is `white-space: nowrap` and a fixed height, which is right for "Next"
-   and wrong for "Talk this through — 20 minutes, no obligation". That label is
+   and wrong for "Talk this through: 20 minutes, no obligation". That label is
    328px of unbreakable text: on a 320px screen the primary call to action on
    the buyer readout hung off the right-hand edge and took the page with it. */
 .btn-line {
@@ -503,13 +503,13 @@
   .rift .actionbar{ padding-bottom: 74px !important; }
 }
 
-/* Touch targets. The visual size stays — a dense agent surface should look
-   dense — but the hit area grows to the 44px minimum on any touch device. */
+/* Touch targets. The visual size stays: a dense agent surface should look
+   dense, but the hit area grows to the 44px minimum on any touch device. */
 @media (pointer: coarse) {
   /* The primary button was missed here for a long time: .btn-sm and .btn-ico
      were raised to touch size and the base .btn was left at 38px, which meant
-     the single most important control in the product — "Show me my numbers",
-     "Next", "Ask for this time" — sat below the 44px target the specification
+     the single most important control in the product: "Show me my numbers",
+     "Next", "Ask for this time": sat below the 44px target the specification
      promises. Comfortable is not the point; 38px on a phone in one hand is
      measurably harder to hit, and every miss is on the revenue path. */
   .rift .btn { height: 44px; padding: 0 17px; }
@@ -528,7 +528,7 @@
 .rift .how-body li { margin-bottom: 7px; }
 
 /* Available to a screen reader, absent from the page. Used by the live
-   regions that announce a recomputed figure — see components/rift/Live.tsx.
+   regions that announce a recomputed figure: see components/rift/Live.tsx.
    `clip-path` rather than `display:none` or `visibility:hidden`, both of which
    remove the element from the accessibility tree and so from the announcement. */
 .sr-only {

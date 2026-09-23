@@ -29,7 +29,7 @@ const STAGES: [string, string][] = [
 /**
  * The seller's "just tell me how this works" door.
  *
- * Says how Rift is paid, in plain terms, on the page about trust — because a
+ * Says how Rift is paid, in plain terms, on the page about trust, because a
  * page about trust that avoids the commercial question is the least
  * trustworthy page on a site. That matters more on the seller side, where the
  * reader is being asked to believe a commission figure computed by the person
@@ -69,7 +69,7 @@ export default function SellHowPage() {
 
         <Block title="Where the numbers come from">
           <p>
-            Every figure is <strong>calculated</strong> — from your answers, published Georgia
+            Every figure is <strong>calculated</strong>: from your answers, published Georgia
             transfer tax, and typical costs for a sale of this size. Nothing is written by a
             language model and nothing is a number somebody typed in.
           </p>
@@ -87,7 +87,7 @@ export default function SellHowPage() {
 
         <Block title="What this will not do">
           <p>
-            It will not value your home. A likely price is your input, not our output — an
+            It will not value your home. A likely price is your input, not our output; an
             algorithm that has never seen your kitchen should not be the thing that prices it.
             Bring a number you believe, or a range, and see what each end leaves you.
           </p>
@@ -106,7 +106,7 @@ export default function SellHowPage() {
           </p>
           <p>
             That is the whole model. The readout is free because a seller who knows their real
-            net is a better client than one who finds out at the settlement table — not because
+            net is a better client than one who finds out at the settlement table, not because
             there is a charge waiting further in.
           </p>
         </Block>

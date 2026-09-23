@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Rift prototype — first-touch attribution.
+ * Rift prototype: first-touch attribution.
  *
  * Deliberately modest. The brief was "strong, not best in the world", and the
  * difference between those two is roughly the difference between one afternoon
@@ -26,7 +26,7 @@ export interface Touch {
   content: string;
   /** Path they landed on, without the query string. */
   landing: string;
-  /** Referring host only — never the full referring URL. */
+  /** Referring host only: never the full referring URL. */
   referrer: string;
   at: string;
 }
@@ -66,10 +66,10 @@ export function captureTouch(): Attribution | null {
     const touch: Touch = {
       source: fallback?.source ?? p.get("utm_source") ?? "direct",
       medium: fallback?.medium ?? p.get("utm_medium") ?? "none",
-      campaign: p.get("utm_campaign") ?? "—",
-      content: p.get("utm_content") ?? "—",
+      campaign: p.get("utm_campaign") ?? "none",
+      content: p.get("utm_content") ?? "none",
       landing: window.location.pathname,
-      referrer: host || "—",
+      referrer: host || "none",
       at: new Date().toISOString(),
     };
     for (const [k, field] of Object.entries(PARAM_MAP)) {
@@ -80,7 +80,7 @@ export function captureTouch(): Attribution | null {
     const raw = window.localStorage.getItem(KEY);
     const prev = raw ? (JSON.parse(raw) as Attribution) : null;
 
-    /* First touch never moves. That is the whole point of first touch — an
+    /* First touch never moves. That is the whole point of first touch: an
        agent who re-attributes a referral to the retargeting ad that caught it
        on the way back will keep buying retargeting and stop asking for
        referrals. */
@@ -120,4 +120,4 @@ export function useAttribution() {
 }
 
 export const describeTouch = (t: Touch) =>
-  t.campaign !== "—" ? `${t.source} · ${t.campaign}` : `${t.source}${t.medium !== "none" ? ` · ${t.medium}` : ""}`;
+  t.campaign !== "none" ? `${t.source} · ${t.campaign}` : `${t.source}${t.medium !== "none" ? ` · ${t.medium}` : ""}`;

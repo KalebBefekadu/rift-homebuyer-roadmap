@@ -14,7 +14,7 @@ import { Ico } from "@/components/rift/icons";
  * somebody.
  *
  * It says what is and is not affected, because the first question on seeing
- * this screen is whether the leads are still there. They are — this boundary
+ * this screen is whether the leads are still there. They are: this boundary
  * catches a rendering failure, not a data one.
  */
 export default function StudioError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -27,7 +27,7 @@ export default function StudioError({ error, reset }: { error: Error & { digest?
         <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Studio could not draw this.</h1>
       </div>
       <p className="t-sm c-3" style={{ marginTop: 12, lineHeight: 1.65 }}>
-        Nothing is lost. This is a screen that failed to render, not data that failed to save —
+        Nothing is lost. This is a screen that failed to render, not data that failed to save.
         your leads, their readouts and every consent record are where they were. It has been
         reported automatically.
       </p>

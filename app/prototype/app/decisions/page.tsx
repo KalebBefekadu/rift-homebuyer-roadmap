@@ -37,7 +37,7 @@ export default function Decisions() {
           <h1 className="serif d3">What price should we actually aim at?</h1>
           <p className="t-sm c-4" style={{ marginTop: 3 }}>Prepared by Kaleb after your 2 September call.</p>
         </div>
-        <span className="chip"><Ico.clock size={10} />No deadline — take your time</span>
+        <span className="chip"><Ico.clock size={10} />No deadline. Take your time</span>
       </div>
 
       <div className="g3 gap-3" style={{ marginBottom: 16 }}>
@@ -113,7 +113,7 @@ export default function Decisions() {
           </div>
           <p className="t-md c-2" style={{ lineHeight: 1.65, marginBottom: 12 }}>
             {money(285_000)} gets you there fastest, but in DeKalb at that price you&apos;re
-            mostly looking at homes that need real work — and the repair budget eats the head
+            mostly looking at homes that need real work, and the repair budget eats the head
             start.
           </p>
           <p className="t-md c-2" style={{ lineHeight: 1.65, marginBottom: 12 }}>
@@ -121,7 +121,7 @@ export default function Decisions() {
             {money(650)}-a-month saving rate. It adds nearly a year.
           </p>
           <p className="t-md c-2" style={{ lineHeight: 1.65 }}>
-            I&apos;d stay at {money(325_000)}. Devon mentioned {money(295_000)} on the call — worth
+            I&apos;d stay at {money(325_000)}. Devon mentioned {money(295_000)} on the call, worth
             the three of us talking about that difference specifically, because it&apos;s about
             four months, not about the house.
           </p>

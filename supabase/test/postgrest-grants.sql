@@ -1,7 +1,7 @@
 -- Grants PostgREST needs to serve the Rift schema locally.
 --
 -- Re-applied after every schema reset, because `drop schema public cascade`
--- takes the grants with it — which surfaces as "permission denied for schema
+-- takes the grants with it: which surfaces as "permission denied for schema
 -- public" a long way from its cause.
 --
 -- Local verification only. Production access is RLS plus the service role;
@@ -24,7 +24,7 @@ alter default privileges in schema public grant all on tables to anon;
 
 -- RLS is enabled on every Rift table and `anon` here stands in for the service
 -- role, which bypasses it. Disabling RLS for the local harness keeps this test
--- about QUERY SYNTAX — the thing TypeScript cannot check — rather than about
+-- about QUERY SYNTAX (the thing TypeScript cannot check) rather than about
 -- policies, which lib/db/schema.test.ts covers directly.
 do $$
 declare t text;

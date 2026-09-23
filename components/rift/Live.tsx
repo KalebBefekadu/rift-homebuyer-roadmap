@@ -3,7 +3,7 @@
  *
  * All three landings answer in place: move a slider or change a select and the
  * dark panel recomputes. There was no `aria-live` anywhere in the codebase, so
- * for anyone not watching the panel, nothing happened at all — the product's
+ * for anyone not watching the panel, nothing happened at all: the product's
  * entire front-door promise, that you get a real number before you give up
  * anything, was being delivered visually and only visually.
  *

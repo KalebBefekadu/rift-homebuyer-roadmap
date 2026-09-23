@@ -10,7 +10,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
  *
  * The rule that survives any provider: **never offer a slot that is not real.**
  * A booking screen showing invented times is a promise the product cannot keep,
- * and the person discovers that only after choosing one — at the exact moment
+ * and the person discovers that only after choosing one: at the exact moment
  * they had decided to trust it. When availability cannot be fetched, the UI is
  * told so and asks the agent to confirm instead of inventing four options.
  */
@@ -41,7 +41,7 @@ function label(startISO: string): string {
 /**
  * Real availability, or an honest absence of it.
  *
- * Returns an empty list with a stated reason when unconfigured — never a
+ * Returns an empty list with a stated reason when unconfigured: never a
  * plausible-looking default. That distinction is the whole point of this
  * module: `slots: []` with `source: "unconfigured"` is a different thing from
  * "the agent has no free time", and the booking screen says something
@@ -56,7 +56,7 @@ export async function availability(days = 7): Promise<Availability> {
       ok: true,
       slots: [],
       source: "unconfigured",
-      reason: "CAL_API_KEY or CAL_EVENT_TYPE_ID not set — no real availability to show",
+      reason: "CAL_API_KEY or CAL_EVENT_TYPE_ID not set, so there is no real availability to show",
     };
   }
 
@@ -103,14 +103,14 @@ export interface BookInput {
  * Takes a slot.
  *
  * Fails loudly rather than silently, because the alternative is somebody
- * believing they have an appointment that does not exist — which is worse than
+ * believing they have an appointment that does not exist, which is worse than
  * not being able to book at all, and is discovered by them rather than by us.
  */
 export async function book(input: BookInput): Promise<{ ok: true; id: string } | { ok: true; skipped: true; reason: string } | { ok: false; error: string }> {
   const key = process.env.CAL_API_KEY;
   const eventTypeId = process.env.CAL_EVENT_TYPE_ID;
   if (!key || !eventTypeId) {
-    return { ok: true, skipped: true, reason: "calendar not configured — the request was recorded but no slot was held" };
+    return { ok: true, skipped: true, reason: "calendar not configured; the request was recorded but no slot was held" };
   }
 
   try {
@@ -130,7 +130,7 @@ export async function book(input: BookInput): Promise<{ ok: true; id: string } |
         /* The call is about their computed blocker, carried from the readout.
            A generic slot asks somebody to decide what to talk about, which is
            work, at the moment of conversion. */
-        title: `Rift — ${input.topic}`.slice(0, 120),
+        title: `Rift: ${input.topic}`.slice(0, 120),
         metadata: {},
       }),
     });

@@ -6,7 +6,7 @@ import { Client } from "pg";
  * The capture flow, end to end, against a real database.
  *
  * These assert the shape of what actually lands in Postgres after a visitor
- * goes through the funnel — not that the functions were called. The difference
+ * goes through the funnel: not that the functions were called. The difference
  * matters: every rule in this product is about what is stored, and a mock
  * cannot enforce a CHECK constraint or a trigger.
  *
@@ -18,7 +18,7 @@ import { Client } from "pg";
  *
  * These suites rebuild the schema from the migrations, so pointing them at the
  * same database the local stack uses meant `npm test` silently destroyed the
- * development environment — including the agent row, after which every write
+ * development environment: including the agent row, after which every write
  * reported "no agent row exists yet" and the cause was two commands earlier.
  */
 const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/rift_test";
@@ -45,7 +45,7 @@ beforeAll(async () => {
     /* Every Rift migration, in order, rather than a hand-written list. Naming
        them individually meant each new migration had to be remembered in two
        test files, and the first one forgotten dropped a table the suite then
-       reported as "not found in the schema cache" — a confusing failure a long
+       reported as "not found in the schema cache": a confusing failure a long
        way from its cause. */
     for (const f of riftMigrations()) await c.query(readFileSync(f, "utf8"));
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
@@ -58,7 +58,7 @@ beforeAll(async () => {
     db = c;
   } catch (e) {
     /* Only an unreachable database is a skip. A migration that fails to apply
-       is a real failure and must say so — swallowing it here would turn the
+       is a real failure and must say so: swallowing it here would turn the
        suite that proves the constraints bite into a suite that quietly proves
        nothing. */
     const msg = e instanceof Error ? e.message : String(e);
@@ -160,7 +160,7 @@ describe("a visitor's journey, as stored", () => {
 
   test("the registry suppresses on the configured window, in SQL", async (c) => {
     /* Enforced in the query rather than trusted to the caller: a second reader
-       — an export, a report, an admin screen — could forget to filter. */
+       (an export, a report, an admin screen) could forget to filter. */
     const fresh = await c.query(
       "select count(*)::int n from rift_programs where verified_on >= (date '2026-09-07' - interval '90 days')");
     const stale = await c.query(
@@ -247,7 +247,7 @@ describe("retention, as enforced", () => {
     const { rows: [a] } = await c.query(
       "insert into rift_assessments (agent_id, session_id, side) values ($1,'sret2','buy') returning id", [AGENT]);
     await c.query("delete from rift_assessments where id = $1", [a.id]);
-    /* The customer-facing promise says "deleted outright — not anonymised,
+    /* The customer-facing promise says "deleted outright: not anonymised,
        not archived". A soft delete would make that sentence false while
        looking like compliance. */
     const { rows } = await c.query("select count(*)::int n from rift_assessments where id = $1", [a.id]);
@@ -275,7 +275,7 @@ describe("a lead without an assessment", () => {
     /* Two real paths produce one: somebody asking for a readout they were sent
        a link to, and somebody booking straight from the landing page. The
        column was NOT NULL, so an empty string reached Postgres as an invalid
-       uuid and the capture failed outright — losing the lead at the single
+       uuid and the capture failed outright: losing the lead at the single
        most valuable moment in the funnel, a stranger volunteering an address. */
     await c.query(
       `insert into rift_leads (agent_id, assessment_id, side, email, score, band)
@@ -298,8 +298,8 @@ describe("a lead without an assessment", () => {
 
 describe("what a nurture touch is allowed to say", () => {
   test("a lead with no readout has nothing to carry", async (c) => {
-    /* The runner used to send zeroes — "Buying in your County takes $0 at the
-       table" — to somebody deciding whether to trust us with their finances.
+    /* The runner used to send zeroes: "Buying in your County takes $0 at the
+       table": to somebody deciding whether to trust us with their finances.
        There is no version of that email worth sending, so the queue has to be
        able to tell that the figures are absent. */
     const { rows: [a] } = await c.query(
@@ -401,7 +401,7 @@ describe("the trust ladder, end to end", () => {
   test("advancing a review advances the figure the customer sees", async (c) => {
     /* The ladder was described end to end and connected at neither end.
        Promoting a review item changed a row in Studio while the number on the
-       customer's screen stayed "preliminary" forever — so "Kaleb has been
+       customer's screen stayed "preliminary" forever: so "Kaleb has been
        through this" was a fact recorded for the one person who already knew. */
     const { rows: [a] } = await c.query(
       "insert into rift_assessments (agent_id, session_id, side) values ($1,'sladder','buy') returning id", [AGENT]);
@@ -438,7 +438,7 @@ describe("the trust ladder, end to end", () => {
 describe("one live assessment per visitor", () => {
   test("a second live assessment for the same session is refused", async (c) => {
     /* startAssessment checked for an existing row and inserted if it found
-       none, and the page fires it on mount — so a double-render, a fast
+       none, and the page fires it on mount, so a double-render, a fast
        refresh, or a retry was enough. Measured before the index: six
        concurrent starts produced six assessments for one visitor, and nothing
        failed. The agent would have seen six abandoned people where there was
@@ -475,7 +475,7 @@ describe("one live assessment per visitor", () => {
 describe("advancing a review is conditional on where it started", () => {
   test("a stale promotion cannot downgrade a figure somebody confirmed", async (c) => {
     /* Two promotions racing both read "pending-review" and both wrote their
-       own next rung — so a "verified" could be overwritten by a "reviewed"
+       own next rung: so a "verified" could be overwritten by a "reviewed"
        that started from the same stale read, silently downgrading a figure
        confirmed in writing. */
     const { rows: [a] } = await c.query(
@@ -505,8 +505,8 @@ describe("advancing a review is conditional on where it started", () => {
 
 describe("a lead is not a side effect of its assessment", () => {
   test("deleting the assessment leaves the person", async (c) => {
-    /* `rift_leads.assessment_id` cascaded, so the retention sweep — whose job
-       is deleting an assessment nobody came back to — silently took the lead
+    /* `rift_leads.assessment_id` cascaded, so the retention sweep: whose job
+       is deleting an assessment nobody came back to: silently took the lead
        with it: contact details, score, enrolment, every touch already sent.
        Nobody chose that. It was a foreign key default doing something the
        retention policy never described. */

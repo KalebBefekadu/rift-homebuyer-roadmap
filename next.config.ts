@@ -9,15 +9,15 @@ import { withSentryConfig } from "@sentry/nextjs";
  * handling somebody's finances should have; the fourth is specific to this
  * product and is the one worth reading.
  *
- * A Rift readout URL is a capability. `/r/<token>` is unguessable on purpose —
- * that is the whole security model for a document somebody can share — and a
+ * A Rift readout URL is a capability. `/r/<token>` is unguessable on purpose:
+ * that is the whole security model for a document somebody can share, and a
  * URL that is a secret must not travel in a Referer header. The browser
  * default (`strict-origin-when-cross-origin`) sends only the origin to another
  * site, so the token does not leak today; but it sends the FULL URL to any
  * same-origin destination, and it is one policy change or one embedded
  * third-party widget away from sending the token somewhere. `no-referrer` on
- * the pages that carry a person's situation costs nothing — there is no
- * analytics here that wants a referrer — and removes the question.
+ * the pages that carry a person's situation costs nothing: there is no
+ * analytics here that wants a referrer, and removes the question.
  */
 const SECURITY_HEADERS = [
   /* Trust the declared type. Without this a browser may sniff an uploaded or

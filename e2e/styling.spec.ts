@@ -11,7 +11,7 @@ import { test, expect } from "@playwright/test";
  * correct markup, the correct class and the correct aria-pressed.
  *
  * Neither threw. Neither failed a test. Both rendered a 200 and looked, to
- * anything that reads the DOM, completely correct — the classes were all
+ * anything that reads the DOM, completely correct: the classes were all
  * there. The only way to see it is to ask the browser what it actually
  * computed.
  */
@@ -41,7 +41,7 @@ test.describe("every visual class actually paints", () => {
           const cs = getComputedStyle(el);
 
           /* A chip or a button is a SHAPE. If it has no fill, no border and no
-             rounding, none of its classes reached it — which is exactly what
+             rounding, none of its classes reached it, which is exactly what
              both incidents looked like. `.btn-g` and `.chip-out` are
              deliberately transparent, and they still carry their radius and
              their padding, so this catches the stripped case without flagging

@@ -104,7 +104,7 @@ describe("nextForClient", () => {
   });
 
   it("does not report a day count it does not have", () => {
-    /* `days: 0` would render as "today" — a deadline nobody set. */
+    /* `days: 0` would render as "today": a deadline nobody set. */
     expect(nextForClient([item()], TODAY)?.days).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 -- ============================================================================
 -- The mortgage rate assumption, given a source and a date.
 --
--- BUYER_DEFAULTS.ratePct was 6.5 — a literal with no provenance that every
+-- BUYER_DEFAULTS.ratePct was 6.5: a literal with no provenance that every
 -- monthly figure, every gap and every timeline in the product depends on. A
 -- rate that is silently four months old is precisely the "wrong number rather
 -- than an error" failure this codebase exists to prevent: nothing breaks, the

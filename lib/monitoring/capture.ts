@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 
-/** Capture operational failures (sync, PDF, etc.) with context — never silent. */
+/** Capture operational failures (sync, PDF, etc.) with context: never silent. */
 export function captureOpError(
   error: unknown,
   context: {

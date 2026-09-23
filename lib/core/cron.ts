@@ -6,7 +6,7 @@
  * they exported `POST` only, and **Vercel's scheduler invokes a cron path with
  * GET**. Every scheduled run since the crons were added returned 405 and did
  * nothing. Nothing errored, nothing was logged, and `/api/health` went on
- * reporting `scheduler: configured` — because the secret was configured. The
+ * reporting `scheduler: configured`: because the secret was configured. The
  * job that sends the nurture sequence had never sent one, and the job that
  * enforces the retention promise printed at the bottom of every readout had
  * never deleted a row.
@@ -37,7 +37,7 @@ export type CronVerdict =
  */
 export function authoriseCron(authorization: string | null, secret: string | undefined): CronVerdict {
   if (!secret) {
-    return { ok: false, status: 503, error: "CRON_SECRET is not set — refusing to run" };
+    return { ok: false, status: 503, error: "CRON_SECRET is not set, refusing to run" };
   }
   /* Constant-time comparison is not worth reaching for here: the comparand is
      a whole header, the endpoint is rate-limited by the platform, and a timing

@@ -38,7 +38,7 @@ const WHEN = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("e
  *
  * What it shows is deliberately small: what has been agreed, who owes it, and
  * by when. Not a dashboard. A person checks this between other things, on a
- * phone, to answer one question — is anything waiting on me?
+ * phone, to answer one question: is anything waiting on me?
  *
  * No account, like everything else here. The token is the authorisation.
  *
@@ -54,11 +54,11 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
   /* A broken query is not a revoked link.
      
      Telling somebody "this plan does not exist" when the database hiccupped
-     says something false about their agent — and they have no way to tell the
+     says something false about their agent, and they have no way to tell the
      difference. Same distinction the shared readout makes, for the same
      reason. */
   /* `skipped` is not `null`, and the difference is the whole point of the
-     union. With no database configured the read is skipped — and falling
+     union. With no database configured the read is skipped, and falling
      through to "this link is no longer open" would tell somebody their agent
      revoked their plan when in fact nothing was ever asked. */
   if (!read.ok || "skipped" in read) {
@@ -66,7 +66,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
       <Shell>
         <h1 className="serif" style={{ fontSize: 28 }}>We cannot open this right now.</h1>
         <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
-          Something on our side is not answering. This does not mean your link has expired —
+          Something on our side is not answering. This does not mean your link has expired;
           try again in a few minutes, and if it keeps happening, tell your agent.
         </p>
       </Shell>
@@ -79,7 +79,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
         <h1 className="serif" style={{ fontSize: 28 }}>This link is no longer open.</h1>
         <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
           Plans can be closed, and links get copied further than anyone intended, so they do
-          not last forever. Ask your agent for a new one — nothing has been lost.
+          not last forever. Ask your agent for a new one. Nothing has been lost.
         </p>
       </Shell>
     );
@@ -92,7 +92,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
   
      `releasedFor` puts `.not("released_at", "is", null)` in the query rather
      than filtering here, so a room he is half way through assembling is never
-     fetched at all — the same shape as readPlanByToken's narrow column list,
+     fetched at all: the same shape as readPlanByToken's narrow column list,
      and for the same reason: a filter applied after the data arrives is one
      refactor away from not being applied. */
   const agentId = await currentAgentId();
@@ -106,14 +106,14 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
      customer can answer immediately. This page answered "where am I" and
      "where do I ask"; these answer "what do I do next", "what is somebody
      else doing", and "what is approaching". All derived from the plan items
-     that already exist — there is no appointments table and no documents
+     that already exist: there is no appointments table and no documents
      table, and a heading that is permanently empty is worse than no heading. */
   const now = new Date();
   const next = nextForClient(plan.items, now);
   const finishedLately = notOnYou(plan.items, now).recentlyDone;
 
   /* Ranked here, on the server, like every other figure in this product. The
-     browser receives numbers, never the arithmetic — this page is reachable by
+     browser receives numbers, never the arithmetic: this page is reachable by
      a link somebody forwarded, and a net computed in the browser from data in
      the page is a net anybody can edit. */
   const nets = plan.sellerCosts ? rankOffers(plan.offers, plan.sellerCosts) : [];
@@ -146,7 +146,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
 
       {/* Question two: the one thing.
 
-          One, not a list — the plan below already shows everything. Somebody
+          One, not a list: the plan below already shows everything. Somebody
           opening this on a phone between other things is asking "is anything
           waiting on me", and five bullet points is a worse answer to that than
           one sentence. Absent entirely when nothing is owed by them, because a
@@ -167,13 +167,13 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           <div className="t-md w6" style={{ marginTop: 8, lineHeight: 1.5 }}>{next.item.title}</div>
           <div className="t-xs c-3" style={{ marginTop: 5 }}>
             {next.days === null
-              ? "No date set — worth asking about when you next speak."
+              ? "No date set. Worth asking about when you next speak."
               : `Due ${WHEN(next.item.dueOn!)} · ${whenPhrase(next.days)}`}
           </div>
         </div>
       ) : s.total > 0 ? (
         /* No heading here. `headline()` above has already said "Nothing is
-           waiting on you right now" — a card repeating it verbatim two lines
+           waiting on you right now": a card repeating it verbatim two lines
            later is how a page reads as generated. What is added is the part
            the headline does not say: where the work actually is. */
         <div className="card p-4" style={{ marginTop: 22 }}>
@@ -186,7 +186,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
 
       {/* Decision Rooms.
       
-          docs/benchmark.md scores 4.3 at 0 in production — absent, not weak.
+          docs/benchmark.md scores 4.3 at 0 in production: absent, not weak.
           High on the page and above the plan, because a decision waiting on
           somebody outranks a checklist: this is the thing that stalls, and the
           criterion asks for rooms "at the moments where clients actually
@@ -209,7 +209,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
       {/* Question three, the half the plan cannot answer.
 
           The Done bucket above holds everything ever completed, in no relation
-          to now — something finished in March sits beside something finished on
+          to now: something finished in March sits beside something finished on
           Tuesday, and neither tells the reader whether anything is currently
           happening. This does, and it ages out at three weeks so it cannot go
           on implying momentum that stopped months ago.
@@ -246,7 +246,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           A "Coming up" section listing the next five dated items was built here
           first and thrown away. The plan below is ALREADY grouped into "Past its
           date", "This week" and "The next two weeks", so the panel restated every
-          one of them a second time — and the next-step card made the first of
+          one of them a second time, and the next-step card made the first of
           them a third. Three copies of "Gather two months of pay stubs" on one
           phone screen. The fix is not a better panel, it is a relative date on
           each row, so how soon a thing is reads at a glance with no second list
@@ -255,8 +255,8 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           The same reasoning removed the open half of "what is happening at our
           end". Every open item already names its owner in the list; somebody
           scanning it reads "Kaleb · Sep 22" and has their answer. What the list
-          could NOT say is what has been finished LATELY — the Done bucket holds
-          everything ever completed, in no relation to now — so that half
+          could NOT say is what has been finished LATELY: the Done bucket holds
+          everything ever completed, in no relation to now, so that half
           survives, below the plan, where reassurance belongs rather than
           competing with the thing they have to do. */}
 
@@ -313,7 +313,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                                 "Sep 24" requires the reader to work out what
                                 today is and subtract. A panel above the plan
                                 that did the subtraction for them was tried and
-                                removed — it restated the whole list — so the
+                                removed (it restated the whole list) so the
                                 answer belongs on the row it is about. */}
                             {item.dueOn && !item.doneAt
                               ? ` · ${WHEN(item.dueOn)} · ${whenPhrase(daysUntil(item.dueOn, now))}`
@@ -340,7 +340,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           reaches them. A seller comparing PDFs sees four headline numbers;
           the highest of them is often not the best one, and that sentence is
           the single most useful thing this product can say at this point in a
-          transaction — so it is computed rather than left to be noticed. */}
+          transaction, so it is computed rather than left to be noticed. */}
       {plan.offers.length > 0 ? (
         <section style={{ marginTop: 32 }}>
           <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
@@ -348,7 +348,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           </div>
           <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
             {plan.sellerCosts
-              ? "Ordered by what would actually reach you after everything comes out — not by the number on the front page."
+              ? "Ordered by what would actually reach you after everything comes out, not by the number on the front page."
               : `These are the offers ${agentFirst} has shared with you. What each one leaves you depends on your payoff, which is not recorded here yet.`}
           </p>
 
@@ -364,7 +364,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           ) : null}
 
           {/* The agent's take. Only ever what he approved, and only while it
-              was approved for exactly these offers — readPlanByToken drops it
+              was approved for exactly these offers: readPlanByToken drops it
               otherwise, so a take written before an offer arrived never sits
               above a table it does not describe. */}
           {plan.take ? (
@@ -410,8 +410,8 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                       ) : null}
                       {/* Shown to them, not only to the agent.
 
-                          These are facts about the paperwork — "no preapproval
-                          letter attached" — and they are material to the person
+                          These are facts about the paperwork: "no preapproval
+                          letter attached": and they are material to the person
                           actually deciding. Keeping them on the agent's screen
                           alone would be withholding something from the one
                           reader who is going to live with the answer, which is
@@ -482,7 +482,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6, maxWidth: 560 }}>
             These figures are estimates from the terms as written. Your payoff moves daily with
             interest and is only exact on a lender&rsquo;s statement, and a closing attorney&rsquo;s
-            settlement statement is the authority on the rest. The figures are not a recommendation —
+            settlement statement is the authority on the rest. The figures are not a recommendation;
             price is one thing an offer is, and how likely it is to close is another
             {plan.take ? `; the only recommendation on this page is ${agentFirst}'s own` : ""}.
           </p>
@@ -494,18 +494,18 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
           It was already here and it was already honest about the missing reply
           box. What it did not do was name the person, say how quickly they
           answer, or distinguish "this is wrong" from "I do not understand this"
-          — three different reasons to make contact, and a block that covers
+         : three different reasons to make contact, and a block that covers
           only the first is one most people will not use. */}
       <div className="card p-4" style={{ marginTop: 26 }}>
         <div className="t-sm w6">If you need something</div>
         <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
           Anything on this page that is wrong, out of date, or that you would just
-          rather have explained — that is {agentFirst}, and it is a normal thing to
+          rather have explained: that is {agentFirst}, and it is a normal thing to
           ask for. There is no reply box here on purpose: a message typed into a page
           nobody is watching is worse than no message at all.
         </p>
         {/* The booking link, and nothing else. `currentAgentPublic` returns
-            the name and deliberately not the address — it is the read every
+            the name and deliberately not the address: it is the read every
             public page uses, and widening it to hang a mailto here would put
             the agent's inbox on surfaces that never asked for it. */}
         <Link href="/book" className="btn btn-s btn-sm" style={{ marginTop: 12 }}>
@@ -515,7 +515,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
 
       <p className="t-xs c-4" style={{ marginTop: 22, lineHeight: 1.6, maxWidth: 560 }}>
         This link is private. Anyone who has it can read this page, so send it on only to
-        people you want reading your plan — and ask {agentFirst} to close it if it ever goes
+        people you want reading your plan, and ask {agentFirst} to close it if it ever goes
         further than you meant.
       </p>
     </Shell>

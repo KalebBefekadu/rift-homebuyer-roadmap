@@ -22,7 +22,7 @@ const SIDES = [
  *
  * The state lives in the URL rather than in the component, for one reason that
  * matters: the agent is on the phone. He types a name, opens the record, and
- * presses back — and if the search were component state, back would return him
+ * presses back, and if the search were component state, back would return him
  * to an empty box and he would type it again while somebody waits.
  *
  * Typing is debounced and the navigation replaces rather than pushes, so the

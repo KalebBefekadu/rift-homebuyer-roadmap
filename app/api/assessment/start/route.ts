@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (!r.ok) {
       captureOpError(new Error(r.error), { op: "assessment.start", extra: { side } });
       /* 200 with no id. The assessment must run whether or not it is being
-         recorded — losing a visitor because a database was unreachable would
+         recorded: losing a visitor because a database was unreachable would
          be the most expensive possible way to handle an outage. */
       return NextResponse.json({ ok: false, error: r.error });
     }

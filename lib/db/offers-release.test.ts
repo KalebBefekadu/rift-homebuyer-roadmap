@@ -6,7 +6,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  *
  * An offer arrives while the agent is driving. Presenting it to the seller
  * unreviewed is how somebody replies to a number before anybody has read the
- * terms under it — so nothing reaches them until he releases it, and that is
+ * terms under it, so nothing reaches them until he releases it, and that is
  * enforced in the QUERY rather than afterwards.
  */
 
@@ -26,7 +26,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 describe("what the seller can read", () => {
   it("filters on released in the query, not after it", async () => {
     /* A filter applied after the read is one refactor away from being dropped,
-       and nothing would look wrong — the page would simply start showing
+       and nothing would look wrong: the page would simply start showing
        offers nobody had reviewed. */
     build();
     await mod.releasedOffersFor("l1");
@@ -114,7 +114,7 @@ describe("money across the boundary", () => {
 describe("the seller's costs", () => {
   it("returns null unless BOTH figures are recorded", async () => {
     /* A net computed against an assumed payoff of zero ranks the offers
-       correctly and reports a figure out by the size of somebody's mortgage —
+       correctly and reports a figure out by the size of somebody's mortgage:
        and it reads entirely reasonable. */
     for (const row of [
       { payoff_cents: null, commission_pct: 5 },

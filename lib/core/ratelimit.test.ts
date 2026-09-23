@@ -33,7 +33,7 @@ describe("rate limiting", () => {
 
   it("cannot grow without bound", () => {
     /* A flood of unique keys must not become the memory leak that takes the
-       process down — that would hand an attacker what the limiter prevents. */
+       process down: that would hand an attacker what the limiter prevents. */
     const limit = { max: 1, windowMs: 1_000 };
     for (let i = 0; i < 12_000; i++) check(`k${i}`, limit, i * 2);
     expect(check("after", limit, 100_000).allowed).toBe(true);

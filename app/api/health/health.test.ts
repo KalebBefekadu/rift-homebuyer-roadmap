@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * The health check, under the conditions a failure drill found it lying in.
  *
  * With the data API stopped underneath a running server it returned
- * `"ok": true` — database "configured" (the env var existed), agent "ready"
+ * `"ok": true`: database "configured" (the env var existed), agent "ready"
  * (an id cached in memory), retention "clear" (cached from before). And once
  * it learned to ask Brevo about email, it asked from every cold serverless
  * instance, each of which made Brevo email the account owner a security alert.

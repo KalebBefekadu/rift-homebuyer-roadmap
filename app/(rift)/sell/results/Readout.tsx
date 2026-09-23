@@ -101,7 +101,7 @@ export function Readout({
         }),
       }).then((x) => x.json());
 
-      /* `stored: false` means nothing was kept on our side — never "noted". */
+      /* `stored: false` means nothing was kept on our side: never "noted". */
       if (res?.error || res?.stored === false) return "error";
       track({ name: "email_capture", side: "sell", meta: { delivered: res?.delivery === "sent" } });
       setSaved(true);
@@ -201,7 +201,7 @@ export function Readout({
               <div className="t-sm w6">At this price, selling costs you money.</div>
               <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
                 The payoff and the cost of selling come to more than the price. That is worth
-                knowing now rather than three weeks before closing — and it is a solvable
+                knowing now rather than three weeks before closing, and it is a solvable
                 problem more often than it looks. It is the first thing to talk through.
               </p>
             </div>
@@ -248,7 +248,7 @@ export function Readout({
                 A repair table that overflows sideways on a phone is reachable
                 with a finger and was reachable with nothing else: no tabindex
                 meant a keyboard could not scroll it, so the "Typical cost" and
-                "Verdict" columns — the two the section exists for — were
+                "Verdict" columns (the two the section exists for) were
                 simply unavailable to anybody not using a pointer. The role and
                 label are what stop a focus stop appearing in the tab order
                 with nothing to announce it. */}

@@ -2,7 +2,7 @@
    fabricates database answers, and a bundler that could reach it from a client
    component could reach the modules it stands in for. layers.test.ts asserts
    the property with no exceptions, which is the only way a guard like that
-   stays worth anything. Under vitest the import resolves to a shim — see
+   stays worth anything. Under vitest the import resolves to a shim: see
    vitest.config.ts. */
 import "server-only";
 
@@ -13,14 +13,14 @@ import "server-only";
  * database. That is the contract, and it is not the behaviour: which rows a
  * function asks for, in what order it writes them, and what it does with a
  * nonsense answer are all untested by it. Those are where the defects have
- * been — `forget()` went on reporting success while leaving the person's name,
+ * been: `forget()` went on reporting success while leaving the person's name,
  * email and phone in place, because a migration changed a foreign key under it
  * and the docblock still described the old behaviour.
  *
  * This is deliberately NOT a database. It does not filter, sort or join; it
  * records every call and returns whatever the test told it to return. What it
- * tests is the caller's reasoning — the order of operations, which table is
- * touched with which filters, whether a failure stops the sequence — not
+ * tests is the caller's reasoning: the order of operations, which table is
+ * touched with which filters, whether a failure stops the sequence: not
  * Postgres. The real schema and its constraints are tested against real
  * Postgres in schema.test.ts and flow.test.ts, which is the right layer for
  * that and the wrong layer for this.
@@ -47,14 +47,14 @@ export interface Call {
 
 type Answer = {
   data?: unknown;
-  /* `code` matters: claimStep distinguishes a unique violation (23505 — the
+  /* `code` matters: claimStep distinguishes a unique violation (23505: the
      constraint doing its job) from any other failure, and that branch is the
      difference between skipping a step and reporting an incident. */
   error?: { message: string; code?: string } | null;
   count?: number;
 };
 
-/** What a caller actually receives — count is always present, as PostgREST has it. */
+/** What a caller actually receives: count is always present, as PostgREST has it. */
 type Settled = { data: unknown; error: { message: string; code?: string } | null; count: number | null };
 
 /**
@@ -93,7 +93,7 @@ export function fakeDb(answers: Answers = {}): Fake {
     const call: Call = { table, verb: "select", filters: [] };
 
     /* PostgREST's builder is a thenable, not a promise. Every method returns
-       `this`, and awaiting it runs the query — which is why lib/db wraps each
+       `this`, and awaiting it runs the query: which is why lib/db wraps each
        one in Promise.resolve before racing it against a deadline. */
     const self: Record<string, unknown> = {
       select(cols?: string, opts?: { count?: string; head?: boolean }) {

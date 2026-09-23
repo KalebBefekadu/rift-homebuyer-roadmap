@@ -7,19 +7,19 @@ import { sessionId } from "@/lib/rift/session";
 import { CONTACT_EMAIL } from "@/lib/core/privacy";
 
 /**
- * "Delete all of it" — the one that actually does.
+ * "Delete all of it": the one that actually does.
  *
  * This lived inside the buyer readout, and the seller readout had a different
  * one: `PrivacyPanel`, which called `forgetMe()` from lib/prototype/privacy.
  * That function clears four localStorage keys and returns true. It does not
  * call /api/forget, so the assessment, the lead, the email address and the
- * consent record all stayed exactly where they were — and the panel then said
+ * consent record all stayed exactly where they were, and the panel then said
  * "Deleted. Nothing about this visit is left on this device."
  *
  * Which was true. That is what made it the worst version of this product's
  * recurring bug: the sentence was accurate, the button worked, nothing threw,
  * and a seller who asked to be forgotten was not forgotten. It was also
- * DISABLED whenever localStorage happened to be empty — so the people most
+ * DISABLED whenever localStorage happened to be empty, so the people most
  * likely to want this, the ones who had given an email address and had a real
  * server-side record, were the ones shown a greyed-out button.
  *
@@ -40,7 +40,7 @@ export interface ForgetLabels {
    * The request never reached us. Optional because the Amharic for it is owed,
    * not written: a machine-guessed sentence about whether somebody's data was
    * deleted is the worst possible place for a mistranslation. Callers without
-   * it fall back to the English — a rare failure state in the wrong script is
+   * it fall back to the English: a rare failure state in the wrong script is
    * the lesser harm.
    */
   failed?: string;
@@ -48,7 +48,7 @@ export interface ForgetLabels {
 
 /* English, and the default rather than the only option. The abroad readout
    renders this under an Amharic paragraph and passes its own, out of the same
-   dictionary the rest of that page reads from — an English button below
+   dictionary the rest of that page reads from: an English button below
    Amharic prose is the half-translated seam that page exists to remove. */
 const EN: ForgetLabels = {
   blurb: "Changed your mind? Remove everything now rather than waiting for the schedule.",
@@ -60,13 +60,13 @@ const EN: ForgetLabels = {
   partial:
     "Cleared from this device. There was nothing stored on our side to remove.",
   /* This was folded into `partial` as "or the request did not reach us, in
-     which case the retention schedule removes it on its own" — which, for
+     which case the retention schedule removes it on its own": which, for
      somebody who had left an email address, meant up to eighteen months, said
      in a sentence that read like reassurance. Found by a failure drill: with
      the database unreachable, the one control whose outcome matters most
      implied the deletion was taken care of. It was not. */
   failed:
-    "Cleared from this device \u2014 but the request did not reach our side, so nothing " +
+    "Cleared from this device, but the request did not reach our side, so nothing " +
     "stored there has been deleted yet. Try again in a minute" +
     (CONTACT_EMAIL ? `, or write to ${CONTACT_EMAIL} and it will be done by hand.` : "."),
 };
@@ -89,7 +89,7 @@ export function ForgetMe({ side, labels, style }: {
       window.localStorage.removeItem("rift.attr");
       window.localStorage.removeItem("rift.events");
       window.sessionStorage.removeItem("rift.sid");
-    } catch { /* storage already unavailable — nothing to clear */ }
+    } catch { /* storage already unavailable: nothing to clear */ }
 
     try {
       const r = await fetch("/api/forget", {
@@ -154,7 +154,7 @@ export function ForgetMe({ side, labels, style }: {
         )}
         {/* Never disabled. The previous seller-side version switched itself off
             when localStorage was empty, which is exactly the state of somebody
-            on a second device — or anybody whose record is only on our side. */}
+            on a second device, or anybody whose record is only on our side. */}
         <button className="btn btn-g btn-sm" onClick={forget} disabled={state === "working"}>
           <Ico.x size={12} /><span style={style}>{state === "working" ? l.working : l.cta}</span>
         </button>

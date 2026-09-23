@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  *
  * Deliberately reports readiness rather than only liveness. A process that is
  * running but cannot reach its database, or has no agent row, is up and
- * useless — and every write in the product degrades silently and honestly in
+ * useless, and every write in the product degrades silently and honestly in
  * that state, which is correct behaviour and also means nobody finds out.
  * This is where somebody finds out.
  *
@@ -22,14 +22,14 @@ export const dynamic = "force-dynamic";
  * to be.
  *
  * 200 when it can do its job, 503 when it cannot. Anything degraded but
- * functional stays 200 with a note — paging somebody at 3am because SMS is not
+ * functional stays 200 with a note: paging somebody at 3am because SMS is not
  * wired yet is how alerts get muted.
  */
 /**
  * The retention answer, cached.
  *
- * This endpoint is public and deliberately unauthenticated — a monitor needs
- * it to be — and the outcome check below costs four queries. Running them on
+ * This endpoint is public and deliberately unauthenticated: a monitor needs
+ * it to be, and the outcome check below costs four queries. Running them on
  * every request turns a health check into a four-times amplifier for anyone
  * with a loop, which is a poor trade for a question whose answer changes at
  * most once a day.
@@ -47,7 +47,7 @@ async function retentionCheck(): Promise<string> {
   const late = await overdue();
   const value = !late.ok || "skipped" in late
     ? "unknown"
-    : late.data.overdue ? "overdue — records past their deletion date" : "clear";
+    : late.data.overdue ? "overdue: records past their deletion date" : "clear";
 
   /* A failed lookup is not cached. "Unknown" because the database blipped
      should clear on the next request rather than persist for five minutes. */
@@ -60,7 +60,7 @@ async function retentionCheck(): Promise<string> {
  *
  * This reported "configured" the moment two environment variables existed.
  * Brevo refuses to send from an address it has not verified, and this account
- * has IP allowlisting on — a request from an address it does not recognise
+ * has IP allowlisting on: a request from an address it does not recognise
  * gets a 401 whatever the key. Serverless functions do not have fixed
  * addresses. So "configured" could be permanently true of an integration that
  * had never delivered, and would never deliver: the scheduler bug again, in a
@@ -68,7 +68,7 @@ async function retentionCheck(): Promise<string> {
  *
  * Cached for ten minutes. This endpoint is public, and a health check that
  * spends the sender's API quota on every monitor ping is its own outage.
- * Only a status word leaves this function — never the key, never an address.
+ * Only a status word leaves this function: never the key, never an address.
  */
 const EMAIL_TTL_MS = 10 * 60_000;
 let emailCache: { at: number; value: string } | null = null;
@@ -82,13 +82,13 @@ async function emailCheck(deep: boolean): Promise<string> {
   /* Only when asked by somebody holding the cron secret.
 
      The first version probed Brevo on any public request. Brevo's IP review
-     emails the account owner — "someone tried to use your organization account
-     from an IP address you have never used" — for every new address that
+     emails the account owner: "someone tried to use your organization account
+     from an IP address you have never used": for every new address that
      calls, and serverless functions run from a pool of changing addresses. So
      a public health endpoint that asked Brevo anything turned every cold
      instance into a security alert in Kaleb's inbox. A check that makes its
      owner wonder whether he has been breached is not a health check. */
-  if (!deep) return "set — not verified (deep check requires the cron secret)";
+  if (!deep) return "set, not verified (deep check requires the cron secret)";
 
   const now = Date.now();
   if (emailCache && now - emailCache.at < EMAIL_TTL_MS) return emailCache.value;
@@ -101,7 +101,7 @@ async function emailCheck(deep: boolean): Promise<string> {
     });
     const body = await res.text();
     if (res.status === 401 && /unrecognised IP/i.test(body)) {
-      value = "blocked — Brevo's IP allowlist refuses this server";
+      value = "blocked: Brevo's IP allowlist refuses this server";
     } else if (!res.ok) {
       value = `refused by Brevo (${res.status})`;
     } else {
@@ -112,7 +112,7 @@ async function emailCheck(deep: boolean): Promise<string> {
     }
   } catch {
     /* A timeout is not a verdict. Uncached, so it clears on the next ping. */
-    return "unknown — Brevo did not answer";
+    return "unknown: Brevo did not answer";
   }
 
   emailCache = { at: now, value };
@@ -122,7 +122,7 @@ async function emailCheck(deep: boolean): Promise<string> {
 /**
  * Whether the database answers, asked of the database.
  *
- * This said "configured" whenever SUPABASE_URL was set — and `agent: "ready"`
+ * This said "configured" whenever SUPABASE_URL was set: and `agent: "ready"`
  * comes from an id cached in memory the first time it was read. A failure
  * drill stopped the data API underneath a running server and this endpoint
  * went on returning `"ok": true`, database configured, agent ready, retention
@@ -150,15 +150,15 @@ export async function GET(req: Request) {
 
   const checks: Record<string, string> = {
     database: !db ? "missing" : reachable ? "reachable" : "unreachable",
-    agent: agent ? "ready" : !db ? "unknown" : reachable ? "not bootstrapped" : "unknown — database unreachable",
+    agent: agent ? "ready" : !db ? "unknown" : reachable ? "not bootstrapped" : "unknown: database unreachable",
     email: await emailCheck(deep),
     calendar: process.env.CAL_API_KEY && process.env.CAL_EVENT_TYPE_ID ? "configured" : "missing",
     /* "Configured" is not "working", and conflating them cost this product
        every scheduled run it ever had. The secret was set, this said
        "configured", and both cron routes were answering the scheduler with a
        405 because they only exported POST. See lib/core/cron.ts. What is
-       reported below is the OUTCOME — whether anything is still here that the
-       retention promise says should already be gone — which goes red however
+       reported below is the OUTCOME, whether anything is still here that the
+       retention promise says should already be gone, which goes red however
        the job stops, including in a way nobody predicted. */
     scheduler: process.env.CRON_SECRET ? "configured" : "missing",
     monitoring: process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN ? "configured" : "missing",
@@ -176,7 +176,7 @@ export async function GET(req: Request) {
   }
 
   /* Only the two that stop the product doing its job are fatal. The rest are
-     features that degrade honestly and say so on screen — including an overdue
+     features that degrade honestly and say so on screen: including an overdue
      sweep, which is a promise being broken rather than a service being down,
      and belongs in somebody's morning rather than in their night. */
   const ready = Boolean(db && agent);

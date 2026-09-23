@@ -16,8 +16,8 @@ import type { Submission } from "@/lib/core/offer-intake";
  * attached and nothing to talk about.
  *
  * Neither failure is allowed to reach the submitter as an error. They have
- * already been given the reading of their own offer — that happened in the
- * browser, from pure arithmetic, before any of this — so the worst honest
+ * already been given the reading of their own offer: that happened in the
+ * browser, from pure arithmetic, before any of this, so the worst honest
  * outcome here is "we could not pass this on", which is what they are told.
  */
 
@@ -30,9 +30,9 @@ export interface StoredOffer {
 
 export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?: string; userAgent?: string } = {}): Promise<DbResult<StoredOffer>> {
   const db = serviceClient();
-  if (!db) return skipped("no database configured — nothing was passed on");
+  if (!db) return skipped("no database configured, so nothing was passed on");
   const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet — nothing was passed on");
+  if (!agent_id) return skipped("no agent row exists yet, so nothing was passed on");
 
   try {
     const offer = await boundedWrite(
@@ -73,7 +73,7 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
      * Side is "buy" whichever box they ticked. A buyer's agent submitting on
      * behalf of a client is not themselves buying, but what Kaleb needs from
      * this row is a person on the buying side of a transaction he is involved
-     * in — and the alternative, a third side the pipeline does not have, would
+     * in, and the alternative, a third side the pipeline does not have, would
      * put them in a stage list that has no stages for them.
      */
     const lead = await captureLead({
@@ -84,7 +84,7 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
       email: s.email,
       /* The phone is deliberately dropped. A number given to deliver an offer
          is not written consent to be called about anything else, and
-         captureLead stores no number without one — holding a number you may
+         captureLead stores no number without one: holding a number you may
          not lawfully ring is pure liability. */
       lead: {
         side: "buy",
@@ -124,7 +124,7 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
  * Offers that arrived through the form, newest first.
  *
  * Read separately from `offersFor(leadId)` because these have no seller lead
- * to hang off — that is what makes them inbound. The Studio queue shows them
+ * to hang off: that is what makes them inbound. The Studio queue shows them
  * so a submission cannot sit in a table nobody reads, which is the only
  * failure mode that would make the whole feature worse than not having it:
  * an offer somebody believes was delivered, on a document with a deadline.

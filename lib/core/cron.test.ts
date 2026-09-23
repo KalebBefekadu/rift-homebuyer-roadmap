@@ -50,7 +50,7 @@ describe("the scheduled routes answer the scheduler", () => {
 
   it("schedules the three jobs the product cannot run without", () => {
     /* Containment, not equality. The loop below is what actually protects the
-       product, and it covers whatever is scheduled — so a fourth cron must not
+       product, and it covers whatever is scheduled, so a fourth cron must not
        have to edit this line to be allowed to exist. What is asserted here is
        that these three have not been quietly dropped. */
     const paths = scheduled.map((c) => c.path);
@@ -68,7 +68,7 @@ describe("the scheduled routes answer the scheduler", () => {
 
     it(`${path} is behind the shared cron guard`, () => {
       const src = readFileSync(`app${path}/route.ts`, "utf8");
-      expect(src, `${path} must call cronRefusal — a scheduled job open to the public sends email and deletes rows`)
+      expect(src, `${path} must call cronRefusal: a scheduled job open to the public sends email and deletes rows`)
         .toMatch(/cronRefusal\(req\)/);
     });
   }

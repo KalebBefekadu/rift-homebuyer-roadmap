@@ -107,7 +107,7 @@ export default function ClientDetail({ params }: { params: Promise<{ id: string 
                   ["Buyer agency agreement", "Prepared, not sent", "Kaleb"],
                   ["Assessment summary", "13 Aug", "Rift"],
                   ["Lender question sheet", "Shared with Brookhaven", "Rift"],
-                  ["Meeting recap — 2 Sep", "Awaiting your review", "Rift"],
+                  ["Meeting recap, 2 Sep", "Awaiting your review", "Rift"],
                 ].map(([n, m, w]) => (
                   <div key={n} className="between link-row" style={{ padding: "12px 16px", borderBottom: "1px solid var(--line-3)", gap: 12 }}>
                     <div className="row gap-3 grow">

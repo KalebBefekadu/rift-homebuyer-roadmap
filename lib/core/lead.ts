@@ -1,5 +1,5 @@
 /**
- * Rift prototype — lead intelligence.
+ * Rift prototype: lead intelligence.
  *
  * The constraint on a solo agent is hours, not leads. Every inbound person
  * looks equally urgent in an inbox, so the inbox is the wrong instrument.
@@ -22,7 +22,7 @@ export interface LeadInput {
   completion: number;
   /** Hours since last activity. */
   hoursSince: number;
-  /** Deal size in dollars — purchase price or estimated sale price. */
+  /** Deal size in dollars: purchase price or estimated sale price. */
   value: number;
   /** Months of saving before they can close. 0 = ready, null = unknown. */
   monthsToReady: number | null;
@@ -71,7 +71,7 @@ const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 export function scoreLead(l: LeadInput): LeadScore {
   const signals: Signal[] = [];
 
-  /* Timing — the strongest single predictor, and the only one they told us
+  /* Timing: the strongest single predictor, and the only one they told us
      in their own words rather than one we inferred. */
   const timingPts =
     l.timing.startsWith("In the next") ? 32
@@ -84,7 +84,7 @@ export function scoreLead(l: LeadInput): LeadScore {
     note: l.timing || "Not answered",
   });
 
-  /* Readiness — can they actually transact when they say they want to. */
+  /* Readiness: can they actually transact when they say they want to. */
   const readyPts =
     l.monthsToReady === null ? 4
     : l.monthsToReady === 0 ? 24
@@ -95,12 +95,12 @@ export function scoreLead(l: LeadInput): LeadScore {
     label: "Financial readiness",
     points: readyPts,
     note:
-      l.monthsToReady === null ? "No saving rate given — timeline unknown"
+      l.monthsToReady === null ? "No saving rate given, timeline unknown"
       : l.monthsToReady === 0 ? "Cash already covers closing"
       : `About ${l.monthsToReady} months from covering closing`,
   });
 
-  /* Engagement — how much of themselves they gave us. */
+  /* Engagement: how much of themselves they gave us. */
   const engPts = Math.round(l.completion * 18);
   signals.push({
     label: "Assessment depth",
@@ -108,7 +108,7 @@ export function scoreLead(l: LeadInput): LeadScore {
     note: l.completion >= 1 ? "Finished the whole assessment" : `Stopped at ${Math.round(l.completion * 100)}%`,
   });
 
-  /* Recency — intent decays fast and it decays steeply in the first day. */
+  /* Recency: intent decays fast and it decays steeply in the first day. */
   const recPts =
     l.hoursSince <= 1 ? 14
     : l.hoursSince <= 24 ? 10
@@ -124,19 +124,19 @@ export function scoreLead(l: LeadInput): LeadScore {
       : `Last active ${Math.round(l.hoursSince / 24)} days ago`,
   });
 
-  /* Reachability — an unreachable lead is not a lead, whatever it scores. */
+  /* Reachability: an unreachable lead is not a lead, whatever it scores. */
   signals.push({
     label: "Reachable",
     points: l.contactable ? 8 : -12,
-    note: l.contactable ? "Left a way to reach them" : "No contact details — nothing can be done here",
+    note: l.contactable ? "Left a way to reach them" : "No contact details, nothing can be done here",
   });
 
-  /* Co-decider — the person who did not answer the questions is usually the
+  /* Co-decider: the person who did not answer the questions is usually the
      one who stalls it. Knowing they exist is worth more than not knowing. */
   signals.push({
     label: "Second decision-maker",
     points: l.coBuyer ? 4 : 0,
-    note: l.coBuyer ? "Named — bring them in early" : "None named",
+    note: l.coBuyer ? "Named: bring them in early" : "None named",
   });
 
   const score = clamp(signals.reduce((a, s) => a + s.points, 0));
@@ -150,21 +150,21 @@ export function scoreLead(l: LeadInput): LeadScore {
 
   const headline =
     !l.contactable
-      ? "No way to reach them — the assessment is all we have"
+      ? "No way to reach them; the assessment is all we have"
     : l.hoursSince <= 1 && l.completion >= 1
       ? "Finished everything minutes ago. This is the window."
     : l.completion < 1 && l.hoursSince <= 24
-      ? `Dropped out ${Math.round(l.completion * 100)}% through, still warm — the drop-off point is the conversation`
+      ? `Dropped out ${Math.round(l.completion * 100)}% through, still warm. The drop-off point is the conversation`
     : l.monthsToReady === 0 && timingPts >= 22
       ? "Can transact now and says they want to. Nothing is in the way but a conversation."
     : l.monthsToReady !== null && l.monthsToReady > 12
-      ? "Real, but the money is the constraint — this is a nurture relationship, not a call"
+      ? "Real, but the money is the constraint. This is a nurture relationship, not a call"
     : timingPts <= 2
       ? "Exploring. Let the plan do the work and check back."
     : `${l.side === "buy" ? "Buyer" : "Seller"} on a ${l.timing.toLowerCase()} horizon with the numbers in reach`;
 
   const action =
-    !l.contactable ? "Nothing to do — waits for them to come back"
+    !l.contactable ? "Nothing to do. Waits for them to come back"
     : l.completion < 1 ? "Call about the exact question they stopped on"
     : band === "now" ? "Call today"
     : band === "soon" ? "Send the readout, then call"
@@ -184,14 +184,14 @@ export interface Lead extends LeadInput {
   initials: string;
   color: string;
   county: string;
-  /** First touch. Never overwritten by a later visit — see attribution.ts. */
+  /** First touch. Never overwritten by a later visit: see attribution.ts. */
   campaign: string;
   landing: string;
   /** Minutes until a human replied. null = nobody has. */
   humanRepliedMins: number | null;
   /** Funnel version they actually answered. Their readout is pinned to it. */
   funnelVersion: number;
-  /** Answers to the agent's own questions — never used in a calculation. */
+  /** Answers to the agent's own questions: never used in a calculation. */
   extras: { q: string; a: string }[];
   /** The specific thing that would open the conversation. */
   hook: string;
@@ -201,26 +201,26 @@ export const LEADS: Lead[] = [
   {
     id: "l1", funnelVersion: 3, campaign: "referral/priya-raman", landing: "/buy", humanRepliedMins: null, name: "Jordan Pike", initials: "JP", color: "#6b4a7a", county: "DeKalb",
     side: "buy", timing: "In the next 3 months", completion: 0.71, hoursSince: 0.4,
-    value: 310_000, monthsToReady: 4, coBuyer: true, contactable: true, source: "Referral — Priya Raman",
+    value: 310_000, monthsToReady: 4, coBuyer: true, contactable: true, source: "Referral: Priya Raman",
     extras: [{ q: "How did you hear about us?", a: "Priya, she closed with you last spring" }],
     hook: "Stopped on the savings question, 24 minutes ago, from a referral that already closed.",
   },
   {
     id: "l2", funnelVersion: 3, campaign: "dpa-help-aug", landing: "/buy/assistance", humanRepliedMins: null, name: "Alina Ferreira", initials: "AF", color: "#2f5480", county: "Gwinnett",
     side: "buy", timing: "In the next 3 months", completion: 1, hoursSince: 5,
-    value: 289_000, monthsToReady: 0, coBuyer: false, contactable: true, source: "Paid social — DPA campaign",
+    value: 289_000, monthsToReady: 0, coBuyer: false, contactable: true, source: "Paid social: DPA campaign",
     extras: [{ q: "Anything you're worried about?", a: "My lease ends in December and I can't extend it" }],
     hook: "Cash already covers closing and the lease ends in December. This is a deadline, not a preference.",
   },
   {
     id: "l3", funnelVersion: 2, campaign: "downsizing-workshop", landing: "/sell", humanRepliedMins: 46, name: "Ruth & Harold Vance", initials: "HV", color: "#3f6f5f", county: "Cobb",
     side: "sell", timing: "3 to 9 months", completion: 1, hoursSince: 19,
-    value: 468_000, monthsToReady: 0, coBuyer: true, contactable: true, source: "Workshop — downsizing",
+    value: 468_000, monthsToReady: 0, coBuyer: true, contactable: true, source: "Workshop: downsizing",
     extras: [{ q: "What matters most in this move?", a: "Staying close to the grandchildren" }],
     hook: "Finished everything, both decision-makers named, and an appeal window closing in 19 days.",
   },
   {
-    id: "l4", funnelVersion: 1, campaign: "—", landing: "/buy", humanRepliedMins: 180, name: "Marcus Deel", initials: "MD", color: "#8a4a2e", county: "Fulton",
+    id: "l4", funnelVersion: 1, campaign: "none", landing: "/buy", humanRepliedMins: 180, name: "Marcus Deel", initials: "MD", color: "#8a4a2e", county: "Fulton",
     side: "buy", timing: "9 to 18 months", completion: 1, hoursSince: 62,
     value: 425_000, monthsToReady: 14, coBuyer: false, contactable: true, source: "Organic search",
     extras: [],
@@ -229,14 +229,14 @@ export const LEADS: Lead[] = [
   {
     id: "l5", funnelVersion: 3, campaign: "assistance-broad-sep", landing: "/buy", humanRepliedMins: null, name: "Unknown visitor", initials: "??", color: "#8a8a8a", county: "Clayton",
     side: "buy", timing: "Just exploring", completion: 0.42, hoursSince: 8,
-    value: 240_000, monthsToReady: null, coBuyer: false, contactable: false, source: "Paid social — assistance ad",
+    value: 240_000, monthsToReady: null, coBuyer: false, contactable: false, source: "Paid social: assistance ad",
     extras: [],
     hook: "No contact details. Nothing to do but leave the door open.",
   },
   {
     id: "l6", funnelVersion: 2, campaign: "open-house-rowan", landing: "/buy", humanRepliedMins: 22, name: "Tomás Beltrán", initials: "TB", color: "#7a5c2e", county: "Henry",
     side: "buy", timing: "3 to 9 months", completion: 1, hoursSince: 30,
-    value: 265_000, monthsToReady: 7, coBuyer: true, contactable: true, source: "Open house — 412 Rowan",
+    value: 265_000, monthsToReady: 7, coBuyer: true, contactable: true, source: "Open house: 412 Rowan",
     extras: [{ q: "How did you hear about us?", a: "Walked into the open house on Rowan" }],
     hook: "Gwinnett funding closed under him last week and we told him. He is owed a follow-up.",
   },
@@ -253,7 +253,7 @@ export const ranked = () =>
 /**
  * The response-time literature is unusually consistent: qualification rates
  * fall off a cliff between five minutes and thirty, and keep falling. For a
- * solo agent that is unwinnable by effort alone — he is at a showing, or asleep.
+ * solo agent that is unwinnable by effort alone: he is at a showing, or asleep.
  *
  * Which is why the automated first response is the readout itself. The person
  * gets everything the moment they finish, with no human in the path. The human
@@ -276,7 +276,7 @@ export interface Sla {
  * The inputs the clock actually needs.
  *
  * Named separately from `Lead` because Studio was passing a hand-built object
- * cast to `never` to satisfy the compiler — and that cast hid a missing
+ * cast to `never` to satisfy the compiler: and that cast hid a missing
  * `contactable`, which made `!l.contactable` true for every lead and `breached`
  * permanently false. The speed-to-lead indicator counted zero breaches from the
  * day it shipped, which reads exactly like doing well.
@@ -302,7 +302,7 @@ export function sla(l: SlaInput, band: Band): Sla {
   return {
     valueDelivered,
     valueLabel: valueDelivered
-      ? "Full readout delivered instantly — no human was needed"
+      ? "Full readout delivered instantly; no human was needed"
       : `Stopped at ${Math.round(l.completion * 100)}%, so nothing was delivered`,
     target,
     repliedMins: replied,

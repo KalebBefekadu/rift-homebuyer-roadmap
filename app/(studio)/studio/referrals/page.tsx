@@ -26,13 +26,13 @@ export const dynamic = "force-dynamic";
  * It does not send anything. Every moment here is a prompt and a record, and
  * the words are Kaleb's. A product that fired a templated "would you leave me
  * a review" at somebody three days after handing them their keys would be
- * spending a relationship he earned to save him a minute — and the one thing
+ * spending a relationship he earned to save him a minute, and the one thing
  * that makes any of these asks land is that they read like a person wrote
  * them, because a person did.
  *
  * It also never lists the moment whose ask is to say nothing. `under_contract`
  * is a real moment with a real trigger and its instruction is "Nothing. Say
- * congratulations and go quiet" — thirty days of anxiety is not a window to
+ * congratulations and go quiet": thirty days of anxiety is not a window to
  * ask for anything. Putting it in a queue of work would invite exactly the
  * contact it exists to prevent, so `actionable()` drops it and the client
  * record still shows it, so the restraint reads as deliberate.
@@ -63,7 +63,7 @@ export default async function ReferralsPage() {
         </h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 600, lineHeight: 1.6 }}>
           Eight moments where an ask is reasonable, and the reason each one is reasonable
-          then rather than a week either side. Nothing here sends anything — the words are
+          then rather than a week either side. Nothing here sends anything. The words are
           yours.
         </p>
 
@@ -75,7 +75,7 @@ export default async function ReferralsPage() {
                 <div className="t-sm w6">This did not load.</div>
                 <p className="t-xs c-3" style={{ marginTop: 4 }}>{failed}.</p>
                 <p className="t-xs c-4" style={{ marginTop: 6 }}>
-                  That is not the same as having nothing to do — we do not know either way.
+                  That is not the same as having nothing to do; we do not know either way.
                 </p>
               </div>
             </div>
@@ -94,7 +94,7 @@ export default async function ReferralsPage() {
           <div className="card p-4" style={{ marginTop: 20 }}>
             <div className="t-sm w6">Nothing is due.</div>
             <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-              Moments arrive on their own — when a plan is published, when somebody closes,
+              Moments arrive on their own: when a plan is published, when somebody closes,
               thirty days after that, six months after that, and every year on the date.
               An empty list here means the timing is not right for anyone yet, not that
               there is nobody to ask.

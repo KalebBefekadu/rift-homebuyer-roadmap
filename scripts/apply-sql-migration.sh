@@ -49,7 +49,7 @@ try:
         # This used to be discarded, which made the script unable to answer the
         # one question worth asking after a migration: did the columns actually
         # arrive? "SQL_OK 201" is the API accepting the request, not the schema
-        # being what you meant — and every defect in this codebase so far has
+        # being what you meant, and every defect in this codebase so far has
         # looked exactly like success. A verification query run through here
         # printed nothing at all.
         try:

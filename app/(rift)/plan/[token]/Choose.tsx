@@ -9,7 +9,7 @@ import { NOT_ACCEPTANCE, CLIENT_NOTE_MAX } from "@/lib/core/offer-room";
  *
  * One control below the offers rather than a button on each card, because the
  * cards are the comparison and a button on every one of them invites a tap
- * while still reading. Choosing is two steps — pick, then confirm — and the
+ * while still reading. Choosing is two steps (pick, then confirm) and the
  * confirm step carries the sentence that matters most: this is not signing.
  *
  * Every figure shown here was computed on the server and arrives as a string.
@@ -30,7 +30,7 @@ export function Choose({ token, agentFirst, options }: {
   const picked = options.find((o) => o.id === pick) ?? null;
 
   /* The confirmation is shown from HERE, the moment the server says the
-     choice is stored — not left to a refresh arriving. The refresh then
+     choice is stored: not left to a refresh arriving. The refresh then
      swaps in the server-rendered record; if it is slow, the seller has
      already been told. A seller who sees nothing taps again. */
   const confirm = async () => {
@@ -44,14 +44,14 @@ export function Choose({ token, agentFirst, options }: {
       });
       const r = (await res.json().catch(() => null)) as { ok?: boolean; stored?: boolean; error?: string } | null;
       if (!r?.ok || r.stored !== true) {
-        setError(r?.error ?? "We could not record that just now. Nothing was sent — please try again in a minute.");
+        setError(r?.error ?? "We could not record that just now. Nothing was sent. Please try again in a minute.");
         return;
       }
       setError(null);
       setDone(picked!.label);
       router.refresh();
     } catch {
-      setError("We could not reach the server. Nothing was sent — check your connection and try again.");
+      setError("We could not reach the server. Nothing was sent. Check your connection and try again.");
     } finally {
       setPending(false);
     }

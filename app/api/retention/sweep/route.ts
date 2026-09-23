@@ -11,7 +11,7 @@ export const maxDuration = 60;
  * Enforces the retention schedule.
  *
  * Scheduled, secret-protected, and reports exactly what it removed. A deletion
- * job that runs silently is one nobody notices has stopped running — and the
+ * job that runs silently is one nobody notices has stopped running, and the
  * failure mode of a stopped retention job is a growing pile of strangers'
  * finances that the product's own readout promises has already been deleted.
  */

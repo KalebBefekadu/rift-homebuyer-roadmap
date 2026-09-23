@@ -52,7 +52,7 @@ export function Forward({
   const inWindow = buckets.reduce((a, b) => a + b.count, 0);
 
   /* Named separately because they are two different conversations. Somebody
-     outside the window is not missing from the forecast by mistake — a lead in
+     outside the window is not missing from the forecast by mistake: a lead in
      Exploring is 210 days from closing and genuinely does not belong in a
      four-month view. Somebody unpriced is missing from the MONEY only. */
   const unpriced = live.filter((l) => !l.valueKnown).length;
@@ -63,7 +63,7 @@ export function Forward({
       <div className="card p-5" style={{ marginBottom: 14 }}>
         <div className="t-sm w6">Nothing to forecast yet</div>
         <p className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55, maxWidth: 520 }}>
-          This fills in as people are given a stage. It is a weighted view — what the
+          This fills in as people are given a stage. It is a weighted view: what the
           stages historically produce, not a list of everyone you hope will close.
         </p>
       </div>
@@ -101,7 +101,7 @@ export function Forward({
               <span className="t-xs c-4">of {b.count}</span>
             </div>
             <div className="t-xs c-3" style={{ marginTop: 3 }}>
-              {b.weightedValue ? money(Math.round(commissionOn(b.weightedValue, commissionPct))) : "—"}
+              {b.weightedValue ? money(Math.round(commissionOn(b.weightedValue, commissionPct))) : "Unpriced"}
             </div>
             <div className="t-2xs c-4 trunc" style={{ marginTop: 4 }}>
               {b.names.length ? b.names.join(", ") : "Nothing expected"}
@@ -129,14 +129,14 @@ export function Forward({
           {mix.observed === 0 && mix.blended === 0 ? (
             <>
               <span className="w6">Every stage here is still an assumption.</span> These odds are
-              starting figures, not your record — a stage needs twelve of your own closed or lost
+              starting figures, not your record. A stage needs twelve of your own closed or lost
               outcomes before it stops borrowing ours. That is deliberate: forecasting from three
               closings is how a solo agent comes to believe a stage converts at 100%.
             </>
           ) : (
             <>
               These odds shrink toward your own closed history and are labelled with what is
-              behind them —
+              behind them:
               <span className="w6">
                 {" "}{mix.observed} from your history, {mix.blended} part-observed,{" "}
                 {mix.assumed} still assumed

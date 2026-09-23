@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
  * The card a Rift page becomes when somebody pastes its link.
  *
  * Every public page had one of these except `/abroad`, which had the only one
- * — so every other link in the product arrived in a message as a bare URL with
+ *, so every other link in the product arrived in a message as a bare URL with
  * a favicon. For a product whose entire distribution is a stranger forwarding
  * a readout to somebody they know, that is not a polish item. The unfurl is
  * most of the decision to tap.
@@ -31,7 +31,7 @@ export interface CardProps {
   headline: string;
   /** What they get. One sentence. */
   sub: string;
-  /** Bottom left — what it costs and what it needs. */
+  /** Bottom left: what it costs and what it needs. */
   foot?: ReactElement | string;
   /** Extra fonts for scripts the renderer does not ship. */
 }

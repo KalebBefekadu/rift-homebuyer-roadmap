@@ -16,7 +16,7 @@ import { sessionId } from "./session";
  *      that can break a funnel is worse than no instrumentation.
  *   2. It flushes on `visibilitychange` and `pagehide`, not `unload`. Mobile
  *      Safari commonly never fires `unload`, and that is precisely where the
- *      abandonment events — the most valuable ones — would be lost.
+ *      abandonment events (the most valuable ones) would be lost.
  *   3. It carries the question and the timing, never the answer.
  */
 

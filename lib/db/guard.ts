@@ -10,7 +10,7 @@ export { MAX_BODY_BYTES };
  * The gate on the public write endpoints.
  *
  * Keyed on the client IP, taken from the proxy header the platform sets. That
- * header is spoofable in principle, and on Vercel it is not — the platform
+ * header is spoofable in principle, and on Vercel it is not: the platform
  * overwrites it. On any host where it is not trusted, this becomes a soft
  * deterrent rather than a control, which is worth knowing before relying on it.
  *
@@ -29,7 +29,7 @@ export function ipOf(req: Request): string {
  * Reads a JSON body, refusing anything oversized.
  *
  * Checks Content-Length first because it is free, then counts what actually
- * arrives — a declared length is a claim, and a chunked request need not make
+ * arrives: a declared length is a claim, and a chunked request need not make
  * one at all.
  */
 export async function readJson(req: Request): Promise<{ ok: true; body: unknown } | { ok: false; res: NextResponse }> {

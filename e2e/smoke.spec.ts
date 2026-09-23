@@ -28,7 +28,7 @@ test.describe("every public page renders with no database", () => {
 
          Polled rather than read once. The funnel pages hold their content
          behind a Suspense boundary until hydration, so a single read can land
-         on the fallback and report a working page as an empty one — which is
+         on the fallback and report a working page as an empty one, which is
          this suite's own version of the bug it exists to catch. */
       await expect
         .poll(async () => (await page.locator("body").innerText()).length,
@@ -70,7 +70,7 @@ test.describe("no page links somewhere that is not there", () => {
 });
 
 test.describe("what must not be reachable", () => {
-  /* Closed for good. A 404 is the assertion — /prototype is a design
+  /* Closed for good. A 404 is the assertion: /prototype is a design
      specification that once left five dead links on the live seller readout,
      and /dev was a debugging surface. */
   for (const path of ["/prototype", "/prototype/app", "/prototype/studio", "/dev"]) {
@@ -81,7 +81,7 @@ test.describe("what must not be reachable", () => {
   }
 
   /* Private, which is a different thing. Next serves an unauthenticated page
-     with a 200 either way, so the status code proves nothing — what matters is
+     with a 200 either way, so the status code proves nothing: what matters is
      that no client data is on it and the visitor is told where to sign in. */
   for (const path of ["/studio", "/studio/clients", "/studio/calendar", "/studio/settings", "/studio/questions", "/studio/add", "/studio/lead/some-id"]) {
     test(`${path} shows a stranger nothing`, async ({ page }) => {
@@ -89,7 +89,7 @@ test.describe("what must not be reachable", () => {
 
       /* Polled. These pages hold their content behind a Suspense boundary, so
          a single read lands on the loading shell often enough to fail on a
-         page that is perfectly correct — which is this suite's own version of
+         page that is perfectly correct, which is this suite's own version of
          the bug it exists to catch. */
       await expect
         .poll(async () => (await page.locator("body").innerText()).toLowerCase(),
@@ -115,7 +115,7 @@ test.describe("the scheduled jobs are not open to a stranger", () => {
      reported "scheduler: configured" throughout, which was true and useless.
      So: assert the verb the caller actually uses. */
   for (const path of ["/api/nurture/run", "/api/retention/sweep", "/api/rates/refresh"]) {
-    test(`GET ${path} refuses without the secret — and does not 405`, async ({ request }) => {
+    test(`GET ${path} refuses without the secret, and does not 405`, async ({ request }) => {
       const res = await request.get(path);
       expect(res.status(), `${path} answered ${res.status()} to a GET`).not.toBe(405);
       expect([401, 503], `${path} let a stranger in`).toContain(res.status());
@@ -156,7 +156,7 @@ test.describe("the client's own plan", () => {
     expect(text).toMatch(/cannot open this right now/i);
 
     /* The wrong CLAIM, not the word. The page says "this does not mean your
-       link has expired", which is the right sentence and contains the word —
+       link has expired", which is the right sentence and contains the word:
        so the first version of this assertion failed on the very copy it was
        written to protect. */
     expect(text, "told the client their link was revoked when it was not")

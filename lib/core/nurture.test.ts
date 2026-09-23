@@ -6,7 +6,7 @@ import { BUY_FUNNEL } from "./funnel";
  * The cadence's own rules.
  *
  * The one these were written for: the dormant sequence exists for people who
- * started and stopped, so they have no readout — and the ordinary touch leads
+ * started and stopped, so they have no readout, and the ordinary touch leads
  * with the reader's figures and refuses to send without them. That combination
  * meant recovery could never reach the largest population in the funnel, and
  * nothing failed. The runner reported it as "nothing worth sending", which is
@@ -115,7 +115,7 @@ describe("recovery can actually reach somebody", () => {
 describe("what a customer actually reads", () => {
   it("every step has customer-facing copy, separate from its rationale", () => {
     /* `gives` is a note to whoever designs the cadence. The first version of
-       the emails sent it — so somebody would have opened a message about their
+       the emails sent it, so somebody would have opened a message about their
        own house purchase and read "Recovery, not pursuit." Caught by rendering
        the templates and looking at them, which nothing else was doing. */
     for (const seq of SEQUENCES) {
@@ -127,18 +127,18 @@ describe("what a customer actually reads", () => {
   });
 
   it("the copy addresses the reader, not a designer", () => {
-    /* Rationale refers to the reader in the third person — "their answers",
-       "the person" — and carries design vocabulary. Copy speaks to them.
+    /* Rationale refers to the reader in the third person: "their answers",
+       "the person": and carries design vocabulary. Copy speaks to them.
        
        Two earlier versions of this test were wrong rather than the copy. One
        flagged the bare word "them", which fails on "exactly where you left
        them". One required every line to contain "you", which fails on "there
-       are two windows this week" — a perfectly direct sentence.
+       are two windows this week": a perfectly direct sentence.
        
        Both were prescribing style rather than detecting the defect. A test
        that rejects correct work is worse than none: the fix people reach for
        is to weaken the writing until the test passes. What is left detects the
-       actual failure — prose about the reader instead of to them, and design
+       actual failure: prose about the reader instead of to them, and design
        vocabulary that has no business in an inbox. */
     const thirdPerson = /\btheir\b|\bthe person\b|\bthe reader\b/i;
     const jargon = /recovery, not pursuit|\brule \d|\bcadence\b|\bsequence\b/i;

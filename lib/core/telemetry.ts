@@ -13,7 +13,7 @@
  *      database, so a row written by anything other than this module is
  *      rejected outright.
  * Layers 2 and 3 were both blocklists and both failed open on the same key.
- * They are allowlists now, and they are kept identical on purpose — see
+ * They are allowlists now, and they are kept identical on purpose: see
  * telemetry.test.ts, which fails when the migration and this file disagree.
  */
 
@@ -40,14 +40,14 @@ export interface EventInput {
 /**
  * The keys telemetry is allowed to carry. Everything else is dropped.
  *
- * This was a blocklist — `value`, `answer`, `input`, `email`, `phone` and a
- * few more — and a blocklist fails open, which is a property you find out
+ * This was a blocklist: `value`, `answer`, `input`, `email`, `phone` and a
+ * few more, and a blocklist fails open, which is a property you find out
  * about afterwards. The buyers-abroad landing page sent
  * `{ page, status, use }` on every view, and `status` there is the visitor's
  * residency situation: citizen, resident, ITIN, or no U.S. status at all. It
  * was not on the list, so it went through `sanitise`, through a type that
  * "has no field that could hold an answer", and through a CHECK constraint
- * that only rejected three literal key names — all three layers, into an
+ * that only rejected three literal key names: all three layers, into an
  * analytics table keyed on a session that joins to a lead.
  *
  * Residency status is about as close a proxy for national origin as this
@@ -60,8 +60,8 @@ export interface EventInput {
  * about whether it is an answer.
  *
  * Note what is NOT here: `status`. In this product that word means somebody's
- * situation, and the one legitimate use — the readout's computed readiness
- * band — is called `band` precisely so the ambiguous word never appears in a
+ * situation, and the one legitimate use: the readout's computed readiness
+ * band: is called `band` precisely so the ambiguous word never appears in a
  * payload again.
  */
 export const ALLOWED_META = [

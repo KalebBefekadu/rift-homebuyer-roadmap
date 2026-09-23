@@ -14,7 +14,7 @@ export const metadata: Metadata = {
  * The diaspora funnel's third door.
  *
  * It did not have one. `/buy` and `/sell` each have a `/how`, and the footer
- * of `/abroad` sent its readers to `/buy/how` — a page written for a domestic
+ * of `/abroad` sent its readers to `/buy/how`: a page written for a domestic
  * first-time buyer, which answers where the assistance figures come from and
  * how Kaleb is paid, and answers not one of the questions somebody in Addis
  * or Dubai is actually holding. They arrive wanting to know whether they are
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  * WHAT THIS PAGE REFUSES TO DO, AND WHY IT IS MOST OF THE DESIGN.
  *
  * Almost every question a foreign buyer has is a tax question or an
- * immigration question, and Kaleb is a licensed real-estate agent — neither a
+ * immigration question, and Kaleb is a licensed real-estate agent: neither a
  * tax adviser nor an attorney. The tempting page here is the one that answers
  * everything: withholding rates, filing thresholds, whether to hold the
  * property personally or in an entity. That page would be this product's
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
  * number of things that are settled and uncontroversial, and for everything
  * else it names the question and the profession that answers it. "Here is
  * what you will be asked, and who to ask" is genuinely useful to somebody
- * eight time zones away who does not know what they do not know — and it is
+ * eight time zones away who does not know what they do not know, and it is
  * true, which the alternative is not.
  *
  * The English-only notice is deliberate and sits at the top rather than the
@@ -76,7 +76,7 @@ export default function AbroadHowPage() {
               <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
                 This page is in English only so far. <Link href="/abroad" className="u">The main page</Link>{" "}
                 is available in Amharic, and this one will be once it has been written by
-                somebody who speaks it — not by a machine.
+                somebody who speaks it, not by a machine.
               </p>
               <p className="t-xs c-3" lang="am" style={{ marginTop: 6, lineHeight: 1.7 }}>
                 ይህ ገጽ እስካሁን በእንግሊዝኛ ብቻ ነው።
@@ -104,7 +104,7 @@ export default function AbroadHowPage() {
             <li>
               <strong>A mortgage, if you have no U.S. credit history.</strong> Most ordinary
               lenders score a borrower using a credit file you will not have. Lenders who work
-              with foreign nationals exist and price that risk differently — usually by asking
+              with foreign nationals exist and price that risk differently, usually by asking
               for a larger deposit. This is the single biggest practical difference between your
               purchase and a domestic one, and it is the first thing worth establishing, because
               it decides your entire budget.
@@ -116,8 +116,8 @@ export default function AbroadHowPage() {
             </li>
             <li>
               <strong>Being eight time zones away.</strong> Signing, identity verification and
-              inspections all assume somebody is in the room. They are solvable — this is
-              ordinary work for an agent who has done it before — but they are what makes the
+              inspections all assume somebody is in the room. They are solvable (this is
+              ordinary work for an agent who has done it before), but they are what makes the
               timeline longer than the one on a domestic purchase.
             </li>
           </ul>
@@ -141,7 +141,7 @@ export default function AbroadHowPage() {
             <li>
               <strong>Withholding when you eventually sell.</strong> The United States withholds
               tax at closing when a foreign person sells real property, and the amount withheld
-              is not the same as the tax owed — the difference is reclaimed by filing. The rate,
+              is not the same as the tax owed; the difference is reclaimed by filing. The rate,
               the exemptions and the paperwork are specific enough that a number quoted here
               would be worth less than nothing. <em>Same adviser, and ask before you buy rather
               than before you sell.</em>
@@ -172,7 +172,7 @@ export default function AbroadHowPage() {
             The <strong>rent estimate is not</strong>, and it is the number to treat most
             carefully, because the return figure is built on it. {rentBasis()} Before you
             rely on a rental return, get a rent estimate from somebody who manages property in
-            that county — it is the cheapest check on this page and it moves the answer more
+            that county. It is the cheapest check on this page and it moves the answer more
             than anything else does.
           </p>
           <p>
@@ -186,7 +186,7 @@ export default function AbroadHowPage() {
         <Block title="How Kaleb is paid">
           <p>
             Nothing here costs you anything. Kaleb is a licensed Georgia agent and is paid a
-            commission when somebody he represents buys or sells — the ordinary arrangement,
+            commission when somebody he represents buys or sells, the ordinary arrangement,
             disclosed in writing before it applies to you.
           </p>
           <p>
@@ -198,7 +198,7 @@ export default function AbroadHowPage() {
         <Block title="Why there is no account">
           <p>
             Your readout is a link you keep. There is nothing to sign up for, nothing to cancel,
-            and you can delete everything we hold from the bottom of it in one click — which
+            and you can delete everything we hold from the bottom of it in one click, which
             matters more, not less, when you are handing your financial position to a company on
             another continent.
           </p>
@@ -234,7 +234,7 @@ export default function AbroadHowPage() {
  */
 function rentBasis(): string {
   if (RENT_RATIO_SOURCE.basis === "published" && RENT_RATIO_SOURCE.name) {
-    return `It comes from ${RENT_RATIO_SOURCE.name}, which is a published source rather than our own guess — but it is still an average, and your specific house is not an average.`;
+    return `It comes from ${RENT_RATIO_SOURCE.name}, which is a published source rather than our own guess, but it is still an average, and your specific house is not an average.`;
   }
   return "It is our own assumption about what property in that county rents for, not an observation of what it actually rents for, and we would rather say so than dress it up as data.";
 }

@@ -7,7 +7,7 @@
  * one thing a housing page must never do is signal who belongs in it.
  * Geometry says "considered" without saying "you" or "not you".
  *
- * The border motif is a tibeb — the woven band along the edge of Ethiopian
+ * The border motif is a tibeb: the woven band along the edge of Ethiopian
  * dress. It is used the way it is used on cloth: a narrow band at an edge,
  * never a background, never a flag. Read as ornament by anyone, recognised by
  * the people who grew up with it.
@@ -35,7 +35,7 @@ export function Tibeb({ height = 10, className, style }: {
 /**
  * The hero mark: a house, and the distance to it.
  *
- * The argument of the page in one drawing — the owner is on one side of an
+ * The argument of the page in one drawing: the owner is on one side of an
  * ocean and the asset is on the other, and the line between them is not a
  * problem to be solved but the ordinary shape of the thing.
  */
@@ -76,7 +76,7 @@ export function Distance({ className, style }: { className?: string; style?: Rea
  * The page argues that cash flow is the smallest of the three returns and the
  * only one people look at. A drawing whose proportions came from anywhere but
  * the numbers would be making that argument dishonestly, so these are passed
- * in — and a negative cash flow draws below the line rather than disappearing.
+ * in, and a negative cash flow draws below the line rather than disappearing.
  */
 export function ReturnBars({ cashFlow, principal, appreciation, labels, lang }: {
   cashFlow: number; principal: number; appreciation: number;

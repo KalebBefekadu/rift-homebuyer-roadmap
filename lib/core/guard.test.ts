@@ -5,7 +5,7 @@ import { MAX_BODY_BYTES } from "./limits";
  * The body-size limit, as a value rather than as behaviour.
  *
  * The first version of this imported the constant from lib/db and was blocked
- * by `server-only` — which is the layering rule working. The limit is policy
+ * by `server-only`: which is the layering rule working. The limit is policy
  * and belongs in the domain layer; `readJson` stays where the I/O is.
  *
  * What this pins is the number, because the failure mode of raising it is

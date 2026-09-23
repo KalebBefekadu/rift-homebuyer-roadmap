@@ -6,7 +6,7 @@
  * the rate, the programme registry and the lead record before they can print
  * anything, each on a two-second deadline. Without this the reader gets a
  * blank page at precisely the moment the product is supposed to be delivering
- * — and a blank page is indistinguishable from a broken one, so the instinct
+ *, and a blank page is indistinguishable from a broken one, so the instinct
  * is to reload, which starts every read again.
  *
  * Deliberately a sentence rather than a spinner: it says what is happening,

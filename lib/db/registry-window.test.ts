@@ -8,7 +8,7 @@ import { readRegistry } from "./programs";
  * it a constant wearing a setting's clothes: /studio/settings could record a
  * decision about it and every programme would go on being suppressed at
  * ninety days regardless. That is the specific failure a settings page
- * introduces if nobody checks — a dial the agent turns, that changes nothing,
+ * introduces if nobody checks: a dial the agent turns, that changes nothing,
  * and reports no error while doing so.
  *
  * No database here. With none configured `readRegistry` falls back to the
@@ -31,7 +31,7 @@ describe("the window the caller asks for", () => {
 
   it("suppresses everything when it is short enough", async () => {
     /* One day. Nothing in a hand-verified registry was checked yesterday, so
-       the correct outcome is an empty customer-facing list — and the agent
+       the correct outcome is an empty customer-facing list, and the agent
        seeing every programme in the withheld panel. */
     const r = await readRegistry(TODAY, 1);
     if (!r.ok || !("data" in r)) throw new Error("expected data");
@@ -49,7 +49,7 @@ describe("the window the caller asks for", () => {
   it("falls back to the default rather than accepting zero", async () => {
     /* Zero or negative pushes the cutoff into the future and suppresses the
        entire registry. A page of no programmes renders perfectly, says
-       nothing is available in Georgia, and is wrong — so a nonsense value
+       nothing is available in Georgia, and is wrong, so a nonsense value
        must not be honoured just because somebody typed it. */
     const zero = await readRegistry(TODAY, 0);
     const negative = await readRegistry(TODAY, -5);

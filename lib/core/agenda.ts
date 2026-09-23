@@ -8,7 +8,7 @@
  * Two things it refuses to do.
  *
  * It does not invent a grid. A month view with twenty-two empty cells is a
- * picture of a calendar, not a calendar — an agent with four things in the
+ * picture of a calendar, not a calendar: an agent with four things in the
  * next fortnight should see four things. Days with nothing in them are not
  * rendered, and the gaps are named in words instead.
  *
@@ -25,7 +25,7 @@ export interface Commitment {
   kind: CommitmentKind;
   /** What is owed, in his own words. */
   what: string;
-  /** ISO date. Everything here has one — that is what puts it on a calendar. */
+  /** ISO date. Everything here has one: that is what puts it on a calendar. */
   dueOn: string;
   /** Who it is about. */
   personId: string;
@@ -61,7 +61,7 @@ export function daysAway(dueOn: string, today: Date): number {
  *
  * Named days for the near ones, because "Thursday" is how somebody plans and
  * "Oct 2" is how a database stores. Beyond a week the weekday stops being
- * useful on its own — there are two Thursdays in a fortnight — so the date
+ * useful on its own (there are two Thursdays in a fortnight) so the date
  * comes back.
  */
 export function dayLabel(dueOn: string, today: Date): string {
@@ -76,7 +76,7 @@ export function dayLabel(dueOn: string, today: Date): string {
 
   const month = d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
   const short = `${weekday.slice(0, 3)} ${d.getUTCDate()} ${month}`;
-  return away < 0 ? `${short} — overdue` : short;
+  return away < 0 ? `${short}, overdue` : short;
 }
 
 /**
@@ -150,7 +150,7 @@ export function agendaHeadline(s: AgendaSummary): string {
     if (s.overdueAndVisible === 0) return `${late}.`;
     return s.overdueAndVisible === s.overdue
       ? `${late}, and ${s.overdue === 1 ? "it is" : "they are"} on pages your clients can open.`
-      : `${late} — ${s.overdueAndVisible} on a page a client can open.`;
+      : `${late}; ${s.overdueAndVisible} on a page a client can open.`;
   }
   if (s.today > 0) return s.today === 1 ? "One thing is due today." : `${s.today} things are due today.`;
   if (s.thisWeek > 0) return `Nothing today. ${s.thisWeek} this week.`;

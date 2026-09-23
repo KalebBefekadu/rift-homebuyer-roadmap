@@ -5,7 +5,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  * The gate, at the layer that enforces it.
  *
  * `lib/core/representation.test.ts` covers what the rule IS. This covers
- * where it is applied — on the write, not in the form — and the distinction
+ * where it is applied (on the write, not in the form) and the distinction
  * the whole thing turns on: a read that FAILED is not "no agreement". Refusing
  * to let an agent move somebody because a query timed out turns a database
  * blip into a compliance alarm he has no way to diagnose from the screen.

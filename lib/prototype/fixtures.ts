@@ -1,5 +1,5 @@
 /**
- * Rift prototype — demonstration fixtures.
+ * Rift prototype: demonstration fixtures.
  * All names, properties, offers, messages, and documents are fabricated
  * demonstration data. Nothing here touches production stores or integrations.
  */
@@ -102,7 +102,7 @@ export const PEOPLE: Person[] = [
     stage: "Preparing the property",
     county: "Cobb",
     source: "Referral",
-    campaign: "—",
+    campaign: "none",
     referrer: "Priya Raman",
     firstTouch: "2026-08-02",
     representation: "signed",
@@ -123,7 +123,7 @@ export const PEOPLE: Person[] = [
     campaign: "rent-vs-buy",
     firstTouch: "2026-06-14",
     representation: "none",
-    nextAction: "Nothing due — checking back monthly",
+    nextAction: "Nothing due, checking back monthly",
     nextDue: "2026-10-01",
     attention: "Stalled: no action across three touches",
   },
@@ -136,11 +136,11 @@ export const PEOPLE: Person[] = [
     stage: "Homeownership",
     county: "DeKalb",
     source: "Open house",
-    campaign: "—",
+    campaign: "none",
     firstTouch: "2025-10-03",
     representation: "expired",
     nextAction: "Nothing due",
-    nextDue: "—",
+    nextDue: "None",
   },
   {
     id: "nadia",
@@ -151,7 +151,7 @@ export const PEOPLE: Person[] = [
     stage: "Reviewing offers",
     county: "Fulton",
     source: "Referral",
-    campaign: "—",
+    campaign: "none",
     referrer: "Harold & Ruth Vance",
     firstTouch: "2026-05-19",
     representation: "signed",
@@ -169,7 +169,7 @@ export const PEOPLE: Person[] = [
     stage: "Exploring",
     county: "DeKalb",
     source: "Referral",
-    campaign: "—",
+    campaign: "none",
     referrer: "Priya Raman",
     firstTouch: "2026-09-04",
     representation: "none",
@@ -198,7 +198,7 @@ export const HAROLD_TASKS: Task[] = [
   { id: "s1", title: "Complete the seller assessment", owner: "customer", state: "completed" },
   { id: "s2", title: "Sign the listing agreement", owner: "customer", state: "completed" },
   { id: "s3", title: "Approve the pre-listing repair shortlist", owner: "customer", state: "current", due: "2026-09-08" },
-  { id: "s4", title: "File the homestead exemption", owner: "customer", state: "current", due: "2026-09-25", note: "Unclaimed value check flagged this — worth roughly $900 a year" },
+  { id: "s4", title: "File the homestead exemption", owner: "customer", state: "current", due: "2026-09-25", note: "Unclaimed value check flagged this, worth roughly $900 a year" },
   { id: "s5", title: "Decide whether to appeal the county assessment", owner: "customer", state: "overdue", due: "2026-09-02", note: "Appeal window closes 25 Sep" },
   { id: "s6", title: "Schedule photography", owner: "agent", state: "upcoming", due: "2026-09-18" },
   { id: "s7", title: "Prepare the seller disclosure package", owner: "rift", state: "current" },
@@ -273,7 +273,7 @@ export const BRIEF: BriefItem[] = [
   {
     id: "b9", kind: "urgent", person: "Registry",
     title: "1 assistance program is stale and has been suppressed",
-    detail: "Legacy county assistance pilot — last verified 157 days ago. Customers are no longer shown it.",
+    detail: "Legacy county assistance pilot, last verified 157 days ago. Customers are no longer shown it.",
     age: "now",
   },
   {
@@ -344,7 +344,7 @@ export const OFFERS: Offer[] = [
     represented: true, submittedAt: "2026-09-05 21:40",
     price: 428_000, netToSeller: 398_900, financing: "Conventional, 20% down",
     earnest: 8_000, closeDate: "2026-10-17",
-    contingencies: ["Financing", "Appraisal", "Due diligence — 10 days"],
+    contingencies: ["Financing", "Appraisal", "Due diligence, 10 days"],
     concessions: "None requested", proofOfFunds: true, preapproval: true,
     decision: "pending", flags: [],
     fields: [
@@ -354,7 +354,7 @@ export const OFFERS: Offer[] = [
       { group: "Deposits", label: "Earnest money", value: "$8,000", confidence: "high", page: 2, consequential: true },
       { group: "Dates", label: "Closing date", value: "17 October 2026", confidence: "high", page: 2, consequential: true },
       { group: "Dates", label: "Due diligence ends", value: "10 days from binding", confidence: "medium", page: 3, consequential: true },
-      { group: "Contingencies", label: "Financing contingency", value: "Yes — 21 days", confidence: "high", page: 3 },
+      { group: "Contingencies", label: "Financing contingency", value: "Yes, 21 days", confidence: "high", page: 3 },
       { group: "Contingencies", label: "Appraisal contingency", value: "Yes", confidence: "high", page: 3 },
       { group: "Concessions", label: "Seller paid closing costs", value: "None requested", confidence: "high", page: 4 },
       { group: "Documents", label: "Preapproval letter", value: "Attached", confidence: "high", page: 0 },
@@ -367,12 +367,12 @@ export const OFFERS: Offer[] = [
     represented: false, submittedAt: "2026-09-06 08:55",
     price: 441_000, netToSeller: 392_400, financing: "FHA, 3.5% down",
     earnest: 2_000, closeDate: "2026-11-14",
-    contingencies: ["Financing", "Appraisal", "Sale of buyer's current home", "Due diligence — 17 days"],
+    contingencies: ["Financing", "Appraisal", "Sale of buyer's current home", "Due diligence, 17 days"],
     concessions: "$12,000 toward closing costs",
     proofOfFunds: false, preapproval: false,
     decision: "pending",
     flags: [
-      "Submitter indicated they are unrepresented — routed to you, no automated reply sent",
+      "Submitter indicated they are unrepresented. Routed to you, no automated reply sent",
       "No preapproval or proof of funds attached",
       "Home-sale contingency detected in special terms",
       "Closing date is 28 days later than the other offer",
@@ -384,7 +384,7 @@ export const OFFERS: Offer[] = [
       { group: "Deposits", label: "Earnest money", value: "$2,000", confidence: "high", page: 2, consequential: true },
       { group: "Dates", label: "Closing date", value: "14 November 2026", confidence: "low", page: 2, consequential: true },
       { group: "Dates", label: "Due diligence ends", value: "17 days from binding", confidence: "low", page: 3, consequential: true },
-      { group: "Contingencies", label: "Sale of buyer's home", value: "Yes — found in special stipulations", confidence: "medium", page: 6 },
+      { group: "Contingencies", label: "Sale of buyer's home", value: "Yes, found in special stipulations", confidence: "medium", page: 6 },
       { group: "Concessions", label: "Seller paid closing costs", value: "$12,000", confidence: "high", page: 4 },
       { group: "Documents", label: "Preapproval letter", value: "Not attached", confidence: "high", page: 0 },
       { group: "Special Terms", label: "Handwritten addendum", value: "Present, partially legible", confidence: "low", page: 6 },
@@ -405,15 +405,15 @@ export interface ProposedChange {
 
 export const MEETING_NOTES = `Called Maya Tuesday 4:30. Devon joined for the second half.
 
-She's been quoted $340k as a comfortable number by a lender friend but that was before we looked at the actual cash. Devon thought the down payment WAS the cash needed — didn't know about escrow or prepaids. That was the moment the conversation changed.
+She's been quoted $340k as a comfortable number by a lender friend but that was before we looked at the actual cash. Devon thought the down payment WAS the cash needed and didn't know about escrow or prepaids. That was the moment the conversation changed.
 
-Savings is $9,000 not $12,000 — the $12k figure included her emergency fund which she does not want to touch. Agreed to treat that as untouchable.
+Savings is $9,000 not $12,000. The $12k figure included her emergency fund which she does not want to touch. Agreed to treat that as untouchable.
 
 Wants to be in before her lease ends 31 March. Devon is more flexible, said "we shouldn't rush it if the numbers don't work."
 
 Georgia Dream looks likely on income. DeKalb county program also possible. She had never heard of either. Asked twice whether it was real money.
 
-Action: send both to Brookhaven Lending to confirm eligibility. She'll open a separate savings account so the emergency fund stays separate. Homebuyer education course needs doing — she was surprised it was required.
+Action: send both to Brookhaven Lending to confirm eligibility. She'll open a separate savings account so the emergency fund stays separate. Homebuyer education course needs doing; she was surprised it was required.
 
 Devon asked about the agency agreement, wants to read it before signing. Fair.`;
 
@@ -422,12 +422,12 @@ export const PROPOSED_CHANGES: ProposedChange[] = [
   { id: "c2", kind: "field", label: "Target price", before: "$340,000", after: "$325,000", basis: "Revised after the true cash-to-close conversation." },
   { id: "c3", kind: "field", label: "Target close", before: "Not set", after: "Before 31 March 2027", basis: "Lease ends 31 March." },
   { id: "c4", kind: "field", label: "Household decision-makers", before: "Maya Ellison", after: "Maya Ellison, Devon Ellison", basis: "Devon joined the call and is part of the decision." },
-  { id: "c5", kind: "task", label: "Open a dedicated savings account", before: "—", after: "Due 11 Sep, owner: customer", basis: "Agreed on the call." },
-  { id: "c6", kind: "task", label: "Confirm Georgia Dream and DeKalb eligibility", before: "—", after: "Due 15 Sep, owner: outside professional", basis: "Agreed to send both to Brookhaven Lending." },
-  { id: "c7", kind: "task", label: "Complete homebuyer education course", before: "—", after: "Due 20 Oct, owner: customer", basis: "Required by two matched programs." },
-  { id: "c8", kind: "task", label: "Send buyer agency agreement", before: "—", after: "Due 8 Sep, owner: agent", basis: "Devon asked to read it before signing." },
+  { id: "c5", kind: "task", label: "Open a dedicated savings account", before: "None", after: "Due 11 Sep, owner: customer", basis: "Agreed on the call." },
+  { id: "c6", kind: "task", label: "Confirm Georgia Dream and DeKalb eligibility", before: "None", after: "Due 15 Sep, owner: outside professional", basis: "Agreed to send both to Brookhaven Lending." },
+  { id: "c7", kind: "task", label: "Complete homebuyer education course", before: "None", after: "Due 20 Oct, owner: customer", basis: "Required by two matched programs." },
+  { id: "c8", kind: "task", label: "Send buyer agency agreement", before: "None", after: "Due 8 Sep, owner: agent", basis: "Devon asked to read it before signing." },
   { id: "c9", kind: "milestone", label: "Financing preparation", before: "Upcoming", after: "Current", basis: "Lender conversation is now in progress." },
-  { id: "c10", kind: "document", label: "Request two months of pay stubs", before: "—", after: "Requested from customer", basis: "Needed for eligibility confirmation." },
+  { id: "c10", kind: "document", label: "Request two months of pay stubs", before: "None", after: "Requested from customer", basis: "Needed for eligibility confirmation." },
   { id: "c11", kind: "field", label: "Emergency fund treatment", before: "Not recorded", after: "Excluded from closing funds", basis: "Explicit instruction from Maya." },
 ];
 
@@ -470,14 +470,14 @@ export const ADVOCACY: AdvocacyRecord[] = [
     id: "a1", person: "Priya Raman", moment: "Closed 12 Dec 2025",
     reviewState: "received",
     referrals: [
-      { name: "Jordan Pike", date: "2026-09-04", outcome: "New lead — assessment started" },
-      { name: "Harold & Ruth Vance", date: "2026-08-02", outcome: "Active seller — listing in preparation" },
+      { name: "Jordan Pike", date: "2026-09-04", outcome: "New lead, assessment started" },
+      { name: "Harold & Ruth Vance", date: "2026-08-02", outcome: "Active seller, listing in preparation" },
     ],
   },
   {
     id: "a2", person: "Harold & Ruth Vance", moment: "Repair plan approved",
     reviewState: "not-asked",
-    referrals: [{ name: "Nadia & Chris Okafor", date: "2026-05-19", outcome: "Active — reviewing offers" }],
+    referrals: [{ name: "Nadia & Chris Okafor", date: "2026-05-19", outcome: "Active, reviewing offers" }],
   },
   {
     id: "a3", person: "Wendell Cruz", moment: "Closed 3 Aug 2026",
@@ -510,7 +510,7 @@ export const PACKAGE_UPDATES: PackageUpdate[] = [
     id: "u2", when: "28 Aug", trigger: "Matched program's funding closed",
     headline: "Gwinnett's program closed its current funding round",
     meaning: "It was in your range only if you widened your search to Gwinnett. Nothing changes for DeKalb.",
-    action: "No action needed — we will tell you if it reopens",
+    action: "No action needed. We will tell you if it reopens",
     tone: "solar",
   },
   {
@@ -524,7 +524,7 @@ export const PACKAGE_UPDATES: PackageUpdate[] = [
     id: "u4", when: "12 Aug", trigger: "Your own progress",
     headline: "You crossed $9,000 saved",
     meaning: "At your current rate you reach the cash you need in about 11 months, down from 14 when we started.",
-    action: "Keep the transfer automatic — it is doing the work",
+    action: "Keep the transfer automatic; it is doing the work",
     tone: "emerald",
   },
 ];
@@ -545,7 +545,7 @@ export interface Playbook {
 
 export const PLAYBOOKS: Playbook[] = [
   {
-    id: "p1", name: "Nurture cadence — not yet ready",
+    id: "p1", name: "Nurture cadence: not yet ready",
     trigger: "Lead in Exploring or Building readiness with no action due",
     mode: "approval",
     actions: ["Check whether a readiness step is due", "Check whether an assumption went stale", "Prepare a living-package update", "Stop if nothing changed"],

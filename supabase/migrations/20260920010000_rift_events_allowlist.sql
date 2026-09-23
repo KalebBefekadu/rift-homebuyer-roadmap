@@ -1,8 +1,8 @@
 -- Telemetry: an allowlist in the database, and a clean-up of what the
 -- blocklist let through.
 --
--- `events_carry_no_answer` rejected three literal key names — value, answer,
--- input — and was described in the code as the only real guarantee behind the
+-- `events_carry_no_answer` rejected three literal key names: value, answer,
+-- input, and was described in the code as the only real guarantee behind the
 -- rule that telemetry stores question ids and timings, never answer values.
 -- It was a blocklist, and a blocklist fails open.
 --

@@ -7,7 +7,7 @@ import AxeBuilder from "@axe-core/playwright";
  * `docs/benchmark.md` scored D3.5 a 3 and wrote the reason in the margin:
  * "Stated target, no-colour-alone, focus-visible, aria-labelled controls. Not
  * tool-audited." The first time anybody ran a tool, the buyer readout returned
- * 35 serious contrast failures — on the page that exists so a stranger can
+ * 35 serious contrast failures: on the page that exists so a stranger can
  * check the arithmetic behind their own numbers.
  *
  * Thirty-three of them were one token. `--ink-4` sat at 2.49:1 against
@@ -17,7 +17,7 @@ import AxeBuilder from "@axe-core/playwright";
  * is the one thing this product promises it will never do.
  *
  * This suite is the instrument, not the fix. It runs on both projects, so a
- * rule that only misbehaves at 390px is caught by the phone run — the same
+ * rule that only misbehaves at 390px is caught by the phone run: the same
  * reason the mobile project exists in playwright.config.ts.
  *
  * WHY THE WHOLE RULESET, MINUS NOTHING.
@@ -33,7 +33,7 @@ import AxeBuilder from "@axe-core/playwright";
  * Every public surface a stranger can reach, plus the two token pages, with
  * parameters that produce real figures rather than the empty state.
  *
- * The readouts carry short keys — `c`, `p`, `s`, `r`, `t` — because that is
+ * The readouts carry short keys (`c`, `p`, `s`, `r`, `t`) because that is
  * what the funnel writes. An earlier suite used long names, matched nothing,
  * and passed against the defaults path while asserting almost nothing.
  */
@@ -101,7 +101,7 @@ test.describe("WCAG 2.2 AA", () => {
       /* The array, not a joined string. Comparing `detail.join("\n")` to `[]`
          is a comparison that can never be true, so the gate failed on pages
          with nothing wrong with them and would have gone on failing after the
-         last violation was fixed — a test that is always red says exactly as
+         last violation was fixed: a test that is always red says exactly as
          little as one that is always green. */
       expect(detail, `${path}\n${detail.join("\n")}`).toEqual([]);
     });

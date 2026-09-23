@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  *
  * A magic link, not a password. There is exactly one person who signs into
  * this product, and a password is a thing that person has to store, rotate and
- * eventually reuse — for a single-user surface it is more attack surface than
+ * eventually reuse: for a single-user surface it is more attack surface than
  * it removes. A link to an inbox the broker already controls is stronger and
  * has nothing to leak.
  *

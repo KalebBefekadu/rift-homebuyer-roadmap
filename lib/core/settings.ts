@@ -1,9 +1,9 @@
 /**
- * Rift prototype — business rules that were hard-coded, made configurable.
+ * Rift prototype: business rules that were hard-coded, made configurable.
  *
  * The gap this closes: the handoff listed five decisions that "need the
  * business owner, not engineering", and then every one of them sat in the code
- * as a literal. That is the worst of both worlds — the owner cannot change it
+ * as a literal. That is the worst of both worlds: the owner cannot change it
  * and the engineer is not allowed to. A decision that lives in a constant has
  * been made by whoever typed the constant.
  *
@@ -38,7 +38,7 @@ export const DEFAULT_RULES: BusinessRules = {
   commissionPct: {
     value: 2.5,
     affects: "Every revenue figure in the forward view. It is the only number in the product that turns pipeline into money, so a wrong value here misprices the whole year.",
-    owner: "Kaleb — but it varies per agreement, so the forecast is a planning figure, not a receivable.",
+    owner: "Kaleb, but it varies per agreement, so the forecast is a planning figure, not a receivable.",
   },
   autoEmailReadout: {
     value: false,
@@ -47,7 +47,7 @@ export const DEFAULT_RULES: BusinessRules = {
   },
   registryOwner: {
     value: "Kaleb",
-    affects: "Whether the 90-day suppression rule means anything. An unowned cadence is not a cadence — programmes silently rot and stop being shown.",
+    affects: "Whether the 90-day suppression rule means anything. An unowned cadence is not a cadence: programmes silently rot and stop being shown.",
     owner: "Kaleb until there is somebody else. Naming him is worth more than leaving it blank.",
   },
   registryDays: {
@@ -57,7 +57,7 @@ export const DEFAULT_RULES: BusinessRules = {
   },
   clientRetentionYears: {
     value: 5,
-    affects: "Deletion of closed client records. Georgia brokerage rules and the broker's own policy both bite here — this is the one setting with a legal floor.",
+    affects: "Deletion of closed client records. Georgia brokerage rules and the broker's own policy both bite here. This is the one setting with a legal floor.",
     owner: "The broker, not the agent. Default 5 is a common brokerage figure and must be confirmed.",
   },
   marketUnrepresented: {
@@ -84,7 +84,7 @@ const KEY = "rift.rules";
  *
  * One of these settings is `commissionPct`, described in its own `affects`
  * note as "the only number in the product that turns pipeline into money".
- * A string where a number belongs does not throw anywhere — it multiplies
+ * A string where a number belongs does not throw anywhere: it multiplies
  * into every revenue figure in the forward view and renders as NaN, or worse,
  * concatenates.
  */
@@ -102,7 +102,7 @@ export function usable<K extends keyof BusinessRules>(k: K, v: unknown): v is Bu
  *
  * Pure, and separate from where the values came from, because there are now
  * two sources: localStorage in the prototype, and `rift_business_rules` in the
- * real Studio. The validation is the part worth having once — it exists
+ * real Studio. The validation is the part worth having once: it exists
  * because these were previously merged behind a `@ts-expect-error` claiming
  * the setter had checked them, and neither the setter nor the store did.
  *
@@ -189,7 +189,7 @@ export interface Reach {
  * describes a delivery that only ever happens when somebody asks for it.
  *
  * A dial connected to nothing, on a page that looks like it configures the
- * product, is this codebase's signature failure built on purpose — the agent
+ * product, is this codebase's signature failure built on purpose: the agent
  * sets his commission to 3%, nothing anywhere disagrees, and he finds out
  * when a forecast he has been quoting turns out to have been computed at 2.5.
  *
@@ -231,7 +231,7 @@ export const RULE_REACH: Record<keyof BusinessRules, Reach> = {
  * Here rather than in lib/db/settings.ts because the editor is a client
  * component and lib/db is `server-only`. A type-only import across that line
  * compiles today and breaks the build the moment somebody drops the `type`
- * keyword — which is exactly the kind of latent trap lib/core/layers.test.ts
+ * keyword, which is exactly the kind of latent trap lib/core/layers.test.ts
  * exists to refuse, and it refused this one.
  */
 export interface StoredRule {

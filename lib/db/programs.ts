@@ -16,8 +16,8 @@ import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
  * Two things are deliberate here.
  *
  * FIRST: suppression happens in the query, not in the caller. `matchPrograms()`
- * in lib/core also filters stale programmes, but a second reader — an admin
- * screen, a report, an export — could forget to. Putting the window in the SQL
+ * in lib/core also filters stale programmes, but a second reader: an admin
+ * screen, a report, an export: could forget to. Putting the window in the SQL
  * means the customer-facing path cannot serve a stale programme even if
  * somebody writes a new caller badly, which is the only kind of guarantee worth
  * having about a number that reaches a stranger.
@@ -27,7 +27,7 @@ import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
  * meant nobody owned it. See docs/handoff.md §4.4.
  *
  * With no database configured this falls back to the seeded registry so the
- * product still works end to end — and it says so, rather than pretending the
+ * product still works end to end, and it says so, rather than pretending the
  * data came from somewhere authoritative.
  */
 
@@ -76,7 +76,7 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
      re-check window a constant wearing a setting's clothes: /studio/settings
      could record a decision about it and every programme would go on being
      suppressed at ninety days regardless. A settings page whose dials are not
-     connected is worse than no settings page — see RULE_REACH in
+     connected is worse than no settings page: see RULE_REACH in
      lib/core/settings.ts, which now has to be able to say "live" about this
      one truthfully. */
   const windowDays = typeof overrideDays === "number" && Number.isFinite(overrideDays) && overrideDays > 0
@@ -88,7 +88,7 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
 
   const db = serviceClient();
   if (!db) {
-    /* The seeded registry is real, verified data — it is the same list the
+    /* The seeded registry is real, verified data: it is the same list the
        specification matches against. Falling back to it keeps the product
        whole; labelling the fallback keeps it honest. */
     const fresh = SEED_PROGRAMS.filter((p) => p.verifiedOn >= cutoffISO);
@@ -116,7 +116,7 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
 
     const { data, error } = result;
     if (error) return failed(error.message);
-    if (!data?.length) return skipped("registry table is empty — seed it before launch");
+    if (!data?.length) return skipped("registry table is empty. Seed it before launch");
 
     const rows = data as Row[];
     return done({

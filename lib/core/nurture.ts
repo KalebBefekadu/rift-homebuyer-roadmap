@@ -1,5 +1,5 @@
 /**
- * Rift prototype — the nurture cadence engine.
+ * Rift prototype: the nurture cadence engine.
  *
  * The gap this closes: leads were being *classified* for nurture and then
  * nothing happened. A band is a label. A label does not follow anybody up, and
@@ -45,7 +45,7 @@ export interface Step {
   says: string;
   /**
    * What this touch GIVES them. Rule 1. If you cannot fill this in, delete
-   * the step rather than writing "checking in" — that is the whole point.
+   * the step rather than writing "checking in": that is the whole point.
    *
    * This is a note to WHOEVER IS DESIGNING THE CADENCE, not copy. It is shown
    * to the agent in Studio and it must never be sent to a customer: the first
@@ -93,23 +93,23 @@ export const SEQUENCES: Sequence[] = [
     ends: "After day 9, drops to the 'This week' cadence rather than going quiet.",
     steps: [
       { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
-      { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it — Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone.", body: "If it would help to go through this with somebody, there are two windows this week." },
-      { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not — say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date." },
-      { id: "n4", day: 6, channel: "email", auto: true, says: "The two programs you matched, and what each would need from you", gives: "The matched assistance, itemised — new information, not a repeat of the readout.", body: "Two Georgia programs look like they fit your answers. Here is what each one would ask of you." },
+      { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it: Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone.", body: "If it would help to go through this with somebody, there are two windows this week." },
+      { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not. Say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date." },
+      { id: "n4", day: 6, channel: "email", auto: true, says: "The two programs you matched, and what each would need from you", gives: "The matched assistance, itemised: new information, not a repeat of the readout.", body: "Two Georgia programs look like they fit your answers. Here is what each one would ask of you." },
       { id: "n5", day: 9, channel: "task", auto: false, says: "Decide: still live, or move to the slower cadence?", gives: "An honest reclassification instead of a permanent 'urgent' that stops meaning anything.", body: "Checking whether this is still something you are working towards, so we know how often to be in touch." },
     ],
   },
   {
     band: "soon",
     name: "Three-month readiness",
-    why: "They are 3 to 9 months out and genuinely working on it. Value beats urgency here — the person who taught them something is the person they call when they are ready.",
+    why: "They are 3 to 9 months out and genuinely working on it. Value beats urgency here: the person who taught them something is the person they call when they are ready.",
     ends: "Rolls into the long horizon after day 45 unless something changed.",
     steps: [
       { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
-      { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date — ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date.", body: "Three things move your closing date more than anything else, and they are not the ones most people focus on." },
+      { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date, ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date.", body: "Three things move your closing date more than anything else, and they are not the ones most people focus on." },
       { id: "s3", day: 9, channel: "text", auto: false, says: "Rates moved this week. Here is what it does to your monthly.", gives: "A recomputed monthly figure, only sent when the change is material.", body: "Rates moved this week, which changes the monthly figure on your readout." },
       { id: "s4", day: 21, channel: "email", auto: true, says: "The assistance programs in your county, and their deadlines", gives: "Deadlines they would otherwise miss. This is the touch that most often gets replied to.", body: "The assistance programs in your county have deadlines, and they are the sort that pass quietly." },
-      { id: "s5", day: 45, channel: "call", auto: false, says: "Checkpoint — are the numbers still the numbers?", gives: "A re-run of their assessment against what has changed since.", body: "It has been a few weeks — worth checking whether the numbers you gave us are still the numbers." },
+      { id: "s5", day: 45, channel: "call", auto: false, says: "Checkpoint: are the numbers still the numbers?", gives: "A re-run of their assessment against what has changed since.", body: "It has been a few weeks. Worth checking whether the numbers you gave us are still the numbers." },
     ],
   },
   {
@@ -118,9 +118,9 @@ export const SEQUENCES: Sequence[] = [
     why: "Nine months to two years. The failure mode is talking to them monthly until they mute you. Four touches a year, each one worth opening, is worth more than twenty that are not.",
     ends: "Repeats quarterly, indefinitely, until a stop fires.",
     steps: [
-      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout — keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to." },
+      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout: keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to." },
       { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date.", body: "The one figure that decides how long this takes, and what it would take to shorten it." },
-      { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check — what changed in your county", gives: "Local price and programme movement, recomputed against their saved position.", body: "A quarter on, here is what has changed in your county and what it does to your position." },
+      { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check: what changed in your county", gives: "Local price and programme movement, recomputed against their saved position.", body: "A quarter on, here is what has changed in your county and what it does to your position." },
       { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached.", body: "Half a year on, your gap recomputed. No ask attached to this one." },
     ],
   },
@@ -130,7 +130,7 @@ export const SEQUENCES: Sequence[] = [
     why: "Incomplete assessment, no contact detail, or explicitly not now. Two touches, both useful, then stop. A list you cannot stop sending to is not a list, it is a liability.",
     ends: "Stops. Re-entry only if they come back on their own.",
     steps: [
-      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through — here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them." },
+      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through. Here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them." },
       { id: "d2", day: 30, channel: "email", auto: true, says: "Still here if it becomes useful. Nothing needed.", gives: "A standing door and an explicit end. Says outright that this is the last one.", body: "Still here if this becomes useful. Nothing is needed from you." },
     ],
   },
@@ -150,7 +150,7 @@ export interface Enrolment {
   daysIn: number;
   /** Set once any stop fires. A live enrolment has none. */
   stopped: StopId | null;
-  /** Written phone consent on file. Gates the text channel — rule 3. */
+  /** Written phone consent on file. Gates the text channel: rule 3. */
   phoneConsent: boolean;
   /** Steps already sent. */
   done: string[];
@@ -169,12 +169,12 @@ export interface Due {
 
 /**
  * Consent gates the channel, not the sequence. A text step for somebody with
- * no written consent becomes an email step — it does not get sent as a text
+ * no written consent becomes an email step: it does not get sent as a text
  * and it does not get silently dropped.
  */
 export function resolveChannel(step: Step, phoneConsent: boolean) {
   if (step.channel === "text" && !phoneConsent) {
-    return { channel: "email" as Channel, downgraded: "No written phone consent on file — sent as email instead." };
+    return { channel: "email" as Channel, downgraded: "No written phone consent on file, so it was sent as email instead." };
   }
   return { channel: step.channel, downgraded: null };
 }
@@ -217,7 +217,7 @@ export function autonomy(band: Band) {
  * Twenty-five is not a throughput figure, it is a blast radius. The cadence
  * accumulates a due cohort whether or not sending is switched on, so the FIRST
  * run after an address is configured is the one run in this product's life that
- * can reach everybody at once — through code that has never sent a real
+ * can reach everybody at once: through code that has never sent a real
  * message. A cap turns that into a sample you can read before the rest goes.
  *
  * Nothing is lost to the cap: a step that is still due tomorrow is still due
@@ -236,8 +236,8 @@ export interface RunOptions {
  * Reads the two safety dials off the request URL.
  *
  * `?dry=1` and `?max=N`. Both are deliberately absent-by-default in the wrong
- * direction only for `dry` — a scheduler that forgets the parameter sends for
- * real, which is what a scheduler is for — while `max` defaults to the cap
+ * direction only for `dry`: a scheduler that forgets the parameter sends for
+ * real, which is what a scheduler is for: while `max` defaults to the cap
  * rather than to unlimited, because forgetting a limit must not mean not having
  * one. A max of 0 is honoured (send nothing); a negative or unparseable one
  * falls back to the default rather than meaning "no limit", since the most
@@ -255,7 +255,7 @@ export function runOptions(url: string): RunOptions {
   const dry = raw !== null && raw !== "0" && raw.toLowerCase() !== "false";
 
   /* The raw string first. `Number(null)` and `Number("")` are both 0, so
-     coercing straight to a number turns "no max given" into "send nothing" —
+     coercing straight to a number turns "no max given" into "send nothing":
      a cap that reads as working and delivers a cron that never sends again. */
   const askedRaw = params.get("max");
   const asked = askedRaw?.trim() ? Number(askedRaw) : NaN;

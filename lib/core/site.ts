@@ -3,14 +3,14 @@
  *
  * Written because the sitemap was empty in production and had been since the
  * day it was added. `app/sitemap.ts` read `NEXT_PUBLIC_SITE_URL`, returned an
- * empty list when it was unset, and nobody had set it on Vercel — so
+ * empty list when it was unset, and nobody had set it on Vercel, so
  * /sitemap.xml served a well-formed document containing no URLs, robots.txt
  * omitted its `Sitemap:` line, and the route returned 200 the whole time.
  * Same shape as the cron bug: a thing that looks like it is working because
  * the only evidence of failure is an absence.
  *
  * So the origin is derived rather than declared. An explicit variable still
- * wins when it is set — a custom domain is a decision, not a guess — but
+ * wins when it is set (a custom domain is a decision, not a guess) but
  * falling back to what the platform already knows means the common case needs
  * no configuration at all, and the failure mode of forgetting is a preview URL
  * in a sitemap rather than no sitemap.
@@ -43,7 +43,7 @@ export function resolveSiteUrl(env: Env): string | null {
        domain are splitting the product's own search authority in two. */
     env.NEXT_PUBLIC_SITE_URL,
     /* Vercel sets this to the stable production hostname on every deployment,
-       including preview builds — which is what makes it the right fallback.
+       including preview builds, which is what makes it the right fallback.
        VERCEL_URL is the per-deployment hostname and changes every push, so it
        would put a dead URL in a card the moment the next deploy landed. */
     env.VERCEL_PROJECT_PRODUCTION_URL,

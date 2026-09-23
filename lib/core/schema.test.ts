@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
  *
  * It is the one thing this product publishes that nobody ever looks at. A
  * claim in a JSON-LD block is read by machines, ranked on, and never seen by
- * the agent or by a visitor — so if it drifts from the page, nothing in the
+ * the agent or by a visitor, so if it drifts from the page, nothing in the
  * product surfaces it and the drift is permanent.
  *
  * Which makes it the natural home for exactly the bug this codebase keeps
@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 const AGENT = readFileSync("components/rift/Agent.tsx", "utf8");
 
 /* Comments stripped. Agent.tsx's docblock explains at length that the licence
-   number and telephone are deliberately absent — so a guard that greps the raw
+   number and telephone are deliberately absent, so a guard that greps the raw
    file fails on the sentence saying the thing is not there. */
 const AGENT_CODE = AGENT.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const ABROAD = readFileSync("app/(rift)/abroad/Landing.tsx", "utf8");
@@ -30,7 +30,7 @@ describe("the agent block", () => {
        Two properties, stated separately rather than in one clever expression.
        The first draft of this test combined them into a conditional regex
        that asserted almost nothing and passed. */
-    expect(AGENT_CODE, "a telephone appears in the agent schema — it is null on rift_agents")
+    expect(AGENT_CODE, "a telephone appears in the agent schema, but it is null on rift_agents")
       .not.toMatch(/\btelephone\b/);
 
     /* Anything that looks like a licence number, whether or not it is labelled
@@ -49,7 +49,7 @@ describe("the agent block", () => {
 
 describe("the FAQ block", () => {
   it("emits nothing rather than an empty FAQPage", () => {
-    /* An empty one is invalid, which means silently ignored — the worst of
+    /* An empty one is invalid, which means silently ignored: the worst of
        both outcomes, since it also looks like the feature is working. */
     expect(AGENT_CODE).toMatch(/if \(usable\.length === 0\) return null;/);
   });
@@ -64,7 +64,7 @@ describe("the FAQ block", () => {
 
   it("is fed from the same array the page renders", () => {
     /* Google's rule is that structured data must match what the visitor sees,
-       and a second copy written for crawlers drifts inside a release — after
+       and a second copy written for crawlers drifts inside a release: after
        which the product makes two claims about the same thing, one invisible.
 
        Asserted structurally: the schema takes `faq`, and so does the map that
@@ -74,7 +74,7 @@ describe("the FAQ block", () => {
 
     /* And there is exactly one place the questions are listed. */
     const listings = ABROAD.match(/t\("faq\.q1"\)/g) ?? [];
-    expect(listings, "faq.q1 appears more than once — there are two copies of the questions")
+    expect(listings, "faq.q1 appears more than once; there are two copies of the questions")
       .toHaveLength(1);
   });
 });

@@ -126,7 +126,7 @@ export default function Sell() {
             </div>
             <p className="t-xs c-4" style={{ marginTop: 14, lineHeight: 1.6 }}>
               We&apos;re not tax advisors or attorneys. We notice the question is worth asking
-              and tell you exactly who decides — your county, your lender, or a tax professional.
+              and tell you exactly who decides: your county, your lender, or a tax professional.
             </p>
             <Link href={go} className="btn btn-brand" style={{ marginTop: 18 }}>
               Check mine <Ico.arrowR size={15} />
@@ -165,7 +165,7 @@ export default function Sell() {
             Six questions and you&apos;ll know where you stand.
           </h3>
           <p style={{ marginTop: 12, color: "rgba(255,255,255,.62)", fontSize: 15, lineHeight: 1.6, maxWidth: 520 }}>
-            Net proceeds, unclaimed value, what to fix, when to list, and a dated plan — yours
+            Net proceeds, unclaimed value, what to fix, when to list, and a dated plan, yours
             whether or not we ever speak.
           </p>
           <div className="g3 gap-3" style={{ marginTop: 26 }}>

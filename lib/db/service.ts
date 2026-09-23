@@ -7,7 +7,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
  * The service-role client.
  *
  * Bypasses RLS entirely, so it never reaches the browser and is never imported
- * by a client component — `server-only` above turns that mistake into a build
+ * by a client component: `server-only` above turns that mistake into a build
  * error rather than a breach.
  *
  * It exists because three things must be written by paths a visitor does not
@@ -18,7 +18,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
  *
  * Returns null when unconfigured rather than throwing. The specification at
  * /prototype runs with an empty environment on purpose, and a missing
- * integration must degrade visibly rather than take the process down —
+ * integration must degrade visibly rather than take the process down:
  * see docs/integrations.md.
  */
 let cached: SupabaseClient | null | undefined;
@@ -31,7 +31,7 @@ export function serviceClient(): SupabaseClient | null {
    *
    * NEXT_PUBLIC_ variables are inlined into the bundle at BUILD time. Server
    * code that reads one is therefore pinned to whatever value was set when the
-   * bundle was compiled, and changing the runtime environment does nothing —
+   * bundle was compiled, and changing the runtime environment does nothing:
    * the process keeps talking to the old project while every environment
    * variable on the machine says otherwise.
    *
@@ -67,7 +67,7 @@ export function serviceClient(): SupabaseClient | null {
  * caching its absence permanently meant a long-lived instance answered "no
  * agent row exists yet" to every request until somebody restarted it.
  *
- * That is not hypothetical — it happened the first time this was run against a
+ * That is not hypothetical: it happened the first time this was run against a
  * real database, and the symptom was every write skipping while the row was
  * plainly there in the table.
  *
@@ -77,7 +77,7 @@ export function serviceClient(): SupabaseClient | null {
  * stranger's lead would be attached to whichever row Postgres happened to
  * return, and nothing anywhere would report it. Every RLS policy in the schema
  * is written `agent_id = rift_my_agent_id()`, so the database is built for
- * several agents even though the product is not — and the gap between those
+ * several agents even though the product is not, and the gap between those
  * two facts is the kind that gets discovered by an agent reading somebody
  * else's client list.
  *
@@ -104,8 +104,8 @@ export async function currentAgentId(): Promise<string | null> {
 
   /* On a deadline, because this read gates EVERY write.
      
-     It is not the write itself — a deadline on a write that then reported
-     success would be worse than waiting — it is the lookup in front of one. An
+     It is not the write itself: a deadline on a write that then reported
+     success would be worse than waiting: it is the lookup in front of one. An
      unbounded lookup means a hung database holds every request open until the
      platform kills it, which on a serverless runtime exhausts concurrency and
      is billed the whole time.
@@ -121,7 +121,7 @@ export async function currentAgentId(): Promise<string | null> {
      This used to treat a timeout exactly like an empty table: return null AND
      remember the absence for ten seconds. The first query on a freshly started
      serverless instance routinely takes longer than the two-second read
-     deadline — it is paying for the connection — so every cold start began
+     deadline (it is paying for the connection) so every cold start began
      with ten seconds in which this function told every caller the agent did
      not exist. Every write in the product gates on it. A lead captured in that
      window reported `skipped`, which the readout renders as "email is not
@@ -131,8 +131,8 @@ export async function currentAgentId(): Promise<string | null> {
      returning 503 once and then 200 eight times in a row.
 
      So: one retry with a longer deadline to absorb the connection cost, and a
-     timeout or a transport error is NEVER remembered. Only a definite answer —
-     the table is genuinely empty — is cached, because only that is a fact. */
+     timeout or a transport error is NEVER remembered. Only a definite answer:
+     the table is genuinely empty: is cached, because only that is a fact. */
   let attempt = await withTimeout(ask(), READ_DEADLINE_MS, null);
   if (attempt.timedOut) attempt = await withTimeout(ask(), COLD_START_MS, null);
 
@@ -145,11 +145,11 @@ export async function currentAgentId(): Promise<string | null> {
   if (rows.length === 0) { missingUntil = Date.now() + MISSING_RETRY_MS; return null; }
 
   if (rows.length > 1) {
-    /* Not cached, and not retried on a short timer either — this is a
+    /* Not cached, and not retried on a short timer either: this is a
        deployment that has outgrown an assumption baked into every module that
        calls this, and it needs a person, not a retry. */
     captureOpError(
-      new Error("more than one agent row exists — the single-agent assumption in lib/db/service.ts no longer holds"),
+      new Error("more than one agent row exists; the single-agent assumption in lib/db/service.ts no longer holds"),
       { op: "agent.resolve" },
     );
     return null;
@@ -163,13 +163,13 @@ export async function currentAgentId(): Promise<string | null> {
  * The agent's own email address.
  *
  * Read through the service client rather than from a session, because the
- * caller is `/api/capture` — an anonymous stranger's request, with nobody
+ * caller is `/api/capture`: an anonymous stranger's request, with nobody
  * signed in. There is one agent (see `currentAgentId` above, which refuses
  * outright when that stops being true), so this is his address.
  *
  * Cached alongside the id and on the same terms: a success is kept, an
  * absence is not. Returns null rather than throwing, so a deployment with no
- * database sends no alert instead of failing a capture — the lead is worth
+ * database sends no alert instead of failing a capture: the lead is worth
  * more than the notification about it.
  */
 let agentEmail: string | null = null;
@@ -204,8 +204,8 @@ let agentPublic: { name: string } | null = null;
  * design, and reaching for the session-based one there would have returned
  * null and addressed the client's own agent as "your agent" on every line.
  *
- * Name only. It is the one field on the agent row that is already public —
- * it is on the landing page, in the structured data and on the readout — and
+ * Name only. It is the one field on the agent row that is already public:
+ * it is on the landing page, in the structured data and on the readout, and
  * a helper that returned the row would put the email in front of the next
  * page that calls it.
  */

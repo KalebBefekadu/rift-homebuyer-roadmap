@@ -7,11 +7,11 @@
  * original decision here was to type it in weekly rather than fetch it, on the
  * grounds that "a wrong rate pulled automatically is worse than a right one
  * typed weekly, because nobody is watching the automatic one". That reasoning
- * is correct and the answer is not to keep typing — it is to make the automatic
+ * is correct and the answer is not to keep typing: it is to make the automatic
  * one watched: refuse on anything it does not fully understand, and say why.
  *
  * So every function here returns a rate OR a refusal, never a best guess. The
- * failure this guards against is not an outage — an outage is loud, and the
+ * failure this guards against is not an outage: an outage is loud, and the
  * previous rate simply stays and ages. It is Freddie Mac changing the file's
  * shape and this code confidently recording the fifteen-year rate, or a
  * thousand-separator, or a header row, as the thirty-year number.
@@ -37,7 +37,7 @@ export const MAX_PLAUSIBLE_PCT = 20;
 /**
  * How far the newest published row may be behind today before we say so.
  *
- * Publication is weekly, so a fortnight means a missed week — either a holiday
+ * Publication is weekly, so a fortnight means a missed week: either a holiday
  * or a file that has stopped updating. The rate is still recorded (it is still
  * the real latest rate); the run reports the gap so a file that quietly froze
  * does not read as a series of successful runs.
@@ -47,7 +47,7 @@ export const PMMS_LAG_DAYS = 14;
 export interface PmmsReading {
   ok: true;
   pct: number;
-  /** ISO date the rate was true, from the file — never today's date. */
+  /** ISO date the rate was true, from the file: never today's date. */
   asOf: string;
   /** Days between `asOf` and the day of the read. */
   lagDays: number;
@@ -94,10 +94,10 @@ export function readPmms(csv: string, today = new Date()): PmmsReading | PmmsRef
 
   /* The whole point of the guard. Freddie Mac reordering or renaming a column
      is the one change that would otherwise be silent, and taking the wrong
-     column means recording the fifteen-year rate as the thirty-year one —
+     column means recording the fifteen-year rate as the thirty-year one:
      roughly seventy basis points, on every monthly figure in the product. */
-  if (rateAt < 0) return { ok: false, reason: `the file has no "${PMMS30_COLUMN}" column — its shape has changed` };
-  if (dateAt < 0) return { ok: false, reason: `the file has no "${PMMS_DATE_COLUMN}" column — its shape has changed` };
+  if (rateAt < 0) return { ok: false, reason: `the file has no "${PMMS30_COLUMN}" column; its shape has changed` };
+  if (dateAt < 0) return { ok: false, reason: `the file has no "${PMMS_DATE_COLUMN}" column; its shape has changed` };
 
   /* Newest last, but read upward rather than trusting that. The trailing rows
      carry blanks for products that have been discontinued, and an ordering

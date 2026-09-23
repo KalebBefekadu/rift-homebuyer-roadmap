@@ -1,6 +1,6 @@
 import { GA_COUNTIES } from "./registry";
 /**
- * Rift prototype — editable funnels.
+ * Rift prototype: editable funnels.
  *
  * The agent can reword, reorder, hide and extend the questions a visitor is
  * asked. What he cannot do is break the arithmetic, and that constraint is the
@@ -8,14 +8,14 @@ import { GA_COUNTIES } from "./registry";
  *
  * Two classes of question:
  *
- *   CORE    — bound to a field the compute engine reads (`bound`). The wording,
+ *   CORE   : bound to a field the compute engine reads (`bound`). The wording,
  *             help text, order and option LABELS are the agent's. The option
  *             VALUES and the field binding are not, because cashToClose() and
  *             matchPrograms() read them. Core questions can be reworded and
  *             moved; a required one cannot be removed, because removing it
  *             would silently produce a wrong number rather than no number.
  *
- *   CUSTOM  — anything the agent invents. Captured onto the lead record and
+ *   CUSTOM : anything the agent invents. Captured onto the lead record and
  *             shown to him in Studio. Never feeds a calculation, so it can
  *             never make a figure wrong. This is the escape hatch, and keeping
  *             it inert is what makes the escape hatch safe.
@@ -69,7 +69,7 @@ export interface Funnel {
   /**
    * Bumped on every save. A lead stores the version it answered, because a
    * readout produced under v3 has to keep making sense after the agent ships
-   * v5 — otherwise last Tuesday's answers get silently reinterpreted against
+   * v5: otherwise last Tuesday's answers get silently reinterpreted against
    * questions that person was never asked.
    */
   version: number;
@@ -80,7 +80,7 @@ export interface Funnel {
 }
 
 /* ------------------------------------------------------------------ *
- * Defaults — what ships before the agent touches anything
+ * Defaults: what ships before the agent touches anything
  * ------------------------------------------------------------------ */
 
 export const BUY_FUNNEL: Funnel = {
@@ -114,8 +114,8 @@ export const BUY_FUNNEL: Funnel = {
       required: true, enabled: true,
       options: [
         { label: "No, I haven't owned anything", value: "none" },
-        { label: "Yes — it was where I lived", value: "primary" },
-        { label: "Yes — but it was a rental or investment property", value: "investment" },
+        { label: "Yes, it was where I lived", value: "primary" },
+        { label: "Yes, but it was a rental or investment property", value: "investment" },
       ],
     },
     {
@@ -192,7 +192,7 @@ export const SELL_FUNNEL: Funnel = {
 };
 
 /* ------------------------------------------------------------------ *
- * Ownership — the nuance the old yes/no question flattened
+ * Ownership: the nuance the old yes/no question flattened
  * ------------------------------------------------------------------ */
 
 export type Ownership = "none" | "primary" | "investment";
@@ -200,7 +200,7 @@ export type Ownership = "none" | "primary" | "investment";
 /**
  * Georgia first-time-buyer definitions almost always turn on an ownership
  * interest in a PRIMARY RESIDENCE within three years. A rental or investment
- * property frequently does not disqualify — but "frequently" is not "never",
+ * property frequently does not disqualify: but "frequently" is not "never",
  * and it varies by administrator. So we match optimistically and say plainly
  * that a lender decides.
  */
@@ -226,7 +226,7 @@ export const OWNERSHIP_CAVEAT: Record<Ownership, string | null> = {
   none: null,
   primary: null,
   investment:
-    "You owned an investment property. Most Georgia programs only count a home you lived in, so we have matched you as a first-time buyer — but this is exactly the kind of thing a program administrator decides case by case. Ask a participating lender before you count on it.",
+    "You owned an investment property. Most Georgia programs only count a home you lived in, so we have matched you as a first-time buyer, but this is exactly the kind of thing a program administrator decides case by case. Ask a participating lender before you count on it.",
 };
 
 /* ------------------------------------------------------------------ *
@@ -263,7 +263,7 @@ export function move(qs: Question[], id: string, dir: -1 | 1): Question[] {
  * The options a question can actually be answered with.
  *
  * Some questions carry their own list. Others are BOUND to a list the product
- * owns — county is the only one today — so that adding a county is one edit to
+ * owns (county is the only one today) so that adding a county is one edit to
  * the registry rather than an edit per funnel.
  *
  * This lived in the assessment component and did not handle the bound case at
@@ -293,16 +293,16 @@ export const needsOptions = (q: Question) =>
 /**
  * The parts of a question an agent may rewrite.
  *
- * Deliberately short, and the shortness is the design. Everything else —
+ * Deliberately short, and the shortness is the design. Everything else:
  * the key, the type, what it is bound to, the machine value behind each
- * option, the bounds of a slider, whether it is required — comes from the code
+ * option, the bounds of a slider, whether it is required: comes from the code
  * and cannot be overridden by anything stored.
  *
  * That is not caution about a hypothetical. The county question feeds the
  * programme registry, `savings` and `monthlySaving` feed the months-to-close
  * arithmetic, and `own` decides first-time-buyer eligibility. An editor that
  * could remove one, or change the value behind "No, I haven't owned anything",
- * would not produce an error — it would produce a readout computed against a
+ * would not produce an error: it would produce a readout computed against a
  * default, which renders perfectly and is about nobody.
  *
  * So the agent gets his own voice, and the engine keeps its own contract.
@@ -326,7 +326,7 @@ function words(v: unknown): string | undefined {
  *
  * Pure and total: an unknown key is ignored, a blank value falls back to the
  * code's own, and nothing structural is read from the input at all. Hand it
- * anything — a stale row, a half-finished edit, a hostile payload — and the
+ * anything (a stale row, a half-finished edit, a hostile payload) and the
  * worst outcome is the funnel the product shipped with.
  */
 export function applyWording(funnel: Funnel, wording: Record<string, Wording>): Funnel {

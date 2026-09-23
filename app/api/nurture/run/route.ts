@@ -21,7 +21,7 @@ export const maxDuration = 60;
  * the queue for the agent, because a product that auto-dials on somebody's
  * behalf has decided something that was not its to decide.
  *
- * Two dials, both off the URL — see lib/core/nurture.ts:
+ * Two dials, both off the URL: see lib/core/nurture.ts:
  *
  *   ?dry=1   walk the whole queue and report it, claiming nothing and sending
  *            nothing. The one way to find out what the first real run will do
@@ -52,13 +52,13 @@ async function run(req: Request) {
 
   /* Four counts, not two. "Held for the agent" and "we could not send it" are
      different facts and lumping them together sends somebody looking for a task
-     that does not exist — which is exactly what the first live run did. */
+     that does not exist, which is exactly what the first live run did. */
   let sent = 0, held = 0, notConfigured = 0, failedCount = 0;
   /* Fifth: still due, not attempted, because this run had used up its budget.
-     Nothing is lost — it is due again tomorrow — but a run that silently drops
+     Nothing is lost (it is due again tomorrow) but a run that silently drops
      the tail is indistinguishable from a run with nothing left to do. */
   let deferred = 0;
-  /* A dry run's only output. Who, which step, and what would have gone — the
+  /* A dry run's only output. Who, which step, and what would have gone: the
      three things you need to decide whether to let it loose. */
   const plan: { to: string; stepId: string; band: string; kind: "readout" | "resume" }[] = [];
 
@@ -69,7 +69,7 @@ async function run(req: Request) {
     /* The cap counts everything this run would put in front of a person,
        including a dry run's plan. A preview that silently shows the first
        twenty-five of two hundred is the same lie as a send that stops there
-       without saying so — both are reported, neither is hidden. */
+       without saying so: both are reported, neither is hidden. */
     if (plan.length + sent + failedCount + notConfigured >= max) { deferred++; continue; }
 
     if (dry) {
@@ -85,8 +85,8 @@ async function run(req: Request) {
     /* Two kinds of touch, because two kinds of person.
        
        Somebody who finished has a readout, and the email leads with their
-       figures. Somebody who stopped has none — that is why they are in the
-       dormant sequence at all — so leading with figures would refuse to send
+       figures. Somebody who stopped has none: that is why they are in the
+       dormant sequence at all, so leading with figures would refuse to send
        and the largest population in the funnel would never hear from us. They
        get a resume link and how far they got, and nothing about what they
        might be missing. Recovery, not pursuit. */
@@ -144,7 +144,7 @@ async function run(req: Request) {
        counts what it did makes the human half invisible. */
     heldForAgent: held,
     /* Wanted to send and could not, because email is not switched on. Not the
-       agent's task and not an error — a configuration gap, and it should read
+       agent's task and not an error: a configuration gap, and it should read
        as one. */
     notConfigured,
     failed: failedCount,
@@ -155,7 +155,7 @@ async function run(req: Request) {
 
 /* Both verbs, same job. Vercel's scheduler sends GET; a human running this by
    hand sends POST. Exporting only POST is how this endpoint spent its whole
-   life returning 405 to the scheduler while every check said it was fine —
+   life returning 405 to the scheduler while every check said it was fine:
    see lib/core/cron.ts. */
 export const GET = run;
 export const POST = run;

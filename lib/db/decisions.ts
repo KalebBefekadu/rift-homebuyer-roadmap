@@ -18,7 +18,7 @@ export type { Decision, Option, Kind };
  *
  * THE CLIENT READ IS A DIFFERENT QUERY, not the same query with a filter in
  * the component. `releasedFor` never asks for an unreleased room, so there is
- * no path by which a draft reaches the page that renders the client's plan —
+ * no path by which a draft reaches the page that renders the client's plan:
  * the same shape as `readPlanByToken`, and for the same reason: a filter
  * applied after the data has been fetched is one refactor away from not being
  * applied at all.
@@ -122,7 +122,7 @@ export async function decisionsFor(leadId: string): Promise<DbResult<Decision[]>
  * through assembling a comparison is never one bug away from showing it.
  *
  * Takes the agent id explicitly because the caller is the client's plan page,
- * where nobody is signed in — the token is the authorisation, exactly as in
+ * where nobody is signed in: the token is the authorisation, exactly as in
  * lib/db/plan.ts.
  */
 export async function releasedFor(leadId: string, agentId: string): Promise<DbResult<Decision[]>> {
@@ -202,7 +202,7 @@ export async function addOption(input: {
      sentence rather than a Postgres error. A bare number in a comparison
      column is the reader's guess about what they are comparing. */
   if (amount !== null && !amountLabel) {
-    return failed("a figure needs to say what it is — \"would reach you\", \"a month\"");
+    return failed("a figure needs to say what it is, like \"would reach you\", \"a month\"");
   }
 
   /* Appended, in the agent's order. Reading the current maximum rather than
@@ -305,8 +305,8 @@ export async function unrelease(decisionId: string): Promise<DbResult<null>> {
  * Record what was decided.
  *
  * The option is verified to belong to this room before the write. The database
- * enforces it too — a composite foreign key, so an outcome naming an option
- * from another room is unrepresentable — but reaching that constraint means
+ * enforces it too: a composite foreign key, so an outcome naming an option
+ * from another room is unrepresentable, but reaching that constraint means
  * the agent sees a Postgres error where a sentence belonged.
  */
 export async function recordOutcome(input: {

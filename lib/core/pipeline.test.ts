@@ -9,7 +9,7 @@ import {
  *
  * A relationship does not usually die of a decision; it dies of forty quiet
  * days. This module decides which client the agent calls today and what he
- * tells himself about his year — so a wrong answer here is not a wrong pixel,
+ * tells himself about his year, so a wrong answer here is not a wrong pixel,
  * it is a call not made and a hire made too early.
  */
 
@@ -46,7 +46,7 @@ describe("stall detection", () => {
   it("points at an overdue action ahead of anything else", () => {
     const s = stallOf("Financing", 40, undefined, "Overdue by 3 days");
     expect(s.reason).toContain("overdue");
-    expect(s.unstick).toContain("it is the dependency");
+    expect(s.unstick).toContain("It is the dependency");
   });
 
   it("treats no recorded cause as its own answer", () => {
@@ -166,7 +166,7 @@ describe("the forward view", () => {
 
   /**
    * Run on the last day of a month, `setMonth` rolled over: the four buckets
-   * came out "Jan, Mar, Mar, May" — February and April gone, March twice —
+   * came out "Jan, Mar, Mar, May": February and April gone, March twice:
    * while `idx` stayed correct, so February's deals were filed under the first
    * "Mar" and March's under the second.
    */

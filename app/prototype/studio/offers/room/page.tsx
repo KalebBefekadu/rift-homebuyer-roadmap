@@ -26,7 +26,7 @@ const RISK: Record<string, { l: string; b: string; lv: "low" | "med" | "high" }[
   ],
   o2: [
     { l: "Financing", b: "FHA at 3.5% down, no preapproval attached.", lv: "high" },
-    { l: "Contingency", b: "They must sell their own home first — a second transaction you don't control.", lv: "high" },
+    { l: "Contingency", b: "They must sell their own home first: a second transaction you don't control.", lv: "high" },
     { l: "Timeline", b: "28 days later, 17-day diligence window.", lv: "med" },
   ],
 };
@@ -109,7 +109,7 @@ export default function Decisions() {
       <div className="g2 gap-3" style={{ marginBottom: 16 }}>
         {OFFERS.map((o) => (
           <div key={o.id} className="card p-4">
-            <div className="t-sm w6" style={{ marginBottom: 12 }}>Risk — {o.submittedBy.split(" ")[1]}</div>
+            <div className="t-sm w6" style={{ marginBottom: 12 }}>Risk: {o.submittedBy.split(" ")[1]}</div>
             {RISK[o.id].map((r) => (
               <div key={r.l} style={{ padding: "9px 0", borderTop: "1px solid var(--line-3)" }}>
                 <div className="row gap-2" style={{ marginBottom: 3 }}>
@@ -136,7 +136,7 @@ export default function Decisions() {
           </p>
           <p className="t-md c-2" style={{ lineHeight: 1.65, marginBottom: 12 }}>
             I&apos;d take Whitfield. If you want, I&apos;ll go back to Deel and ask him to drop the
-            home-sale contingency and attach a preapproval — but I wouldn&apos;t hold Whitfield
+            home-sale contingency and attach a preapproval, but I wouldn&apos;t hold Whitfield
             waiting while we find out.
           </p>
           <p className="t-sm c-4">

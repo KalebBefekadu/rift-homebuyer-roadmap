@@ -5,7 +5,7 @@ import { join, dirname, resolve } from "node:path";
 /**
  * Nothing a stranger can reach may link into /prototype.
  *
- * `/prototype/*` returns 404 in production — deliberately, it is the design
+ * `/prototype/*` returns 404 in production: deliberately, it is the design
  * prototype and it is not the product. The trouble is that three components
  * are shared between the prototype and the real funnels, and one of them,
  * `components/rift/Readout.tsx`, is the shell the live seller readout renders

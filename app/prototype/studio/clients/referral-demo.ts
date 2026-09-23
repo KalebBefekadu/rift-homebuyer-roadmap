@@ -7,7 +7,7 @@ import { MOMENTS, type Moment, type Mood, type MomentId, type MomentState } from
  * real relationships. Five fictional people with fictional referral histories
  * are the right thing to draw a specification against and the wrong thing to
  * keep in `lib/core`, where every other module is either arithmetic or a rule
- * the production product depends on — and where a name that renders is
+ * the production product depends on, and where a name that renders is
  * indistinguishable from a real one.
  *
  * The engine itself stayed behind and is now derived from lifecycle data. See

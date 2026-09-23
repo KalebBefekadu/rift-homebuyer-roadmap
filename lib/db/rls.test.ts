@@ -5,8 +5,8 @@ import { Client } from "pg";
 /**
  * Row-level security, exercised.
  *
- * These policies are the security boundary — `docs/architecture.md` says route
- * guards are experience, not authorization — and they had never been run. The
+ * These policies are the security boundary: `docs/architecture.md` says route
+ * guards are experience, not authorization, and they had never been run. The
  * local harness disables RLS so the query-shape tests can focus on syntax, and
  * the application uses the service role, which bypasses policies entirely. So
  * every policy in this product was written, shipped, and never once enforced
@@ -17,7 +17,7 @@ import { Client } from "pg";
  * clients. There is exactly one agent today, which is why this is cheap to fix
  * now and expensive to discover later.
  *
- * Runs as a real authenticated role with a JWT claim, not as the table owner —
+ * Runs as a real authenticated role with a JWT claim, not as the table owner:
  * the owner bypasses RLS, and a first attempt at this "passed" for that reason
  * while proving nothing.
  */
@@ -45,7 +45,7 @@ beforeAll(async () => {
     for (const f of riftMigrations()) await c.query(readFileSync(f, "utf8"));
     /* The registry, because the assertion that matters most here is that an
        anonymous visitor CAN read it. Without the seed that test passes for the
-       wrong reason — an empty table looks exactly like a policy refusing. */
+       wrong reason: an empty table looks exactly like a policy refusing. */
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
 
     await c.query("insert into auth.users (id) values ($1),($2) on conflict do nothing", [A_USER, B_USER]);
@@ -67,7 +67,7 @@ beforeAll(async () => {
        
        Roles are cluster-wide but grants are per-database, so dropping this one
        from the test database failed on grants still held in the development
-       one — a cross-database dependency that has nothing to do with this suite
+       one: a cross-database dependency that has nothing to do with this suite
        and would break it on any machine that had run the local stack. */
     await c.query("do $$ begin if not exists (select 1 from pg_roles where rolname='rls_user') then execute 'create role rls_user nologin'; end if; end $$");
     await c.query("grant usage on schema public to rls_user");

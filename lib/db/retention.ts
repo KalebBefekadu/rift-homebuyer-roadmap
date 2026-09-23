@@ -14,8 +14,8 @@ import { boundedWrite, boundedRead } from "./bounded";
  * paragraph. This is the job.
  *
  * Deletion here means DELETION. Not a flag, not an anonymised row, not an
- * archive table — the specification says so in the customer's own words
- * ("Deleted outright — not anonymised, not archived") and a soft delete would
+ * archive table: the specification says so in the customer's own words
+ * ("Deleted outright: not anonymised, not archived") and a soft delete would
  * make that sentence false while looking like compliance.
  *
  * The one period this cannot decide is the client record's. It has a legal
@@ -30,7 +30,7 @@ export const WINDOWS = {
   unconverted: { days: 18 * 30, rule: "unconverted" },
   /** A part-finished assessment with no contact details. */
   abandoned: { days: 30, rule: "abandoned" },
-  /** Funnel measurement — question ids and dwell, never answers. */
+  /** Funnel measurement: question ids and dwell, never answers. */
   analytics: { days: 24 * 30, rule: "analytics" },
 } as const;
 
@@ -41,7 +41,7 @@ export interface SweepResult {
   attributions: number;
   /** People, deleted deliberately rather than by cascade. */
   leads: number;
-  /** Marked abandoned rather than deleted — still recoverable. */
+  /** Marked abandoned rather than deleted: still recoverable. */
   marked: number;
   /** Anything the job deliberately did not touch, and why. */
   held: string[];
@@ -49,7 +49,7 @@ export interface SweepResult {
 
 export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
   const db = serviceClient();
-  if (!db) return skipped("no database configured — nothing was deleted");
+  if (!db) return skipped("no database configured, so nothing was deleted");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
@@ -61,7 +61,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
        
        An assessment quiet for a day is abandoned; one quiet for a month with no
        contact details is deleted. Marking is not deletion and must not become
-       it — an abandonment deleted immediately destroys the recovery
+       it: an abandonment deleted immediately destroys the recovery
        opportunity, and one never marked leaves the agent staring at a queue
        that never empties. */
     const { data: quiet } = await db
@@ -79,7 +79,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
     }
 
     /* Abandoned, no contact details. The strictest window, and deliberately so:
-       this is the most sensitive data in the product — a stranger's finances,
+       this is the most sensitive data in the product: a stranger's finances,
        with no relationship attached and no way to ask them about it. */
     const { data: orphans, error: orphanErr } = await db
       .from("rift_assessments")
@@ -94,7 +94,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       .map((a) => a.id);
 
     /* Completed but never converted. Kept far longer, because a buyer who
-       answered "9 to 18 months" is still inside their own stated timeline —
+       answered "9 to 18 months" is still inside their own stated timeline:
        deleting at ninety days would throw away the person the product exists
        for. */
     const { data: cold, error: coldErr } = await db
@@ -116,7 +116,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
         .in("assessment_id", doomed);
       answers = count ?? 0;
 
-      /* Answers cascade from the assessment, so one delete is enough — and one
+      /* Answers cascade from the assessment, so one delete is enough, and one
          delete is safer than two, because a partial sweep that removed the
          assessment and left the answers would leave orphaned finances behind. */
       const { error } = await db.from("rift_assessments").delete().in("id", doomed);
@@ -135,7 +135,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       .from("rift_events").delete().eq("agent_id", agent_id).lte("at", ago(WINDOWS.analytics.days));
     if (evErr) return failed(evErr.message);
 
-    /* Attribution follows analytics — it is the same kind of record about the
+    /* Attribution follows analytics: it is the same kind of record about the
        same visit, and keeping it after the events it explains would leave a
        channel history for a person whose visit has been forgotten. */
     const { count: atCount } = await db
@@ -149,7 +149,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
 
     /* Leads, deliberately.
        
-       They used to disappear as a cascade from the assessment — the person,
+       They used to disappear as a cascade from the assessment: the person,
        their score, their enrolment and every touch already sent, removed as a
        side effect of a foreign key default that the retention policy never
        described. That is now SET NULL, so this is the only place a person is
@@ -177,9 +177,9 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
     }
 
     held.push(
-      "Leads with a recorded reply or a live sequence are untouched — those are relationships, not expired records.",
-      "Client records are untouched — the period has a legal floor and is the broker's to set.",
-      "Consent records are untouched — they outlive the relationship because they are what proves the contact was lawful.",
+      "Leads with a recorded reply or a live sequence are untouched. Those are relationships, not expired records.",
+      "Client records are untouched. The period has a legal floor and is the broker's to set.",
+      "Consent records are untouched. They outlive the relationship because they are what proves the contact was lawful.",
     );
 
     return done({
@@ -204,9 +204,9 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
  * This used to say it was "the same deletion the sweep performs, triggered by
  * the person rather than by time", and that was true on the day it was
  * written: rift_leads.assessment_id cascaded, so removing the assessment took
- * the lead with it. 20260908000000 changed the cascade to SET NULL — for a
+ * the lead with it. 20260908000000 changed the cascade to SET NULL: for a
  * good reason, because the retention sweep was destroying relationships the
- * agent was still working — and updated the sweep to delete leads explicitly.
+ * agent was still working, and updated the sweep to delete leads explicitly.
  *
  * It did not update this function, which shares the mechanism. From that
  * migration onward, clicking "Delete all of it" removed the assessment, the
@@ -223,7 +223,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
  *   * The LEAD goes. A person who asks to be erased is not a relationship the
  *     agent gets to keep on the grounds that he might want it.
  *   * The CONSENT RECORD goes with them. The sweep deliberately keeps consent
- *     records, because they are the evidence that contact was lawful — but
+ *     records, because they are the evidence that contact was lawful, but
  *     that argument only holds while there is somebody for them to be evidence
  *     about. Keeping proof of permission to email an address you have just
  *     destroyed is retention with no purpose left in it.
@@ -253,7 +253,7 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
        rift_leads.assessment_id is SET NULL on delete, so removing the
        assessments before collecting the leads that point at them severs the
        only link between the two and leaves the person permanently
-       unfindable — deleted from their own point of view, present in the
+       unfindable: deleted from their own point of view, present in the
        table. Two queries: the leads that came from these assessments, and
        the leads that carry this session directly, which is the only handle a
        capture with no assessment behind it has ever had. */
@@ -266,7 +266,7 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
     if (byAssessment && !byAssessment.ok) return byAssessment;
 
     /* `session_id` on rift_leads arrived with 20260920020000, which is run by
-       hand. If this deploys first, asking for the column returns an error —
+       hand. If this deploys first, asking for the column returns an error:
        and failing the whole request would leave the person with a delete
        button that does nothing at all, which is strictly worse than the
        partial erasure this is fixing. So a missing column degrades to "no
@@ -334,14 +334,14 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
  * Is anything still here that should already be gone?
  *
  * This exists because `/api/health` used to answer "is the retention job
- * working?" with "is CRON_SECRET set?" — and those turned out to be different
+ * working?" with "is CRON_SECRET set?": and those turned out to be different
  * questions in the worst possible way. The secret was set, the check was
  * green, and the job had never run once because the route did not accept the
  * verb the scheduler sends.
  *
  * So this checks the outcome instead of the plumbing. If the sweep is running,
- * nothing is ever meaningfully past its date; if it stops for any reason —
- * a wrong verb, a revoked key, a scheduler someone disabled — this goes red on
+ * nothing is ever meaningfully past its date; if it stops for any reason:
+ * a wrong verb, a revoked key, a scheduler someone disabled: this goes red on
  * its own, without anybody having predicted the specific way it would break.
  *
  * It answers yes or no and never a count. Health is public, and "how many
@@ -365,8 +365,8 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
   try {
     /* The strictest window first, and the only one that needs a join: a
        part-finished assessment with nobody attached to it. That is the most
-       sensitive data in the product — a stranger's finances with no
-       relationship and no way to ask them about it — and it is the window that
+       sensitive data in the product: a stranger's finances with no
+       relationship and no way to ask them about it, and it is the window that
        would go red soonest if the sweep stopped. Checked separately because a
        lead attached to it means it is not an orphan and its clock is a
        different one. */
@@ -383,7 +383,7 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
 
     /* Sequential with an early exit, not Promise.all. One row anywhere is the
        whole answer, so running all three concurrently buys nothing and pays
-       for every query every time — and the last of them is the only one
+       for every query every time, and the last of them is the only one
        without an index behind it. Cheapest and most likely to trip first. */
     const events = await boundedRead(
       db.from("rift_events").select("id")

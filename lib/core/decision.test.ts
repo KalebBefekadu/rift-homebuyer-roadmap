@@ -8,7 +8,7 @@ import {
 /**
  * Decision Rooms.
  *
- * docs/benchmark.md scores 4.3 at 0 in production — absent, not weak. What is
+ * docs/benchmark.md scores 4.3 at 0 in production: absent, not weak. What is
  * tested here is almost entirely the restraint, because the failure mode of a
  * comparison tool is not a wrong number. It is a comparison that has quietly
  * made the choice: ordering by amount, showing one option with only good news,
@@ -72,7 +72,7 @@ describe("canRelease", () => {
 
   it("refuses a mix of priced and unpriced options", () => {
     /* Side by side, an option with no number reads as one that costs
-       nothing — which is the most expensive misreading available here. */
+       nothing, which is the most expensive misreading available here. */
     const c = canRelease({
       question: "Which?",
       options: [

@@ -11,7 +11,7 @@ import { Client } from "pg";
  *
  * They SKIP when no database is reachable rather than fail. A contributor
  * without Docker should still be able to run `npm test` and get a meaningful
- * signal — a suite that cannot run is worse than one that says why it did not.
+ * signal: a suite that cannot run is worse than one that says why it did not.
  *
  *   docker run -d --name rift-pg -e POSTGRES_PASSWORD=pw -p 55432:5432 postgres:16-alpine
  */
@@ -21,7 +21,7 @@ import { Client } from "pg";
  *
  * These suites rebuild the schema from the migrations, so pointing them at the
  * same database the local stack uses meant `npm test` silently destroyed the
- * development environment — including the agent row, after which every write
+ * development environment: including the agent row, after which every write
  * reported "no agent row exists yet" and the cause was two commands earlier.
  */
 const URL_ = process.env.TEST_DATABASE_URL ?? "postgresql://postgres:pw@localhost:55432/rift_test";
@@ -46,14 +46,14 @@ beforeAll(async () => {
     /* Every Rift migration, in order, rather than a hand-written list. Naming
        them individually meant each new migration had to be remembered in two
        test files, and the first one forgotten dropped a table the suite then
-       reported as "not found in the schema cache" — a confusing failure a long
+       reported as "not found in the schema cache": a confusing failure a long
        way from its cause. */
     for (const f of riftMigrations()) await c.query(readFileSync(f, "utf8"));
     await c.query(readFileSync("supabase/seed/rift_programs.sql", "utf8"));
     db = c;
   } catch (e) {
     /* Only an unreachable database is a skip. A migration that fails to apply
-       is a real failure and must say so — swallowing it here would turn the
+       is a real failure and must say so: swallowing it here would turn the
        suite that proves the constraints bite into a suite that quietly proves
        nothing. */
     const msg = e instanceof Error ? e.message : String(e);
@@ -199,7 +199,7 @@ describe("rift schema", () => {
     /* `claimStep` inserts a touch BEFORE sending and treats a unique violation
        as "somebody else already has this one". That is the whole idempotency
        story for the only job in this product that contacts strangers on a
-       timer — if this constraint were ever dropped, the insert would succeed
+       timer: if this constraint were ever dropped, the insert would succeed
        twice, two emails would go out, and nothing anywhere would report a
        problem. The person on the other end has no way to know it was a bug
        rather than a company that does not pay attention.
@@ -243,7 +243,7 @@ describe("deleting a login does not delete the business", () => {
   test("the agent and everything belonging to them survives", async (c) => {
     /* `rift_agents.auth_user_id` cascaded from auth.users, and every other
        table cascades from rift_agents. So removing one row in Supabase's
-       Authentication panel — a routine action, and an easy misclick — would
+       Authentication panel (a routine action, and an easy misclick) would
        have deleted every assessment, lead, consent record, readout, figure,
        enrolment and event in the product.
        
@@ -318,7 +318,7 @@ describe("referral attribution", () => {
        The first version of the trigger above refused every change to a
        non-null referred_by, including NULL. referred_by is `on delete set
        null`, and a foreign-key SET NULL action fires row-level UPDATE
-       triggers — so deleting a referrer raised, and "delete all of it" failed
+       triggers: so deleting a referrer raised, and "delete all of it" failed
        for any client who had introduced somebody. The strongest promise the
        product makes, broken by a correctness guarantee about attribution, and
        it would have surfaced the first time a referrer asked to be erased. */
@@ -361,7 +361,7 @@ describe("representation", () => {
   });
 
   test("the status vocabulary is closed", async (c) => {
-    /* A status outside the list does not error anywhere in the application —
+    /* A status outside the list does not error anywhere in the application:
        it fails isCovered, so the journey silently stops advancing and nobody
        can see why. The database is the only place that can refuse it. */
     await rejects(c,
@@ -494,7 +494,7 @@ describe("decision rooms", () => {
     /* RESTRICT, and the first version of this migration used SET NULL, which
        is a trap on a COMPOSITE key: it nulls every column in the key, and the
        second column here is rift_decisions.id. Deleting an option failed with
-       "null value in column id violates not-null constraint" — this test is
+       "null value in column id violates not-null constraint": this test is
        why that was found before it shipped rather than after.
     
        RESTRICT is also the better rule. Quietly removable evidence is not

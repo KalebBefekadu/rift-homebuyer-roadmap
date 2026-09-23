@@ -9,7 +9,7 @@
 --
 -- Three things were missing, and none of them are the funnel's fault:
 --
---   A STAGE. `band` is computed urgency — now/soon/later/nurture — derived
+--   A STAGE. `band` is computed urgency (now/soon/later/nurture) derived
 --   from answers and recency. It is not where somebody IS. A person under
 --   contract and a person who filled in a form this morning can both be
 --   'now', and an agent cannot run a business off that.
@@ -17,7 +17,7 @@
 --   A RECORD OF CONTACT. rift_touches is bound to an enrolment and unique per
 --   step, because its job is guaranteeing an automated sequence never sends
 --   twice. It physically cannot hold "called Tuesday, she is pre-approved to
---   340" — and that sentence is the most valuable data in a solo practice.
+--   340": and that sentence is the most valuable data in a solo practice.
 --
 --   A BASIS FOR CONTACTING THEM. A lead from the funnel consented on the way
 --   in, and that consent is recorded. A lead typed in by hand has no such
@@ -37,7 +37,7 @@ alter table rift_leads add column if not exists archived_at timestamptz;
 alter table rift_leads add column if not exists archived_reason text;
 
 -- The stage vocabulary is closed. A lead sitting in 'Under Contract' while the
--- board filters for 'Under contract' does not error and does not appear — it
+-- board filters for 'Under contract' does not error and does not appear: it
 -- silently stops being part of the business. That is the exact failure mode
 -- this codebase keeps finding, so the database refuses the typo instead.
 do $$

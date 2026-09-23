@@ -20,7 +20,7 @@ export default function Unclaimed() {
             Money you may already be losing, every year.
           </h1>
           <p className="lede" style={{ marginTop: 18, maxWidth: 520 }}>
-            Four questions. Nothing here is advice — each item names who actually decides.
+            Four questions. Nothing here is advice. Each item names who actually decides.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function Unclaimed() {
               ) : null}
               <div className="row gap-2" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--line-3)" }}>
                 <Ico.arrowR size={13} className="c-4" />
-                <span className="t-sm c-3">Decided by <span className="w55 c-2">{u.decidedBy}</span> — not by us</span>
+                <span className="t-sm c-3">Decided by <span className="w55 c-2">{u.decidedBy}</span>, not by us</span>
               </div>
             </div>
           ))}

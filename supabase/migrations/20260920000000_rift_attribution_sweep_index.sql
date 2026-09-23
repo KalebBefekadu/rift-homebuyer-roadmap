@@ -8,7 +8,7 @@
 -- It does not hurt yet, because the analytics window is twenty-four months and
 -- the table is small. It starts hurting on the first day that window fires
 -- against a table with real traffic in it, which is exactly the day nobody
--- will be watching the retention job — and a deletion job that times out is a
+-- will be watching the retention job, and a deletion job that times out is a
 -- deletion job that silently stops keeping the promise printed at the bottom
 -- of every readout.
 --

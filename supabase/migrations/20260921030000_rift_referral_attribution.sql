@@ -2,7 +2,7 @@
 --
 -- 20260921010000 added rift_leads.referred_by, a Studio screen that counts it,
 -- and referralLinks() to read it. Nothing in the product could ever set it.
--- Three reads, zero writes — so "advocacy share of pipeline", the first of the
+-- Three reads, zero writes: so "advocacy share of pipeline", the first of the
 -- three metrics docs/vision.md names as mattering most and the one with a 30%
 -- target by month 12, was not merely at zero. It was incapable of being
 -- anything else.
@@ -14,7 +14,7 @@
 -- The handle
 -- ---------------------------------------------------------------------------
 
--- Deliberately NOT client_token. That one opens somebody's plan — it is a
+-- Deliberately NOT client_token. That one opens somebody's plan: it is a
 -- credential, and the whole point of this column is to be given away. Handing
 -- a friend a link that shows them your payoff, your stage and every step your
 -- agent owes you is not a referral mechanism, it is a disclosure.
@@ -27,7 +27,7 @@ alter table rift_leads add column if not exists referral_token text;
 -- fail. A column default costs nothing, cannot be forgotten by a new insert
 -- path, and means the handle exists from the moment the person does. Crucially
 -- it also does not appear in any INSERT statement, so a deploy that lands
--- before this migration is unaffected — the column simply is not there yet.
+-- before this migration is unaffected: the column simply is not there yet.
 alter table rift_leads
   alter column referral_token set default encode(gen_random_bytes(12), 'hex');
 
@@ -35,7 +35,7 @@ create unique index if not exists rift_leads_referral_token_idx
   on rift_leads (referral_token) where referral_token is not null;
 
 comment on column rift_leads.referral_token is
-  'Public handle this person hands to somebody else. Appears in a URL as ?r=. Never opens anything — it only records who sent the visitor. See client_token for the credential.';
+  'Public handle this person hands to somebody else. Appears in a URL as ?r=. Never opens anything: it only records who sent the visitor. See client_token for the credential.';
 
 -- ---------------------------------------------------------------------------
 -- Carrying it through the visit
@@ -43,13 +43,13 @@ comment on column rift_leads.referral_token is
 
 -- A referral is a first touch. Somebody arrives on a friend's link, reads for
 -- ten minutes, leaves, comes back a week later through a Google search and
--- finally finishes the assessment — the friend sent them, and an attribution
+-- finally finishes the assessment: the friend sent them, and an attribution
 -- model that credits the search has just told the agent to buy more search.
 alter table rift_attributions add column if not exists first_ref text;
 alter table rift_attributions add column if not exists last_ref  text;
 
 comment on column rift_attributions.first_ref is
-  'The ?r= value on the visitor''s FIRST touch. Immutable, like every other first_* column — enforced by rift_reject_first_touch_change().';
+  'The ?r= value on the visitor''s FIRST touch. Immutable, like every other first_* column: enforced by rift_reject_first_touch_change().';
 
 -- The trigger names its columns one by one, so a new first_* column is not
 -- covered until it is added here. Adding the column without this is the whole
@@ -78,13 +78,13 @@ end $$;
 -- would make the cheapest source in the business look like the weakest.
 --
 -- WHAT IS REJECTED IS RE-POINTING, NOT CLEARING, and the difference is not a
--- softening — the first version of this rejected both and broke erasure.
+-- softening: the first version of this rejected both and broke erasure.
 --
 -- referred_by is `on delete set null`. A foreign-key SET NULL action fires
 -- row-level UPDATE triggers, so a trigger that refused every change to a
 -- non-null referred_by refused the cascade too, and DELETING A REFERRER
--- FAILED. That is "delete all of it" — the strongest promise this product
--- makes and the one with a legal obligation behind it — broken by a
+-- FAILED. That is "delete all of it": the strongest promise this product
+-- makes and the one with a legal obligation behind it: broken by a
 -- correctness guarantee about attribution, and it would have surfaced at the
 -- worst possible moment: somebody exercising their erasure right, on a person
 -- whose only distinguishing feature is that somebody else liked the product

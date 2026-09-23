@@ -7,7 +7,7 @@ import { REFERRAL_STATE, dueNow, referralStats } from "@/app/prototype/studio/cl
  *
  * These five clients are invented and are drawn only by `/prototype`, which
  * does not serve in production. The tests stay because the fixture still has
- * to obey the rules it illustrates — a specification that demonstrates the
+ * to obey the rules it illustrates: a specification that demonstrates the
  * wrong behaviour is worse than none, since it is what the next person builds
  * against.
  */

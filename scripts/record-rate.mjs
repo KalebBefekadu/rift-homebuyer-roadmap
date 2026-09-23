@@ -23,7 +23,7 @@ const pct = Number(process.argv[2]);
 if (!Number.isFinite(pct) || pct <= 1 || pct >= 20) {
   console.error(
     "Usage: record-rate.mjs <rate> [--source \"...\"] [--as-of YYYY-MM-DD]\n" +
-    "The rate must be a percentage between 1 and 20 — 6.72, not 0.0672. A value\n" +
+    "The rate must be a percentage between 1 and 20: 6.72, not 0.0672. A value\n" +
     "outside that band is a data-entry error, not a market event, and entering\n" +
     "0.65 for 6.5 would understate every monthly payment by hundreds of dollars.",
   );

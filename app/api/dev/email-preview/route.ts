@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  * Renders the emails without sending them.
  *
  * Three templates existed and nobody had ever seen one. Email HTML is the least
- * forgiving markup there is and the hardest to check after the fact — by the
+ * forgiving markup there is and the hardest to check after the fact: by the
  * time a broken layout is noticed it has been read by everybody who was going
  * to read it.
  *
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
           band: (url.searchParams.get("band") as "now" | "soon" | "later" | "nurture") ?? "now",
           score: 82,
           headline: "Ready now, fully answered, and reachable",
-          action: "Call today — he named a co-decider, so ask who else is on the call.",
+          action: "Call today. He named a co-decider, so ask who else is on the call.",
           signals: [
             { label: "Timing", points: 30, note: "Wants to move in under three months" },
             { label: "Completion", points: 12, note: "Answered every question" },
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
         ? buildResume({
             to: "sam@example.com",
             name: "<script>alert(1)</script>",
-            says: "You were most of the way through — here is what you had so far",
+            says: "You were most of the way through. Here is what you had so far",
             body: "Your answers are still here, exactly where you left them.",
             resumeUrl: `${url.origin}/buy/start`,
             answered: 3,

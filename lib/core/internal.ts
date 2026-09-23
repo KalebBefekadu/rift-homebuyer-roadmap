@@ -14,7 +14,7 @@
  *   names are fiction, and nothing on the page says so.
  *
  * `robots.txt` already disallowed both. A disallow is a request to crawlers,
- * not access control — it keeps a page out of an index while leaving it served
+ * not access control: it keeps a page out of an index while leaving it served
  * to anybody with the URL, which is the weaker half of the problem.
  *
  * This is the same shape as the refusal in `app/api/dev/email-preview`, which
@@ -40,7 +40,7 @@ export function internalHidden(env: InternalEnv): boolean {
   if (env.RIFT_INTERNAL === "1") return false;
   /* Note the direction: this asks whether we are positively somewhere these
      pages belong, not whether we are positively in production. An environment
-     nobody anticipated — an unset NODE_ENV, a preview runner, a new host —
+     nobody anticipated: an unset NODE_ENV, a preview runner, a new host:
      lands on "hidden", which is dull. The other direction lands on "served",
      and a page that renders looks exactly like a page that is meant to. */
   return env.NODE_ENV !== "development" && env.NODE_ENV !== "test";

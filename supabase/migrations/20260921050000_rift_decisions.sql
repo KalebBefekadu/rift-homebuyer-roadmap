@@ -1,6 +1,6 @@
 -- Decision Rooms.
 --
--- docs/benchmark.md scores criterion 4.3 at 0 in production. Not weak —
+-- docs/benchmark.md scores criterion 4.3 at 0 in production. Not weak:
 -- absent. The prototype has /app/decisions and a decision room; the shipped
 -- product had no surface at all, and the criterion asks for rooms "at the
 -- moments where clients actually stall, with scenarios and recorded outcomes".
@@ -28,7 +28,7 @@ create table if not exists rift_decisions (
   -- Not a boolean: when it was released is the part that matters afterwards.
   released_at timestamptz,
 
-  -- The recorded outcome. An outcome is a fact, not a state — which option,
+  -- The recorded outcome. An outcome is a fact, not a state, which option,
   -- when, and in whose words.
   decided_at       timestamptz,
   chosen_option_id uuid,
@@ -82,7 +82,7 @@ end $$;
 -- The chosen option must belong to this decision.
 --
 -- A plain foreign key to rift_decision_options would let a decision be
--- recorded against an option from a DIFFERENT room — which renders as a
+-- recorded against an option from a DIFFERENT room, which renders as a
 -- perfectly ordinary outcome naming an option the reader cannot see. The
 -- composite key makes that unrepresentable.
 create unique index if not exists rift_decision_options_scoped_idx
@@ -93,7 +93,7 @@ create unique index if not exists rift_decision_options_scoped_idx
 --
 -- `on delete set null` here does NOT null only chosen_option_id. A composite
 -- foreign key sets EVERY column in the key to null, and the second column of
--- this one is rift_decisions.id — the primary key. Deleting an option that a
+-- this one is rift_decisions.id: the primary key. Deleting an option that a
 -- decision named failed with "null value in column id violates not-null
 -- constraint", which is the good outcome; the bad one was available on
 -- Postgres 15+ as `set null (chosen_option_id)`, and writing version-specific
@@ -102,7 +102,7 @@ create unique index if not exists rift_decision_options_scoped_idx
 --
 -- RESTRICT is also the better rule. An option a recorded decision names is
 -- part of the record of what was decided, and quietly removable evidence is
--- not evidence. Reopen the decision first — which clears the reference — and
+-- not evidence. Reopen the decision first (which clears the reference) and
 -- then the option can go.
 do $$
 begin

@@ -3,8 +3,8 @@
 # Brings up a local stand-in for Supabase: Postgres + PostgREST behind a proxy
 # that speaks the /rest/v1 path supabase-js expects.
 #
-# This exists because the pieces were all verified separately — SQL against
-# Postgres, query syntax against PostgREST, the UI against fixtures — and
+# This exists because the pieces were all verified separately: SQL against
+# Postgres, query syntax against PostgREST, the UI against fixtures, and
 # running the ACTUAL application against a database found three defects none of
 # those could have. It is worth being able to do that again in one command.
 #
@@ -27,13 +27,13 @@ docker run -d --name rift-pg -e POSTGRES_PASSWORD=pw -p "${PG_PORT}:5432" postgr
 for _ in $(seq 1 30); do docker exec rift-pg pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
 
 # A separate database for the test suites. They rebuild the schema from the
-# migrations, and sharing one database meant `npm test` destroyed this stack —
+# migrations, and sharing one database meant `npm test` destroyed this stack:
 # including the agent row, after which every write reported "no agent row
 # exists yet" two commands away from the cause.
 #
 # NOT swallowed. This was `|| true` with both streams to /dev/null, and when it
-# failed — which it did, because pg_isready reports the server up a moment
-# before it will accept a CREATE DATABASE — the consequence was that every
+# failed, which it did, because pg_isready reports the server up a moment
+# before it will accept a CREATE DATABASE: the consequence was that every
 # database suite SKIPPED. Seventy tests, reported as "skipped", which the
 # schema suite's own docblock calls the worst possible outcome and which CI has
 # a dedicated step to catch. Locally there was nothing to catch it.
@@ -41,7 +41,7 @@ if ! docker exec rift-pg psql -U postgres -q -c "create database rift_test;" 2>/
   if grep -q "already exists" /tmp/rift-createdb.err; then
     echo "  (rift_test already exists)"
   else
-    echo "Could not create rift_test — the database suites would silently SKIP:" >&2
+    echo "Could not create rift_test: the database suites would silently SKIP:" >&2
     cat /tmp/rift-createdb.err >&2
     exit 1
   fi

@@ -21,7 +21,7 @@ const BASIS = [
   "Past client",
   "They contacted me",
   "Referred by a client",
-  "Met in person — they asked me to follow up",
+  "Met in person, they asked me to follow up",
   "Open house sign-in",
 ];
 
@@ -62,7 +62,7 @@ export function AddLead() {
         Add someone
       </h1>
       <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>
-        For people you are already working with. They will not be scored — a score explains a set
+        For people you are already working with. They will not be scored: a score explains a set
         of funnel answers, and inventing one for somebody who never answered anything would put a
         made-up number beside a real person.
       </p>

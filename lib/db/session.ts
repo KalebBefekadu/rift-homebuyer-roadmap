@@ -7,7 +7,7 @@ import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
  * Who is asking, on the agent surface.
  *
  * Studio is the only part of Rift behind a login, and it is the agent's own
- * book of business. The check happens on the SERVER for every page — a client
+ * book of business. The check happens on the SERVER for every page: a client
  * route guard is an experience, not authorization, and the difference matters
  * on a surface that lists strangers' finances.
  *
@@ -30,8 +30,8 @@ export interface AgentSession {
  * call did not answer within two seconds, and the agent row could not be read.
  * Every caller turned all four into `redirect("/studio/sign-in")`.
  *
- * So a two-second blip signed the agent out. Not really — the cookie was still
- * there and the next request worked — but he was looking at a sign-in page,
+ * So a two-second blip signed the agent out. Not really: the cookie was still
+ * there and the next request worked, but he was looking at a sign-in page,
  * which says his session expired. It is reproducible on the first request
  * after a cold start, and Vercel gives you a cold start plus a round trip to
  * Supabase's auth service on exactly the requests most likely to be slow.
@@ -53,7 +53,7 @@ export async function agentSession(): Promise<SessionState> {
   if (!supabase) return { state: "unknown", reason: "sign-in is not configured on this deployment" };
 
   /* Still on a deadline. Studio is behind a login and a hang leaves the agent
-     looking at a blank tab — but a miss now reports itself as a miss instead
+     looking at a blank tab, but a miss now reports itself as a miss instead
      of as an absence. */
   const { value: auth, timedOut } = await withTimeout(
     supabase.auth.getUser().then((r) => r).catch(() => null),
@@ -87,7 +87,7 @@ export async function agentSession(): Promise<SessionState> {
      implicit provisioning here: creating an agent record because somebody
      managed to sign up would hand a stranger the book of business.
 
-     This one IS signed-out rather than unknown — the question was asked and
+     This one IS signed-out rather than unknown: the question was asked and
      answered, and the answer was no. */
   if (!agent) return { state: "signed-out", reason: "signed in, but not an agent on this account" };
 
@@ -105,7 +105,7 @@ export async function agentSession(): Promise<SessionState> {
 /**
  * The narrow question: who is asking, or nobody.
  *
- * Kept for the write actions, where the distinction does not help — an action
+ * Kept for the write actions, where the distinction does not help: an action
  * that cannot confirm the session must refuse either way, and refusing is what
  * this returns. Every PAGE should use `agentSession()` instead, because a page
  * has somewhere better to send a person than a sign-in form they do not need.

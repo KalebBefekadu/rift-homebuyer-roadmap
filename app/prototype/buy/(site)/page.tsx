@@ -55,7 +55,7 @@ export default function Buy() {
               <>
                 <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>Nothing verified matches those answers today</div>
                 <p style={{ marginTop: 10, color: "rgba(255,255,255,.72)", fontSize: 15, maxWidth: 480, lineHeight: 1.6 }}>
-                  That doesn&apos;t mean nothing exists — only that we won&apos;t show you a
+                  That doesn&apos;t mean nothing exists, only that we won&apos;t show you a
                   number we can&apos;t stand behind. Your cash-to-close figure still matters.
                 </p>
                 <Link href={go} className="btn btn-lg" style={{ background: "#fff", color: "var(--ink)", marginTop: 20 }}>
@@ -97,7 +97,7 @@ export default function Buy() {
 
         <p className="t-xs c-4" style={{ marginTop: 14, maxWidth: 640, lineHeight: 1.6 }}>
           Estimated ranges, not approvals. Income limits, purchase-price caps and funding
-          availability decide what you can actually use — your lender and the program confirm it.
+          availability decide what you can actually use; your lender and the program confirm it.
           Anything we haven&apos;t verified in 90 days isn&apos;t shown at all.
         </p>
       </section>
@@ -112,7 +112,7 @@ export default function Buy() {
             </h2>
             <p className="t-md c-2" style={{ marginTop: 14, lineHeight: 1.65, maxWidth: 440 }}>
               On a {money(325_000)} home the down payment at 3.5% is {money(cash.down)}. The
-              cash you actually bring is {money(cash.total)} — and that difference is what
+              cash you actually bring is {money(cash.total)}, and that difference is what
               breaks most purchases in the last three weeks.
             </p>
             <Link href={go} className="btn btn-brand" style={{ marginTop: 22 }}>
@@ -140,7 +140,7 @@ export default function Buy() {
         </div>
       </section>
 
-      {/* what you get — a list, not six cards. Six cards is a brochure. */}
+      {/* what you get: a list, not six cards. Six cards is a brochure. */}
       <section className="shell-w sec">
         <div className="split-w">
           <div>
@@ -156,7 +156,7 @@ export default function Buy() {
             {[
               [Ico.spark, "Your assistance match", "Named programs, what each requires, what it does to your gap"],
               [Ico.wallet, "True cash to close", "Every line, including the ones nobody mentions until three weeks out"],
-              [Ico.clock, "Your gap and your timeline", "How many months — and the two changes that shorten it most"],
+              [Ico.clock, "Your gap and your timeline", "How many months, and the two changes that shorten it most"],
               [Ico.chart, "Monthly across a price band", "Three price points, all in, so you see the shape of the trade"],
               [Ico.alert, "The one thing in your way", "Named plainly, with what to do about it"],
               [Ico.doc, "Questions for any lender", "Written for your situation. Take it to anyone."],

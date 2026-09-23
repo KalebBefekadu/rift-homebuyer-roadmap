@@ -25,7 +25,7 @@ interface Item {
 const ITEMS: Item[] = [
   { id: "1", kind: "offer", who: "Okafor", av: "NO", color: "#8a4a2e", title: "Two offers on 1841 Ferncliff need a decision", meta: "Neither released to the seller · deadline tomorrow 5:00pm", age: "3h", href: "/prototype/studio/offers" },
   { id: "2", kind: "deadline", who: "Vance", av: "HV", color: "#3f6f5f", title: "Assessment appeal window closes in 19 days", meta: "Est. $1,100–$1,800/yr · no decision recorded", age: "2d" },
-  { id: "3", kind: "approve", who: "Ellison", av: "ME", color: "#2f5480", title: "Meeting recap ready — 11 plan changes", meta: "From Tuesday's planning session", age: "1d" },
+  { id: "3", kind: "approve", who: "Ellison", av: "ME", color: "#2f5480", title: "Meeting recap ready: 11 plan changes", meta: "From Tuesday's planning session", age: "1d" },
   { id: "4", kind: "deadline", who: "Ellison", av: "ME", color: "#2f5480", title: "Buyer agency agreement prepared, not sent", meta: "Journey blocked at Ready to shop until signed", age: "2d" },
   { id: "5", kind: "lead", who: "Pike", av: "JP", color: "#6b4a7a", title: "New referral from Priya Raman", meta: "Started the assessment, stopped at question 9", age: "22m", href: "/prototype/studio/queue" },
   { id: "9", kind: "approve", who: "Ellison", av: "ME", color: "#2f5480", title: "Maya asked you to check her cash-to-close figure", meta: "Waiting 19h of the 24h you promise · 3 in the review queue", age: "19h", href: "/prototype/studio/queue" },

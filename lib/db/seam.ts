@@ -22,7 +22,7 @@ import { currentRate } from "./rates";
  * WHAT CAN ACTUALLY MOVE, AND WHY THAT IS A SHORT LIST.
  *
  * The person's own answers are frozen in the snapshot, so price, savings,
- * income and county cannot drift — they are read back from the same row. Two
+ * income and county cannot drift: they are read back from the same row. Two
  * things genuinely move underneath them:
  *
  *   The rate. It is refreshed every Friday from Freddie Mac, and it is the
@@ -62,8 +62,8 @@ const EMPTY: SnapshotComparison = {
  * The fields of a stored blob that are safe to use, and only those.
  *
  * NOT a plain spread. `{ ...DEFAULTS, ...stored }` lets a key present with the
- * value `null` — which is what a jsonb column returns for a field written as
- * absent, and what `JSON.stringify` produces for several of these — overwrite
+ * value `null`: which is what a jsonb column returns for a field written as
+ * absent, and what `JSON.stringify` produces for several of these: overwrite
  * a perfectly good default with nothing. The engine then formats `null.toFixed`
  * and throws, inside the server action, at the moment the agent presses
  * publish. Only finite numbers and non-empty strings are taken; everything
@@ -96,7 +96,7 @@ interface Stored {
  * Compare a lead's readout snapshot against the same arithmetic run today.
  *
  * Never throws and never guesses. A lead with no snapshot comes back
- * `hasSnapshot: false`, which `canPublish` treats as a blocker — a plan with
+ * `hasSnapshot: false`, which `canPublish` treats as a blocker: a plan with
  * nothing to be honest about cannot be honest.
  */
 export async function compareToSnapshot(leadId: string): Promise<DbResult<SnapshotComparison>> {
@@ -150,7 +150,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
 
   /* Only the buyer side recomputes today. The seller readout's figures depend
      on a valuation that is not stored as an input, so there is nothing honest
-     to recompute it from — and an empty drift list on a seller is the truthful
+     to recompute it from, and an empty drift list on a seller is the truthful
      answer rather than a reassuring one, because `hasSnapshot` is still true
      and the snapshot is still shown. */
   if (snap.side !== "buy") return done(base);
@@ -161,7 +161,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
    * A snapshot is written by whichever build was live on the day, and the
    * engine's input shape has grown since. `cashToClose` reads `downPct` and
    * formats it, so a snapshot predating that field does not produce a wrong
-   * comparison — it throws, inside a server action, at the moment the agent
+   * comparison: it throws, inside a server action, at the moment the agent
    * presses publish. Merging over BUYER_DEFAULTS means a missing field falls
    * back to the documented assumption, which is exactly what the readout it
    * came from would have used.
@@ -177,7 +177,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
   const [match, rate] = await Promise.all([
     /* The stored value is narrowed rather than cast. A snapshot written by an
        older build could carry anything here, and "none" is the assumption that
-       matches the most programmes — so an unrecognised value fails towards
+       matches the most programmes, so an unrecognised value fails towards
        showing somebody more help rather than less, and the plan's own intake
        asks again anyway. */
     matchForVisitor(inputs.county, firstTimeFrom(ownershipOf(raw.ownership))),
@@ -191,7 +191,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
      bug report, which is why `drift()` demands one. */
   const rateCause = rateMoved
     ? `the rate assumption moved from ${thenRate!.toFixed(2)}% to ${rate.pct.toFixed(2)}%`
-    : "recomputed from the same answers — the arithmetic itself changed";
+    : "recomputed from the same answers; the arithmetic itself changed";
 
   const wasMatched = (snap.matched ?? []).map((m) => m.name);
   const nowMatched = match.match.matched.map((m) => m.name);
@@ -204,7 +204,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
   /* The whole recompute, guarded. `usable()` fixes the shapes this build knows
      about; a snapshot written by a build nobody here has seen is still a blob
      off the wire. The honest outcome of "we could not recompute" is an empty
-     drift list beside a snapshot that still exists — not a server action that
+     drift list beside a snapshot that still exists: not a server action that
      throws while somebody is publishing a plan. */
   try {
   const live = { ...inputs, ratePct: rate.pct };
@@ -225,7 +225,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
     const cause =
       s.label === "All-in monthly" ? rateCause
       : s.label === "Still to find" || s.label === "Covered" ? programmeCause
-      : "recomputed from the same answers — the arithmetic itself changed";
+      : "recomputed from the same answers; the arithmetic itself changed";
     drifts.push(drift(s.label, s.value, Math.round(recomputed), cause));
   }
 

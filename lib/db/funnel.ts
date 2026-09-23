@@ -9,7 +9,7 @@ import { BUY_FUNNEL, SELL_FUNNEL, applyWording, type Funnel, type Wording } from
  * The published funnel version, and pinning answers to it.
  *
  * Contract 4.6: a lead is pinned to the version it answered. That was written
- * down, the columns existed, and nothing ever set them — so every assessment
+ * down, the columns existed, and nothing ever set them, so every assessment
  * and every lead pointed at no version at all.
  *
  * It matters before the editor exists, not after. When an agent eventually
@@ -41,7 +41,7 @@ export async function currentVersionId(side: "buy" | "sell"): Promise<string | n
 
   /* On a deadline, because this runs when an assessment starts. The pin is
      valuable; the assessment is essential. Losing the pin for one visitor is
-     a gap in a record — losing the assessment is a lost lead. */
+     a gap in a record: losing the assessment is a lost lead. */
   const { value } = await withTimeout(publish(db, agent_id, side), READ_DEADLINE_MS, null);
   if (value) cache.set(side, value);
   return value;
@@ -112,7 +112,7 @@ async function publish(
 
     return versionId as string;
   } catch (e) {
-    /* A missing version must never stop an assessment — the pin is valuable
+    /* A missing version must never stop an assessment: the pin is valuable
        and the funnel is essential, and they are not the same thing. But it is
        reported, because a silent failure here means every lead from now on is
        unpinned and nothing says so. */
@@ -146,7 +146,7 @@ export async function publishedQuestionCount(side: "buy" | "sell"): Promise<DbRe
  * The wording published on the newest version, keyed by question.
  *
  * ONLY wording. The structure of the funnel is read from `lib/core/funnel.ts`
- * and nothing here can change it — see `applyWording`, which reads no
+ * and nothing here can change it: see `applyWording`, which reads no
  * structural field from this at all. A stale row, a half-finished edit or a
  * hostile payload can at worst produce the funnel the product shipped with.
  *
@@ -211,7 +211,7 @@ export async function funnelWithWording(side: "buy" | "sell"): Promise<Funnel> {
  * Publishing an edit, as a new version.
  *
  * A new row in rift_funnel_versions rather than an update in place, because
- * the pin exists to answer "what exactly was this person asked" — and
+ * the pin exists to answer "what exactly was this person asked": and
  * rewriting the wording on the version they are pinned to answers it wrongly
  * while looking like a record. Contract 4.6.
  *
@@ -233,7 +233,7 @@ export async function publishWording(
   try {
     const { data: funnelRow } = await db
       .from("rift_funnels").select("id,version").eq("agent_id", agent_id).eq("side", side).maybeSingle();
-    if (!funnelRow) return failed("no funnel to publish against — the assessment has never been opened");
+    if (!funnelRow) return failed("no funnel to publish against; the assessment has never been opened");
 
     const funnelId = (funnelRow as { id: string }).id;
     const next = ((funnelRow as { version: number }).version ?? definition.version) + 1;

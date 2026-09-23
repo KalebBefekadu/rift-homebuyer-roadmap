@@ -9,14 +9,14 @@ export const dynamic = "force-dynamic";
 /**
  * "Delete all of it."
  *
- * Keyed on the session id, which is the only handle an anonymous visitor has —
+ * Keyed on the session id, which is the only handle an anonymous visitor has:
  * and deliberately the only one required. Asking somebody to prove who they are
  * before deleting data they never signed up to give would be a gate on the exit
  * from a product with no gate on the entrance.
  *
  * The trade is that a session id is guessable in principle. It is a random
  * token in sessionStorage and the only thing it can do is destroy that
- * session's own records — the worst an attacker achieves is deleting data on
+ * session's own records: the worst an attacker achieves is deleting data on
  * the person's behalf, which is what the endpoint is for.
  */
 export async function POST(req: Request) {

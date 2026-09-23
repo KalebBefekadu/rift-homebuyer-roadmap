@@ -5,7 +5,7 @@ import { DEFAULT_RULES } from "./settings";
 /**
  * The registry's honesty rules.
  *
- * Contract 4.4 drifted from the code without either noticing — the document
+ * Contract 4.4 drifted from the code without either noticing: the document
  * said suppression was silent to the customer, and the shipped readout told
  * them. The code was right; the contract has been reversed. These pin the
  * behaviour so the next disagreement is a failing test rather than a
@@ -27,7 +27,7 @@ describe("suppression", () => {
 
   it("returns suppressed programmes separately rather than dropping them", () => {
     /* Dropped, the customer cannot be told and the agent cannot be prompted.
-       Separated, both are possible — and both happen. */
+       Separated, both are possible, and both happen. */
     const m = matchPrograms({ county: "DeKalb", firstTimeBuyer: true, today: TODAY });
     expect(m.suppressed.length).toBeGreaterThan(0);
     for (const p of m.suppressed) expect(daysSinceVerified(p, TODAY)).toBeGreaterThan(STALE_AFTER_DAYS);
@@ -46,7 +46,7 @@ describe("suppression", () => {
 describe("funding state is shown, never hidden", () => {
   it("a closed programme still appears, with its state", () => {
     /* Somebody planning around money that is not currently available needs to
-       know it is not available — removing it silently lets them plan on it. */
+       know it is not available: removing it silently lets them plan on it. */
     const closed = PROGRAMS.filter((p) => p.funding === "closed");
     expect(closed.length).toBeGreaterThan(0);
     const m = matchPrograms({ county: closed[0].county ?? "DeKalb", firstTimeBuyer: true, today: TODAY });

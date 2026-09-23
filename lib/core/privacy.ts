@@ -1,10 +1,10 @@
 /**
- * Rift — retention and consent policy.
+ * Rift: retention and consent policy.
  *
  * People hand this product their savings balance, their timeline and the name
  * of the person they are buying with, before they have agreed to anything.
- * Being able to state plainly what happens to that — and to act on a request to
- * delete it in one click — is not a compliance chore here. It is the same
+ * Being able to state plainly what happens to that, and to act on a request to
+ * delete it in one click: is not a compliance chore here. It is the same
  * argument the whole product makes: show them the truth before asking for
  * something.
  *
@@ -36,7 +36,7 @@ export const RETENTION: RetentionRule[] = [
     what: "An assessment nobody ever came back to",
     keptFor: "18 months",
     why: "A buyer on a 'nine to eighteen months' answer is still inside their own stated timeline. Deleting at ninety days would throw away the person the product was built for.",
-    thenWhat: "Deleted outright — not anonymised, not archived.",
+    thenWhat: "Deleted outright, not anonymised, not archived.",
   },
   {
     id: "abandoned",
@@ -54,7 +54,7 @@ export const RETENTION: RetentionRule[] = [
   },
   {
     id: "analytics",
-    what: "Funnel measurement — which question people stop on",
+    what: "Funnel measurement: which question people stop on",
     keptFor: "24 months",
     why: "Carries the question id and the time spent, never the answer. We know someone stopped on the savings question; we do not know what they typed.",
     thenWhat: "Aggregated counts survive, individual event rows do not.",
@@ -67,12 +67,12 @@ export const RETENTION: RetentionRule[] = [
     id: "referral",
     what: "Who passed you the link, if you arrived on one",
     keptFor: "With your record",
-    why: "A referral is the only way we learn that somebody thought this was worth passing on, and the person who did it deserves the credit. It records that they sent you and nothing else — they are never shown your answers, your figures or what you did next.",
+    why: "A referral is the only way we learn that somebody thought this was worth passing on, and the person who did it deserves the credit. It records that they sent you and nothing else. They are never shown your answers, your figures or what you did next.",
     thenWhat: "Deleted with your record. Asking us to delete yours removes the link from theirs as well.",
   },
   {
     /* Added because the panel was silent about it, and a retention list that
-       omits one category is not a retention list — it is a selection. This
+       omits one category is not a retention list: it is a selection. This
        record is also the only thing that can later prove the contact was
        lawful, which is why it outlives the relationship it came from. */
     id: "consent",
@@ -84,14 +84,14 @@ export const RETENTION: RetentionRule[] = [
   {
     /* Added the day /offer shipped, for the reason the note above gives. An
        inbound offer is a genuinely new category: it is the only record here
-       that is ABOUT A THIRD PARTY — a property somebody else owns, and often a
+       that is ABOUT A THIRD PARTY: a property somebody else owns, and often a
        buyer who is not the person typing. Leaving it off the list because the
        submitter is not the subject would be the same selection this file
        already refuses once. */
     id: "offer",
     what: "An offer you submitted, and the address it was on",
     keptFor: "While it is live, then 24 months",
-    why: "An offer is a document somebody may act on, and the record of what was sent is the only protection either side has if the terms are later disputed. The address belongs to a property, not to you — we do not treat it as yours to delete, and we do not attach it to anybody who has not asked us to.",
+    why: "An offer is a document somebody may act on, and the record of what was sent is the only protection either side has if the terms are later disputed. The address belongs to a property, not to you. We do not treat it as yours to delete, and we do not attach it to anybody who has not asked us to.",
     thenWhat: "Deleted outright. A phone number given to deliver an offer is passed on with it and never stored.",
   },
 ];
@@ -104,7 +104,7 @@ export const RETENTION: RetentionRule[] = [
  * US telemarketing rules require prior express WRITTEN consent before an
  * autodialed or prerecorded marketing call or text. A pre-ticked box is not
  * consent, and consent bundled into a terms-of-service link is not consent
- * either — it has to be a separate, unticked, specific agreement, and the exact
+ * either: it has to be a separate, unticked, specific agreement, and the exact
  * wording shown has to be retained alongside the record.
  *
  * Which is also why the phone number is optional here. Email costs nothing to
@@ -155,7 +155,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Vercel",
     does: "Runs the site",
-    sees: "The ordinary request log of any web host — your IP address and which pages were requested.",
+    sees: "The ordinary request log of any web host: your IP address and which pages were requested.",
   },
   {
     name: "Brevo",
@@ -165,12 +165,12 @@ export const SUBPROCESSORS: Subprocessor[] = [
   {
     name: "Sentry",
     does: "Reports errors so they get fixed",
-    sees: "Technical detail about a failure — the page, the browser, the error. Session recording is switched off, so it never receives what you typed.",
+    sees: "Technical detail about a failure: the page, the browser, the error. Session recording is switched off, so it never receives what you typed.",
   },
   {
     name: "Cal.com",
     does: "Holds a booked time",
-    sees: "Your name, email, and the time you chose — only if you book a call.",
+    sees: "Your name, email, and the time you chose, only if you book a call.",
   },
 ];
 
@@ -186,7 +186,7 @@ export const SUBPROCESSORS: Subprocessor[] = [
  * a privacy policy naming a dead inbox is a promise that fails silently, in
  * the one document whose entire job is to be relied on.
  *
- * The delete button does not depend on this. It never did — it is one click on
+ * The delete button does not depend on this. It never did: it is one click on
  * the readout and it needs no address, no account and no reply from anyone.
  *
  * Set 21 September 2026, by Kaleb, who named this his official address. It was

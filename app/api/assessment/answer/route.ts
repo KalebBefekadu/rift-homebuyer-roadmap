@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Stores one answer.
  *
  * This is the only endpoint that accepts an answer VALUE, and it writes to
- * `rift_answers` — never to `rift_events`. The separation is the privacy rule:
+ * `rift_answers`: never to `rift_events`. The separation is the privacy rule:
  * telemetry knows which question somebody stopped on; only this table knows
  * what they said, and the two have different retention and different deletion.
  */

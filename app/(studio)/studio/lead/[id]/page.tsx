@@ -30,14 +30,14 @@ export const dynamic = "force-dynamic";
  * The screen the agent is actually on while the phone is ringing, so it is
  * ordered by what he needs in that moment: who they are and how to reach them,
  * where they are and how long they have been there, then everything that has
- * ever been said — newest first, because the last conversation is the one he
+ * ever been said: newest first, because the last conversation is the one he
  * is continuing.
  */
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await agentSession();
   /* A blip is not an expired session. Redirecting on "unknown" shows the
      agent a sign-in form when his cookie is fine, which says something false
-     about what just happened — see lib/db/session.ts. */
+     about what just happened: see lib/db/session.ts. */
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/studio/sign-in");
   const agent = session.agent;
@@ -50,7 +50,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       <main className="shell-w" style={{ paddingTop: 60 }}>
         <h1 className="serif" style={{ fontSize: 26 }}>This record could not be loaded.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
-          The database did not answer. Nothing has been lost — this is a read, and the record is
+          The database did not answer. Nothing has been lost. This is a read, and the record is
           still there. It has been reported, and the error was: {read.error}
         </p>
         <Link href="/studio" className="btn btn-p" style={{ marginTop: 18 }}>Back to Studio</Link>

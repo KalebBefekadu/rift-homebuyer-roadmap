@@ -11,19 +11,19 @@ import { Trust, TrustLadder } from "./Trust";
 
 /**
  * The readout is a document, not a marketing page. It carries the product
- * identity and a way back, and deliberately not the landing page's nav — the
+ * identity and a way back, and deliberately not the landing page's nav: the
  * "Get my numbers" call to action is nonsense to someone who is holding them.
  */
 /**
  * Every link in here pointed at /prototype/*.
  *
  * That was harmless for as long as /prototype was served, and it stopped being
- * harmless the moment those routes started returning 404 in production — which
+ * harmless the moment those routes started returning 404 in production, which
  * happened in the same sweep that closed them, with a full green suite and a
  * page that rendered perfectly. This component is shared: the prototype uses
  * it, and so does the real seller readout at /sell/results. So the live seller
- * readout shipped with five dead links — the logo, "Change my answers", "Sign
- * in", "About Kaleb" and the cross-sell — and nothing anywhere reported it,
+ * readout shipped with five dead links: the logo, "Change my answers", "Sign
+ * in", "About Kaleb" and the cross-sell: and nothing anywhere reported it,
  * because a <Link> to a 404 is not an error until somebody clicks it.
  *
  * They point at the real routes now. "Sign in" is gone rather than repointed:
@@ -86,7 +86,7 @@ const TONE: Record<Status, string> = {
   ready: "chip-pos", close: "chip-brand", building: "chip-warn", exploring: "chip",
 };
 
-/** Numbered section. The number matters — it tells someone how far they are through. */
+/** Numbered section. The number matters: it tells someone how far they are through. */
 export function Sec({ n, title, sub, children, id }: {
   n: number; title: string; sub?: string; id?: string; children: React.ReactNode;
 }) {
@@ -234,7 +234,7 @@ export function Steps({ r }: { r: Readout }) {
   );
 }
 
-/** The takeaway artifact. It has to be liftable — that is the whole point of it. */
+/** The takeaway artifact. It has to be liftable: that is the whole point of it. */
 export function Questions({ r, who }: { r: Readout; who: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -262,7 +262,7 @@ export function Questions({ r, who }: { r: Readout; who: string }) {
         ))}
       </ol>
       <p className="t-xs c-4" style={{ padding: "12px 18px", background: "var(--sunk)", lineHeight: 1.6 }}>
-        Take these to anyone — including a lender {who} has never met. Nothing here asks
+        Take these to anyone, including a lender {who} has never met. Nothing here asks
         them to work with us, and none of it stops working if you never speak to us again.
       </p>
     </div>
@@ -337,7 +337,7 @@ export function ActionBar({ onKeep, saved, bookHref }: { onKeep: () => void; sav
         <div className="row gap-2">
           <Ico.checkCircle size={15} className="c-pos" />
           <span className="t-sm c-2">
-            {saved ? "Saved. We'll tell you if anything here changes." : "This is yours already — nothing on this page is held back."}
+            {saved ? "Saved. We'll tell you if anything here changes." : "This is yours already. Nothing on this page is held back."}
           </span>
         </div>
         <div className="row gap-2">
@@ -389,7 +389,7 @@ export function PrivacyPanel({ v }: { v: "buy" | "sell" }) {
             {held.length ? held.map((h) => h.label).join(" · ") : "Nothing"}
           </div>
           {/* The real one. What stood here cleared localStorage, said
-              "Deleted", and left the server untouched — and disabled itself
+              "Deleted", and left the server untouched: and disabled itself
               when this device happened to be empty, which is the state of the
               person with the most to delete. See components/rift/Forget.tsx. */}
           <ForgetMe side={v} />
@@ -399,15 +399,15 @@ export function PrivacyPanel({ v }: { v: "buy" | "sell" }) {
   );
 }
 
-/** Capture. Email only, after the value, and it buys durability — not access. */
+/** Capture. Email only, after the value, and it buys durability: not access. */
 /**
  * The keep-it dialog.
  *
  * The email field is controlled and the address is handed to the caller, which
  * sounds obvious and was not true before: this rendered an uncontrolled input
  * and called `onDone()` with nothing, so every address typed into it was
- * discarded. It looked like it worked from the outside — the dialog closed and
- * said thank you — which is the only reason it survived this long.
+ * discarded. It looked like it worked from the outside: the dialog closed and
+ * said thank you, which is the only reason it survived this long.
  *
  * The caller performs the capture and returns what actually happened, because
  * only the caller knows. "Check your inbox" for a message that was never sent
@@ -442,7 +442,7 @@ export function Keep({ v, onDone, onClose, coBuyer }: {
           <p className="t-sm c-2" style={{ marginTop: 10, lineHeight: 1.6 }}>
             {state === "sent"
               ? `We sent the link to ${email.trim()}. It stays live, and nothing here changes.`
-              : "Noted — but email is not switched on yet, so nothing has been sent. This page is still yours: the link in your address bar keeps working."}
+              : "Noted, but email is not switched on yet, so nothing has been sent. This page is still yours: the link in your address bar keeps working."}
           </p>
           <button className="btn btn-p btn-lg" style={{ width: "100%", marginTop: 18 }} onClick={onClose}>
             Back to the readout
@@ -481,7 +481,7 @@ export function Keep({ v, onDone, onClose, coBuyer }: {
         ) : null}
         {state === "error" ? (
           <p className="t-sm c-neg" style={{ marginTop: 12, lineHeight: 1.55 }}>
-            That did not go through. Your readout is unaffected — the link in your address bar
+            That did not go through. Your readout is unaffected. The link in your address bar
             still works, and you can try again.
           </p>
         ) : null}

@@ -2,8 +2,8 @@
 /**
  * Runs every PostgREST query the data layer uses, against a real PostgREST.
  *
- * This exists because embedded selects — `rift_leads(name,email)`,
- * `rift_touches(step_id)` — are STRINGS. TypeScript cannot check them, the
+ * This exists because embedded selects: `rift_leads(name,email)`,
+ * `rift_touches(step_id)`: are STRINGS. TypeScript cannot check them, the
  * build cannot check them, and they fail at runtime with a message about a
  * schema cache. They are the least-verified and most brittle code in the
  * project, and a broken one takes down a page rather than a query.
@@ -34,7 +34,7 @@ const token = `${head}.${payload}.${createHmac("sha256", SECRET).update(`${head}
 
 /* supabase-js prefixes /rest/v1; PostgREST serves at the root. Rewriting the
    path here keeps the real supabase-js query builder in the loop, which is the
-   entire point — testing hand-written URLs would verify nothing. */
+   entire point: testing hand-written URLs would verify nothing. */
 const db = createClient(BASE, token, {
   auth: { persistSession: false },
   global: { fetch: (input, init) => fetch(String(input).replace("/rest/v1/", "/"), init) },

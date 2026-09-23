@@ -7,7 +7,7 @@
 -- out, and the failure arrives exactly when the data finally means something.
 --
 -- The window matters more than the speed. The report had no time bound, so it
--- mixed last year's funnel with this week's — and the whole point of measuring
+-- mixed last year's funnel with this week's, and the whole point of measuring
 -- drop-off is to change a question and see whether it helped. Averaged against
 -- twelve months of the old wording, it never will.
 -- ============================================================================
@@ -43,7 +43,7 @@ as $$
     count(distinct w.session_id) filter (where w.name = 'question_answer')::integer,
     /* The median, not the mean. One person who left a tab open for an hour
        would otherwise turn "they read it and declined" into "they bounced off
-       it" for everybody else — and those two want opposite remedies. */
+       it" for everybody else: and those two want opposite remedies. */
     coalesce(
       percentile_cont(0.5) within group (order by w.dwell_ms)
         filter (where w.name = 'question_answer' and w.dwell_ms is not null),

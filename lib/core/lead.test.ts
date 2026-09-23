@@ -7,7 +7,7 @@ import { scoreLead, sla, type LeadInput } from "./lead";
  * These exist because the readout's capture path was sending three of the six
  * signals and passing cash-to-close where the model expects the purchase
  * price. The same person scored 100 ("call today") with the full set and 46
- * ("scheduled") with what was actually being sent — a lead the agent should
+ * ("scheduled") with what was actually being sent: a lead the agent should
  * have called that day, filed as something to get to eventually.
  *
  * Nothing about that failed. It produced a plausible number, which is why it
@@ -81,7 +81,7 @@ describe("lead scoring", () => {
   });
 
   it("an unreachable lead is ranked, not hidden", () => {
-    /* Somebody who gave no contact details is still worth counting — they are
+    /* Somebody who gave no contact details is still worth counting: they are
        the recovery population, and dropping them from the ranking would make
        the funnel look better than it is. */
     const s = scoreLead(base({ contactable: false }));
@@ -145,7 +145,7 @@ describe("the speed-to-lead clock", () => {
   });
 
   it("holds the two clocks apart", () => {
-    /* The automated half already happened — the readout was delivered the
+    /* The automated half already happened: the readout was delivered the
        moment they finished. Conflating it with the human reply hides the fact
        that the valuable half is done. */
     const done = sla(input(), "now");

@@ -10,7 +10,7 @@ import { join } from "node:path";
  * answer within two seconds, and the agent row could not be read. Every page
  * turned all four into `redirect("/studio/sign-in")`.
  *
- * So a two-second blip signed the agent out — not really, the cookie was still
+ * So a two-second blip signed the agent out: not really, the cookie was still
  * there and the next request worked, but he was looking at a sign-in page,
  * which says his session expired. It reproduces on the first request after a
  * cold start, which on Vercel is the first thing he does in the morning.
@@ -47,7 +47,7 @@ describe("every Studio page", () => {
 
     /* The sign-in page itself is exempt, and only it. It uses the session to
        send an ALREADY signed-in agent away; on "unknown" it shows the form,
-       which is both what it would have done anyway and the right answer —
+       which is both what it would have done anyway and the right answer:
        somebody who cannot be confirmed should be offered a way in. Every other
        page runs the other direction, and that direction is where the lie is. */
     const sendsToSignIn = /redirect\("\/studio\/sign-in"\)/.test(src);
@@ -103,7 +103,7 @@ describe("the session itself", () => {
 
   it("calls a timeout unknown and an auth error signed-out", () => {
     /* The distinction that makes the whole thing work. A missing, malformed or
-       expired token IS an auth error — that is genuinely signed out. Only the
+       expired token IS an auth error: that is genuinely signed out. Only the
        absence of an answer is unknown. */
     expect(src).toMatch(/if \(timedOut\) return \{ state: "unknown"/);
     expect(src).toMatch(/auth\.error[\s\S]{0,60}state: "signed-out"/);
@@ -117,7 +117,7 @@ describe("the session itself", () => {
 
   it("keeps currentAgent() for the write actions, and says why", () => {
     /* An action that cannot confirm the session must refuse either way, so
-       the distinction buys nothing there — but a PAGE has somewhere better to
+       the distinction buys nothing there, but a PAGE has somewhere better to
        send a person than a form they do not need. */
     expect(src).toMatch(/export async function currentAgent\(\)/);
     expect(src).toMatch(/Every PAGE should use `agentSession\(\)`/);

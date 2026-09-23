@@ -15,7 +15,7 @@ export const contentType = OG_CONTENT_TYPE;
  * forwarding it is usually vouching for it to someone who reads one of them.
  */
 export default async function Image() {
-  /* The image renderer ships no Ethiopic face, so Amharic arrives as tofu —
+  /* The image renderer ships no Ethiopic face, so Amharic arrives as tofu:
      empty boxes, in a card whose whole job is to say this page speaks your
      language. Bundled rather than fetched: this runs on every unfurl, and a
      card that depends on a third-party font request is a card that sometimes
@@ -31,7 +31,7 @@ export default async function Image() {
           <>
             {/* The space is inside the string, as a non-breaking space. The
                 two scripts need separate spans for the font switch, and
-                satori does not apply `gap` between them — so relying on the
+                satori does not apply `gap` between them: so relying on the
                 layout to separate them renders "From abroad ·ከውጭ አገር". */}
             <span>{"From abroad ·\u00A0"}</span>
             <span style={{ fontFamily: "Noto Sans Ethiopic" }}>ከውጭ አገር</span>

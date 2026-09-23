@@ -3,7 +3,7 @@
 --
 -- The constraint allowed 'number' and 'money', which `FieldType` does not have,
 -- and rejected 'select' and 'boolean', which it does. So publishing the
--- built-in funnel failed on its very first question — the county select — and
+-- built-in funnel failed on its very first question (the county select) and
 -- the failure was swallowed by a caller that did not check the error.
 --
 -- Two lessons, both already learned once in this schema and worth the comment

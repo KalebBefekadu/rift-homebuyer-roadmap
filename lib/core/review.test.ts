@@ -69,8 +69,8 @@ describe("promotion", () => {
 
   it("refuses a skipped rung and names the real next one", () => {
     /* The message read `to === "verified" ? "review" : next`, so the one case
-       it was written for was told "Next is review" — a rung that does not
-       exist — while the actual next rung went unmentioned. */
+       it was written for was told "Next is review": a rung that does not
+       exist, while the actual next rung went unmentioned. */
     const r = promote(item({ state: "preliminary" }), "verified", "A lender");
     expect(r.ok).toBe(false);
     if (!r.ok) {

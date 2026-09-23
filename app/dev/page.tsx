@@ -6,7 +6,7 @@ import { internalHidden } from "@/lib/core/internal";
  * The development index.
  *
  * `/` used to be the retired portal MVP's marketing page. Rift's real public
- * landing is specified — see `/prototype/buy` and `/prototype/sell` — and is
+ * landing is specified (see `/prototype/buy` and `/prototype/sell`) and is
  * built in phase 2. Until then this route exists so the root is never a 404
  * and so anybody opening the repo lands somewhere that tells them the truth
  * about what is built and what is specification.
@@ -25,7 +25,7 @@ const BUILT = [
 
 const SPEC = [
   { href: "/prototype/app", name: "Client portal", note: "Phase 6. Specified, not built." },
-  { href: "/prototype/studio", name: "Studio, in full", note: "Board, offers, calendar, client records — phase 5." },
+  { href: "/prototype/studio", name: "Studio, in full", note: "Board, offers, calendar, client records. Phase 5." },
 ];
 
 const DOCS = [
@@ -48,7 +48,7 @@ export default function Home() {
   return (
     /* Paints its own ground. `body` carries --app-bg (#101914), a dark green
        left behind by the retired portal, so a page that sets dark text and no
-       background renders dark-on-dark — which is exactly what this one did:
+       background renders dark-on-dark, which is exactly what this one did:
        every card title was invisible. The product routes escape it because
        .rift sets its own background; this one has to do the same. */
     <main style={{
@@ -67,7 +67,7 @@ export default function Home() {
         marginTop: 28, padding: "14px 16px", borderRadius: 10,
         background: "#fff8e6", border: "1px solid #f0dfae", fontSize: 14.5,
       }}>
-        <strong>Buyers and sellers are live</strong>, and so is lead management &mdash; see{" "}
+        <strong>Buyers and sellers are live</strong>, and so is lead management; see{" "}
         <code style={{ background: "#00000010", padding: "1px 5px", borderRadius: 4 }}>docs/handoff.md</code>.
         The client portal and the referral engine are specified and not built. The traffic gate
         that deferred them no longer governs the build order: the goal is running real
@@ -115,7 +115,7 @@ export default function Home() {
         {DOCS.map(([f, note]) => (
           <li key={f} style={{ marginBottom: 6 }}>
             <code style={{ background: "#00000008", padding: "1px 5px", borderRadius: 4 }}>{f}</code>
-            <span style={{ color: "#666" }}> — {note}</span>
+            <span style={{ color: "#666" }}>: {note}</span>
           </li>
         ))}
       </ul>

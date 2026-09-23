@@ -5,7 +5,7 @@ import { boundedWrite, boundedRead } from "./bounded";
 import { nextRung, ceilingNote, type ReviewItem, type TrustState, type ReviewKind } from "@/lib/core/review";
 
 /**
- * The review queue — the producer for `pending-review`.
+ * The review queue: the producer for `pending-review`.
  *
  * The trust ladder has four rungs and, until this existed, only three could
  * ever occur: `pending-review` was rendered, explained, and unreachable. A
@@ -45,7 +45,7 @@ const TO_ADVANCE: Record<ReviewKind, string> = {
  * The figure a share token's readout holds under a given label.
  *
  * The ask control knows which figure it sits beside; it does not know that
- * figure's id, and it must not be trusted to send one — a client that can name
+ * figure's id, and it must not be trusted to send one: a client that can name
  * an arbitrary figure id can queue a review against somebody else's numbers.
  * So the server resolves it from the token and the label instead.
  */
@@ -73,7 +73,7 @@ export async function figureFor(shareToken: string, label: string): Promise<stri
 
 export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
   const db = serviceClient();
-  if (!db) return skipped("no database configured — the request was not queued");
+  if (!db) return skipped("no database configured; the request was not queued");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
@@ -109,7 +109,7 @@ export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
  *
  * The agent is being asked to stand behind a number. Showing the request
  * without the number's own assumptions and failure mode asks him to do that
- * from memory — which is exactly the situation contract 4.2 exists to prevent
+ * from memory, which is exactly the situation contract 4.2 exists to prevent
  * on the customer's side, and there is no reason his side should be worse.
  */
 export interface ReviewItemWithFigure extends ReviewItem {
@@ -172,7 +172,7 @@ export async function openItems(): Promise<DbResult<ReviewItemWithFigure[]>> {
  *
  * `agentId` is the SIGNED-IN agent, threaded from the server action rather
  * than resolved here. It matters because this uses the service-role client,
- * which bypasses RLS — so the policy that would have stopped a cross-agent
+ * which bypasses RLS, so the policy that would have stopped a cross-agent
  * write is never consulted, and `.eq("id", id)` alone would promote any review
  * item in the database to anyone who knows a UUID. The action checks that
  * somebody is signed in; only this checks that it is theirs.
@@ -208,7 +208,7 @@ export async function promoteItem(
     /* Compare-and-swap on the state we read.
        
        Two promotions racing both saw "pending-review" and both wrote their own
-       next rung — so a "verified" could be overwritten by a "reviewed" that
+       next rung: so a "verified" could be overwritten by a "reviewed" that
        started from the same stale read, silently downgrading a figure somebody
        had confirmed in writing. Advancing a rung has to be conditional on the
        rung it started from. */
@@ -225,7 +225,7 @@ export async function promoteItem(
 
     const moved = ("data" in advanced ? advanced.data : null) as { id: string }[] | null;
     if (!moved?.length) {
-      return failed("somebody else moved this while you were looking at it — reload and check where it is now");
+      return failed("somebody else moved this while you were looking at it. Reload and check where it is now");
     }
 
     /* And the figure itself, which is the whole point.

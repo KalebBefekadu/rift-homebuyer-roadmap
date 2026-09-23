@@ -5,7 +5,7 @@ import { siteUrl } from "@/lib/core/site";
  * What crawlers may see.
  *
  * The public product pages should be found. Everything that carries a person's
- * situation must not be — a readout URL is unguessable to a human and trivially
+ * situation must not be: a readout URL is unguessable to a human and trivially
  * findable by a crawler that has been handed one, for example in a shared link
  * that ended up on a forum.
  *
@@ -29,8 +29,8 @@ export default function robots(): MetadataRoute.Robots {
         /* /dev is the development index. It is not secret, but it describes what
            is built and what is only specified, and it is not the product. */
         /* /abroad/results was missing from this list while the other two
-           readouts were on it. Same kind of document — one person's price,
-           deposit, county and residency status in a URL — and the only one of
+           readouts were on it. Same kind of document: one person's price,
+           deposit, county and residency status in a URL, and the only one of
            the three a crawler was free to index. The funnel written for people
            outside the country was the one without the protection. */
         disallow: [

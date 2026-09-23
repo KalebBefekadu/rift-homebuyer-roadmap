@@ -6,7 +6,7 @@ import { RECOMMENDATION_MARKER } from "@/lib/core/offer-room";
  * The offer room's data layer: what it asks for, and what it refuses to trust.
  *
  * The constraints themselves are proven against real Postgres in
- * schema.test.ts. This proves the reasoning above them — that the seller's
+ * schema.test.ts. This proves the reasoning above them: that the seller's
  * read never carries Rift's draft, that the draft and the snapshot are built
  * here rather than accepted from a form, and that two taps make one choice.
  */

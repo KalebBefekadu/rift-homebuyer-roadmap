@@ -1,5 +1,5 @@
 /**
- * Decision Rooms — the place a consequential choice gets made and recorded.
+ * Decision Rooms: the place a consequential choice gets made and recorded.
  *
  * docs/benchmark.md scores 4.3 at **0** in production. Not weak: absent. The
  * prototype has `/app/decisions` and a decision room; production had no
@@ -10,7 +10,7 @@
  * available scenarios, comparable numbers, assumptions, benefits, trade-offs,
  * risks, source documents, review state, agent context, customer questions,
  * and the recorded decision. This module implements the half of that list that
- * can be true today — documents and threaded questions need tables that do not
+ * can be true today: documents and threaded questions need tables that do not
  * exist, and a heading over a feature that cannot work is worse than its
  * absence.
  *
@@ -49,7 +49,7 @@ export interface Option {
    * The number that makes options comparable, in cents.
    *
    * Cents because these are money and a float is not money. Null when the
-   * decision is not about an amount — "sell first, then buy" has no figure and
+   * decision is not about an amount: "sell first, then buy" has no figure and
    * forcing one would invent it.
    */
   amountCents: number | null;
@@ -57,7 +57,7 @@ export interface Option {
   amountLabel: string | null;
   /** What is good about it, in the agent's words. */
   upside: string | null;
-  /** What is not. Required alongside upside — see `balanced` below. */
+  /** What is not. Required alongside upside: see `balanced` below. */
   downside: string | null;
   sort: number;
 }
@@ -108,7 +108,7 @@ export function canRelease(d: Pick<Decision, "question" | "options">): ReleaseCh
 
   if (d.options.length < MIN_OPTIONS) {
     blocks.push(
-      `A decision needs at least ${MIN_OPTIONS} options. One option is not a choice — it is an instruction, and presenting it as a decision asks somebody to agree with something they were never given an alternative to.`,
+      `A decision needs at least ${MIN_OPTIONS} options. One option is not a choice. It is an instruction, and presenting it as a decision asks somebody to agree with something they were never given an alternative to.`,
     );
   }
 
@@ -138,7 +138,7 @@ export function canRelease(d: Pick<Decision, "question" | "options">): ReleaseCh
 /**
  * Whether every option that argues a case also argues against itself.
  *
- * Not enforced — an agent may genuinely have nothing to say either way, and
+ * Not enforced: an agent may genuinely have nothing to say either way, and
  * blocking on it would teach him to type a word to get past the check. It is
  * warned about, because the failure it guards is subtle: a comparison where
  * one option has an upside and no downside has made a recommendation without
@@ -174,7 +174,7 @@ export interface Spread {
  * The single most useful sentence a comparison can carry, and the one nobody
  * works out for themselves: two offers whose headline prices differ by $9,000
  * may differ by $1,200 in what reaches the seller. Null when the options carry
- * no figures, which is honest rather than zero — a spread of $0 and no spread
+ * no figures, which is honest rather than zero: a spread of $0 and no spread
  * at all render identically and mean opposite things.
  */
 export function spreadOf(options: Option[]): Spread | null {
@@ -191,7 +191,7 @@ export function spreadOf(options: Option[]): Spread | null {
  * The options, in the order they are shown.
  *
  * The agent's own order, always. Sorting by amount would put the largest
- * number first, and the largest number is not the best option — that is the
+ * number first, and the largest number is not the best option: that is the
  * exact mistake `headlineTrap` in lib/core/offers.ts exists to catch, and
  * building it into the ordering of every decision room would be committing it
  * everywhere at once.

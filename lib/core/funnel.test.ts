@@ -5,7 +5,7 @@ import { BUY_FUNNEL, SELL_FUNNEL, optionsFor, needsOptions } from "./funnel";
  * The funnels have to be completable.
  *
  * This exists because they were not. The county question is `type: "select"`
- * with no `options` of its own — the values come from the registry — and the
+ * with no `options` of its own (the values come from the registry) and the
  * assessment never resolved that binding, so it rendered a dropdown containing
  * nothing but "Choose one". County is question two of both funnels and it is
  * required, so no visitor could finish an assessment on either side.
@@ -28,7 +28,7 @@ describe("every funnel can actually be completed", () => {
       it("resolves the county question from the registry", () => {
         const county = funnel.questions.find((q) => q.bound === "county");
         expect(county).toBeDefined();
-        /* Not a fixed number — the registry grows. What matters is that the
+        /* Not a fixed number: the registry grows. What matters is that the
            binding resolves to a real list rather than nothing. */
         expect(optionsFor(county!).length).toBeGreaterThan(1);
       });

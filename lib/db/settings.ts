@@ -13,17 +13,17 @@ import {
  * `lib/core/settings.ts` has held these since the prototype, in localStorage.
  * That was fine for a specification and wrong for a product: the values lived
  * on one device, in one browser, and nothing the server computed could read
- * them. So `commissionPct` — described in its own note as "the only number in
- * the product that turns pipeline into money" — ran on a default that Kaleb
+ * them. So `commissionPct`: described in its own note as "the only number in
+ * the product that turns pipeline into money": ran on a default that Kaleb
  * had no way to see, let alone change, because /prototype/studio/settings is
  * the only page that ever rendered it and that path returns 404 in production.
  *
  * Six decisions, one row each, keyed `(agent_id, key)`.
  *
  * A row records WHO decided and WHEN, not just what. Two of these six are not
- * Kaleb's to decide alone — client retention has a legal floor set by the
+ * Kaleb's to decide alone: client retention has a legal floor set by the
  * broker, and marketing to an unrepresented counterparty is a conflict
- * question before it is a marketing one — and a settings table that cannot
+ * question before it is a marketing one, and a settings table that cannot
  * tell "the broker confirmed 5 years" from "nobody has touched this" is a
  * table that quietly converts a default into a policy.
  *
@@ -33,13 +33,13 @@ import {
  * in the forward view without throwing.
  */
 
-/* Re-exported so server callers keep one import. The shape lives in core —
+/* Re-exported so server callers keep one import. The shape lives in core:
    see the note there. */
 export type { StoredRule };
 
 export interface AgentRules {
   rules: BusinessRules;
-  /** Keys with no usable stored value — still on the default. */
+  /** Keys with no usable stored value: still on the default. */
   undecided: (keyof BusinessRules)[];
   /** Provenance for the ones that were decided. */
   decided: StoredRule[];
@@ -142,7 +142,7 @@ export async function clearRule(agentId: string, key: keyof BusinessRules): Prom
   }
 }
 
-/** For callers that cannot fail — the forecast, which must render something. */
+/** For callers that cannot fail: the forecast, which must render something. */
 export async function rulesOrDefaults(agentId: string | null): Promise<AgentRules> {
   if (!agentId) return FALLBACK;
   const r = await readAgentRules(agentId);

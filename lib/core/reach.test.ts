@@ -13,7 +13,7 @@ import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, mergeRules, undecidedIn, type Bu
  * the difference that building a settings page is how you introduce it
  * deliberately.
  *
- * Five of the six rules currently reach nothing — the screens they price or
+ * Five of the six rules currently reach nothing: the screens they price or
  * govern are prototype-only. That is fine and it is said on the page. What is
  * not fine is the claim drifting from the code, so these tests hold
  * RULE_REACH to the source.
@@ -110,7 +110,7 @@ describe("telling a decision from a default", () => {
   });
 
   it("still calls it undecided when the stored value is unusable", () => {
-    /* The whole point. A bad row must not read as a decision — the agent
+    /* The whole point. A bad row must not read as a decision: the agent
        would see his own value on screen and it would not be the one in use. */
     expect(undecidedIn({ commissionPct: "3" as unknown })).toContain("commissionPct");
   });
@@ -138,7 +138,7 @@ describe("the re-check window actually reaches the registry", () => {
 
   it("falls back to the default for a value that could suppress everything", () => {
     /* 0 and negative would push the cutoff into the future and suppress the
-       whole registry — a page of no programmes, which renders perfectly. */
+       whole registry: a page of no programmes, which renders perfectly. */
     expect(programs).toContain("overrideDays > 0");
   });
 });

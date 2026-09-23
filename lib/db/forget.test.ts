@@ -10,8 +10,8 @@ import { Client } from "pg";
  *
  * `forget()` was written when rift_leads.assessment_id cascaded on delete: it
  * removed the assessment and the lead went with it. 20260908000000 changed the
- * cascade to SET NULL — correctly, because the retention SWEEP was destroying
- * relationships the agent was still working — and updated the sweep to delete
+ * cascade to SET NULL: correctly, because the retention SWEEP was destroying
+ * relationships the agent was still working, and updated the sweep to delete
  * leads explicitly. `forget()` shares the mechanism and was not updated, so
  * from that day a person who asked to be erased had their assessment removed
  * and their name, email, phone and consent record left in place, under a page
@@ -20,8 +20,8 @@ import { Client } from "pg";
  * Nothing threw. The endpoint returned `ok`. The docblock described the
  * behaviour the code had lost.
  *
- * So the first test here asserts the fact that made it possible — that a
- * deleted assessment leaves its lead behind — rather than trusting anyone to
+ * So the first test here asserts the fact that made it possible: that a
+ * deleted assessment leaves its lead behind: rather than trusting anyone to
  * remember it. If somebody restores the cascade, the sweep's bug comes back
  * and this fails. If somebody removes the explicit lead deletion, the erasure
  * bug comes back and the tests below fail.
@@ -135,7 +135,7 @@ describe("the fact the bug rested on", () => {
     const { assessmentId, leadId } = await seed(c, "keep-1", { withAssessment: true });
     await c.query("delete from rift_assessments where id=$1", [assessmentId]);
 
-    /* This is correct and deliberate — see 20260908000000. The retention sweep
+    /* This is correct and deliberate: see 20260908000000. The retention sweep
        must not destroy a relationship just because the assessment aged out.
        It is also exactly why erasure has to delete the lead itself. */
     expect(await count(c, "rift_leads", "id=$1", [leadId])).toBe(1);
@@ -197,7 +197,7 @@ describe("erasure, from a readout", () => {
 
   test("counts the person, not only the paperwork", async (c) => {
     /* A session with a lead and no assessment used to return `deleted: 0`,
-       which the route turns into "nothing was stored on our side to remove" —
+       which the route turns into "nothing was stored on our side to remove":
        said to somebody whose email address had just been found and deleted. */
     await seed(c, "gone-5", { withAssessment: false });
     expect(await forget(c, "gone-5")).toBe(1);
@@ -206,7 +206,7 @@ describe("erasure, from a readout", () => {
 
 describe("the erasure code still does all of that", () => {
   /* The tests above prove the SQL is right. This proves the module still
-     issues it — the bug was never in a query, it was in a function that had
+     issues it: the bug was never in a query, it was in a function that had
      quietly stopped containing one. */
   const src = readFileSync("lib/db/retention.ts", "utf8");
   const forgetBody = src.slice(src.indexOf("export async function forget"));
@@ -225,7 +225,7 @@ describe("the erasure code still does all of that", () => {
     expect(leadLookup).toBeGreaterThan(-1);
     expect(assessmentDelete).toBeGreaterThan(-1);
     /* SET NULL severs the link. Deleting first makes the lead unfindable and
-       the erasure silently partial — the exact shape of the original bug. */
+       the erasure silently partial: the exact shape of the original bug. */
     expect(leadLookup).toBeLessThan(assessmentDelete);
   });
 
@@ -239,7 +239,7 @@ describe("every capture surface hands over a session", () => {
      rift_leads.session_id only if the page that captured it sent one, and a
      capture form added later that forgets is invisible: it stores the person
      perfectly and quietly makes them impossible to delete. Nothing about that
-     looks wrong from any direction — which is why it is a test rather than a
+     looks wrong from any direction, which is why it is a test rather than a
      convention. */
   function tsxFiles(dir: string): string[] {
     let out: string[] = [];

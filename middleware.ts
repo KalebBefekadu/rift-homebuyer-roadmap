@@ -7,7 +7,7 @@ import { updateSession } from "@/lib/supabase/middleware";
  *
  * Scoped to the surfaces that HAVE sessions, which is Studio and the auth
  * callback. It used to run on everything except the prototype and the home
- * page — so every stranger loading /buy, /sell, /abroad, /book or a readout
+ * page, so every stranger loading /buy, /sell, /abroad, /book or a readout
  * paid a round trip to the auth server to refresh a session they could not
  * possibly have. The previous note said "when the real authenticated surfaces
  * land in phase 3, add their prefixes here rather than widening this back to

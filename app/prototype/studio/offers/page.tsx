@@ -79,7 +79,7 @@ export default function Offers() {
               <tbody>
                 {[
                   ["Offer price", (o: typeof OFFERS[0]) => money(o.price), money(13_000)],
-                  ["Concessions", (o: typeof OFFERS[0]) => o.concessions === "None requested" ? "—" : o.concessions, money(12_000)],
+                  ["Concessions", (o: typeof OFFERS[0]) => o.concessions === "None requested" ? "None" : o.concessions, money(12_000)],
                   ["Net to seller", (o: typeof OFFERS[0]) => money(o.netToSeller), `−${money(6_500)}`],
                   ["Earnest", (o: typeof OFFERS[0]) => money(o.earnest), money(6_000)],
                   ["Closing", (o: typeof OFFERS[0]) => o.closeDate, "28 days later"],

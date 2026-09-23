@@ -4,7 +4,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
 /**
  * The crossing from a free readout to a published plan.
  *
- * The failure this guards is not a wrong number — it is a number that changed
+ * The failure this guards is not a wrong number: it is a number that changed
  * without anybody saying so. Somebody shown "you need $27,875" has repeated it
  * to their partner and organised their saving around it. A plan opening at
  * $29,400 with no explanation leaves them unable to tell which figure was

@@ -6,10 +6,10 @@ import { Ico } from "@/components/rift/icons";
 const DOCS = [
   { n: "Your readiness package", m: "PDF · 6 pages", d: "2 Sep", who: "Rift", state: "Reviewed" },
   { n: "Lender question sheet", m: "PDF · 1 page", d: "2 Sep", who: "Rift", state: "Reviewed" },
-  { n: "Meeting recap — 2 September", m: "PDF · 2 pages", d: "2 Sep", who: "Kaleb", state: "Reviewed" },
-  { n: "Buyer agency agreement", m: "Awaiting Kaleb", d: "—", who: "Kaleb", state: "Waiting" },
-  { n: "Pay stubs — August", m: "Requested from you", d: "Due 1 Oct", who: "You", state: "Needed" },
-  { n: "Bank statements — Jul, Aug", m: "Requested from you", d: "Due 1 Oct", who: "You", state: "Needed" },
+  { n: "Meeting recap, 2 September", m: "PDF · 2 pages", d: "2 Sep", who: "Kaleb", state: "Reviewed" },
+  { n: "Buyer agency agreement", m: "Awaiting Kaleb", d: "No date", who: "Kaleb", state: "Waiting" },
+  { n: "Pay stubs, August", m: "Requested from you", d: "Due 1 Oct", who: "You", state: "Needed" },
+  { n: "Bank statements, Jul and Aug", m: "Requested from you", d: "Due 1 Oct", who: "You", state: "Needed" },
 ];
 
 const CHIP: Record<string, string> = { Reviewed: "chip-pos", Waiting: "chip-warn", Needed: "chip-neg" };

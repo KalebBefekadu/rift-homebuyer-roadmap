@@ -26,7 +26,7 @@ import {
  *
  * The second is to refuse the industry's slogan. "As little as 10% down" is
  * true for some readers and false for most, and a reader who sends documents
- * on the strength of it and is then asked for 30% has been wasted — which is
+ * on the strength of it and is then asked for 30% has been wasted, which is
  * the specific injury this whole product exists to prevent. So the hero asks
  * which of four situations they are in and shows that situation's real number,
  * including the one that is bad news. Being the only page that tells them the
@@ -72,7 +72,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
       const saved = window.localStorage.getItem("rift.locale");
       if (isLocale(saved)) { setLocale(saved); return; }
       if (navigator.language?.toLowerCase().startsWith("am")) setLocale("am");
-    } catch { /* storage unavailable — the server's choice stands */ }
+    } catch { /* storage unavailable: the server's choice stands */ }
   }, [localePinned]);
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -88,8 +88,8 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
   useCaptureTouch();
   /* The page, and nothing about the reader.
      
-     This used to carry `status` and `use` — the visitor's residency situation
-     and what they intend to do with the house — straight into the analytics
+     This used to carry `status` and `use`: the visitor's residency situation
+     and what they intend to do with the house: straight into the analytics
      table on every view. Two things wrong with that, and the second is the
      serious one. It breaks the product's own rule that telemetry stores
      question ids and timings and never answer values. And residency status is
@@ -98,7 +98,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
      a session that joins to a lead. This page was designed around targeting a
      SITUATION rather than an ethnicity, and then logged the situation.
      
-     The drop-off signal that was wanted is already available without it —
+     The drop-off signal that was wanted is already available without it:
      `hero_answer` records which control was touched, by question id. */
   useTrack({ name: "landing_view", side: "buy", meta: { page: "abroad" } });
 
@@ -117,7 +117,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
   );
   const r = useMemo(() => abroadReturns(input), [input]);
   /* The break-even sweeps every down payment, so it deliberately ignores the
-     one currently selected — dragging that slider must not recompute it. */
+     one currently selected: dragging that slider must not recompute it. */
   const breakEven = useMemo(
     () => breakEvenDownPct(input),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,8 +126,8 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
   const answered = (qid: string) => track({ name: "hero_answer", side: "buy", meta: { qid, page: "abroad" } });
 
   /* Straight to the readout, not into the buyer funnel. That funnel asks what
-     you have saved and what you put away each month — a first-time buyer
-     closing a cash gap — and its readout names Georgia Dream throughout, which
+     you have saved and what you put away each month: a first-time buyer
+     closing a cash gap, and its readout names Georgia Dream throughout, which
      requires the buyer to live in the house. Every answer this page needs has
      already been given above, so there is nothing left to ask. */
   const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}&lang=${locale}`;
@@ -257,7 +257,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                 <span className="t-xs c-4" style={{ marginTop: 6, display: "block", lineHeight: am ? 1.8 : 1.5, ...script }}>
                   {minDown}% {t("down.floor")}
                   {breakEven !== null
-                    ? ` ${breakEven}% — ${t("down.breakEven")}`
+                    ? ` ${breakEven}%: ${t("down.breakEven")}`
                     : use === "rent" ? ` ${t("down.never")}` : ""}
                 </span>
               </label>
@@ -311,7 +311,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                 <div style={{ marginTop: 22, borderTop: "1px solid rgba(255,255,255,.14)", paddingTop: 18 }}>
                   <div className="t-sm" style={{ color: "rgba(255,255,255,.72)", maxWidth: 560, lineHeight: 1.6 }}>
                     Held empty for your own use it costs {money(r.monthly.total)} a month and
-                    earns nothing — but {money(r.year1.principal)} of the first year&apos;s
+                    earns nothing, but {money(r.year1.principal)} of the first year&apos;s
                     payments is principal, which is yours, not the bank&apos;s.
                   </div>
                 </div>
@@ -392,7 +392,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
           {/* Declared to a search engine from the SAME array the page renders
               from. Google's rule is that structured data must match what the
               visitor sees, and a second copy written for crawlers drifts from
-              the page inside a release — at which point the product is making
+              the page inside a release: at which point the product is making
               two different claims about the same thing, one of them invisible.
 
               Locale-aware, because the Amharic page is a real addressable

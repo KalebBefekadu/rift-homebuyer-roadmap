@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
  * `app/globals.css` is loaded by the root layout; `app/prototype/rift.css` is
  * loaded by every Rift and Studio layout inside it. Both are plain global CSS
  * with no module scoping, so a class defined in both is resolved by whichever
- * stylesheet Next happens to emit second — which is not something any of this
+ * stylesheet Next happens to emit second, which is not something any of this
  * code decides, states, or can rely on.
  *
  * It had already happened. A dark-ground `.chip` from the retired portal MVP
@@ -34,18 +34,18 @@ describe("the two global stylesheets", () => {
     const rift = definedClasses("app/prototype/rift.css");
     const both = [...globals].filter((c) => rift.has(c)).sort();
 
-    expect(both, "defined in both globals.css and rift.css — which one wins is decided by stylesheet order, not by anything here")
+    expect(both, "defined in both globals.css and rift.css; which one wins is decided by stylesheet order, not by anything here")
       .toEqual([]);
   });
 
   it("keeps globals.css to element rules and variables", () => {
     /* The narrower rule, and the one that prevents the collision rather than
        detecting it. globals.css exists to render a page that is OUTSIDE
-       `.rift` — not-found and global-error. Anything reached through a Rift
+       `.rift`: not-found and global-error. Anything reached through a Rift
        layout is rift.css's to style, and a class here is either dead or a
        collision waiting to happen. */
     const classes = [...definedClasses("app/globals.css")];
-    expect(classes, "globals.css should hold no class rules — rift.css styles everything inside .rift")
+    expect(classes, "globals.css should hold no class rules: rift.css styles everything inside .rift")
       .toEqual([]);
   });
 });
@@ -55,7 +55,7 @@ describe("the two global stylesheets", () => {
  *
  * `.rift button { background: none; border: 0; padding: 0 }` exists so a bare
  * `<button>` reads as text. Written with any specificity at all, it out-
- * specifies the visual classes in the same file — and then it has to name its
+ * specifies the visual classes in the same file, and then it has to name its
  * own exceptions, one bug at a time.
  *
  * It has done this twice. `<button class="btn btn-p">` rendered as bare text
@@ -72,7 +72,7 @@ describe("the button reset", () => {
 
   it("carries no specificity, so any class beats it", () => {
     const rule = css.split("\n").find((l) => /button\)?\s*\{[^}]*background:\s*none/.test(l));
-    expect(rule, "the reset is gone or has been rewritten — read the comment above it first")
+    expect(rule, "the reset is gone or has been rewritten. Read the comment above it first")
       .toBeTruthy();
 
     /* `:where()` is the whole mechanism. Without it the rule wins against
@@ -86,7 +86,7 @@ describe("the button reset", () => {
   it("resets the font at zero specificity too", () => {
     /* `.rift button { font: inherit }` is (0,1,1) and beat `.chip`'s
        font-size. Found the same afternoon as the background, one line above
-       it, by the same test — which is the argument for asserting the property
+       it, by the same test, which is the argument for asserting the property
        rather than patching the instance. `cursor` may stay where it is: it is
        not a property any visual class sets, so it cannot out-specify one. */
     const line = css.split("\n").find((l) => /^:where\(\.rift button\)/.test(l));

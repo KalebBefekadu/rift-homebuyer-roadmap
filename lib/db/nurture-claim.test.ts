@@ -7,7 +7,7 @@ import { fakeDb, type Answers, type Fake } from "./test/fake-db";
  * This is the only thing standing between a retry and a second email to the
  * same person. The ordering is deliberate and stated in the route: claim,
  * then send, then record the outcome. A crash between sending and recording
- * would otherwise resend on the next run — and the person on the other end has
+ * would otherwise resend on the next run, and the person on the other end has
  * no way to tell a bug from a company that does not pay attention.
  *
  * The constraint that makes it work is asserted against real Postgres in

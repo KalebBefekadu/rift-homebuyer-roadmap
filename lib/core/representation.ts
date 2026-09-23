@@ -1,11 +1,11 @@
 /**
- * Representation — the gate between a lead and a client.
+ * Representation: the gate between a lead and a client.
  *
  * This is the most consequential compliance moment in a residential
  * transaction, and docs/product.md is explicit that it must be "a visible
  * lifecycle state rather than an offline side channel". It was neither. There
  * was no column, which is why `canPublish` in seam.ts carried
- * `hasAgreement: true` as a literal — the one precondition in the product that
+ * `hasAgreement: true` as a literal: the one precondition in the product that
  * was asserted rather than read, sitting in a function whose entire job is to
  * refuse to publish when something is not true.
  *
@@ -18,7 +18,7 @@
  * ONE RULE ABOVE THE REST: this module never says an agreement is signed. It
  * reports what is recorded. An agent typing "signed" into a form is the record
  * of a paper event that happened elsewhere, and the product's job is to hold
- * that record accurately and refuse to proceed without it — not to be the
+ * that record accurately and refuse to proceed without it: not to be the
  * authority on it. Rift never signs, and never sends for signature.
  */
 
@@ -132,7 +132,7 @@ export interface Standing {
  * A stored status of `signed` against an expiry date in the past is not
  * signed, and reading it as signed is how somebody shows a house on a lapsed
  * agreement. The stored value is what an agent last typed; this is what it
- * means now. Nothing writes the expiry back — a derived truth stored twice is
+ * means now. Nothing writes the expiry back: a derived truth stored twice is
  * two truths, and the clock is not something we need to remember for.
  */
 export function standingOf(rep: Representation, today = new Date()): Standing {
@@ -169,7 +169,7 @@ export function standingOf(rep: Representation, today = new Date()): Standing {
  * The last stage a journey may reach without a signed agreement.
  *
  * From docs/product.md: a buyer cannot advance past **Ready to shop**, a
- * seller cannot advance past pricing and launch — which in this product's
+ * seller cannot advance past pricing and launch, which in this product's
  * stage vocabulary is **Preparing the property**.
  *
  * The stages before the gate are the ones where an agent is establishing
@@ -209,7 +209,7 @@ export interface GateCheck {
 /**
  * Whether a journey may move to a stage.
  *
- * Refuses rather than warns, and says why — docs/product.md: "Rift blocks the
+ * Refuses rather than warns, and says why: docs/product.md: "Rift blocks the
  * advance and explains why rather than silently allowing it."
  *
  * The terminal stages are always allowed. A relationship that ended without an

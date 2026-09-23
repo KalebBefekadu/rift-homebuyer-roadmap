@@ -11,7 +11,7 @@ import { clientRoomFor } from "./offer-room";
 import { takeIsCurrent, type ChoiceSnapshot } from "@/lib/core/offer-room";
 
 /**
- * The client's plan — reading it by token, and the agent's edits to it.
+ * The client's plan: reading it by token, and the agent's edits to it.
  *
  * The read is the interesting half. It is the only query in this product that
  * answers a request from somebody who is not the agent and has no session, so
@@ -20,7 +20,7 @@ import { takeIsCurrent, type ChoiceSnapshot } from "@/lib/core/offer-room";
  *
  * What it must never return is in `SAFE_LEAD_COLUMNS` below and is enforced by
  * a test. A lead row carries a score, a band, a contact basis, the agent's
- * archive reason and a list of signals about how promising this person is —
+ * archive reason and a list of signals about how promising this person is:
  * all of it written for the agent, none of it written to be read by the person
  * it is about.
  */
@@ -56,7 +56,7 @@ export interface ClientPlan {
   offers: Offer[];
   sellerCosts: SellerCosts | null;
   /**
-   * The agent's approved take on those offers — null unless it was approved
+   * The agent's approved take on those offers: null unless it was approved
    * for EXACTLY the offers released now. Decided here, not in the page: a
    * take about a table that has since changed is advice about a choice that no
    * longer exists, and "the component checks" is one refactor from nobody does.
@@ -79,7 +79,7 @@ const shapeItem = (r: Record<string, unknown>): PlanItem => ({
 /**
  * Open a plan by its token.
  *
- * No agent scope, because there is no agent asking — the token IS the
+ * No agent scope, because there is no agent asking: the token IS the
  * authorisation. That is the same trade the shared readout makes, and it is
  * only safe while the token is long, random, unique and revocable, which the
  * migration enforces and `newClientToken` provides.
@@ -118,7 +118,7 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
     : [];
 
   /* Only a seller can have offers ON them, and only released ones are ever
-     read — the filter is in the query in lib/db/offers.ts, not applied here,
+     read: the filter is in the query in lib/db/offers.ts, not applied here,
      because a filter applied after the read is one refactor from being
      dropped. */
   const side = row.side as "buy" | "sell";
@@ -140,7 +140,7 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
 
     /* A failed room read costs the take and the recorded choice, never the
        offers themselves. The page then offers a choice it cannot record, and
-       the write refuses — loudly — rather than the page going blank. */
+       the write refuses (loudly) rather than the page going blank. */
     if (room.ok && "data" in room) {
       const r = room.data;
       if (takeIsCurrent(r, offers)) take = { text: r.take!, approvedAt: r.approvedAt! };
@@ -182,7 +182,7 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
  * Mint the client's link, or return the one that already exists.
  *
  * Idempotent on purpose. An agent who clicks twice must not invalidate the
- * link he sent an hour ago — the client would open it, see nothing, and have
+ * link he sent an hour ago: the client would open it, see nothing, and have
  * no way to tell that from the product being broken.
  */
 export async function openPlan(leadId: string): Promise<DbResult<{ token: string }>> {
@@ -213,7 +213,7 @@ export async function openPlan(leadId: string): Promise<DbResult<{ token: string
  * Revoke it.
  *
  * Nulling the token breaks every copy of the link at once, which is the whole
- * point — a link that has been forwarded cannot be taken back any other way.
+ * point: a link that has been forwarded cannot be taken back any other way.
  * The plan itself is kept: the relationship may resume, and deleting somebody's
  * agreed steps because a link was shared too widely is a second mistake.
  */
@@ -389,7 +389,7 @@ export async function datedCommitments(): Promise<DbResult<Commitment[]>> {
     ),
   ]);
 
-  /* Either half may be missing without the page being wrong — the follow-up
+  /* Either half may be missing without the page being wrong: the follow-up
      columns and the plan table shipped separately from the code that reads
      them. What must not happen is an empty agenda that looks like a clear
      month. If BOTH fail, that is reported. */
@@ -418,7 +418,7 @@ export async function datedCommitments(): Promise<DbResult<Commitment[]>> {
   }
 
   if (steps.ok && "data" in steps) {
-    /* The steps' own leads may not be in the map above — that query only
+    /* The steps' own leads may not be in the map above: that query only
        returns people who have a next action. One more read rather than a
        guess: a step attributed to the wrong person is worse than a slow page. */
     const stepRows = steps.data as Record<string, unknown>[];
