@@ -459,3 +459,22 @@ export async function datedCommitments(): Promise<DbResult<Commitment[]>> {
 
   return done(out);
 }
+
+/**
+ * The plan steps on a relationship, for a journey's Today (blueprint v4 W07).
+ * The caller names the agent: a member's page has already checked the
+ * membership and passes the journey's agent, never one from the request.
+ */
+export async function planItemsFor(leadId: string, agentId: string): Promise<DbResult<PlanItem[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const items = await boundedRead(
+    db.from("rift_plan_items")
+      .select("id,title,owner,owner_name,due_on,done_at,sort")
+      .eq("lead_id", leadId).eq("agent_id", agentId)
+      .order("sort", { ascending: true }).limit(200),
+    "the plan steps",
+  );
+  if (!items.ok) return items;
+  return done(("data" in items ? (items.data as Record<string, unknown>[]) : []).map(shapeItem));
+}

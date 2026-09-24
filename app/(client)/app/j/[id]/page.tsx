@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { clientBrief, clientHomes, clientSession, clientTours, memberOf } from "@/lib/db/client";
+import { clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/client";
+import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
+import { todayFor } from "@/lib/core/today";
 import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";
 import { buyerSearchOn, canRespond, ROLE_LABEL } from "@/lib/core/journey";
 import { describe, diffBriefs, FIELDS, STRENGTH_LABEL, type SearchStatus } from "@/lib/core/search";
 import { ClientShell } from "../../ClientShell";
 import { ClientBrief } from "./ClientBrief";
 import { ClientHomes } from "./ClientHomes";
+import { Today, type BuyerWork } from "./Today";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -50,10 +53,11 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const member = m.data;
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
-  const [brief, homes, tours] = await Promise.all([
+  const [brief, homes, tours, prog] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
+    member.side === "buy" ? clientProgress(member) : Promise.resolve(null),
   ]);
   /* Worded here, on the server, so nothing but the buyer's line leaves it:
      not the agent's notes, not the ShowingTime reference, not why a showing
@@ -76,6 +80,31 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const h = homes && homes.ok && "data" in homes ? homes.data : null;
   const respond = canRespond(member.role);
 
+  /* Today (W07). The order is lib/core/today.ts; every line is worded here
+     so the workstreams' raw notes and sources leave only as sentences. */
+  const p = prog && prog.ok && "data" in prog ? prog.data : null;
+  const address = new Map((h ?? []).map((x) => [x.id, x.address]));
+  const today = p && !p.unavailable
+    ? todayFor({
+      agentFirst,
+      progress: p.progress,
+      work: p.open?.work ?? [],
+      plan: p.plan,
+      briefToConfirm: respond && !!b?.revision && !b.myResponse,
+      showingsToAnswer: respond ? showings.filter((x) => x.completed && !x.answeredByMe).map((x) => address.get(x.homeId) ?? "A home you saw") : [],
+    })
+    : null;
+  const contract = p?.open ? {
+    id: p.open.id,
+    address: p.open.address,
+    summary: workSummary(p.open.work),
+    work: p.open.work.map((w): BuyerWork => ({
+      workstream: w.workstream, label: w.label, state: w.state, stateLabel: WORK_STATE_LABEL[w.state],
+      line: workLine(w, agentFirst), seq: w.seq,
+      canReport: w.owner === "client" && !isSettled(w.state) && w.state !== "reported",
+    })),
+  } : null;
+
   return (
     <ClientShell agentName={member.agentName}>
       <Link href="/app" className="t-sm c-3">← Your move</Link>
@@ -90,8 +119,43 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
         </p>
       ) : null}
 
+      {member.side === "buy" ? (
+        <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
+          <h2 id="today-h" className="t-md w6">Today</h2>
+          {!p ? (
+            <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
+              What is due did not load. That is not the same as nothing being due; reload in a moment, or ask {agentFirst}.
+            </p>
+          ) : p.unavailable || !today ? (
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>This part is being set up. Ask {agentFirst} what comes next.</p>
+          ) : p.detail ? (
+            <Today
+              journeyId={member.journeyId}
+              where={today.where}
+              strip={stageStrip(p.progress, p.visited)}
+              items={today.items}
+              nothingOwed={today.nothingOwed}
+              contract={contract}
+              canRespond={respond}
+              agentFirst={agentFirst}
+            />
+          ) : (
+            <Today
+              journeyId={member.journeyId}
+              where={`${today.where} Your access shows where the move is, not the details of it.`}
+              strip={stageStrip(p.progress, p.visited)}
+              items={[]}
+              nothingOwed={null}
+              contract={null}
+              canRespond={false}
+              agentFirst={agentFirst}
+            />
+          )}
+        </section>
+      ) : null}
+
       {member.side === "buy" && member.scopes.includes("search") ? (
-        <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pri-h">
+        <section id="priorities" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pri-h">
           <h2 id="pri-h" className="t-md w6">Your search priorities</h2>
           {!b ? (
             <p className="t-sm c-3" style={{ marginTop: 8 }}>Your priorities did not load. Nothing is lost; reload in a moment.</p>
@@ -157,7 +221,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       ) : null}
 
       {member.side === "buy" && member.scopes.includes("homes") ? (
-        <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="homes-h">
+        <section id="homes" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="homes-h">
           <h2 id="homes-h" className="t-md w6">Homes</h2>
           <p className="t-xs c-4" style={{ marginTop: 2 }}>
             Homes you or {agentFirst} added. Reacting tells {agentFirst} what you think; it does not change your search.

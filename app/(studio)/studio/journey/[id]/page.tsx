@@ -16,6 +16,8 @@ import { SearchSetup } from "./SearchSetup";
 import { Household } from "./Household";
 import { Homes } from "./Homes";
 import { Showings } from "./Showings";
+import { Progress } from "./Progress";
+import { progressFor } from "@/lib/db/progress";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -67,13 +69,14 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const journey = j.data;
   const buying = journey.side === "buy";
 
-  const [search, members, homes, lead, start, tours] = await Promise.all([
+  const [search, members, homes, lead, start, tours, progress] = await Promise.all([
     buying ? searchState(id) : Promise.resolve(null),
     membersOf(id),
     homesOf(id),
     readLead(journey.leadId),
     buying ? readoutStart(journey.leadId) : Promise.resolve(null),
     buying ? toursOf(id) : Promise.resolve(null),
+    buying ? progressFor(id) : Promise.resolve(null),
   ]);
 
   const s = search && search.ok && "data" in search ? search.data : null;
@@ -85,6 +88,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const leadRow = lead.ok && "data" in lead ? lead.data?.lead ?? null : null;
   const startPoint = start && start.ok && "data" in start ? start.data : null;
   const tourData = tours && tours.ok && "data" in tours ? tours.data : null;
+  const prog = progress && progress.ok && "data" in progress ? progress.data : null;
 
   /* Homes are compared with the search as it runs in Matrix when there is
      one, otherwise with the latest brief: and the card says which. */
@@ -111,6 +115,31 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
         <p className="t-xs c-4" style={{ marginTop: 4 }}>
           {journey.person} · started {DAY(journey.createdAt)}
         </p>
+
+        {buying ? (
+          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="progress-h">
+            <h2 id="progress-h" className="t-md w6">Where it stands</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+              The stage the buyer sees, and under contract what is running at once. Each change is recorded with why and by whom.
+            </div>
+            {prog ? (
+              <Progress
+                journeyId={id}
+                progress={prog.progress}
+                events={prog.events}
+                open={prog.open}
+                past={prog.contracts.filter((c) => c.outcome)}
+                homes={prog.homes}
+                coverage={prog.coverage}
+                leadId={journey.leadId}
+                person={journey.person.split(/\s+/)[0] ?? journey.person}
+                unavailable={prog.unavailable}
+              />
+            ) : (
+              <p className="t-xs c-neg">Where this journey stands did not load. That is not the same as it being at Prepare.</p>
+            )}
+          </section>
+        ) : null}
 
         {buying ? (
           <>

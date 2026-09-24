@@ -450,7 +450,8 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | D12, F15 | Decided 23 Sep | Review requests stop depending on how the client felt: everyone who closes gets the same neutral request, and an unhappy client gets a separate follow-up that never decides whether they are asked (Google forbids review gating) |
 | F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
 | W06 | Built 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Needs migration `20260924000000` and a deploy |
-| W07 onward | Not started | W07 is next; W08 and W09 wait for the broker's rules; W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
+| W07 | Built 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Needs migration `20260924010000` and a deploy. Seller stages wait for D08 |
+| W08 onward | Not started | W08 and W09 wait for the broker's rules (D06, D07); W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
@@ -477,6 +478,24 @@ buyer sees only "On hold". Once answered, the home keeps a line saying it was se
 they said, and a second viewing can be asked for. Nothing about access is stored. When the broker answers when an
 agreement is required (D06), that rule changes in `stepError`, not in the screens.
 Migration `20260924000000_rift_tours.sql`, additive.
+
+Today and progress (W07, 23 September 2026). A buying journey's stage (Prepare, Search, Tour &
+evaluate, Offer, Under contract, Close, Own) and status (active, paused, completed, cancelled)
+are history: each change is a row with a reason and who recorded it, and nothing moves on its
+own. Under contract and Own are reached only by recording the executed contract and how it
+ended, so the stage and the attempt cannot disagree; a terminated attempt sends the journey
+back to Search or Offer and stays on file. Under contract, eight workstreams run at once, each
+with its own owner and history; a cash purchase marks financing and appraisal as not applying.
+A buyer can only report their part done (earnest money reads "sent, not confirmed received"
+until the agent records the holder's confirmation), and any open workstream with no word for
+seven days reads "last confirmed ..., waiting for an update", never "on track". The buyer's
+Today follows the blueprint's fixed order: blockers and their overdue items, decisions, their
+own next items (every one due within a week), then what others are doing, including the
+relationship's existing plan. The strip ticks only stages the journey was recorded at. The
+journey stage is separate from the lead's pipeline stage and does not change it; an agent who
+moves one should move the other. Moving forward past Prepare uses the pipeline's agreement
+gate until D06. Retention of contract records (F16) is still open: they cascade with the
+journey today. Migration `20260924010000_rift_progress.sql`, additive.
 
 ---
 

@@ -336,6 +336,25 @@ await check("tour step replay (recordTourStep)", () => db.from("rift_tour_steps"
   .select("seq").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
 await check("buyer agreement (coverageFor)", () => db.from("rift_leads")
   .select("representation,representation_signed_on,representation_expires_on").eq("id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("journey events (readProgress)", () => db.from("rift_journey_events")
+  .select("seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("seq").limit(1));
+await check("contracts (readProgress)", () => db.from("rift_transactions")
+  .select("id,home_id,financing,evidence,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at", { ascending: false }).limit(1));
+await check("contract outcomes (readProgress)", () => db.from("rift_transaction_outcomes")
+  .select("transaction_id,outcome,reason,actor_label,created_at").eq("journey_id", NIL).eq("agent_id", NIL).limit(1));
+await check("workstream updates (readProgress)", () => db.from("rift_workstream_updates")
+  .select("transaction_id,workstream,seq,state,owner,owner_name,source,confirmed_on,note,actor_kind,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("seq").limit(1));
+await check("event replay (changeStage)", () => db.from("rift_journey_events")
+  .select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("contract replay (recordContract)", () => db.from("rift_transactions")
+  .select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("work replay (recordWork)", () => db.from("rift_workstream_updates")
+  .select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("journey plan (planItemsFor)", () => db.from("rift_plan_items")
+  .select("id,title,owner,owner_name,due_on,done_at,sort").eq("lead_id", NIL).eq("agent_id", NIL).order("sort", { ascending: true }).limit(1));
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);

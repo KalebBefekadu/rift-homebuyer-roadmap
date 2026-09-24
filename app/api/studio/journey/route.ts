@@ -6,8 +6,13 @@ import {
   startJourney, relabelJourney, saveBrief, approveSearch, confirmSearchSetUp, pauseSearch,
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
+  moveStage, setJourneyStatus, openContract, closeContract, updateWork,
 } from "@/app/(studio)/studio/journey/ops";
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
+import {
+  JOURNEY_STATUSES, STAGES, WORKSTREAMS, WORK_STATES,
+  type JourneyStatus, type Owner, type Stage, type WorkState, type Workstream,
+} from "@/lib/core/progress";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,6 +130,41 @@ export async function POST(req: Request) {
       return json(await recordShowingAnswer(journeyId, str(b.stopId, 40), {
         offer: offer as "yes" | "maybe" | "no", reason: str(b.reason, 500) || null, searchChange: str(b.searchChange, 500) || null,
       }, str(b.onBehalfOf, 120)));
+    }
+    case "stage": {
+      const to = str(b.to, 20) as Stage;
+      if (!STAGES.includes(to)) return json({ ok: false, error: "Choose a stage." }, 400);
+      return json(await moveStage(journeyId, to, str(b.reason, 500), str(b.evidence, 300) || null, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "status": {
+      const to = str(b.to, 20) as JourneyStatus;
+      if (!JOURNEY_STATUSES.includes(to)) return json({ ok: false, error: "Choose a status." }, 400);
+      return json(await setJourneyStatus(journeyId, to, str(b.reason, 500), num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "contract": {
+      const financing = str(b.financing, 10);
+      if (financing !== "financed" && financing !== "cash") return json({ ok: false, error: "Say whether it is financed or cash." }, 400);
+      return json(await openContract(journeyId, { homeId: str(b.homeId, 40), financing, evidence: str(b.evidence, 300) },
+        num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "end-contract": {
+      const outcome = str(b.outcome, 12);
+      if (outcome !== "closed" && outcome !== "terminated") return json({ ok: false, error: "Say whether it closed or was terminated." }, 400);
+      const backTo = str(b.backTo, 20) as Stage;
+      return json(await closeContract(journeyId, str(b.contractId, 40), outcome, str(b.reason, 500),
+        STAGES.includes(backTo) ? backTo : null, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "work": {
+      const workstream = str(b.workstream, 20) as Workstream;
+      const state = str(b.state, 20) as WorkState;
+      const owner = str(b.owner, 10) as Owner;
+      if (!WORKSTREAMS.includes(workstream) || !WORK_STATES.includes(state) || !["client", "agent", "other"].includes(owner)) {
+        return json({ ok: false, error: "That update could not be read. Reload and try again." }, 400);
+      }
+      return json(await updateWork(journeyId, str(b.contractId, 40), workstream, {
+        state, owner, ownerName: str(b.ownerName, 160) || null, source: str(b.source, 160) || null,
+        confirmedOn: str(b.confirmedOn, 10) || null, note: str(b.note, 500) || null,
+      }, num(b.expectedSeq), str(b.requestId, 40)));
     }
     case "take-off":
       return json(await takeHomeOff(journeyId, str(b.homeId, 40), str(b.reason, 500)));

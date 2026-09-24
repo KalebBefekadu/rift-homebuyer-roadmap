@@ -8,6 +8,10 @@ import { shapeRevision, type Revision } from "./search";
 import { insertHome, insertReaction, readHomes, type Home, type NewHome } from "./shortlist";
 import { insertFeedback, readTours, requestTour, type Tours } from "./tours";
 import type { FeedbackInput } from "@/lib/core/tour";
+import { readProgress, recordWork } from "./progress";
+import { planItemsFor } from "./plan";
+import { visitedStages, type Progress, type Stage, type Workstream, type WorkstreamView } from "@/lib/core/progress";
+import type { PlanItem } from "@/lib/core/plan";
 import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
 import {
   acceptError, canRespond, memberState, normaliseEmail,
@@ -452,4 +456,61 @@ export async function requestTourAsMember(m: Membership, homeId: string, availab
 export async function tourFeedbackAsMember(m: Membership, stopId: string, f: FeedbackInput) {
   if (!canRespond(m.role) || !m.scopes.includes("homes")) return failed("Your access lets you look, not answer");
   return insertFeedback(m.journeyId, m.agentId, stopId, f, { memberId: m.memberId, label: m.name });
+}
+
+/* ------------------------------------------------------------------ *
+ * Progress and Today (blueprint v4 W07)
+ * ------------------------------------------------------------------ */
+
+export interface ClientProgress {
+  progress: Progress;
+  /** The stages this journey was recorded at, so the strip ticks only those. */
+  visited: Stage[];
+  /** False for a viewer: they see where the move is, not the details of it. */
+  detail: boolean;
+  open: { id: string; address: string; work: WorkstreamView[] } | null;
+  plan: PlanItem[];
+  unavailable?: string;
+}
+
+/**
+ * Where the journey is, the open contract's workstreams and the plan, for a
+ * member. A viewer (a parent helping with the search, say) sees the stage
+ * only: workstream notes can be about somebody's loan, and the plan was
+ * written for the buyers.
+ */
+export async function clientProgress(m: Membership): Promise<DbResult<ClientProgress>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await readProgress(m.journeyId, m.agentId);
+  if (!r.ok || !("data" in r)) return r as DbResult<never>;
+  const rec = r.data;
+  const visited = visitedStages(rec.events);
+  if (rec.unavailable) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [], unavailable: rec.unavailable });
+  if (!canRespond(m.role)) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [] });
+
+  const j = await boundedRead(
+    db.from("rift_journeys").select("origin_lead_id").eq("id", m.journeyId).eq("agent_id", m.agentId).maybeSingle(),
+    "your plan",
+  );
+  if (!j.ok) return j;
+  const leadId = (("data" in j ? j.data : null) as { origin_lead_id: string } | null)?.origin_lead_id;
+  const plan = leadId ? await planItemsFor(leadId, m.agentId) : done([] as PlanItem[]);
+  if (!plan.ok) return plan;
+  return done({
+    progress: rec.progress,
+    visited,
+    detail: true,
+    open: rec.open ? { id: rec.open.id, address: rec.open.address, work: rec.open.work } : null,
+    plan: "data" in plan ? plan.data : [],
+  });
+}
+
+/** "I have done my part." Recorded as reported; the agent confirms (REQ-UX-02). */
+export async function reportWorkAsMember(
+  m: Membership, contractId: string, workstream: Workstream, note: string | null, expectedSeq: number, requestId: string,
+) {
+  if (!canRespond(m.role)) return failed("Your access lets you look, not report progress");
+  return recordWork(m.journeyId, m.agentId, contractId, workstream,
+    { state: "reported", owner: "client", note }, expectedSeq, { kind: "client", memberId: m.memberId, label: m.name }, requestId);
 }

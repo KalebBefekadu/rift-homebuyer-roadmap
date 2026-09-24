@@ -6,10 +6,11 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
-  proposeRevision, reactAsMember, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
+  proposeRevision, reactAsMember, reportWorkAsMember, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
 } from "@/lib/db/client";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
+import { WORKSTREAMS, type Workstream } from "@/lib/core/progress";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,6 +149,16 @@ export async function POST(req: Request) {
       r = await tourFeedbackAsMember(member, stopId, {
         offer: offer as "yes" | "maybe" | "no", reason: str(b.reason, 500) || null, searchChange: str(b.searchChange, 500) || null,
       });
+      break;
+    }
+    case "report-work": {
+      const contractId = str(b.contractId, 40);
+      const requestId = str(b.requestId, 40);
+      const workstream = str(b.workstream, 20) as Workstream;
+      if (!isUuid(contractId) || !isUuid(requestId) || !WORKSTREAMS.includes(workstream)) {
+        return json({ ok: false, error: "That page is out of date. Reload it." }, 400);
+      }
+      r = await reportWorkAsMember(member, contractId, workstream, str(b.note, 500) || null, Number(b.expectedSeq), requestId);
       break;
     }
     case "add-home": {

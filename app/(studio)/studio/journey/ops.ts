@@ -10,6 +10,8 @@ import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused }
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
 import type { FeedbackInput, StepInput } from "@/lib/core/tour";
+import { changeStage, changeStatus, endContract, recordContract, recordWorkAsAgent } from "@/lib/db/progress";
+import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
 
 /**
  * Operations writes for journeys, the search brief, the Matrix search and
@@ -191,4 +193,58 @@ export async function recordShowingAnswer(journeyId: string, stopId: string, f: 
   const r = await feedbackAsAgent(journeyId, stopId, f, onBehalfOf);
   revalidatePath(`/studio/journey/${journeyId}`);
   return out(r);
+}
+
+/* ------------------------------------------------------------------ *
+ * Progress (W07). Every change carries the sequence the page showed, so two
+ * people changing the same journey cannot both win.
+ * ------------------------------------------------------------------ */
+
+export async function moveStage(journeyId: string, to: Stage, reason: string, evidence: string | null, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await changeStage(journeyId, to, reason, evidence, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+export async function setJourneyStatus(journeyId: string, to: JourneyStatus, reason: string, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await changeStatus(journeyId, to, reason, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+export async function openContract(journeyId: string, input: ContractInput, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(input.homeId) || !isUuid(requestId)) return { ok: false as const, error: "Choose a home on the list" };
+  const r = await recordContract(journeyId, input, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ id: d.id }));
+}
+
+export async function closeContract(
+  journeyId: string, contractId: string, outcome: ContractOutcome, reason: string, backTo: Stage | null, expectedSeq: number, requestId: string,
+) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(contractId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await endContract(journeyId, contractId, outcome, reason, backTo, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+export async function updateWork(
+  journeyId: string, contractId: string, workstream: Workstream, input: WorkInput, expectedSeq: number, requestId: string,
+) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(contractId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordWorkAsAgent(journeyId, contractId, workstream, input, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
 }

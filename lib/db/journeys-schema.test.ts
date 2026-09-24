@@ -433,12 +433,101 @@ describe("tours (W06; AT17, AT18 in the record)", () => {
   });
 });
 
+describe("progress (W07; REQ-STATE-05, 06, REQ-UX-02 in the record)", () => {
+  const H3 = "a6666666-0000-4000-8000-000000000003";
+  const T1 = "a9999999-0000-4000-8000-000000000001";
+  const DEVON = "a5555555-0000-4000-8000-000000000001";
+  const rq = (n: number) => `a9999999-1111-4000-8000-${String(n).padStart(12, "0")}`;
+  const event = (seq: number, kind: string, from: string, to: string, tx: string | null, n: number) => c2(
+    `insert into rift_journey_events (agent_id, journey_id, seq, kind, from_value, to_value, reason, transaction_id, actor_label, request_id)
+     values ($1,$2,$3,$4,$5,$6,'because',$7,'Agent A',$8)`, [A, J1, seq, kind, from, to, tx, rq(n)]);
+  const work = (seq: number, state: string, extra: Record<string, unknown> = {}, n = seq) => {
+    const cols = { owner: "other", owner_name: "Dana at Peach Mortgage", actor_kind: "agent", ...extra };
+    const keys = Object.keys(cols);
+    return c2(
+      `insert into rift_workstream_updates (agent_id, journey_id, transaction_id, workstream, seq, state, actor_label, request_id, ${keys.join(", ")})
+       values ($1,$2,$3,'financing',$4,$5,'Agent A',$6${keys.map((_, i) => `,$${7 + i}`).join("")})`,
+      [A, J1, T1, seq, state, rq(100 + n), ...Object.values(cols)]);
+  };
+  function c2(sql: string, params: unknown[]): [string, unknown[]] { return [sql, params]; }
+  const run = (c: Client, [sql, params]: [string, unknown[]]) => c.query(sql, params as never[]);
+
+  test("fixtures", async (c) => {
+    await c.query(
+      `insert into rift_shortlist_homes (id, agent_id, journey_id, address, facts_source, facts_as_of, added_by_kind, added_by_label)
+       values ($1,$2,$3,'7 Elm Way, Tucker','Matrix listing','2026-09-21','agent','Agent A')`, [H3, A, J1]);
+    await run(c, event(1, "stage", "prepare", "search", null, 1));
+  });
+
+  test("Under contract is reached only with a contract attached", async (c) => {
+    await refused(c, ...event(2, "stage", "search", "under-contract", null, 2), /contract_stages/);
+    await c.query(
+      `insert into rift_transactions (id, agent_id, journey_id, home_id, financing, evidence, actor_label, request_id)
+       values ($1,$2,$3,$4,'financed','Executed purchase agreement, 23 Sep','Agent A',$5)`, [T1, A, J1, H3, rq(900)]);
+    await run(c, event(2, "stage", "search", "under-contract", T1, 3));
+  });
+
+  test("two people changing the stage at once: one wins", async (c) => {
+    await refused(c, ...event(2, "status", "active", "paused", null, 4), /rift_journey_events_seq/);
+  });
+
+  test("a stage never moves to itself or to a value that does not exist", async (c) => {
+    await refused(c, ...event(3, "stage", "under-contract", "under-contract", T1, 5), /_moves/);
+    await refused(c, ...event(3, "stage", "under-contract", "escrow", T1, 6), /_values/);
+  });
+
+  test("a client can report, never confirm", async (c) => {
+    await run(c, work(1, "not-started"));
+    await refused(c, ...work(2, "confirmed", { actor_kind: "client", member_id: DEVON, source: "me", confirmed_on: "2026-09-22" }), /client_reports/);
+    await refused(c, ...work(2, "reported", { actor_kind: "client" }), /client_reports/);
+  });
+
+  test("confirmed needs a named source and a date; blocked says why", async (c) => {
+    await refused(c, ...work(2, "confirmed", { source: "Dana at Peach Mortgage" }), /confirmed_has_source/);
+    await refused(c, ...work(2, "blocked"), /blocked_says_why/);
+    await refused(c, ...work(2, "waiting", { owner_name: null }), /other_is_named/);
+    await run(c, work(2, "blocked", { note: "Needs two more pay stubs" }));
+  });
+
+  test("a contract ends once, and everything recorded against it stays", async (c) => {
+    await c.query(`insert into rift_transaction_outcomes (agent_id, journey_id, transaction_id, outcome, reason, actor_label)
+       values ($1,$2,$3,'terminated','Financing fell through','Agent A')`, [A, J1, T1]);
+    await refused(c, `insert into rift_transaction_outcomes (agent_id, journey_id, transaction_id, outcome, reason, actor_label)
+       values ($1,$2,$3,'closed','Changed my mind','Agent A')`, [A, J1, T1], /transaction_id/);
+    const { rows } = await c.query("select count(*)::int n from rift_workstream_updates where transaction_id = $1", [T1]);
+    expect(rows[0].n).toBe(2);
+  });
+
+  test("all of it is history", async (c) => {
+    await refused(c, "update rift_journey_events set to_value = 'offer' where journey_id = $1 and seq = 1", [J1], /is history/);
+    await refused(c, "update rift_transactions set financing = 'cash' where id = $1", [T1], /is history/);
+    await refused(c, "update rift_transaction_outcomes set outcome = 'closed' where transaction_id = $1", [T1], /is history/);
+    await refused(c, "update rift_workstream_updates set state = 'confirmed' where transaction_id = $1", [T1], /is history/);
+  });
+
+  test("a contract cannot point at a home on another journey", async (c) => {
+    await refused(c,
+      `insert into rift_transactions (agent_id, journey_id, home_id, financing, evidence, actor_label, request_id)
+       values ($1,$2,$3,'cash','Executed','A',$4)`, [A, J2, H3, rq(901)], /home_on_journey/);
+  });
+
+  test("another agent sees none of it", async (c) => {
+    for (const t of ["rift_journey_events", "rift_transactions", "rift_workstream_updates"]) {
+      const mine = await as(c, A_USER, async () => (await c.query(`select count(*)::int n from ${t}`)).rows[0].n);
+      const theirs = await as(c, B_USER, async () => (await c.query(`select count(*)::int n from ${t}`)).rows[0].n);
+      expect(mine, t).toBeGreaterThan(0);
+      expect(theirs, t).toBe(0);
+    }
+  });
+});
+
 describe("deletion (first-migration-proposal §deletion compatibility)", () => {
   test("removing the journeys first lets the relationship go, and takes everything under them", async (c) => {
     await c.query("begin");
     await c.query("delete from rift_journeys where origin_lead_id = $1 and agent_id = $2", [A_LEAD, A]);
     await c.query("delete from rift_leads where id = $1", [A_LEAD]);
-    for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses", "rift_tour_stops", "rift_tour_steps", "rift_tour_feedback"]) {
+    for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses", "rift_tour_stops", "rift_tour_steps", "rift_tour_feedback",
+      "rift_journey_events", "rift_transactions", "rift_transaction_outcomes", "rift_workstream_updates"]) {
       const { rows } = await c.query(`select count(*)::int n from ${t} where agent_id = $1`, [A]);
       expect(rows[0].n, t).toBe(0);
     }
