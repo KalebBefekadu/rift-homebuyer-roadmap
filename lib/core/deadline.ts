@@ -94,7 +94,7 @@ export function validZone(tz: string): boolean {
  * Counting
  * ------------------------------------------------------------------ */
 
-const addDays = (day: string, n: number) => {
+export const addDays = (day: string, n: number) => {
   const d = new Date(`${day}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);

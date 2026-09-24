@@ -453,8 +453,8 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | W07 | Live 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Migration `20260924010000` applied. Seller stages wait for D08 |
 | W08 | Live 24 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Migration `20260924020000` applied |
 | W09 | Live 24 Sep | Contract dates and scheduled-job runs, on today's rules. Migration `20260924030000` applied |
-| W12 (part) | Built 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40), and the morning summary (D07). Needs migration `20260924040000` and a deploy. Pilot evidence waits for the pilot |
-| W11 | Built 25 Sep | Walkthrough and possession apart from closing, "You own your home" only after a confirmed closing, restart without inherited dates, the buyer's records page, deletion that holds a contract record and removes provider copies (AT34 to AT36). Migration `20260925000000` |
+| W12 | Live 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40), the morning summary (D07), and the pilot report at `/studio/pilot` with its checks against Matrix and the documents. Migrations `20260924040000` and `20260925010000` applied. The evidence itself comes from the pilot |
+| W11 | Live 24 Sep | Walkthrough and possession apart from closing, "You own your home" only after a confirmed closing, restart without inherited dates, the buyer's records page, deletion that holds a contract record and removes provider copies (AT34 to AT36). Migration `20260925000000` applied |
 | W10, W13 | Not started | W10 follows the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
@@ -571,7 +571,7 @@ funnel, and the one for a seller choosing an offer, are unchanged: whether they 
 summary as well is the owner's call, because Studio's fifteen-minute reply target for a
 "Call today" lead depends on the first one.
 
-**Closing and after (W11, 25 September 2026).** A contract now has ten workstreams: the final
+**Closing and after (W11, 24 September 2026).** A contract now has ten workstreams: the final
 walkthrough (before closing; recording it done says in the buyer's words that it is not a legal
 acceptance of the home's condition) and possession and keys (after closing, apart from it: a
 seller may stay on). Possession is the one workstream still updated once the contract closed.
@@ -591,6 +591,26 @@ readout then says what was kept. Which parts the broker requires kept, and for h
 broker's answer (D06, F16); until then the published promise is the rule. The Amharic for the
 "kept" message is owed; the abroad readout shows it in English. Migration
 `20260925000000_rift_closing.sql`, additive.
+
+**The pilot report (W12).** `/studio/pilot` (Operations, Pilot) answers the two questions the
+rollout plan asks of the pilot (blueprint v4 implementation plan §8, steps 4 and 7), from what is
+already recorded, and prints to a PDF. First, whether the same-business-day promise (D07) is
+kept: each thing a buyer did that needs the agent is paired with the first thing he recorded in
+answer (a showing request with the next step on it, work reported done with his next update on
+that workstream, a request to change the priorities with his next version, a proposal with his
+next version or an approval, an offer answer with the next step on that offer), and counted as
+answered the same business day, later, past due, or waiting and not late yet. A question asked on
+a weekend or holiday is due the next business day, New York time. What is still waiting is
+listed by name. Search setup is measured apart, from approval to recording the Matrix search.
+Second, whether the record matches the source: for each active or paused buying journey he
+records a check that the Matrix search is the approved one and the dates are the contract's
+(`rift_reconciliations`, history). A difference must say what it was and stands until a later
+check matches; a match goes stale, and says which, once the search or the dates change after it.
+Only what the journey has can be checked, worked out on the server. Also on the page: how many
+invited household members have signed in, and whether each scheduled job ran. Nothing is
+compared with a time before Rift, because none was measured, and the page says so rather than
+inventing a baseline. Rules in `lib/core/pilot.ts`, reads and the one writer in `lib/db/pilot.ts`.
+Migration `20260925010000_rift_reconciliations.sql`, additive.
 
 **Rolling the release back.** Set `RIFT_BUYER_SEARCH=off` on Vercel and redeploy (a variable
 reaches only new deployments). Every journey page then says it is switched off and every

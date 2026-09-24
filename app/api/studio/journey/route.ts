@@ -7,11 +7,12 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile,
 } from "@/app/(studio)/studio/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
+import type { CheckResult } from "@/lib/core/pilot";
 import {
   JOURNEY_STATUSES, STAGES, WORKSTREAMS, WORK_STATES,
   type JourneyStatus, type Owner, type Stage, type WorkState, type Workstream,
@@ -250,6 +251,13 @@ export async function POST(req: Request) {
         deadlineId: str(c.deadlineId, 40), remove: c.remove === true, input: c.remove === true ? null : dateInput(c.input), expectedSeq: num(c.expectedSeq),
       }));
       return json(await amendDates(journeyId, str(b.reference, 200), changes, str(b.requestId, 40)));
+    }
+    case "reconcile": {
+      const results = ["matches", "differs", "none"];
+      const search = str(b.search, 10);
+      const dates = str(b.dates, 10);
+      if (!results.includes(search) || !results.includes(dates)) return json({ ok: false, error: "Choose an answer for the search and for the dates." }, 400);
+      return json(await reconcile(journeyId, search as CheckResult, dates as CheckResult, str(b.note, 1000) || null, str(b.requestId, 40)));
     }
     case "take-off":
       return json(await takeHomeOff(journeyId, str(b.homeId, 40), str(b.reason, 500)));

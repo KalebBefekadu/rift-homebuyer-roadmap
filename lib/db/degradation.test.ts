@@ -236,7 +236,7 @@ describe("the calendar with no credentials", () => {
  * over rows) and the few with their own shapes are named and checked apart.
  */
 describe("the journey layer with nothing configured (AT38)", () => {
-  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "jobs", "retention", "summary"] as const;
+  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "jobs", "retention", "summary", "pilot"] as const;
   const OWN_SHAPE = new Set([
     "journeyTablesMissing", "inviteTokenHash", "trackedCron", "clientSession",
     "shapeRevision", "shapeHomes", "shapeEvents", "shapeUpdates", "shapeSteps", "shapeTours", "newHomeError", "maskEmail",
@@ -285,7 +285,7 @@ describe("the journey layer with nothing configured (AT38)", () => {
  * brief, homes, showings, offers, documents and dates by hand.
  */
 describe("manual journey work depends on no provider (AT38)", () => {
-  for (const mod of ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client"]) {
+  for (const mod of ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "pilot"]) {
     it(`${mod} imports no email, calendar or outside call`, () => {
       const src = readFileSync(resolve(__dirname, `${mod}.ts`), "utf8");
       expect(src).not.toMatch(/from "\.\/(email|calendar)"|brevo|api\.cal\.com|anthropic|openai/i);

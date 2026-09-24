@@ -21,7 +21,7 @@ import { signOut } from "./actions";
 export function StudioHeader({ agentName, undecided = 0, current }: {
   agentName: string;
   undecided?: number;
-  current: "today" | "clients" | "search" | "calendar" | "offers" | "referrals" | "questions" | "settings" | "add";
+  current: "today" | "clients" | "search" | "calendar" | "offers" | "referrals" | "pilot" | "questions" | "settings" | "add";
 }) {
   const nav = [
     { key: "today", href: "/studio", label: "Today" },
@@ -30,6 +30,7 @@ export function StudioHeader({ agentName, undecided = 0, current }: {
     { key: "offers", href: "/studio/offers", label: "Offers" },
     { key: "calendar", href: "/studio/calendar", label: "Calendar" },
     { key: "referrals", href: "/studio/referrals", label: "Advocacy" },
+    { key: "pilot", href: "/studio/pilot", label: "Pilot" },
   ] as const;
 
   return (
@@ -44,10 +45,12 @@ export function StudioHeader({ agentName, undecided = 0, current }: {
           </Link>
           <span className="chip chip-out t-2xs hide-sm">Operations</span>
 
-          <nav className="row gap-1" style={{ marginLeft: 6, overflowX: "auto", maxWidth: "calc(100vw - 260px)" }} aria-label="Operations">
+          {/* The right-hand group wraps below when there is no room, so the
+              menu may use the width; past that it scrolls, never the page. */}
+          <nav className="row gap-1" style={{ marginLeft: 6, overflowX: "auto", maxWidth: "calc(100vw - 80px)" }} aria-label="Operations">
             {nav.map((n) => (
               <Link key={n.key} href={n.href} className="row" style={{
-                height: 28, padding: "0 10px", borderRadius: 7, fontSize: 13,
+                height: 28, padding: "0 9px", borderRadius: 7, fontSize: 13, whiteSpace: "nowrap",
                 fontWeight: current === n.key ? 600 : 500,
                 color: current === n.key ? "var(--ink)" : "var(--ink-3)",
                 background: current === n.key ? "var(--sunk)" : "transparent",

@@ -683,6 +683,41 @@ describe("contract dates (W09; AT26, AT27 in the record)", () => {
   });
 });
 
+describe("pilot checks (W12; implementation plan §8 step 4)", () => {
+  const rq = (n: number) => `acccccc2-1111-4000-8000-${String(n).padStart(12, "0")}`;
+  const ins = (journey: string, pkg: string | null, search: string, dates: string, note: string | null, n: number) => [
+    `insert into rift_reconciliations (agent_id, journey_id, search_package_id, search, dates, note, actor_label, request_id)
+     values ($1,$2,$3,$4,$5,$6,'Agent A',$7)`, [A, journey, pkg, search, dates, note, rq(n)]] as [string, unknown[]];
+  let live = "";
+
+  test("fixtures", async (c) => {
+    live = (await c.query("select id from rift_search_packages where journey_id = $1 and status = 'active-confirmed'", [J1])).rows[0].id;
+  });
+
+  test("a check names the search it checked, and only a search on its own journey", async (c) => {
+    await c.query(...ins(J1, live, "matches", "none", null, 1));
+    await refused(c, ...ins(J1, null, "matches", "none", null, 2), /search_names_package/);
+    await refused(c, ...ins(J1, live, "none", "matches", null, 3), /search_names_package/);
+    await refused(c, ...ins(J2, live, "matches", "none", null, 4), /package_on_journey/);
+  });
+
+  test("a difference says what it was, and a check of nothing is refused", async (c) => {
+    await refused(c, ...ins(J1, live, "differs", "none", null, 5), /difference_says_what/);
+    await refused(c, ...ins(J1, null, "none", "differs", null, 6), /difference_says_what/);
+    await refused(c, ...ins(J1, null, "none", "none", null, 7), /checked_something/);
+    await refused(c, ...ins(J1, live, "roughly", "none", null, 8), /search_check/);
+    await c.query(...ins(J1, live, "differs", "none", "Price cap was 450k in Matrix; fixed", 9));
+  });
+
+  test("checks are history, and another agent sees none", async (c) => {
+    await refused(c, "update rift_reconciliations set search = 'matches' where journey_id = $1", [J1], /is history/);
+    const theirs = await as(c, B_USER, async () => (await c.query("select count(*)::int n from rift_reconciliations")).rows[0].n);
+    expect(theirs).toBe(0);
+    const mine = await as(c, A_USER, async () => (await c.query("select count(*)::int n from rift_reconciliations")).rows[0].n);
+    expect(mine).toBe(2);
+  });
+});
+
 describe("deletion (first-migration-proposal §deletion compatibility)", () => {
   test("removing the journeys first lets the relationship go, and takes everything under them", async (c) => {
     await c.query("begin");
@@ -690,7 +725,7 @@ describe("deletion (first-migration-proposal §deletion compatibility)", () => {
     await c.query("delete from rift_leads where id = $1", [A_LEAD]);
     for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses", "rift_tour_stops", "rift_tour_steps", "rift_tour_feedback",
       "rift_journey_events", "rift_transactions", "rift_transaction_outcomes", "rift_workstream_updates",
-      "rift_bids", "rift_bid_steps", "rift_bid_responses", "rift_documents", "rift_deadlines", "rift_deadline_revisions"]) {
+      "rift_bids", "rift_bid_steps", "rift_bid_responses", "rift_documents", "rift_deadlines", "rift_deadline_revisions", "rift_reconciliations"]) {
       const { rows } = await c.query(`select count(*)::int n from ${t} where agent_id = $1`, [A]);
       expect(rows[0].n, t).toBe(0);
     }

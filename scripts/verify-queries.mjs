@@ -404,6 +404,31 @@ for (const [name, table, cols] of [
 }
 await check("summary: members", () => db.from("rift_journey_members").select("id,journey_id,display_name,email,accepted_at").eq("agent_id", NIL).limit(1));
 await check("summary: bids to homes", () => db.from("rift_bids").select("id,home_id").eq("agent_id", NIL).limit(1));
+// The pilot report (lib/db/pilot.ts, W12): replies against the same-day promise, and checks against Matrix and documents.
+await check("pilot: buying journeys", () => db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", NIL).eq("side", "buy")
+  .order("created_at", { ascending: false }).limit(1));
+for (const [name, table, cols] of [
+  ["pilot: events", "rift_journey_events", "journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at"],
+  ["pilot: members", "rift_journey_members", "journey_id,accepted_at,revoked_at"],
+  ["pilot: searches", "rift_search_packages", "id,journey_id,status,approved_at,confirmed_at,ended_at,external_ref"],
+  ["pilot: brief versions", "rift_search_revisions", "journey_id,author_kind,created_at"],
+  ["pilot: brief answers", "rift_search_responses", "journey_id,response,created_at"],
+  ["pilot: showings", "rift_tour_stops", "id,journey_id,requested_by_kind,created_at"],
+  ["pilot: showing steps", "rift_tour_steps", "stop_id,seq,created_at"],
+  ["pilot: work", "rift_workstream_updates", "transaction_id,journey_id,workstream,seq,state,actor_kind,created_at"],
+  ["pilot: offer answers", "rift_bid_responses", "bid_id,journey_id,told_agent,created_at"],
+  ["pilot: offer steps", "rift_bid_steps", "bid_id,created_at"],
+  ["pilot: contracts", "rift_transactions", "id,journey_id,created_at"],
+  ["pilot: dates", "rift_deadlines", "id,journey_id,transaction_id"],
+  ["pilot: date versions", "rift_deadline_revisions", "deadline_id,journey_id,seq,state,verified,created_at"],
+]) {
+  await check(name, () => db.from(table).select(cols).eq("agent_id", NIL).limit(1));
+}
+await check("pilot: checks", () => db.from("rift_reconciliations").select("journey_id,search,dates,note,actor_label,created_at")
+  .eq("agent_id", NIL).order("created_at", { ascending: false }).limit(1));
+await check("pilot: check replay (recordCheck)", () => db.from("rift_reconciliations").select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("pilot: live search (recordCheck)", () => db.from("rift_search_packages").select("id").eq("journey_id", NIL).eq("agent_id", NIL)
+  .in("status", ["active-confirmed", "paused"]).limit(1));
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);

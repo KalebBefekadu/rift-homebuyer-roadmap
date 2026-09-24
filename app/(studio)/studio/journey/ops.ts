@@ -15,6 +15,8 @@ import { recordBidStep, responseAsAgent, startBid } from "@/lib/db/bids";
 import { finishUpload, uploadSlot } from "@/lib/db/documents";
 import { addDeadline, recordAmendment, reviseDeadline, type Revise } from "@/lib/db/deadlines";
 import type { AmendmentChange, DeadlineInput, DeadlineKind } from "@/lib/core/deadline";
+import { recordCheck } from "@/lib/db/pilot";
+import type { CheckResult } from "@/lib/core/pilot";
 import type { Instruction, StepInput as BidStepInput, Terms } from "@/lib/core/bid";
 import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
 
@@ -342,4 +344,14 @@ export async function amendDates(journeyId: string, reference: string, changes: 
   const r = await recordAmendment(journeyId, reference, changes, g.name, requestId);
   revalidatePath(`/studio/journey/${journeyId}`);
   return out(r, (d) => ({ changed: d.changed }));
+}
+
+/** A pilot check of the search and dates against Matrix and the documents (W12). */
+export async function reconcile(journeyId: string, search: CheckResult, dates: CheckResult, note: string | null, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordCheck(journeyId, { search, dates, note }, g.name, requestId);
+  revalidatePath("/studio/pilot");
+  return out(r, (d) => ({ id: d.id }));
 }

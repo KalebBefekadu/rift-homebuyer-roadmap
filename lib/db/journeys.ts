@@ -22,7 +22,7 @@ import {
    still render the lead page, as a relationship with no journeys, which is
    true, rather than fail it. Same pattern as rift_offer_rooms. */
 export const journeyTablesMissing = (msg: string) =>
-  /rift_(journeys|journey_members|search_|shortlist_homes|home_reactions|tour_|journey_events|transaction|workstream_|bid|documents|deadline)/.test(msg)
+  /rift_(journeys|journey_members|search_|shortlist_homes|home_reactions|tour_|journey_events|transaction|workstream_|bid|documents|deadline|reconciliation)/.test(msg)
   && /does not exist|schema cache|Could not find/i.test(msg);
 
 export interface Journey {
