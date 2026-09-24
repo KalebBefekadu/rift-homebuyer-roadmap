@@ -41,7 +41,11 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { accept: "application/json", "content-type": "application/json", "api-key": apiKey },
-      body: JSON.stringify({ sender: FROM, ...payload }),
+      /* Reply-To is always the real address. Brevo cannot authenticate a
+         free-mail sender such as @gmail.com, so it rewrites the visible From
+         to an @brevosend.com address; without this, a client's reply would
+         go there instead of to the agent. */
+      body: JSON.stringify({ sender: FROM, replyTo: { email: FROM_EMAIL }, ...payload }),
     });
     if (!res.ok) {
       const body = await res.text();
