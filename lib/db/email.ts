@@ -105,6 +105,46 @@ export async function sendTouch(t: TouchEmail): Promise<SendResult> {
   }, "email.touch");
 }
 
+/**
+ * The addresses Brevo will not send to, with its reason code for each (AT37).
+ *
+ * Every touch carries Brevo's unsubscribe link, so an opt-out lands there, not
+ * here. Brevo then refuses the send, but the refusal comes after the API has
+ * already answered 201, and the touch would be recorded as sent while the
+ * sequence carried on. Reading the list before a run is how the opt-out
+ * reaches the sequence.
+ *
+ * Newest first, up to a thousand. If it cannot be read, Brevo still enforces
+ * the list at send time; the caller says the check did not run.
+ */
+export type BlockList =
+  | { ok: true; codes: Map<string, string> }
+  | { ok: true; skipped: true; reason: string }
+  | { ok: false; error: string };
+
+export async function blockedContacts(): Promise<BlockList> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return { ok: true, skipped: true, reason: "BREVO_API_KEY not set" };
+  const codes = new Map<string, string>();
+  try {
+    for (let offset = 0; offset < 1000; offset += 100) {
+      const res = await fetch(`https://api.brevo.com/v3/smtp/blockedContacts?limit=100&offset=${offset}&sort=desc`, {
+        headers: { accept: "application/json", "api-key": apiKey },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) throw new Error(`Brevo ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const body = (await res.json()) as { contacts?: { email?: string; reason?: { code?: string } }[] };
+      const page = body.contacts ?? [];
+      for (const c of page) if (c.email) codes.set(c.email.trim().toLowerCase(), c.reason?.code ?? "unknown");
+      if (page.length < 100) break;
+    }
+    return { ok: true, codes };
+  } catch (error) {
+    captureOpError(error, { op: "email.blocklist" });
+    return { ok: false, error: error instanceof Error ? error.message : "the block list could not be read" };
+  }
+}
+
 export async function sendResume(r: ResumeEmail): Promise<SendResult> {
   const { subject, html } = buildResume(r);
   return send({

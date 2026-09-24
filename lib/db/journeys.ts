@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
+import { captureOpError } from "@/lib/monitoring/capture";
 import {
   DEFAULT_SCOPES, INVITE_DAYS, labelError, memberState, normaliseEmail, SCOPES,
   type MemberState, type Role, type Scope, type Side,
@@ -143,6 +144,19 @@ export async function createJourney(leadId: string, side: Side, label: string): 
     "the journey",
   );
   if (!wrote.ok) return wrote;
+
+  /* They are a client now. The follow-up sequence is marketing to a lead and
+     would talk past the journey, so it stops here, recorded as "They became a
+     client" (AT37). If this write misses, the journey still stands: the nurture
+     run also skips anyone with a journey, and rechecks just before each send. */
+  const stopped = await boundedWrite(
+    s.db.from("rift_enrolments")
+      .update({ stopped_at: new Date().toISOString(), stop_reason: "converted" })
+      .eq("lead_id", leadId).eq("agent_id", s.agentId).is("stopped_at", null),
+    "the follow-up sequence",
+  );
+  if (!stopped.ok) captureOpError(new Error(stopped.error), { op: "journeys.stopNurture" });
+
   return done({ id: (("data" in wrote ? wrote.data : null) as { id: string }).id });
 }
 

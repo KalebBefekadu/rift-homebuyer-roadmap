@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 /**
  * Every write in the data layer degrades visibly, or the house rule is a
@@ -222,4 +224,72 @@ describe("the calendar with no credentials", () => {
       start: "2026-10-01T14:00:00Z", name: "A", email: "a@b.co", topic: "t",
     }))).toBe("skipped");
   });
+});
+
+/**
+ * AT38: the journey layer, walked the same way. Every read and write a journey
+ * page makes says which of the three things happened, with nothing configured,
+ * instead of throwing or claiming an empty journey is a real one.
+ *
+ * Walked by listing each module's exports rather than naming them, so a new
+ * function joins the walk the day it is written. The shapers (pure functions
+ * over rows) and the few with their own shapes are named and checked apart.
+ */
+describe("the journey layer with nothing configured (AT38)", () => {
+  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "jobs", "retention"] as const;
+  const OWN_SHAPE = new Set([
+    "journeyTablesMissing", "inviteTokenHash", "trackedCron", "clientSession",
+    "shapeRevision", "shapeHomes", "shapeEvents", "shapeUpdates", "shapeSteps", "shapeTours", "newHomeError", "maskEmail",
+  ]);
+  const ID = "00000000-0000-4000-8000-000000000001";
+  /* Plausible arguments for any signature: ids for strings, a membership-shaped
+     object for objects. A function that dereferences a field it was not given
+     would throw here, which is itself a finding. */
+  const member = {
+    journeyId: ID, memberId: ID, agentId: ID, role: "buyer", scopes: ["search", "homes", "money"],
+    name: "A", journeyLabel: "A", side: "buy", agentName: "Kaleb",
+  };
+
+  for (const mod of MODULES) {
+    it(`${mod}: every export degrades with a reason`, async () => {
+      const m = (await import(`./${mod}`)) as Record<string, unknown>;
+      let walked = 0;
+      for (const [name, fn] of Object.entries(m)) {
+        if (typeof fn !== "function" || OWN_SHAPE.has(name) || /^[A-Z]/.test(name)) continue;
+        const args = Array.from({ length: Math.max(fn.length, 1) }, (_, i) => (i === 0 && mod === "client" && !/^(myJourneys|memberOf|invitationByToken|acceptInvitation|mayReceiveSignIn)$/.test(name) ? member : ID));
+        let r: unknown;
+        try {
+          r = await (fn as (...a: unknown[]) => unknown)(...args);
+        } catch (e) {
+          throw new Error(`${mod}.${name} threw with nothing configured: ${(e as Error).message}`);
+        }
+        if (r === undefined || r === null || typeof r !== "object" || !("ok" in (r as object))) continue;
+        expect(contract(`${mod}.${name}`, r), `${mod}.${name}`).not.toBe("done");
+        walked++;
+      }
+      expect(walked, `${mod} had nothing to walk`).toBeGreaterThan(0);
+    });
+  }
+
+  it("the client's session reads as unknown or signed out, never signed in", async () => {
+    const { clientSession } = await import("./client");
+    const s = await clientSession().catch(() => ({ state: "threw" }));
+    expect(["unknown", "signed-out"]).toContain((s as { state: string }).state);
+  });
+});
+
+/**
+ * AT38: manual work never waits on a provider. No journey module sends email,
+ * books a calendar slot or calls out to anything but the database, so with
+ * Brevo, Cal and every other service down the agent can still enter the
+ * brief, homes, showings, offers, documents and dates by hand.
+ */
+describe("manual journey work depends on no provider (AT38)", () => {
+  for (const mod of ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client"]) {
+    it(`${mod} imports no email, calendar or outside call`, () => {
+      const src = readFileSync(resolve(__dirname, `${mod}.ts`), "utf8");
+      expect(src).not.toMatch(/from "\.\/(email|calendar)"|brevo|api\.cal\.com|anthropic|openai/i);
+      expect(src.replace(/storage|\.from\(/g, ""), `${mod} calls fetch`).not.toMatch(/\bfetch\(/);
+    });
+  }
 });

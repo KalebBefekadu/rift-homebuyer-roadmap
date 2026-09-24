@@ -568,7 +568,7 @@ export default async function StudioToday() {
                 Nobody on the board yet. People who come through the funnel arrive below; anyone
                 you are already working with has to be added by hand once.
               </p>
-              <Link href="/studio/add" className="btn btn-brand btn-sm" style={{ marginTop: 12 }}>
+              <Link href="/studio/add" className="btn btn-p btn-sm" style={{ marginTop: 12 }}>
                 Add your first
               </Link>
             </div>

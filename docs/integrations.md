@@ -114,6 +114,14 @@ cadence and is the reason §6 exists.
 `TIME_TO_BUY`, `RIFT_CLIENT_ID`, `RIFT_EVENT`. Bootstrap them once with
 `npm run brevo:ensure-attributes`.
 
+**Opt-outs come back from Brevo.** The unsubscribe link in every touch is Brevo's, so an
+opt-out is recorded there. Each nurture run first reads `GET /v3/smtp/blockedContacts`
+(`blockedContacts()` in `lib/db/email.ts`, newest first, up to a thousand) and stops the
+sequence of anyone who unsubscribed or reported spam ("They opted out") or hard-bounced
+("Their email bounced"). An administrator's block suppresses the send without claiming an
+opt-out. The key needs no extra permission; IP blocking for API keys must stay off, as for
+sending.
+
 ### The wire-contract rule
 `TimeToBuy` and `ClientStage` are now declared **inside** `lib/brevo/sync.ts` rather than
 imported from the product's domain types. This is deliberate. Attribute values already sitting

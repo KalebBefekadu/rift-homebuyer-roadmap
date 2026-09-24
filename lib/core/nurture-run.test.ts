@@ -121,3 +121,37 @@ describe("a dry run cannot reach anybody", () => {
     expect(src).toContain("deferred");
   });
 });
+
+/**
+ * AT37: a reply, opt-out or journey recorded after the queue was read stops
+ * the send. The queue is read once, at the start of a run that can take a
+ * minute; the recheck is what makes "immediate" true.
+ */
+describe("a stop after the queue was read still stops the send", () => {
+  const src = readFileSync(resolve(__dirname, "../../app/api/nurture/run/route.ts"), "utf8");
+
+  it("rechecks after the claim and before either send", () => {
+    const claim = src.indexOf("claimStep(");
+    const recheck = src.indexOf("stillOwed(");
+    expect(recheck, "the send is rechecked").toBeGreaterThan(claim);
+    expect(src.indexOf("sendTouch(")).toBeGreaterThan(recheck);
+    expect(src.indexOf("sendResume(")).toBeGreaterThan(recheck);
+  });
+
+  it("reads the provider's opt-out list before the loop, and never stops a sequence on a dry run", () => {
+    expect(src.indexOf("blockedContacts(")).toBeLessThan(src.indexOf("for (const t of queue.data)"));
+    expect(src).toMatch(/if \(!dry && reason && agentId\)[\s\S]{0,80}stop\(/);
+  });
+
+  it("tries no other channel for somebody who opted out", () => {
+    const at = src.indexOf("if (block) {");
+    const branch = src.slice(at, src.indexOf("continue;", at));
+    for (const other of ["sendTouch", "sendResume", "claimStep", "text"]) {
+      expect(branch, other).not.toContain(other + "(");
+    }
+  });
+
+  it("reports what was stopped and whether the opt-out list was read", () => {
+    for (const k of ["optedOut", "stoppedBeforeSend", "optOuts:"]) expect(src).toContain(k);
+  });
+});

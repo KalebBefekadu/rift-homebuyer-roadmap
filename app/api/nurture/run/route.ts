@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
 import { trackedCron } from "@/lib/db/jobs";
-import { due, claimStep, markTouch } from "@/lib/db/nurture";
-import { sendTouch, sendResume } from "@/lib/db/email";
-import { runOptions } from "@/lib/core/nurture";
+import { due, claimStep, markTouch, stillOwed, stop } from "@/lib/db/nurture";
+import { sendTouch, sendResume, blockedContacts } from "@/lib/db/email";
+import { currentAgentId } from "@/lib/db/service";
+import { runOptions, blockedStop } from "@/lib/core/nurture";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -44,6 +45,14 @@ async function run(req: Request) {
 
   const { dry, max } = runOptions(req.url);
 
+  /* Opt-outs and hard bounces are recorded at Brevo, where the unsubscribe
+     link points. Read them first, so an opted-out person's sequence stops here
+     too instead of being recorded as sent while Brevo refuses it (AT37). If the
+     list cannot be read, Brevo still refuses those sends; the run says so. */
+  const blocked = await blockedContacts();
+  const blockList = blocked.ok && "codes" in blocked ? blocked.codes : null;
+  const agentId = blockList?.size ? await currentAgentId() : null;
+
   const queue = await due(new Date());
   if (!queue.ok) {
     captureOpError(new Error(queue.error), { op: "nurture.run" });
@@ -59,6 +68,9 @@ async function run(req: Request) {
      Nothing is lost (it is due again tomorrow) but a run that silently drops
      the tail is indistinguishable from a run with nothing left to do. */
   let deferred = 0;
+  /* Sixth and seventh: on the provider's block list (the sequence is stopped),
+     and stopped between the queue being read and the send (AT37). */
+  let optedOut = 0, stoppedBeforeSend = 0;
   /* A dry run's only output. Who, which step, and what would have gone: the
      three things you need to decide whether to let it loose. */
   const plan: { to: string; stepId: string; band: string; kind: "readout" | "resume" }[] = [];
@@ -66,6 +78,18 @@ async function run(req: Request) {
   for (const t of queue.data) {
     if (!t.auto) { held++; continue; }
     if (t.channel !== "email" || !t.email) { held++; continue; }
+
+    /* No other channel is tried instead. An opt-out is from all of them. */
+    const block = blockList?.get(t.email.trim().toLowerCase());
+    if (block) {
+      optedOut++;
+      const reason = blockedStop(block);
+      if (!dry && reason && agentId) {
+        const s = await stop(t.leadId, reason, agentId);
+        if (!s.ok) captureOpError(new Error(s.error), { op: "nurture.optout" });
+      }
+      continue;
+    }
 
     /* The cap counts everything this run would put in front of a person,
        including a dry run's plan. A preview that silently shows the first
@@ -80,6 +104,21 @@ async function run(req: Request) {
 
     const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
     if (!claim.ok || "skipped" in claim || !claim.data.claimed) { notConfigured++; continue; }
+
+    /* Read again now the claim is held: a reply, an opt-out or a journey
+       recorded since the queue was read stops this send. If the recheck
+       cannot be read, nothing is sent and the agent is told. */
+    const owed = await stillOwed(t);
+    if (!owed.ok) {
+      await markTouch(t.enrolmentId, t.stepId, "failed", `Not sent: could not confirm the sequence was still running (${owed.error})`);
+      failedCount++;
+      continue;
+    }
+    if ("data" in owed && !owed.data.owed) {
+      await markTouch(t.enrolmentId, t.stepId, "skipped", `Not sent: ${owed.data.why}`);
+      stoppedBeforeSend++;
+      continue;
+    }
 
     const origin = new URL(req.url).origin;
 
@@ -150,6 +189,11 @@ async function run(req: Request) {
     notConfigured,
     failed: failedCount,
     deferred,
+    optedOut,
+    stoppedBeforeSend,
+    /* Whether the provider's opt-out list was read. When it was not, Brevo
+       still refuses those sends, but this run could not stop their sequences. */
+    optOuts: blockList ? "checked" : `not checked: ${blocked.ok ? ("reason" in blocked ? blocked.reason : "") : blocked.error}`,
     ...(dry ? { wouldSend: plan } : {}),
   });
 }

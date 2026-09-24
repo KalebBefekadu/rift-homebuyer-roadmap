@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy } from "./nurture";
+import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop } from "./nurture";
 import { BUY_FUNNEL } from "./funnel";
 
 /**
@@ -152,3 +152,20 @@ describe("what a customer actually reads", () => {
     }
   });
 })
+
+describe("an address on the provider's block list (AT37)", () => {
+  it("reads every kind of unsubscribe, and a spam report, as an opt-out", () => {
+    for (const c of ["unsubscribedViaEmail", "unsubscribedViaApi", "unsubscribedViaMA", "contactFlaggedAsSpam"]) {
+      expect(blockedStop(c), c).toBe("unsubscribed");
+    }
+  });
+
+  it("reads a hard bounce as a dead address, not as disinterest", () => {
+    expect(blockedStop("hardBounce")).toBe("bounced");
+  });
+
+  it("does not claim an opt-out for a block the person did not make", () => {
+    expect(blockedStop("adminBlocked")).toBeNull();
+    expect(blockedStop("somethingNew")).toBeNull();
+  });
+});

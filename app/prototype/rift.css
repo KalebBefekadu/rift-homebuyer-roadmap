@@ -55,10 +55,11 @@
   --pos-wash: #e9f5f0;
   --pos-line: #c5e4d8;
 
-  /* 4.53:1 on --warn-wash. #a2670c missed at 4.24:1, which put the one chip
-     on the readout whose whole job is to say "this is not settled yet" below
-     the threshold on the ground it is always drawn on. */
-  --warn: #9c630c;
+  /* 4.74:1 on --warn-wash and 4.68:1 on --sunk. #a2670c missed at 4.24:1 on
+     the wash, which put the one chip on the readout whose whole job is to say
+     "this is not settled yet" below the threshold; #9c630c then missed at
+     4.47:1 on --sunk, where the journey page draws its warnings inside a card. */
+  --warn: #98600b;
   --warn-wash: #fbf3e3;
   --warn-line: #eeddb8;
 

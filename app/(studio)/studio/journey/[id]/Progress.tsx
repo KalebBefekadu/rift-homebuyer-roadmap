@@ -35,6 +35,10 @@ const CHIP: Record<WorkState, string> = {
   reported: "chip-warn", confirmed: "chip-pos", "not-applicable": "",
 };
 /* Stages the agent can pick by hand. Under contract and Own come from the contract record. */
+/* A stage not reached yet: dimmer ink and a dashed edge, never opacity. At
+   0.55 the label fell to 3:1, and the stages ahead are exactly the ones a
+   buyer reads to see what is coming. --ink-4 is the AA floor on --sunk. */
+const AHEAD = { color: "var(--ink-4)", borderStyle: "dashed" } as const;
 const MANUAL: Stage[] = ["prepare", "search", "tour", "offer", "close"];
 
 /**
@@ -93,7 +97,7 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
       <ol className="row gap-1 wrap" aria-label="Stages" style={{ listStyle: "none", padding: 0 }}>
         {stageStrip(progress, visitedStages(events)).map((s) => (
           <li key={s.stage} className={`chip t-2xs ${s.state === "now" ? "chip-pos" : ""}`}
-            aria-current={s.state === "now" ? "step" : undefined} style={{ opacity: s.state === "ahead" ? 0.55 : 1 }}>
+            aria-current={s.state === "now" ? "step" : undefined} style={s.state === "ahead" ? AHEAD : undefined}>
             {s.state === "done" ? "✓ " : ""}{s.label}{s.state === "skipped" ? " (not recorded)" : ""}
           </li>
         ))}

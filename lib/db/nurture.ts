@@ -1,7 +1,8 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedWrite } from "./bounded";
+import { boundedRead, boundedWrite } from "./bounded";
+import { journeyTablesMissing } from "./journeys";
 import { sequenceFor, resolveChannel, type Enrolment, type StopId } from "@/lib/core/nurture";
 import { BUY_FUNNEL } from "@/lib/core/funnel";
 import type { Band } from "@/lib/core/lead";
@@ -126,11 +127,19 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
       .is("stopped_at", null);
     if (error) return failed(error.message);
 
-    const rows = (data ?? []) as unknown as {
+    /* A lead the agent now works with in a journey is a client: the journey
+       is the follow-up, and marketing touches would talk past it (AT37).
+       createJourney stops the sequence; this also covers a journey whose stop
+       did not land. */
+    const clients = await journeyLeads(db, agent_id);
+    if (!clients.ok) return clients;
+    const isClient = "data" in clients ? clients.data : new Set<string>();
+
+    const rows = ((data ?? []) as unknown as {
       id: string; lead_id: string; band: Band; entered_at: string; phone_consent: boolean;
       rift_leads: { name: string | null; email: string | null; assessment_id: string | null; side: "buy" | "sell" } | null;
       rift_touches: { step_id: string }[];
-    }[];
+    }[]).filter((r) => !isClient.has(r.lead_id));
 
     /* One query for the whole queue rather than one per enrolment. */
     const assessmentIds = rows
@@ -225,6 +234,46 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
   } catch (e) {
     return failed(e);
   }
+}
+
+async function journeyLeads(db: NonNullable<ReturnType<typeof serviceClient>>, agentId: string): Promise<DbResult<Set<string>>> {
+  const r = await boundedRead(db.from("rift_journeys").select("origin_lead_id").eq("agent_id", agentId), "the journeys");
+  if (!r.ok) return journeyTablesMissing(r.error) ? done(new Set<string>()) : r;
+  const list = (("data" in r ? r.data : null) ?? []) as { origin_lead_id: string }[];
+  return done(new Set(list.map((x) => x.origin_lead_id)));
+}
+
+/**
+ * Whether a claimed touch is still owed, read again just before it is sent
+ * (AT37).
+ *
+ * The queue is read once, at the start of a run that can take a minute. A
+ * reply the agent records, an opt-out, a journey started or an address changed
+ * in that minute must stop the send, not the one after it. The claim is taken
+ * first, so this read and the send are milliseconds apart.
+ */
+export type Owed = { owed: true } | { owed: false; why: string };
+
+export async function stillOwed(t: Pick<DueTouch, "enrolmentId" | "leadId" | "email">): Promise<DbResult<Owed>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const e = await boundedRead(
+    db.from("rift_enrolments").select("stopped_at,stop_reason,rift_leads(email)").eq("id", t.enrolmentId).maybeSingle(),
+    "the sequence",
+  );
+  if (!e.ok) return e;
+  const row = ("data" in e ? e.data : null) as unknown as {
+    stopped_at: string | null; stop_reason: string | null; rift_leads: { email: string | null } | null;
+  } | null;
+  if (!row) return done({ owed: false, why: "the sequence no longer exists" });
+  if (row.stopped_at) return done({ owed: false, why: `the sequence was stopped (${row.stop_reason ?? "no reason given"})` });
+  const now = row.rift_leads?.email?.trim().toLowerCase() ?? "";
+  if (!now || now !== (t.email ?? "").trim().toLowerCase()) return done({ owed: false, why: "the address changed" });
+
+  const j = await boundedRead(db.from("rift_journeys").select("id").eq("origin_lead_id", t.leadId).limit(1), "the journeys");
+  if (!j.ok && !journeyTablesMissing(j.error)) return j;
+  if (j.ok && "data" in j && ((j.data as unknown[] | null) ?? []).length) return done({ owed: false, why: "they are now a client with a journey" });
+  return done({ owed: true });
 }
 
 /**

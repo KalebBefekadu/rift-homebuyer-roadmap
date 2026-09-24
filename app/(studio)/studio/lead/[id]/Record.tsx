@@ -220,6 +220,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
                 <input
                   className="input"
                   style={{ marginTop: 12 }}
+                  aria-label="The next thing to do"
                   placeholder="Call about the Oakhurst listing"
                   value={action}
                   onChange={(e) => setAction(e.target.value)}
@@ -228,6 +229,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
                 <input
                   className="input"
                   type="date"
+                  aria-label="When it is due"
                   style={{ marginTop: 10 }}
                   value={due}
                   onChange={(e) => setDue(e.target.value)}

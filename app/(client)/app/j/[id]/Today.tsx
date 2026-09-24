@@ -31,6 +31,10 @@ const HEADING: Record<TodayKind, string> = {
   yours: "Yours to do",
   others: "What others are doing",
 };
+/* A stage not reached yet: dimmer ink and a dashed edge, never opacity. At
+   0.55 the label fell to 3:1, and the stages ahead are exactly the ones a
+   buyer reads to see what is coming. --ink-4 is the AA floor on --sunk. */
+const AHEAD = { color: "var(--ink-4)", borderStyle: "dashed" } as const;
 const ORDER: TodayKind[] = ["blocker", "overdue", "decision", "yours", "others"];
 const CHIP: Partial<Record<WorkState, string>> = { blocked: "chip-neg", reported: "chip-warn", confirmed: "chip-pos", waiting: "chip-warn" };
 
@@ -77,7 +81,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
       <ol className="row gap-1 wrap" aria-label="Where your move is" style={{ listStyle: "none", padding: 0, marginTop: 8 }}>
         {strip.map((s) => (
           <li key={s.stage} className={`chip t-2xs ${s.state === "now" ? "chip-pos" : ""}`}
-            aria-current={s.state === "now" ? "step" : undefined} style={{ opacity: s.state === "now" || s.state === "done" ? 1 : 0.55 }}>
+            aria-current={s.state === "now" ? "step" : undefined} style={s.state === "now" || s.state === "done" ? undefined : AHEAD}>
             {s.state === "done" ? "✓ " : ""}{s.label}
           </li>
         ))}

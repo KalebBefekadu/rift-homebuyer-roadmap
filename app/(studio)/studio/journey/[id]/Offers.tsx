@@ -277,7 +277,7 @@ function Offer({ b, journeyId, docs, deciders, busy, run }: {
         </dl>
       ) : null}
       {fx ? (
-        <p className="t-2xs c-3" style={{ marginTop: 6, lineHeight: 1.5 }}>
+        <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.5 }}>
           Loan {usd(fx.loanAmount)} · down payment {usd(fx.downPayment)} · {usd(fx.cashAtContract)} earnest money at contract ·
           about {usd(fx.cashAtClosingBeforeCosts)} more at closing before closing costs (not estimated here).
         </p>

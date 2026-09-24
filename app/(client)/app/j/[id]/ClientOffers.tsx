@@ -80,7 +80,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
                   {a.terms.respondBy ? <><dt className="c-4">Respond by</dt><dd>{WHEN(a.terms.respondBy)} ({a.terms.respondBySource})</dd></> : null}
                   {a.terms.other ? <><dt className="c-4">Other</dt><dd>{a.terms.other}</dd></> : null}
                 </dl>
-                <p className="t-2xs c-3" style={{ marginTop: 6, lineHeight: 1.5 }}>
+                <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.5 }}>
                   On these terms: {usd(a.effects.cashAtContract)} earnest money when it goes under contract, then about{" "}
                   {usd(a.effects.cashAtClosingBeforeCosts)} more at closing before closing costs, which are not estimated here.
                   {a.effects.loanAmount ? ` Loan of ${usd(a.effects.loanAmount)}.` : ""}

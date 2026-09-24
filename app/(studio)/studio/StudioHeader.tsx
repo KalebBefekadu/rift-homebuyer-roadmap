@@ -34,9 +34,11 @@ export function StudioHeader({ agentName, undecided = 0, current }: {
 
   return (
     <header style={{ borderBottom: "1px solid var(--line-2)", background: "var(--paper)" }}>
-      <div className="shell-w between" style={{ height: 56 }}>
+      {/* Wraps rather than running off the side: at 200% zoom a laptop is
+          640px wide, and a header that scrolls sideways hides "Sign out". */}
+      <div className="shell-w between" style={{ minHeight: 56, flexWrap: "wrap", rowGap: 8, paddingBlock: 8 }}>
         <div className="row gap-2">
-          <Link href="/studio" className="row gap-2">
+          <Link href="/studio" className="row gap-2" aria-label="Rift Operations, Today">
             <Mark size={19} />
             <span className="mark-name hide-sm" style={{ fontSize: 18 }}>Rift</span>
           </Link>

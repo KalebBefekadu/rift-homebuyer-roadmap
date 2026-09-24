@@ -449,11 +449,12 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | D11, F08, F09 | Decided 23 Sep | The specification's ledger and labels are adopted. W10 is built after the buyer pilot starts, keeping every saved readout exactly as it was; the current engine stays until then |
 | D12, F15 | Decided 23 Sep | Review requests stop depending on how the client felt: everyone who closes gets the same neutral request, and an unhappy client gets a separate follow-up that never decides whether they are asked (Google forbids review gating) |
 | F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
-| W06 | Built 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Needs migration `20260924000000` and a deploy |
-| W07 | Built 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Needs migration `20260924010000` and a deploy. Seller stages wait for D08 |
-| W08 | Built 23 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Needs migration `20260924020000` and a deploy |
-| W09 | Built 24 Sep | Contract dates and scheduled-job runs, on today's rules. Needs migration `20260924030000` and a deploy |
-| W10 onward | Not started | W10 and W11 follow the pilot (D11); W12 hardens the release; W13 waits for pilot results (D08) |
+| W06 | Live 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Migration `20260924000000` applied |
+| W07 | Live 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Migration `20260924010000` applied. Seller stages wait for D08 |
+| W08 | Live 24 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Migration `20260924020000` applied |
+| W09 | Live 24 Sep | Contract dates and scheduled-job runs, on today's rules. Migration `20260924030000` applied |
+| W12 (part) | Built 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40). No migration. Pilot evidence waits for the pilot |
+| W10, W11, W13 | Not started | W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
@@ -534,6 +535,36 @@ scheduled job now records its runs (`rift_job_runs`, through `trackedCron`); a f
 missing run is an urgent item on Studio Today and a state on /api/health (REQ-QUALITY-04).
 Which counting rule a Georgia contract uses is the broker's question (D06/D07), not the code's.
 Migration `20260924030000_rift_deadlines_jobs.sql`, additive.
+
+Release hardening (W12, 24 September 2026). The follow-up emails now honour a stop that
+arrives mid-run: the queue is read once at the start, so each touch is rechecked after it is
+claimed and just before it is sent, and a reply, an opt-out, a changed address or a journey
+started in between stops it (AT37). Starting a journey stops the lead's sequence as "They
+became a client", and the queue skips anyone with a journey regardless. The unsubscribe link
+in every touch is Brevo's, so each run first reads Brevo's block list
+(`GET /v3/smtp/blockedContacts`) and stops the sequence of anyone who unsubscribed, reported
+spam or hard-bounced; no other channel is tried instead. If the list cannot be read, Brevo
+still refuses those sends and the run says `optOuts: not checked`. Rift calls no AI service,
+and no journey module calls email, calendar or anything but the database, so with every
+provider down the brief, homes, showings, offers, documents and dates are still entered by
+hand; every journey read and write says "skipped" with a reason when nothing is configured
+(AT38, `lib/db/degradation.test.ts`). The Studio and buyer journey screens were walked at
+1280, 390 and 375 pixels, at 200% and 400% zoom, by keyboard and with reduced motion (AT39):
+no WCAG 2.2 AA violation, no sideways scroll, focus visible on every stop, nothing moving.
+That walk found and fixed a Studio button with no fill, stage labels faded to 3:1, warning
+text at 4.47:1 on shaded cards (`--warn` is now `#98600b`), an unnamed logo link, two
+unlabelled fields and offer money in 10.5px type. The release switch is held by
+`lib/core/release.test.ts` and was drilled (AT40), below.
+
+**Rolling the release back.** Set `RIFT_BUYER_SEARCH=off` on Vercel and redeploy (a variable
+reaches only new deployments). Every journey page then says it is switched off and every
+journey write, buyer write and document link is refused, while `/plan` and `/r` links, the
+public funnel, Studio Today, the scheduled jobs and deletion keep working. Nothing is deleted.
+Remove the variable and redeploy to bring it back. Drilled locally on 24 September: with the
+switch off, a write left every journey table unchanged; switched back on, every record was
+there, and two follow-up runs started at the same moment recorded each step once. If the code
+itself is at fault, Vercel's instant rollback to the previous deployment is the faster route;
+migrations are additive, so older code runs against the newer schema.
 
 ---
 

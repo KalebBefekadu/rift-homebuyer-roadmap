@@ -67,7 +67,7 @@ export function HomeCard({ home, criteria, children }: {
       <div style={{ marginTop: 8 }}>
         <div className="t-xs w6">{fit.summary}</div>
         {fit.lines.length ? (
-          <ul className="t-2xs c-3" style={{ marginTop: 3, display: "grid", gap: 2 }}>
+          <ul className="t-xs c-3" style={{ marginTop: 3, display: "grid", gap: 2 }}>
             {fit.lines.map((l) => (
               <li key={l.criterionId}>
                 <span aria-hidden="true" style={{ display: "inline-block", minWidth: 34 }}>{FIT_MARK[l.fit]}</span>

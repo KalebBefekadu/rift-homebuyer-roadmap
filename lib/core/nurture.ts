@@ -81,6 +81,22 @@ export const STOPS = [
 
 export type StopId = (typeof STOPS)[number]["id"];
 
+/**
+ * What an address on the email provider's block list means for the sequence
+ * (AT37). The unsubscribe link in every touch is Brevo's, so an opt-out is
+ * recorded there first; the run reads the list and stops the sequence here, so
+ * the agent sees "They opted out" rather than a cadence still marked as sent.
+ *
+ * A block this does not recognise (an administrator's block, a new code) still
+ * suppresses the send, but records no reason: saying "they opted out" about a
+ * block they did not make would put words in their mouth.
+ */
+export function blockedStop(code: string): StopId | null {
+  if (/^unsubscribed/.test(code) || code === "contactFlaggedAsSpam") return "unsubscribed";
+  if (code === "hardBounce") return "bounced";
+  return null;
+}
+
 /* ------------------------------------------------------------------ *
  * The sequences
  * ------------------------------------------------------------------ */

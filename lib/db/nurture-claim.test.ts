@@ -107,3 +107,67 @@ describe("recording what happened", () => {
     expect(db.to("update rift_touches")[0]!.payload).toMatchObject({ detail: null });
   });
 });
+
+describe("rechecking just before the send (AT37)", async () => {
+  const { stillOwed, due } = await import("./nurture");
+  const touch = { enrolmentId: "e1", leadId: "l1", email: "Sam@Example.com" };
+  const live = { data: { stopped_at: null, stop_reason: null, rift_leads: { email: "sam@example.com " } }, error: null };
+
+  it("sends when nothing changed, whatever the address's case or spacing", async () => {
+    build({ "select rift_enrolments": live, "select rift_journeys": { data: [], error: null } });
+    const r = await stillOwed(touch);
+    expect(r.ok && "data" in r && r.data).toEqual({ owed: true });
+  });
+
+  it("does not send once the sequence was stopped, and says why", async () => {
+    build({ "select rift_enrolments": { data: { stopped_at: "2026-09-24T10:00:00Z", stop_reason: "replied", rift_leads: { email: "sam@example.com" } }, error: null } });
+    const r = await stillOwed(touch);
+    expect(r.ok && "data" in r && r.data).toEqual({ owed: false, why: "the sequence was stopped (replied)" });
+  });
+
+  it("does not send to an address that has since changed, or to a lead that was deleted", async () => {
+    build({ "select rift_enrolments": { data: { stopped_at: null, stop_reason: null, rift_leads: { email: "new@example.com" } }, error: null } });
+    const changed = await stillOwed(touch);
+    expect(changed.ok && "data" in changed && changed.data.owed).toBe(false);
+
+    build({ "select rift_enrolments": { data: null, error: null } });
+    const gone = await stillOwed(touch);
+    expect(gone.ok && "data" in gone && gone.data).toEqual({ owed: false, why: "the sequence no longer exists" });
+  });
+
+  it("does not send marketing to somebody who is now a client with a journey", async () => {
+    build({ "select rift_enrolments": live, "select rift_journeys": { data: [{ id: "j1" }], error: null } });
+    const r = await stillOwed(touch);
+    expect(r.ok && "data" in r && r.data).toEqual({ owed: false, why: "they are now a client with a journey" });
+    expect(db.to("select rift_journeys")[0]!.filters).toContain("eq:origin_lead_id=l1");
+  });
+
+  it("reports a recheck it could not read as a failure, so nothing is sent on a guess", async () => {
+    build({ "select rift_enrolments": { error: { message: "connection reset" } } });
+    const r = await stillOwed(touch);
+    expect(r.ok).toBe(false);
+  });
+
+  it("leaves anyone with a journey out of the queue", async () => {
+    const enrolment = (id: string, lead: string) => ({
+      id, lead_id: lead, band: "now", entered_at: "2026-09-01T00:00:00Z", phone_consent: false,
+      rift_leads: { name: lead, email: `${lead}@example.com`, assessment_id: null, side: "buy" }, rift_touches: [],
+    });
+    build({
+      "select rift_enrolments": { data: [enrolment("e1", "client"), enrolment("e2", "lead")], error: null },
+      "select rift_journeys": { data: [{ origin_lead_id: "client" }], error: null },
+    });
+    const q = await due(new Date("2026-09-24T12:00:00Z"));
+    expect(q.ok && "data" in q && q.data.map((t) => t.leadId)).toEqual(["lead"]);
+    expect(db.to("select rift_journeys")[0]!.filters).toContain("eq:agent_id=agent-1");
+  });
+
+  it("still runs before the journeys migration, with nobody treated as a client", async () => {
+    build({
+      "select rift_enrolments": { data: [], error: null },
+      "select rift_journeys": { error: { message: 'relation "public.rift_journeys" does not exist' } },
+    });
+    const q = await due(new Date());
+    expect(q.ok).toBe(true);
+  });
+});
