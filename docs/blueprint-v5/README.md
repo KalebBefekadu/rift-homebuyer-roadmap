@@ -1,0 +1,891 @@
+# Rift Blueprint v5
+
+**The single source of truth for what Rift is and what gets built next.**
+**Written:** 24 September 2026. **Owner:** Kaleb Befekadu.
+**Replaces:** blueprint v4 (`docs/blueprint-v4`, now kept only as the record of the September
+review) and the test feedback file from Kaleb's page-by-page review (rounds R1 and R2, merged
+here in full and then deleted).
+
+Blueprint v5 exists because blueprint v4 built the private client journey and Operations
+plumbing, and left the public site and the look of Operations as they were. When Kaleb tested
+the live site he found no visible change on any page. v5 keeps everything v4 got right,
+records what is built, and turns the rest, plus his feedback, into one plan across Rift's three
+experiences: the lead side, the client side and the Agent OS.
+
+## Contents
+
+0. [How to use this document](#0-how-to-use-this-document)
+1. [Where Rift stands](#1-where-rift-stands-24-september-2026)
+2. [The product: three experiences](#2-the-product-three-experiences)
+3. [Principles](#3-principles)
+4. [Design system, across the whole site](#4-design-system-across-the-whole-site)
+5. [Lead side](#5-lead-side)
+6. [The Georgia assistance engine](#6-the-georgia-assistance-engine)
+7. [Client side](#7-client-side)
+8. [Agent OS (Operations)](#8-agent-os-operations)
+9. [Seller journey](#9-seller-journey)
+10. [Platform: money, automation, integrations](#10-platform-money-automation-integrations)
+11. [Decisions](#11-decisions)
+12. [What only Kaleb can supply](#12-what-only-kaleb-can-supply)
+13. [Delivery order](#13-delivery-order)
+14. [Change log](#14-change-log)
+
+Companion files in this folder:
+- [requirements.md](requirements.md): every requirement ID carried from v4 (STATE, LEAD,
+  SEARCH, UX, MONEY, DOC, DEC, DATE, FUNDS, OPS, AUTO, ACCESS, PRIV, CAMP, QUALITY), each marked
+  Built, Partly or Not built, plus the forty acceptance scenarios.
+- [journey-contracts.md](journey-contracts.md): the stage-by-stage contracts, buyer B00 to B20
+  and seller S00 to S18, carried from v4.
+
+---
+
+## 0. How to use this document
+
+- **Planning lives here and nowhere else.** If this document and another one disagree about
+  what Rift should be or what comes next, this one wins. `docs/handoff.md` stays the engineering
+  record of what is built and how it works; it does not decide what is built next.
+- **New feedback is added to the section it concerns**, tagged with who said it and the round,
+  like the existing tags: (Kaleb, R1) and (Kaleb, R2) are the review of 24 September 2026.
+- **A decision is recorded in §11** before the work that depends on it starts. An open decision
+  disables that work; an engineer's default never stands in for it.
+- **Proposals are marked as proposals.** Anything written by engineering and not yet confirmed by
+  Kaleb (for example most of the Agent OS layout in §8) says so, and is confirmed through a
+  design review before it is built.
+- **Built items are not repeated as work.** When something ships, its line here says "Built"
+  with the date, and the details go in `docs/handoff.md`.
+- **No em dashes** anywhere, including this document (a test enforces it on the site).
+
+---
+
+## 1. Where Rift stands (24 September 2026)
+
+Live at https://rift-homebuyer-roadmap.vercel.app. Code at
+https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
+
+### Built and live
+
+| Area | What exists |
+| --- | --- |
+| Lead side | Front door; buyer, seller and abroad landings, questionnaires and readouts (computed on the server, shareable, dated snapshots); Georgia programs list; how-it-works pages; unclaimed money page; public offer form; booking request; privacy page with "delete all of it"; first-touch attribution; answer-free telemetry; follow-up emails with consent and stop rules |
+| Client side | Email sign-in by invitation; household members with scopes; the buyer's Today, search priorities, homes and reactions, showings answers, offer answers, checked contract dates, "You own your home" after a confirmed closing, and a printable records page |
+| Agent OS | Today (ranked leads, review queue, follow-ups, deadlines, failed jobs); Relationships; person records with plan, decisions, agreement, journeys; the journey page (brief, Matrix search record, household, homes, showings, offers and documents, where it stands, ten workstreams, contract dates); Search; Offers; Calendar; Advocacy; Pilot report; funnel question editor; settings; morning summary email |
+| Platform | Supabase with row-level security on every table, history-only tables, idempotent writes, job-run tracking and health checks, release switch `RIFT_BUYER_SEARCH`, Brevo email, Sentry |
+
+Blueprint v4 packages built: W00 to W09, W11 and W12. Not started: W10 (money v2) and W13 (seller
+journey and campaigns). Details and dates: `docs/handoff.md` §8.2.
+
+### What the live review found (Kaleb, R2)
+
+- No visible change on any page, public or agent. The v4 work sits behind sign-in, and the
+  agent's account had no journey yet, so even the new agent screens were mostly empty.
+- The agent side still says "Studio" in its addresses and emails.
+- The buyer portal sent no sign-in email: no invitation existed yet, and the sign-in page gives
+  no sign that nothing was sent (see §7.3).
+- The public pages need a design pass, the questionnaire and readouts need to become separate
+  values, and the Georgia programs need rethinking (§4, §5, §6).
+- Operations needs a major UI and UX redesign (§8).
+
+### Not built, in one list
+
+Everything below is specified in the section named.
+- Design system rules: spacing, symmetry, footers, form controls, calls to action (§4).
+- Lead side rebuilt as separate values, with a custom artifact each (§5).
+- Page-by-page public changes from the review (§5.6 to §5.9).
+- The Georgia assistance engine (§6).
+- Client side: money, documents and help areas; clearer sign-in; summary share links; the
+  dependency between a sale and a purchase; move-in handoff (§7).
+- Agent OS redesign, full rename to Operations, Transactions view, snooze, delegation and
+  pinning (§8).
+- Seller journey (§9) and the campaign composer (§5.10).
+- Money v2 (W10), the approval and outbox mechanism, AI budget controls, document extraction,
+  Cal.com, and the other integrations (§10).
+- The pilot itself: 3 to 5 real buyers, added by hand (§13).
+
+---
+
+## 2. The product: three experiences
+
+Rift is three experiences sharing one set of data, identity and automation:
+
+```text
+                         RIFT
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+       LEAD SIDE (public)           CLIENT SIDE (portal)
+       buyer, seller, abroad        buyer, later seller
+             │                           │
+             └────────────┬──────────────┘
+                          │
+                  AGENT OS (Operations)
+                          │
+                 AI + AUTOMATION LAYER
+                          │
+   Matrix/OneHome · ShowingTime · Remine · Google · Cal.com · Brevo
+```
+
+| Experience | Question it answers | Feel | In one line |
+| --- | --- | --- | --- |
+| Lead side | "What does my situation mean?" | Expressive, bright, editorial, one custom artifact per value | Discovery + value + personalization + conversion |
+| Client side | "What matters for my move today?" | Calm, personal, reassuring, phone-first | Progress + understanding + decisions |
+| Agent OS | "What needs my judgment?" | Utilitarian, dense where useful, fast to scan, keyboard-friendly | Control + exceptions + execution |
+
+- **Names.** The agent side is called **Operations** everywhere a user can see it: navigation,
+  titles, emails and web addresses. "Agent OS" is the internal name for the architecture.
+- **The AI layer is not a fourth website.** Four levels, in order of how much they are trusted:
+  workflow automation (deterministic reminders), AI reasoning (turning messy input into a draft),
+  tool execution (only through verified integrations), and human decision (judgment, negotiation,
+  anything legal or financial). AI prepares and drafts; people decide and approve.
+- **Conversion is a state change, not a new record.** Someone who used the lead side and becomes
+  a client never starts over (§5.5).
+- **Messages and decisions are distinct.** No messaging platform; email and calls stay, and the
+  meaningful outcome is recorded.
+
+---
+
+## 3. Principles
+
+Carried from v3 and v4, with Kaleb's review added. Each applies to all three experiences unless
+it says otherwise.
+
+1. **Value before contact.** Every tool gives its advertised answer before asking for details.
+   Extra functionality beyond that answer may ask for details (decision D14).
+2. **Say "no account" quietly.** Mention it subtly once or twice on the whole site, never at every
+   turn. (Kaleb, R1)
+3. **Simple, and not crowded.** Kaleb likes that the pages are not crowded; keep it that way while
+   adding value. (Kaleb, R1)
+4. **Symmetry and alignment.** Nothing out of line; paired columns balance; spacing follows one
+   system (§4). (Kaleb, R1)
+5. **One primary action at a time.** Each screen has one obvious next step: "Get my numbers",
+   "Save my plan", "Review these homes", "Record a check". Secondary things sit below it.
+6. **Progressive disclosure.** Clarity first, detail on request.
+7. **Journey first, dashboard second.** Organize around where the person is and what happens
+   next, not a grid of widgets.
+8. **Education at the moment of need,** never an encyclopedia.
+9. **Automation reduces noise.** Clients see decisions, deadlines, exceptions and meaningful
+   updates, not a stream of automated tasks.
+10. **Honest numbers.** Every figure is computed or sourced, carries its assumptions and date, and
+    never overclaims ("potentially eligible", never "you qualify"). No fabricated counts,
+    testimonials, activity, match percentages or forecasts.
+11. **People keep authority.** AI and automation propose; the agent approves external actions;
+    professionals confirm their own facts.
+12. **The calls to action must earn the click.** The review found them weak everywhere (Kaleb, R2);
+    §4.4 sets the rule.
+13. **Avoid becoming** a generic CRM, a giant dashboard, a task app, a document portal, a chatbot
+    with real-estate branding, an MLS clone, a pile of calculators, or a lead form in disguise.
+
+---
+
+## 4. Design system, across the whole site
+
+The brand stays: editorial serif headings, warm off-white canvas, restrained palette, strong
+charcoal, terracotta for buyers, green for sellers, generous whitespace, large meaningful numbers,
+subtle borders. What changes is the discipline around layout and interaction.
+
+### 4.1 Spacing and symmetry (Kaleb, R1)
+- One spacing scale and one content grid for every page, with fixed section spacing. No
+  one-off margins.
+- Paired columns balance: when a short text column sits beside a tall list, the layout changes
+  (stack, centre, or give the text a visual) so no empty hole is left. The buyer landing's
+  "Seven minutes" section is the reference case of what not to do (§5.7, D3).
+- Cards and question boxes align to the grid and are centred with the content above and below
+  them. The buyer landing's county box is the reference case (§5.7, D2).
+- Symmetry is reviewed on every page at 1280px, 390px and 375px before it ships.
+
+### 4.2 One footer rule (Kaleb, R1)
+- Both the front door and the buyer landing have misaligned footers. Every page uses one footer
+  component with the same columns, alignment and spacing. The footer's link groups align to the
+  content grid, not to the window edge.
+
+### 4.3 Form controls (Kaleb, R2)
+- Radio and checkbox circles are clipped on the forms, most visibly on the abroad page ("I have a
+  green card or a U.S. visa", "I have an ITIN, not a Social Security number"), probably elsewhere
+  too. One option-control component with enough padding, used everywhere.
+- Single-choice questions advance on click; there is no Next button (§5.6).
+- Money inputs accept any amount (§5.6, E3).
+
+### 4.4 Calls to action (Kaleb, R2)
+- "The CTA is poor throughout the entire platform." Every page is reviewed for its one primary
+  action: a specific verb about the person's outcome ("See my cash to close", "Check my
+  programs"), one visual weight for primary actions and one for secondary, and never more than
+  one primary action per view.
+- After a value is delivered, the primary action is the next value or "Save my plan" (§5.5).
+
+### 4.5 Custom artifacts (Kaleb, R1)
+- Each value (§5.2 to §5.4), and the buying and selling choices on the front door, gets its own
+  custom artifact: a visual centrepiece made for that answer, not decoration.
+- Artifact language: architectural geometry, home and material forms, data built into the visual,
+  crisp typography, restrained bright accents, slow purposeful motion, no stock photography, no
+  AI imagery unrelated to the question. Each artifact explains, personalizes or pulls people in;
+  the best do all three.
+- Examples from v3: a cash-to-close stack that assembles the pieces of cash; a proceeds flow from
+  sale price through payoff and costs to "what you keep"; a journey path Prepare to Own.
+- Every artifact reads the same computed output as its table and has a text equivalent
+  (CAMP-04), and loads after the tool without shifting the layout (QUALITY-03).
+- **To confirm (D13):** that "artifact" means this custom visual.
+
+### 4.6 Three levels of expression
+Public: most expressive. Client: calm and personal. Operations: utilitarian (smaller type,
+stronger hierarchy, tables and lists, fewer decorative surfaces). Shared tokens, typography and
+icons; different density.
+
+### 4.7 Accessibility and performance
+Every redesigned page passes again: WCAG 2.2 AA, keyboard, focus, 200% and 400% zoom, reduced
+motion, 375px and 390px with no sideways scroll, 44px touch targets on public and client pages,
+and the performance targets in QUALITY-03.
+
+---
+
+## 5. Lead side
+
+The lead side should feel like **question, useful answer, personal insight, deeper answer, saved
+plan, relationship**, not "marketing page, form, phone call". The person should be invested in
+the experience before being asked to invest in the agent.
+
+### 5.1 Separate values, earned one at a time (Kaleb, R1 and R2)
+
+- Today the landing leads with one value (down payment assistance you may qualify for), and one
+  long questionnaire produces a crowded readout with several values mixed together. The
+  readout is "very complicated and confusing". (Kaleb, R2)
+- **Each value becomes its own component**: its own few questions, its own answer, its own
+  artifact.
+- Finishing a value shows **only that value**, then "You can also get..." the next one, which
+  often needs just one more question. Answers already given are reused, never asked again.
+- The landing pages can offer several values as separate ways in.
+- **Gating (D14, proposed):** the advertised answer of each value is always free and complete
+  (LEAD-01). Extras beyond it may ask for contact details or an account: saving the plan,
+  alerts when a program changes, the full program-combination report, a printable plan. Kaleb
+  asked for this on the programs page (§5.8, G3).
+
+**Acceptance for every value:** the answer appears with no contact details asked; only that
+value is shown; the next value is offered and reuses earlier answers; the artifact and the text
+equivalent show the same numbers; completion is measured without recording answers (§12 of
+requirements).
+
+### 5.2 Buyer values
+
+Proposed catalogue, drawn from v3 (§5, §46.3, §47) and today's readout. Kaleb confirms the
+first set and their order.
+
+| Value | Question it answers | Inputs (ask only these) | Answer | Notes |
+| --- | --- | --- | --- | --- |
+| Assistance | "What Georgia programs might help me?" | County, first-time status, then income, household, price, credit, occupation, loan type as each program needs | Potential programs and potential combinations (§6) | Headline stays conditional (MONEY-02) |
+| Cash to close | "How much cash do I really need?" | Price, down payment choice, county | Real cash needed, line by line | **Moving is removed** (Kaleb, R1) |
+| Monthly cost | "What would I pay each month?" | Price, down payment, rate (weekly Freddie Mac) | Monthly cost across three prices | Taxes, insurance, HOA shown separately (MONEY-04) |
+| Timeline | "When could I buy?" | Savings, monthly saving, cash needed | Months to ready, and the two changes that shorten it most | Unknown saving rate never becomes "ready now" |
+| Affordability | "How much home fits me?" | Income, debts, comfort payment | A comfort range as a planning scenario | Needs its own tested model first (MONEY-05) |
+| Lender questions | "What should I ask a lender?" | Uses earlier answers | Questions written for their situation | Existing readout section |
+| Rent vs. buy, first-time roadmap, readiness | From v3 | To define | To define | Later values |
+
+### 5.3 Seller values (Kaleb, R2: same lens as the buyer side)
+
+| Value | Question | Inputs | Answer |
+| --- | --- | --- | --- |
+| Net proceeds | "What would I actually keep?" | Likely price, amount owed, county | Proceeds after payoff and costs (MONEY-06) |
+| Selling costs | "What will selling cost?" | Price, county | Each cost, commission as a negotiated input, never a standard rate |
+| Unclaimed money | "Am I losing money already?" | County, homestead status | Exemptions and appeal deadlines (existing `/sell/unclaimed`) |
+| Preparation | "Should I fix this before listing?" | Condition questions | What is worth addressing, maybe, not yet; no invented ROI |
+| Sell first or buy first, move-up | From v3 | To define | To define |
+
+All buyer-side feedback applies to the seller side unless it is buyer-specific: separate values,
+no Next button, uncapped amounts, simpler readouts, better calls to action, the footer and
+spacing rules, and a rewritten how-it-works page. Seller pages: `/sell`, `/sell/start`,
+`/sell/results`, `/sell/unclaimed`, `/sell/how`. This is public-page work and is not held back by
+the seller journey's gate (§9).
+
+### 5.4 Buyers abroad (Kaleb, R1 and R2)
+
+- Say **the United States**, not Georgia, where the point is about being allowed to buy: "You
+  don't need citizenship, a green card, or a visa to own property in the United States." People
+  abroad care about the US and many do not know Georgia. Applies on the front door and every
+  abroad page.
+- The abroad page is too complicated. Split it into values and do not put everything on one page.
+- Collect a phone number, with the existing consent rules for calls and texts (a phone number
+  without consent is refused today; keep that).
+- Fix the clipped radio circles (§4.3).
+- The Amharic for one message (what was kept after a deletion) is owed, and the rent ratios
+  behind the return figure are invented estimates (§12).
+
+### 5.5 Saving the plan and carrying it into the client side
+
+- **"Save my plan"** replaces the plain email box: the person's values so far, saved as a plan
+  they can reopen, with separate choices for being contacted, marketing and booking (PRIV-04,
+  LEAD-03).
+- **A plan taking shape:** as the person completes values, a small summary builds up (for
+  example target price, cash needed, monthly cost, programs to check). It is the thing they
+  save.
+- **Anonymous progress** on one device expires and can be reset; restoring elsewhere needs a
+  claim (LEAD-06).
+- **Continuity:** when a saved plan becomes a client journey, its answers prefill the search
+  brief with their dates and source, and the client confirms only what is stale or missing
+  (LEAD-04).
+- **Lead summary in Operations:** each lead shows what they did, for example "Built a $425k plan,
+  checked programs, saved cash-to-close, no consultation booked" (v3 §46.7), built from recorded
+  actions, never from browsing surveillance.
+
+### 5.6 Buyer questions (`/buy/start`) (Kaleb, R2)
+
+- **The layout is bad.** The "So far" card on the left is wide, the question column on the right
+  is narrow, they do not line up, and most of the screen is empty. Redesign it around one
+  centred question at a time, with the running figure placed where it balances the page.
+- **No Next button.** Choosing an answer moves straight to the next question. Typed and slider
+  answers keep an explicit continue, since they cannot know when the person is done.
+- **Amounts are capped.** "What price range are you thinking about?" stops at $700,000; what if
+  someone wants $1,000,000? The same limit problem applies to savings ($120,000) and monthly
+  saving ($3,000), and on the seller side to price ($1,200,000) and amount owed ($900,000).
+  Every amount question must accept any realistic amount, for example a slider for the common
+  range plus typing an exact figure.
+- With values split (§5.1), each value asks only its own questions.
+
+### 5.7 Front door and buyer landing (Kaleb, R1)
+
+**Front door `/`**
+- Put "I'm buying" and "I'm selling" **side by side**, each with its own custom artifact.
+- **Delete the three trust points** ("Calculated, not written", "Nothing is held back", "No call
+  unless you ask"). They are "just useless". Replace them with something simpler and more
+  effective, respecting principle 2.
+- Buyers abroad: "United States" wording (§5.4).
+- Footer (§4.2).
+
+**Buyer landing `/buy`**
+- Delete "Two questions. No account, no email, no phone call."
+- (D2) The county and ownership question box is not centred or aligned.
+- (D3) Empty space below "Not a brochure and not a callback..." because the left column is short
+  and the list on the right is tall.
+- (D4) Remove Moving from "What you bring". The same figure ($26,188) is on the front door; both
+  change.
+- Offer several values, not only assistance (§5.1).
+- Footer (§4.2).
+
+### 5.8 Readouts, programs and how it works
+
+**Buying readout `/buy/results`** (Kaleb, R2)
+- Too complicated and confusing. Show only the value the person came for, then offer the next.
+  The same applies to the seller and abroad readouts.
+
+**Georgia programs `/buy/programs`** (Kaleb, R2)
+- Too much information. Make it very simple, more like a **table**, with a **filter** and a
+  **sort**.
+- Reword "Every Georgia program we track" to something like "Georgia programs".
+- The call to action needs work; hold some functionality back until the person creates an
+  account or gives their details (D14).
+- The programs themselves come from the assistance engine (§6), shown with "View official
+  program source", "Last verified", and the standard caution line.
+
+**How it works** (`/buy/how`, `/sell/how`, `/abroad/how`) (Kaleb, R1)
+- They read like a legal document or a privacy policy. Rewrite them to explain the process and
+  the value Rift gives.
+- The only money message: **you pay Rift nothing**; the only fees are the ones any transaction
+  has, such as agent fees. No other talk about money.
+
+### 5.9 Submit an offer and book a call
+
+**Submit an offer `/offer`** (Kaleb, R2)
+- Heading becomes **"Submit an offer"**, replacing "Submit an offer on any Georgia address. And
+  see what it is actually worth to the seller before you send it. No account, nothing to
+  install, and the arithmetic is yours whether or not you press send."
+- **Start with the upload:** "Upload your offer in PDF". Rift reads the PDF and fills in the
+  boxes; the sender reviews, edits if needed, and presses submit. Extraction follows DOC-02:
+  candidate values with their place in the document, a person confirms, a failed read leaves a
+  manual form. It needs AI with a cost limit (AUTO-06, D16).
+- **Fields:** remove "Repair credit asked"; remove "Brokerage (optional)"; choosing "Other" for
+  financing requires saying what it is; **add due diligence days**.
+- **Sending is required:** remove "Send it to Kaleb. Optional. The arithmetic above is yours
+  either way." The sender must say whether they are "a real estate agent" or "the buyer", and
+  phone is required.
+
+**Book a call `/book`** (Kaleb, R2)
+- The form is not centred.
+- Field order: name, phone, email, then time.
+- "When suits you?" becomes **"What time works best for you?"**
+- **Real times from Cal.com** (decided 24 Sep): free plan, connected to Kaleb's Google Calendar,
+  so bookings appear there. Rift already has the Cal.com adapter; it needs `CAL_API_KEY` and
+  `CAL_EVENT_TYPE_ID`. Until then the page asks for a preferred time.
+
+### 5.10 Campaigns (later)
+
+From v4 (CAMP-01 to CAMP-05) and v3 §46.6: landing pages as recipes of approved blocks, including
+the custom artifact block, composed in Operations; AI may draft a recipe, never code; preview,
+validate, publish and roll back. Start with one buyer recipe on the assistance path; the general
+composer comes after. Campaign data flows into the lead summary (§5.5). **Waits for** the value
+components (§5.1), because campaigns are built from them.
+
+---
+
+## 6. The Georgia assistance engine
+
+Kaleb's design (R1). For a Georgia-only product it replaces building on several national down
+payment assistance providers.
+
+### 6.1 The idea
+- An earlier plan combined Freddie Mac DPA One, possibly Down Payment Resource (DPR), and a
+  Rift-maintained specialty database. DPA One offers a central database and API for government
+  and housing-agency programs; DPR keeps a larger national database and sells integrations.
+- The problems: API access, licensing, cost, duplicate programs, conflicting data, and dependence
+  on outside providers.
+- Instead, build **one normalized Georgia database**:
+
+```text
+                    RIFT
+          Georgia Assistance Database
+                       │
+        ┌──────────────┼──────────────┐
+        ↓              ↓              ↓
+ Government/HFA     Banks & CUs     Other Programs
+        │              │              │
+ GA Dream          Bank grants      Builders
+ Counties           CRA programs     Employers
+ Cities             Credit unions    Nonprofits
+ Housing Auth.                      Special programs
+        │              │              │
+        └──────────────┼──────────────┘
+                       ↓
+             ~50–100 Programs
+                       ↓
+              Eligibility Engine
+                       ↓
+                  Buyer Profile
+                       ↓
+        Potential Programs + Stacking
+```
+
+- **Start** with the roughly 25 Georgia programs already found through DPR, DPA One, Georgia DCA
+  and similar sources. **Then** use automated research to find the harder ones: banks, credit
+  unions, counties, cities, housing authorities, nonprofits, employers and builders.
+
+### 6.2 One standard record per program
+- Program name and provider; assistance amount; type (grant or loan) and repayment or
+  forgiveness terms; where it applies; income and purchase-price limits; minimum credit score;
+  first-time buyer requirement; eligible loan types; occupation requirements; deadlines and
+  funding availability; official source and last-checked date; whether it combines with other
+  programs, where known.
+- Fields for keeping it current:
+
+```text
+official_source_url
+discovered_date
+last_verified_date
+next_review_date
+program_status
+application_deadline
+funding_status
+source_type
+```
+
+- *Engineering note:* the existing registry (`lib/core/registry.ts`, the stale-program rule and
+  the freshness setting) is extended into this record, not replaced, so today's "withheld because
+  not verified" behaviour carries over.
+
+### 6.3 Matching is the product, not the database
+The buyer enters their details:
+
+```text
+Purchase Price:     $375,000
+Location:           DeKalb County
+Income:             $82,000
+Household:          2
+Credit:             720
+First-time buyer:   Yes
+Occupation:         Teacher
+Loan:               Conventional
+```
+
+Rift checks them against each program's rules and returns potential matches, with what fits and
+what still needs checking:
+
+```text
+POTENTIAL MATCHES
+
+Georgia Program A
+Potential assistance: $10,000
+✓ Income
+✓ Location
+✓ Purchase price
+✓ First-time buyer
+
+Bank Program B
+Potential assistance: $7,500
+✓ Location
+✓ Income
+△ Additional lender requirements
+
+County Program C
+Potential assistance: $15,000
+✓ Geography
+✓ Income
+△ Funding availability must be confirmed
+```
+
+- These inputs are asked only as the assistance value needs them (§5.2), and they are private
+  product data, never analytics (PRIV-01). Occupation is used only where a program itself
+  requires it.
+
+### 6.4 Combining programs
+- Show combinations that could work together, not just a list:
+
+  > Potential assistance combination: Program A + Program B.
+  > Potential combined assistance: $17,500.
+  > Compatibility and current availability must be verified.
+
+- A combination appears only when both programs' recorded rules allow it; unknown compatibility
+  is shown as unknown. The public headline still counts assistance as 0 (MONEY-02).
+
+### 6.5 Keeping it current: two jobs
+- **Monitoring:** revisit each program's official page monthly or quarterly, not every six to
+  twelve months, because limits, funding and rules change faster than that. No staff needed:
+
+```text
+Initial Deep Research
+        ↓
+Discover 50–100 programs
+        ↓
+Human/AI structure information
+        ↓
+Rift Database
+        ↓
+Save official source URLs
+        ↓
+Periodic automated checks
+        ↓
+Page unchanged? ──────→ Do nothing
+        │
+      Changed
+        ↓
+AI compares old/new
+        ↓
+Flag record
+        ↓
+Update / review
+```
+
+- **Discovery:** a deeper search of all of Georgia every 6 to 12 months, only for programs not
+  already in the database.
+- A flagged change is reviewed by a person before the record changes (AUTO-05). A check that
+  fails is visible in Operations like any other scheduled job (QUALITY-04). AI cost is capped
+  (AUTO-06, D16).
+
+### 6.6 Facts from official sources, not other databases
+- Facts such as maximum amounts, limits and deadlines are generally not protected just because
+  another database collected them. But another company's compilation, descriptions, categories,
+  API output or terms-restricted content can raise contract or copyright problems.
+- So Rift collects facts from the administering organization's own public pages and does not
+  copy DPR's database:
+
+```text
+DPR tells us:
+"Program XYZ exists"
+          ↓
+Rift finds:
+Official Program XYZ website
+          ↓
+Rift extracts facts from
+the primary source
+          ↓
+Rift database
+```
+
+- This also records exactly where each fact came from.
+
+### 6.7 How each program is shown
+- A "View official program source" button and "Last verified: September 2026".
+- "Program terms and funding availability may change. Confirm current eligibility with the
+  program administrator or participating lender before relying on this information."
+- Never "you qualify": say "Potentially eligible" or "Likely match based on the information
+  provided". Lenders and program administrators decide.
+
+### 6.8 Where DPA One and DPR fit
+- Discovery and reference tools only, not APIs Rift depends on. Each Rift record points back to
+  the organization that runs the program.
+- Result: no API dependency or recurring API cost; a Georgia-only dataset small enough to manage;
+  specialty programs competitors may miss; full control of matching and combining.
+- If Rift expands to other states (Florida, Texas, North Carolina and so on), a commercial API or
+  data licence starts to make sense then.
+- For the Georgia-only first version: a small, high-quality dataset, with the engineering effort
+  spent on matching and combining rather than national data infrastructure.
+
+**Acceptance:** every shown program has an official source and a last-verified date; a program
+past its review date is withheld with the reason shown; no combination is shown without both
+programs' rules allowing it; "qualify" never appears; the programs table filters and sorts; a
+failed monitoring check shows in Operations.
+
+---
+
+## 7. Client side
+
+### 7.1 Built
+Invitation sign-in and household scopes; Today in the fixed order (blockers, decisions, own
+tasks, what others are doing); search priorities with "These are right", "Something should
+change" and "Make the change myself"; homes with reactions and "Would like to see it"; showings
+and the after-showing answer; offer answers per version; checked contract dates; earnest money
+as "sent, not confirmed received"; "You own your home" only after a confirmed closing; the
+printable records page. Stage contracts B00 to B20 are in [journey-contracts.md](journey-contracts.md).
+
+### 7.2 To build
+- **The same UI and UX lens as the public site** (Kaleb, R2): the client pages were not reviewed
+  for design; they get the §4 rules and a calm, phone-first pass.
+- **Navigation from v4:** Today, Homes, Journey, Money, Documents, with Help always reachable.
+  Today there is one journey page and a records page.
+- **Money area** with money v2 (W10, §10.1).
+- **Documents area**: every document shared with them in one place, not only through offers.
+- **Help**: how to reach the agent and what happens next, on every page.
+- **Selected read-only summary links** for someone outside the household (ACCESS-02).
+- **A sale linked to a purchase** shows the dependency and its owner (STATE-07).
+- **Move-in handoff** (B19): utilities, keys, address changes, and county homestead and tax
+  dates from maintained official sources.
+- **Ownership records** (B20) later: maintenance and warranty records, with retention approved
+  first.
+- **Side-by-side home comparison** (SEARCH-05) once W10 provides monthly scenarios.
+- **Check the no-match state** (SEARCH-09).
+
+### 7.3 Signing in (Kaleb, R2)
+- Kaleb could not get into the buyer portal: no email came. Cause: no invitation existed, and
+  the sign-in page sends nothing to an uninvited address without saying so.
+- Make the path clear without revealing who is a client: the sign-in page explains that access
+  starts with an invitation from the agent and what to do if no email arrives; the agent's
+  journey page makes "invite the household" an obvious first step.
+
+---
+
+## 8. Agent OS (Operations)
+
+**A major UI and UX redesign.** The agent pages were not redesigned in v4 and look unchanged
+(Kaleb, R2). The layout below is **engineering's proposal**, built from v3 §0.3, v4 §9 and what
+the live pages show. It is confirmed with Kaleb in a design review, using a clickable prototype,
+before it is built (D15).
+
+### 8.1 What is wrong today
+- **The name.** Addresses are still `/studio/...`, the emails say "Open them in Studio", and two
+  setting descriptions say Studio. (Kaleb, R2)
+- **Today is the old lead list.** It ranks leads and lists queues, but is not organized around
+  "what needs my judgment". Journey work, deadlines and failed jobs are mixed into the lead view.
+- **The journey page is one very long page** with nine stacked sections (brief, what changed,
+  Matrix search, household, homes, showings, offers, where it stands, dates). Finding one thing
+  means scrolling past everything else.
+- **No view across deals.** There is no Transactions view of every contract with its workstreams
+  and dates.
+- **It looks like the public site.** Same editorial serif and spacing, where Operations should be
+  compact and utilitarian.
+- **Navigation** is a top bar of seven items plus three buttons that barely fits at 1280px.
+- **Missing tools:** snooze, delegation, pinning, persistent filters, keyboard shortcuts, a quick
+  switcher, detail panels that keep your place.
+
+### 8.2 What Operations must answer, at a glance
+1. What needs my attention now?
+2. What needs my approval?
+3. What is happening today?
+4. What is waiting on someone else?
+5. What deadlines are coming?
+6. Which leads or clients changed?
+7. What did Rift do on its own, and did anything fail?
+
+### 8.3 Navigation (proposal)
+- A **left sidebar**, stable on every page, collapsible, replacing the top bar:
+  - **Today**
+  - **Relationships** (leads and clients)
+  - **Search**
+  - **Transactions** (new)
+  - **Offers**
+  - **Calendar**
+  - then, smaller: **Advocacy**, **Reports** (the pilot report and funnel figures), **Campaigns**
+    (later), **Questions**, **Settings**.
+- "Add someone" as a single primary button in the sidebar.
+- A **quick switcher** (Cmd+K) to jump to any person, journey or page, and keyboard shortcuts for
+  the common actions. The prototype at `/prototype/studio` already has a palette to start from.
+- Full rename: every address moves to `/operations/...` with permanent redirects from
+  `/studio/...`; emails and settings text say Operations.
+
+### 8.4 Today (proposal)
+Five groups, each item saying why it is there, who owns it, what it relates to, its evidence, its
+due time and its next action:
+- **Needs attention:** passed contract dates, failed jobs, overdue items, buyer requests past
+  the same-day promise, disagreements in a household.
+- **Needs your approval:** drafts and prepared actions waiting for the agent (AUTO-01), search
+  updates to approve, flagged program changes (§6.5).
+- **Today:** showings, calls, closings, inspections, bookings.
+- **Waiting on others:** lender, attorney, buyer, other agent, with last update and when to check
+  in.
+- **Upcoming:** dates and milestones in the next two weeks.
+- A **Recent activity** strip: meaningful changes across the business, not every event.
+- New leads and "Call today" leads stay prominent (the 15-minute reply target, unless D07a
+  changes it).
+- Snooze with an owner and a resume time (never moving a contract date), delegate with
+  acceptance, pin with a reason and expiry (OPS-02).
+
+### 8.5 Relationships (proposal)
+- A table: name, side, stage, next action and due date, last contact, source. Search, filters
+  that persist, sort.
+- Opening a person opens a **detail panel** beside the list, so the agent keeps his place; a
+  full page is one click further.
+- The person view leads with the lead summary (§5.5), then journeys, plan, decisions, agreement,
+  history.
+
+### 8.6 The journey workspace (proposal)
+- Replace the long page with a **workspace**: a fixed header (name, stage, status, next action,
+  household) and tabs:
+  - **Overview:** next actions, blockers, key dates, recent activity.
+  - **Search:** brief, what changed and who agrees, Matrix record.
+  - **Homes and showings.**
+  - **Offers and documents.**
+  - **Contract:** where it stands, workstreams, dates.
+  - **History.**
+- Every write keeps today's rules (history-only records, request IDs, server checks).
+
+### 8.7 Transactions (new, proposal)
+- Every contract in one table: property, client, stage, next deadline, workstreams at a glance
+  (a small status for each of the ten), and anything blocked or unconfirmed.
+- Opens straight to the journey's Contract tab.
+
+### 8.8 The other pages
+- **Search:** keep, restyle as a table; add "update pending" filters.
+- **Offers:** inbound offers from `/offer`, now with the uploaded PDF and extracted terms (§5.9).
+- **Calendar:** real Cal.com bookings alongside dates and showings.
+- **Reports:** the pilot report plus funnel and value-ladder figures.
+- **Settings and Questions:** keep; group the settings by what they affect.
+
+### 8.9 Look and feel
+- Utilitarian: sans-serif interface type, smaller scale, dense tables, clear hierarchy, few
+  decorative surfaces, consistent status chips with words and icons.
+- Works on a phone for the urgent things (Today, a person, a journey's next action), and
+  everything by keyboard.
+- Same accessibility bar as the rest (§4.7).
+
+**Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
+1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
+a detail keeps the list position and filters; every item on Today names its owner and next
+action.
+
+---
+
+## 9. Seller journey
+
+- The seller's private journey (stages S00 to S18 in [journey-contracts.md](journey-contracts.md))
+  and seller stages in Operations wait until the buyer pilot shows results (D08). They share the
+  buyer foundations already built: journeys, households, offers, documents, dates, workstreams.
+- The seller **public pages** are improved now with the buyer side (§5.3); only the private
+  journey waits.
+- Includes: seller Today; pricing strategy with the agent's approved opinion (no generated
+  valuation); preparation plan; listing assets; launch; showings and feedback with honest
+  denominators; weekly performance review; offer review (the existing offer room and "your
+  take"); negotiation; under contract; final proceeds reconciled to the official statement;
+  post-sale. And a sale linked to a purchase (STATE-07).
+
+---
+
+## 10. Platform: money, automation, integrations
+
+### 10.1 Money v2 (W10)
+Starts once the pilot starts (D11). The ledger in MONEY-03: estimated total buying budget; needed
+before closing; estimated remaining funds at settlement; suggested reserve; official cash to
+close from the closing document. Old snapshots keep their meaning. Acceptance AT30 to AT33. The
+moving-cost removal (§5.7) happens before W10, on the public figure only.
+
+### 10.2 Approvals, outbox and AI controls
+Needed before any integration writes or any AI draft is used:
+- The approval and outbox mechanism (AUTO-01, AUTO-02).
+- AI cost limits per workflow and per month, with manual entry when they run out; model and
+  prompt versions recorded; no training on private data (AUTO-06). Pilot budget: at most $50 a
+  month on AI and integrations (D07).
+- First AI uses: offer PDF extraction (§5.9), program page monitoring (§6.5), optionally turning
+  an agent's notes into a draft search brief (v4 §3.2: candidates with source spans, never a
+  ready search).
+
+### 10.3 Integrations
+
+| Tool | Status | Next step |
+| --- | --- | --- |
+| Cal.com | Adapter built; not connected | **Decided:** connect on the free plan to Kaleb's Google Calendar (§5.9) |
+| Brevo | Live (follow-ups, alerts, summary) | Authenticate a custom sending domain (DKIM, DMARC) before real clients |
+| Supabase sign-in email | Live | Check the sending limits during the pilot |
+| Matrix/OneHome | Manual path built | Confirm the account's write rights (D02) before any adapter |
+| ShowingTime | Manual path built | Confirm integration rights (D02) |
+| Remine | Manual path built | Confirm export or API rights and broker policy (D02, D06) |
+| Google email and calendar | Not connected | Only after choosing scopes and account (D02) |
+| MLS data | None | Licence fields, media, caching and AI use separately |
+
+### 10.4 Standing engineering rules
+Carried from v4 and the build so far: pure rules in `lib/core`, database access in `lib/db`,
+typed results; every write has a request ID and replays safely; history-only tables; row-level
+security and non-owner tests with every table; additive migrations; a release switch for each
+release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy.
+
+---
+
+## 11. Decisions
+
+### Settled
+
+| ID | Decision | Settled |
+| --- | --- | --- |
+| D01 | Complete the buyer journey first, with shared seller foundations | 22 Sep |
+| D03 | Email sign-in for private documents and decisions; selected read-only summaries by link | 22 Sep |
+| D04 | Automation prepares drafts and internal reminders; the agent approves external actions. Rift sends buyers only sign-in links; the agent sends invitations himself | 22 to 23 Sep |
+| D05 | No import; Rift has no real clients yet, so each client is added by hand | 23 Sep |
+| D07 | Conservative pilot: business hours, same-business-day replies, one morning summary instead of instant journey alerts, 3 to 5 buyers, at most $50 a month on AI and integrations | 23 Sep |
+| D08 | The old traffic gate is set aside for the buyer journey; the seller journey waits for pilot results | 23 Sep |
+| D10 | Buyer search (preferences into Matrix) is the first useful slice | 22 Sep |
+| D11 | The v4 money ledger and labels are adopted; W10 follows the pilot's start | 23 Sep |
+| D12 | Review requests are the same for everyone; service recovery is separate | 23 Sep |
+| D17 | Georgia assistance comes from Rift's own database built from official sources; DPA One and DPR are discovery tools only (§6) | 24 Sep |
+| D18 | Booking uses Cal.com's free plan with Kaleb's Google Calendar | 24 Sep |
+| D19 | Blueprint v5 is the only source of truth for planning | 24 Sep |
+
+### Open
+
+| ID | Question | Why it matters | Who |
+| --- | --- | --- | --- |
+| D02 | Integration rights for Matrix/OneHome, ShowingTime, Remine and Google, on Kaleb's accounts | No adapter is built without them; the manual paths stay | Kaleb with vendors and broker |
+| D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
+| D07a | Fold the instant new-lead and seller-offer alerts into the morning summary too? That retires the 15-minute "Call today" target | Changes Today and the alert emails | Kaleb |
+| D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
+| D13 | Does "custom artifact" mean a custom visual made for each value (§4.5)? | Sets the design work | Kaleb |
+| D14 | Which extras beyond a value's answer may ask for contact details or an account (§5.1, programs page)? | LEAD-01 keeps the answer itself free | Kaleb |
+| D15 | Approve the Agent OS layout (§8) after a prototype review | §8 is a proposal until then | Kaleb |
+| D16 | AI provider and monthly limit for offer extraction and program monitoring, within the $50 pilot cap | Needed before §5.9 upload and §6.5 monitoring | Kaleb |
+| D20 | The first buyer and seller values and their order (§5.2, §5.3) | Sets the lead-side build | Kaleb |
+| D21 | Delivery order (§13): design and lead side first, or the pilot first | Both are ready to start | Kaleb |
+
+---
+
+## 12. What only Kaleb can supply
+
+Engineering never invents these; until they arrive the product says so on screen.
+- The broker's written rules (D06, D09). Raise after testing, as Kaleb asked.
+- Integration rights (D02).
+- County rent-to-price ratios for the abroad return figure (today's are estimates, and the
+  Amharic still claims they are county averages).
+- The Amharic for the deletion "kept" message, and a native review of the whole Amharic
+  translation.
+- Licence number and phone for the agent profile.
+- The 3 to 5 pilot buyers, added by hand.
+- Cal.com account and API key (§5.9); a custom email domain for Brevo before real clients.
+- Confirmation that the test data created during the review can be cleared.
+
+---
+
+## 13. Delivery order
+
+Proposed; Kaleb confirms it (D21). Each phase ships in reviewable pieces, tested, migrated and
+verified on the live site as before.
+
+| Phase | Work | Needs first |
+| --- | --- | --- |
+| 0. Housekeeping | Full rename to Operations with redirects; connect Cal.com; clearer buyer sign-in (§7.3); clear the test data | Cal.com key |
+| 1. Design system | Spacing and grid, footer, form controls, call-to-action rules, artifact language (§4) | D13 |
+| 2. Lead side | Values split and questionnaire rebuilt (§5.1, §5.6); front door and buyer landing (§5.7); readouts, programs table, how it works (§5.8); offer upload and book page (§5.9); seller and abroad with the same lens (§5.3, §5.4); Save my plan and continuity (§5.5) | D14, D16 (offer upload), D20 |
+| 3. Assistance engine | Program records from official sources, matching, combinations, monitoring and discovery (§6) | D16 for monitoring |
+| 4. Agent OS | Prototype, review, then build the redesign (§8) | D15 |
+| 5. Pilot and client side | Run the pilot with 3 to 5 buyers; client side design pass and missing areas (§7); money v2 (W10) once the pilot starts | Pilot buyers |
+| 6. Seller journey and campaigns | After pilot results (§9, §5.10) | D08 evidence |
+
+Phases 1 and 2 go together (the design rules are applied as the pages are rebuilt). Phase 3 can
+run alongside phase 2, since the assistance value depends on it. Phase 4 can start its prototype
+during phase 2. The pilot (phase 5) can start any time the agent is ready, since the client
+journey is live; running it before phase 4 means piloting on today's Operations screens.
+
+---
+
+## 14. Change log
+
+| Date | Change |
+| --- | --- |
+| 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

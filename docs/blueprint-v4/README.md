@@ -1,5 +1,10 @@
 # Rift blueprint v4 — review and implementation package
 
+> **Archived 24 September 2026. Superseded by [Blueprint v5](../blueprint-v5/README.md), the only
+> source of truth for planning.** This folder is kept as the record of the September review. The
+> journey contracts moved to `docs/blueprint-v5/journey-contracts.md`; every requirement here is
+> carried, with its status, in `docs/blueprint-v5/requirements.md`.
+
 **Prepared:** 22 September 2026  
 **Final consistency review:** 23 September 2026  
 **Baseline reviewed:** repository commit `168aa96`, plus the supplied `rift_buyer_seller_blueprint_v3.md` (internally version 0.3).  
@@ -11,7 +16,7 @@ Rift should give a stranger a useful answer, help that person become a client wi
 
 1. [Review findings and decision register](review-and-decisions.md) — what was wrong, what changes, and what still needs an answer.
 2. [Product specification](product-spec.md) — the improved blueprint: experience, behavior, boundaries, permissions, intelligence, and measurement.
-3. [Journey operating contracts](journey-contracts.md) — triggers, responsibilities, evidence, exits, and exceptions for every buyer and seller stage.
+3. [Journey operating contracts](../blueprint-v5/journey-contracts.md) (moved to v5) — triggers, responsibilities, evidence, exits, and exceptions for every buyer and seller stage.
 4. [Implementation plan](implementation-plan.md) — existing code to reuse, target model, interfaces, ordered work packages, and acceptance scenarios.
 5. [First migration proposal](first-migration-proposal.md) — reviewable SQL for the narrow first data change, deliberately outside the executable migration directory.
 

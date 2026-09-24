@@ -5,6 +5,10 @@
 **Prototype:** `/prototype` — 30 routes, no accounts, no database, no configuration.
 **Grades against:** [benchmark.md](benchmark.md) — built prototype scores **93** after gap remediation, provisional.
 
+> **Planning moved to [Blueprint v5](blueprint-v5/README.md) on 24 September 2026.** It is the
+> only source of truth for what is built next. This handoff stays the engineering record of what
+> is built and how it works.
+
 This document is the bridge between the prototype and the real build. It says what to
 build, in what order, which contracts must not drift, and what is deliberately fake.
 

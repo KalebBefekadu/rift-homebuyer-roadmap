@@ -44,6 +44,10 @@ disagree about a number that matters. It does not check prose. Keep finding the 
 
 ## Read in this order
 
+0. **[docs/blueprint-v5/README.md](docs/blueprint-v5/README.md)**: the only source of truth for
+   what Rift is and what gets built next. Where it and anything below disagree about plans, it
+   wins; the documents below record what is built and how.
+
 1. **[docs/handoff.md](docs/handoff.md)** — **§2 is what ships first**, then the build order,
    the contracts that must not drift, and the acceptance tests to write first. Start here
    every session. The MVP is phases 1–3, buyers only; phase 4 is behind a traffic gate.
