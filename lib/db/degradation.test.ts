@@ -236,7 +236,7 @@ describe("the calendar with no credentials", () => {
  * over rows) and the few with their own shapes are named and checked apart.
  */
 describe("the journey layer with nothing configured (AT38)", () => {
-  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "jobs", "retention"] as const;
+  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "jobs", "retention", "summary"] as const;
   const OWN_SHAPE = new Set([
     "journeyTablesMissing", "inviteTokenHash", "trackedCron", "clientSession",
     "shapeRevision", "shapeHomes", "shapeEvents", "shapeUpdates", "shapeSteps", "shapeTours", "newHomeError", "maskEmail",

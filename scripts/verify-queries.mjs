@@ -387,6 +387,23 @@ await check("all dates (datesNeedingAttention)", () => db.from("rift_deadlines")
 await check("ended contracts (datesNeedingAttention)", () => db.from("rift_transaction_outcomes").select("transaction_id").eq("agent_id", NIL).limit(1));
 await check("date replay (addDeadline)", () => db.from("rift_deadlines").select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
 await check("job runs (jobsHealth)", () => db.from("rift_job_runs").select("job,ok,detail,started_at,finished_at").order("started_at", { ascending: false }).limit(1));
+// The morning summary (lib/db/summary.ts, W12): what each member did since the last business morning.
+const SINCE = new Date(Date.now() - 86_400_000).toISOString();
+for (const [name, table, cols] of [
+  ["summary: new people", "rift_leads", "name,side,band"],
+  ["summary: reactions", "rift_home_reactions", "journey_id,home_id,member_id,reaction,reason,created_at"],
+  ["summary: homes added", "rift_shortlist_homes", "journey_id,address,added_by_member,created_at"],
+  ["summary: showing requests", "rift_tour_stops", "journey_id,home_id,requested_by_member,created_at"],
+  ["summary: showing answers", "rift_tour_feedback", "journey_id,stop_id,member_id,offer,created_at"],
+  ["summary: offer answers", "rift_bid_responses", "journey_id,bid_id,member_id,version,instruction,told_agent,created_at"],
+  ["summary: brief answers", "rift_search_responses", "journey_id,member_id,response,created_at"],
+  ["summary: brief proposals", "rift_search_revisions", "journey_id,author_member_id,created_at"],
+  ["summary: reported work", "rift_workstream_updates", "journey_id,member_id,workstream,created_at"],
+]) {
+  await check(name, () => db.from(table).select(cols).eq("agent_id", NIL).gte("created_at", SINCE).limit(1));
+}
+await check("summary: members", () => db.from("rift_journey_members").select("id,journey_id,display_name,email,accepted_at").eq("agent_id", NIL).limit(1));
+await check("summary: bids to homes", () => db.from("rift_bids").select("id,home_id").eq("agent_id", NIL).limit(1));
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);

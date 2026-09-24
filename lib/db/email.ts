@@ -190,3 +190,17 @@ export async function sendOfferChosen(c: OfferChosenEmail): Promise<SendResult> 
     tags: ["agent-alert"],
   }, "email.offerChosen");
 }
+
+/**
+ * The agent's morning summary (W12, D07). One email a business day, built in
+ * lib/core/summary.ts. Tagged apart from the instant alerts so either can be
+ * silenced without touching the other.
+ */
+export async function sendDailySummary(to: string, built: { subject: string; html: string }): Promise<SendResult> {
+  return send({
+    to: [{ email: to, name: "Kaleb" }],
+    subject: built.subject,
+    htmlContent: built.html,
+    tags: ["agent-summary"],
+  }, "email.dailySummary");
+}

@@ -145,4 +145,21 @@ describe("scheduled jobs (AT29, REQ-QUALITY-04)", () => {
     const crons = (JSON.parse(readFileSync("vercel.json", "utf8")).crons as { path: string }[]).map((c) => c.path).sort();
     expect(JOB_IDS.map((j) => JOBS[j].path).sort()).toEqual(crons);
   });
+
+  it("does not call the morning summary missed over a weekend or a holiday", () => {
+    const summary = (at: string): JobRun => ({ job: "daily-summary", ok: true, detail: null, startedAt: at, finishedAt: at });
+    const friday = summary("2026-09-25T13:00:00Z");
+    expect(jobHealth("daily-summary", [friday], T0, new Date("2026-09-27T20:00:00Z")).state).toBe("ok");
+    expect(jobHealth("daily-summary", [friday], T0, new Date("2026-09-28T18:00:00Z")).state).toBe("ok");
+    expect(jobHealth("daily-summary", [friday], T0, new Date("2026-09-28T20:00:00Z")).state).toBe("missed");
+    /* Labor Day 2026 is Monday Sep 7: Friday's run is not late until Tuesday. */
+    const beforeLaborDay = summary("2026-09-04T13:00:00Z");
+    expect(jobHealth("daily-summary", [beforeLaborDay], T0, new Date("2026-09-07T20:00:00Z")).state).toBe("ok");
+    expect(jobHealth("daily-summary", [beforeLaborDay], T0, new Date("2026-09-08T20:00:00Z")).state).toBe("missed");
+  });
+
+  it("schedules the morning summary on weekdays only", () => {
+    const crons = JSON.parse(readFileSync("vercel.json", "utf8")).crons as { path: string; schedule: string }[];
+    expect(crons.find((c) => c.path === JOBS["daily-summary"].path)?.schedule).toMatch(/ \* \* 1-5$/);
+  });
 });

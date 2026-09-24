@@ -453,7 +453,7 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | W07 | Live 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Migration `20260924010000` applied. Seller stages wait for D08 |
 | W08 | Live 24 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Migration `20260924020000` applied |
 | W09 | Live 24 Sep | Contract dates and scheduled-job runs, on today's rules. Migration `20260924030000` applied |
-| W12 (part) | Built 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40). No migration. Pilot evidence waits for the pilot |
+| W12 (part) | Built 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40), and the morning summary (D07). Needs migration `20260924040000` and a deploy. Pilot evidence waits for the pilot |
 | W10, W11, W13 | Not started | W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
@@ -555,6 +555,20 @@ That walk found and fixed a Studio button with no fill, stage labels faded to 3:
 text at 4.47:1 on shaded cards (`--warn` is now `#98600b`), an unnamed logo link, two
 unlabelled fields and offer money in 10.5px type. The release switch is held by
 `lib/core/release.test.ts` and was drilled (AT40), below.
+
+**The morning summary (D07).** One email each business morning at 9 AM Eastern (13:00 UTC,
+Monday to Friday; federal holidays skipped and covered the next business morning), from
+`/api/summary/run`: contract dates that passed and failed scheduled jobs first, then what each
+household did since the previous business morning (accepted an invitation, reacted to a home,
+added one, asked to see one, answered after a showing, answered on an offer, confirmed or asked
+to change the search priorities, reported a task done), then dates not yet checked or coming
+up, then new people. Only what a member did counts; an answer the agent recorded for them is
+not news. A day with nothing to say sends nothing. It is a scheduled job like the others, so a
+failed or missed one shows on Today and /api/health, and a weekend is not a missed run.
+Journeys send the agent no instant alerts. The instant alert for a new lead from the public
+funnel, and the one for a seller choosing an offer, are unchanged: whether they fold into the
+summary as well is the owner's call, because Studio's fifteen-minute reply target for a
+"Call today" lead depends on the first one.
 
 **Rolling the release back.** Set `RIFT_BUYER_SEARCH=off` on Vercel and redeploy (a variable
 reaches only new deployments). Every journey page then says it is switched off and every

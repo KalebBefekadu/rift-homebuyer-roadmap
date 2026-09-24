@@ -12,9 +12,16 @@
  * Pure. The schedules mirror vercel.json; a test holds them together.
  */
 
-export type JobId = "nurture-run" | "retention-sweep" | "rates-refresh";
+import { isBusinessDay } from "./deadline";
+import { marketDay } from "./progress";
 
-export const JOBS: Record<JobId, { label: string; path: string; everyHours: number; graceHours: number; matters: string }> = {
+export type JobId = "nurture-run" | "retention-sweep" | "rates-refresh" | "daily-summary";
+
+export const JOBS: Record<JobId, {
+  label: string; path: string; everyHours: number; graceHours: number; matters: string;
+  /** Runs Monday to Friday and not on federal holidays: a weekend is not a missed run. */
+  businessDaysOnly?: boolean;
+}> = {
   "nurture-run": {
     label: "Follow-up emails", path: "/api/nurture/run", everyHours: 24, graceHours: 6,
     matters: "Follow-ups that are due are not being sent.",
@@ -26,6 +33,10 @@ export const JOBS: Record<JobId, { label: string; path: string; everyHours: numb
   "rates-refresh": {
     label: "Weekly mortgage rate", path: "/api/rates/refresh", everyHours: 24 * 7, graceHours: 24,
     matters: "Payment figures keep using an older rate, and say so.",
+  },
+  "daily-summary": {
+    label: "Morning summary", path: "/api/summary/run", everyHours: 24, graceHours: 6, businessDaysOnly: true,
+    matters: "The morning summary email is not arriving. Everything it would say is still on Today.",
   },
 };
 export const JOB_IDS = Object.keys(JOBS) as JobId[];
@@ -65,7 +76,7 @@ export function jobHealth(job: JobId, runs: JobRun[], trackingSince: string, now
   const lastSuccess = mine.find((r) => r.ok && r.finishedAt)?.finishedAt ?? null;
   const allowed = (spec.everyHours + spec.graceHours) * HOUR;
   const since = lastSuccess ?? trackingSince;
-  const overdue = now.getTime() - Date.parse(since) > allowed;
+  const overdue = now.getTime() - Date.parse(since) > allowed + (spec.businessDaysOnly ? daysOff(since, now) * 24 * HOUR : 0);
 
   let state: JobState;
   let problem: string | null = null;
@@ -84,6 +95,18 @@ export function jobHealth(job: JobId, runs: JobRun[], trackingSince: string, now
   } else state = lastSuccess ? "ok" : "never";
 
   return { job, label: spec.label, state, lastSuccess, lastRun, problem };
+}
+
+/** Weekend days and federal holidays after `since`, up to and including today, in Georgia. */
+function daysOff(since: string, now: Date): number {
+  let n = 0;
+  const last = marketDay(now);
+  for (let t = Date.parse(since) + 24 * HOUR, i = 0; i < 60; t += 24 * HOUR, i++) {
+    const day = marketDay(new Date(t));
+    if (day > last) break;
+    if (!isBusinessDay(day)) n++;
+  }
+  return n;
 }
 
 /** The short failure text kept with a run. Never a payload: no addresses, no names. */
