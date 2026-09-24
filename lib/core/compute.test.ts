@@ -25,7 +25,7 @@ describe("the reference case", () => {
   const i = buyer();
 
   it("produces the documented cash to close", () => {
-    expect(cashToClose(i).total).toBeCloseTo(26_187.5, 2);
+    expect(cashToClose(i).total).toBeCloseTo(24_787.5, 2);
   });
 
   it("produces the documented down payment and loan", () => {
@@ -42,9 +42,9 @@ describe("the reference case", () => {
 
   it("produces the documented gap and timeline", () => {
     const g = cashGap(i);
-    expect(g.gap).toBeCloseTo(17_187.5, 2);
+    expect(g.gap).toBeCloseTo(15_787.5, 2);
     expect(g.fullyCovered).toBe(false);
-    expect(g.monthsToClose).toBe(27);
+    expect(g.monthsToClose).toBe(25);
   });
 });
 

@@ -139,7 +139,6 @@ export function cashToClose(i: BuyerInputs) {
   const prepaids = i.insuranceYr + (i.price * i.taxPct) / 100 / 12 * 3;
   const inspection = 550;
   const appraisal = 650;
-  const moving = 1_400;
   const earnest = Math.round((i.price * 0.01) / 100) * 100;
 
   const lines: CashLine[] = [
@@ -148,7 +147,6 @@ export function cashToClose(i: BuyerInputs) {
     { label: "Prepaids and escrow", amount: prepaids, note: "First-year insurance plus about three months of taxes held in escrow" },
     { label: "Inspection", amount: inspection, note: "Paid before closing, not refundable if you walk" },
     { label: "Appraisal", amount: appraisal, note: "Usually collected by the lender up front" },
-    { label: "Moving", amount: moving, note: "Local move estimate, the cost buyers forget most often" },
     { label: "Earnest money", amount: earnest, note: "Paid at contract, credited back to you at closing", credited: true },
   ];
 
@@ -164,7 +162,7 @@ export function cashToClose(i: BuyerInputs) {
       { label: "Down payment", value: pct(i.downPct) },
       { label: "Closing cost estimate", value: `${pct(i.closingPct)} of price` },
       { label: "Insurance", value: `${money(i.insuranceYr)} per year, first year collected up front` },
-      { label: "Inspection / appraisal / moving", value: `${money(inspection)} / ${money(appraisal)} / ${money(moving)}` },
+      { label: "Inspection / appraisal", value: `${money(inspection)} / ${money(appraisal)}` },
     ],
     couldBeWrong:
       "Closing costs in Georgia vary by lender, attorney, and loan type, and a seller may agree to pay part of them. Escrow amounts depend on when in the tax year you close. Earnest money is shown separately because you get it back at the table.",

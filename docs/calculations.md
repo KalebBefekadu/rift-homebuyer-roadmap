@@ -74,7 +74,7 @@ total     = pi + tax + insurance + pmi + hoa
 ## Cash to close — `cashToClose(i)`
 
 The figure that misleads almost every first-time buyer, because they have only ever been
-quoted the down payment. Seven lines, one of which is credited back:
+quoted the down payment. Six lines, one of which is credited back:
 
 ```text
 down       = price * downPct / 100
@@ -82,7 +82,6 @@ closing    = price * closingPct / 100
 prepaids   = insuranceYr + (price * taxPct / 100 / 12) * 3
 inspection = 550
 appraisal  = 650
-moving     = 1400
 earnest    = round(price * 0.01 / 100) * 100      -- credited back at closing
 
 total = sum of every line that is NOT credited
@@ -92,9 +91,9 @@ total = sum of every line that is NOT credited
 the line understates what they need on the day, and including it in the total overstates what
 the purchase actually costs them. It is the only `credited: true` line.
 
-The three lines nobody quotes — inspection, appraisal, moving — are held as constants rather
-than percentages because they do not scale with price. Moving is the cost buyers forget most
-often.
+The two lines nobody quotes, inspection and appraisal, are held as constants rather than
+percentages because they do not scale with price. Moving was a third until Blueprint v5
+(Kaleb, R1): it is not paid at closing, so it is not part of the cash to close.
 
 ## The gap — `cashGap(i)`
 
@@ -162,14 +161,14 @@ filed.
 | Closing costs | `$9,750` |
 | Prepaids and escrow | `$2,462.50` |
 | Earnest money (credited back) | `$3,300` |
-| **Cash to close** | **`$26,187.50`** |
+| **Cash to close** | **`$24,787.50`** |
 | Covered | `$9,000` |
-| **Gap** | **`$17,187.50`** |
-| Months to close the gap | `27` |
+| **Gap** | **`$15,787.50`** |
+| Months to close the gap | `25` |
 | `fullyCovered` | `false` |
 
 Note the shape of it: the down payment is **$11,375** and the cash actually needed is
-**$26,187.50**. A buyer told only the first number is short by more than the number they
+**$24,787.50**. A buyer told only the first number is short by more than the number they
 were told.
 
 These values are pinned in `lib/core/compute.test.ts`. Update the test, this table, and
