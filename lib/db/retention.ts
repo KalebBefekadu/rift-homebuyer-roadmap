@@ -1,5 +1,6 @@
 import "server-only";
 import { journeyTablesMissing } from "./journeys";
+import { removeJourneyFiles } from "./documents";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
@@ -313,6 +314,19 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
          go too, and everything under them cascades from the journey. When
          transaction records exist this is where the broker's hold rule
          belongs (first-migration-proposal, "deletion compatibility"). */
+      /* Their documents' FILES first (W08). The rows are how the files are
+         found, and the rows go with the journeys below; a file left in
+         Storage after its row is gone could never be found to delete. If
+         the files cannot be removed, stop here so the request can be
+         retried, rather than erase the record and keep the files. */
+      const theirJourneys = await boundedRead(
+        db.from("rift_journeys").select("id").eq("agent_id", agent_id).in("origin_lead_id", leadIds),
+        "their journeys");
+      if (!theirJourneys.ok && !journeyTablesMissing(theirJourneys.error)) return theirJourneys;
+      const journeyIds = theirJourneys.ok && "data" in theirJourneys ? (theirJourneys.data as { id: string }[]).map((x) => x.id) : [];
+      const files = await removeJourneyFiles(agent_id, journeyIds);
+      if (!files.ok) return files;
+
       const journeys = await boundedWrite(
         db.from("rift_journeys").delete().eq("agent_id", agent_id).in("origin_lead_id", leadIds),
         "their journeys");

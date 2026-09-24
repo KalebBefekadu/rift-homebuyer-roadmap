@@ -7,8 +7,36 @@
  * worth verifying: building those URLs is the part that goes wrong.
  */
 import http from "node:http";
+import { createHmac } from "node:crypto";
 
 const TARGET = process.env.PGRST_URL ?? "http://localhost:3001";
+/* Supabase Storage (supabase/storage-api), started by up.sh on 5055: 5000 is
+   often taken by macOS AirPlay. */
+const STORAGE = process.env.STORAGE_URL ?? "http://localhost:5055";
+const SECRET = "rift-local-test-secret-at-least-32-chars-long";
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+const SERVICE_TOKEN = (() => {
+  const h = b64({ alg: "HS256", typ: "JWT" });
+  const p = b64({ role: "service_role", iat: 1700000000, exp: 2000000000 });
+  return `${h}.${p}.${createHmac("sha256", SECRET).update(`${h}.${p}`).digest("base64url")}`;
+})();
+
+/**
+ * Locally the server's "service role key" is an anon token (env.sh), which is
+ * all PostgREST needs here. Storage enforces roles, so for /storage/v1 that
+ * exact token, anon with no user, is upgraded to the service role: what the
+ * real service key is in production. A browser upload to a signed URL carries
+ * no Authorization header and passes through as it is.
+ */
+function storageHeaders(headers) {
+  const out = { ...headers };
+  const token = String(out.authorization ?? "").replace(/^Bearer\s+/i, "");
+  try {
+    const claims = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8"));
+    if (claims.role === "anon" && !claims.sub) out.authorization = `Bearer ${SERVICE_TOKEN}`;
+  } catch { /* no token: leave it */ }
+  return out;
+}
 const PORT = Number(process.env.PROXY_PORT ?? 3002);
 
 /**
@@ -59,11 +87,26 @@ http.createServer(async (req, res) => {
     return;
   }
 
-  const url = TARGET + path.replace(/^\/rest\/v1/, "");
+  const storage = path.startsWith("/storage/v1/");
+  /* In a Supabase project the API gateway (Kong) answers CORS for Storage,
+     which is what lets a browser upload straight to a signed URL. The
+     storage server itself does not, so this proxy stands in for the gateway. */
+  const cors = {
+    "access-control-allow-origin": req.headers.origin ?? "*",
+    "access-control-allow-methods": "GET,HEAD,POST,PUT,DELETE,OPTIONS",
+    "access-control-allow-headers": req.headers["access-control-request-headers"] ?? "authorization,apikey,content-type,x-upsert",
+    "access-control-max-age": "3600",
+  };
+  if (storage && req.method === "OPTIONS") {
+    res.writeHead(204, cors);
+    res.end();
+    return;
+  }
+  const url = storage ? STORAGE + path.replace(/^\/storage\/v1/, "") : TARGET + path.replace(/^\/rest\/v1/, "");
   const chunks = [];
   for await (const c of req) chunks.push(c);
 
-  const headers = { ...req.headers };
+  const headers = storage ? storageHeaders(req.headers) : { ...req.headers };
   delete headers.host;
   delete headers["content-length"];
 
@@ -73,7 +116,11 @@ http.createServer(async (req, res) => {
       headers,
       body: ["GET", "HEAD"].includes(req.method ?? "") ? undefined : Buffer.concat(chunks),
     });
-    res.writeHead(upstream.status, Object.fromEntries(upstream.headers));
+    const out = Object.fromEntries(upstream.headers);
+    /* The body is sent whole below, already decoded by fetch. */
+    delete out["content-encoding"];
+    delete out["content-length"];
+    res.writeHead(upstream.status, storage ? { ...out, ...cors } : out);
     res.end(Buffer.from(await upstream.arrayBuffer()));
   } catch (e) {
     res.writeHead(502, { "content-type": "application/json" });

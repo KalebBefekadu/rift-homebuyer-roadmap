@@ -72,7 +72,28 @@ docker run -d --name rift-postgrest --network host \
   postgrest/postgrest >/dev/null
 sleep 5
 
-echo "→ /rest/v1 proxy"
+echo "→ Storage (documents, W08)"
+# Supabase's own storage server, on the files backend, so uploads are tested
+# against the real API rather than a stand-in. It creates the storage schema
+# and the anon/authenticated/service_role roles in this database; the bucket
+# is created the way the migration creates it in production. Port 5055: 5000
+# is often taken by macOS AirPlay.
+mkjwt() { node -e 'const c=require("crypto");const b=o=>Buffer.from(JSON.stringify(o)).toString("base64url");const h=b({alg:"HS256",typ:"JWT"});const p=b({role:process.argv[1],iat:1700000000,exp:2000000000});console.log(h+"."+p+"."+c.createHmac("sha256",process.argv[2]).update(h+"."+p).digest("base64url"))' "$1" "$SECRET"; }
+docker rm -f rift-storage >/dev/null 2>&1 || true
+docker run -d --name rift-storage --network host \
+  -e ANON_KEY="$(mkjwt anon)" -e SERVICE_KEY="$(mkjwt service_role)" \
+  -e AUTH_JWT_SECRET="$SECRET" -e PGRST_JWT_SECRET="$SECRET" \
+  -e DATABASE_URL="postgres://postgres:pw@localhost:${PG_PORT}/postgres" -e DB_INSTALL_ROLES=true \
+  -e FILE_SIZE_LIMIT=52428800 -e STORAGE_BACKEND=file -e FILE_STORAGE_BACKEND_PATH=/tmp/storage \
+  -e TENANT_ID=stub -e REGION=local -e GLOBAL_S3_BUCKET=stub -e SERVER_PORT=5055 -e ENABLE_IMAGE_TRANSFORMATION=false \
+  public.ecr.aws/supabase/storage-api:v1.72.1 >/dev/null
+for _ in $(seq 1 30); do curl -sf localhost:5055/status >/dev/null && break; sleep 1; done
+docker exec rift-pg psql -U postgres -q -c "
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('rift-documents','rift-documents', false, 20971520, array['application/pdf','image/jpeg','image/png'])
+  on conflict (id) do nothing;"
+
+echo "→ /rest/v1 and /storage/v1 proxy"
 pkill -f "scripts/local/proxy.mjs" >/dev/null 2>&1 || true
 nohup node scripts/local/proxy.mjs > /tmp/rift-proxy.log 2>&1 &
 sleep 2

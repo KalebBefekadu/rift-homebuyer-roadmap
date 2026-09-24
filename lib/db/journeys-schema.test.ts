@@ -521,13 +521,97 @@ describe("progress (W07; REQ-STATE-05, 06, REQ-UX-02 in the record)", () => {
   });
 });
 
+describe("offers and documents (W08; AT22 to AT25 in the record)", () => {
+  const H4 = "a6666666-0000-4000-8000-000000000004";
+  const BID = "abbbbbbb-0000-4000-8000-000000000001";
+  const DEVON = "a5555555-0000-4000-8000-000000000001";
+  const rq = (n: number) => `abbbbbbb-1111-4000-8000-${String(n).padStart(12, "0")}`;
+  const TERMS = JSON.stringify({ price: 400000, earnestMoney: 5000, financing: "conventional", downPct: 10 });
+  const stepSql = `insert into rift_bid_steps (agent_id, journey_id, bid_id, seq, kind, version, terms, origin, required, note, actor_label, request_id)
+     values ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::jsonb,$10,'Agent A',$11)`;
+  const st = (seq: number, kind: string, version: number, extra: { terms?: string | null; origin?: string | null; required?: string; note?: string | null } = {}, n = seq): [string, unknown[]] =>
+    [stepSql, [A, J1, BID, seq, kind, version, extra.terms ?? null, extra.origin ?? null, extra.required ?? "[]", extra.note ?? null, rq(n)]];
+  const answer = (instruction: string, note: string | null, n: number, member = DEVON): [string, unknown[]] =>
+    [`insert into rift_bid_responses (agent_id, journey_id, bid_id, version, member_id, instruction, note, actor_label, request_id)
+      values ($1,$2,$3,1,$4,$5,$6,'Devon',$7)`, [A, J1, BID, member, instruction, note, rq(n)]];
+  const run = (c: Client, [sql, params]: [string, unknown[]]) => c.query(sql, params as never[]);
+
+  test("fixtures", async (c) => {
+    await c.query(
+      `insert into rift_shortlist_homes (id, agent_id, journey_id, address, facts_source, facts_as_of, added_by_kind, added_by_label)
+       values ($1,$2,$3,'3 Birch Ln, Snellville','Matrix listing','2026-09-21','agent','Agent A')`, [H4, A, J1]);
+    await c.query(`insert into rift_bids (id, agent_id, journey_id, home_id, actor_label) values ($1,$2,$3,$4,'Agent A')`, [BID, A, J1, H4]);
+  });
+
+  test("an offer starts with our terms, as version 1, and terms steps carry terms", async (c) => {
+    await refused(c, ...st(1, "ask", 1, { required: '[{"memberId":"x","name":"Devon"}]' }), /first_is_ours/);
+    await refused(c, ...st(1, "terms", 1, { terms: TERMS, origin: "theirs" }), /first_is_ours/);
+    await refused(c, ...st(1, "terms", 1, { origin: "ours" }), /terms_carry_terms/);
+    await run(c, st(1, "terms", 1, { terms: TERMS, origin: "ours" }));
+  });
+
+  test("asking names the people whose say is needed", async (c) => {
+    await refused(c, ...st(2, "ask", 1), /ask_names_people/);
+    await run(c, st(2, "ask", 1, { required: `[{"memberId":"${DEVON}","name":"Devon"}]` }));
+  });
+
+  test("signed, submitted and the endings need evidence", async (c) => {
+    for (const kind of ["signed", "submitted", "accepted", "rejected", "expired", "withdrawn"]) {
+      await refused(c, ...st(3, kind, 1), /evidence/);
+    }
+  });
+
+  test("anything but go ahead says why, and only household members answer", async (c) => {
+    await refused(c, ...answer("stop", null, 50), /not_proceed_says_why/);
+    await refused(c, ...answer("proceed", null, 51, "a5555555-0000-4000-8000-0000000000ff"), /member_on_journey/);
+    await run(c, answer("proceed", null, 52));
+  });
+
+  test("two people recording the next step at once: one wins", async (c) => {
+    await run(c, st(3, "prepared", 1));
+    await refused(c, ...st(3, "withdrawn", 1, { note: "x" }, 60), /rift_bid_steps_seq/);
+  });
+
+  test("a document is kept only from the clean area, with its hash", async (c) => {
+    const doc = (path: string, sha: string) => c.query(
+      `insert into rift_documents (agent_id, journey_id, family, label, filename, kind, bytes, sha256, storage_path, actor_label)
+       values ($1,$2,'counter','Seller counter','counter.pdf','pdf',1200,$3,$4,'Agent A')`, [A, J1, sha, path]);
+    await refused(c, `insert into rift_documents (agent_id, journey_id, family, label, filename, kind, bytes, sha256, storage_path, actor_label)
+       values ($1,$2,'counter','Seller counter','counter.pdf','pdf',1200,$3,'quarantine/x/y','Agent A')`, [A, J1, "a".repeat(64)], /storage_path/);
+    await refused(c, `insert into rift_documents (agent_id, journey_id, family, label, filename, kind, bytes, sha256, storage_path, actor_label)
+       values ($1,$2,'counter','Seller counter','counter.exe','exe',1200,$3,'clean/x/y','Agent A')`, [A, J1, "a".repeat(64)], /kind/);
+    await doc(`clean/${A}/${J1}/1.pdf`, "b".repeat(64));
+  });
+
+  test("all of it is history", async (c) => {
+    await refused(c, "update rift_bid_steps set note = 'edited' where bid_id = $1", [BID], /is history/);
+    await refused(c, "update rift_bid_responses set instruction = 'stop' where bid_id = $1", [BID], /is history/);
+    await refused(c, "update rift_bids set home_id = home_id where id = $1", [BID], /is history/);
+    await refused(c, "update rift_documents set label = 'renamed' where journey_id = $1", [J1], /is history/);
+  });
+
+  test("an offer cannot point at a home on another journey", async (c) => {
+    await refused(c, `insert into rift_bids (agent_id, journey_id, home_id, actor_label) values ($1,$2,$3,'A')`, [A, J2, H4], /home_on_journey/);
+  });
+
+  test("another agent sees none of it", async (c) => {
+    for (const t of ["rift_bids", "rift_bid_steps", "rift_bid_responses", "rift_documents"]) {
+      const mine = await as(c, A_USER, async () => (await c.query(`select count(*)::int n from ${t}`)).rows[0].n);
+      const theirs = await as(c, B_USER, async () => (await c.query(`select count(*)::int n from ${t}`)).rows[0].n);
+      expect(mine, t).toBeGreaterThan(0);
+      expect(theirs, t).toBe(0);
+    }
+  });
+});
+
 describe("deletion (first-migration-proposal §deletion compatibility)", () => {
   test("removing the journeys first lets the relationship go, and takes everything under them", async (c) => {
     await c.query("begin");
     await c.query("delete from rift_journeys where origin_lead_id = $1 and agent_id = $2", [A_LEAD, A]);
     await c.query("delete from rift_leads where id = $1", [A_LEAD]);
     for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses", "rift_tour_stops", "rift_tour_steps", "rift_tour_feedback",
-      "rift_journey_events", "rift_transactions", "rift_transaction_outcomes", "rift_workstream_updates"]) {
+      "rift_journey_events", "rift_transactions", "rift_transaction_outcomes", "rift_workstream_updates",
+      "rift_bids", "rift_bid_steps", "rift_bid_responses", "rift_documents"]) {
       const { rows } = await c.query(`select count(*)::int n from ${t} where agent_id = $1`, [A]);
       expect(rows[0].n, t).toBe(0);
     }

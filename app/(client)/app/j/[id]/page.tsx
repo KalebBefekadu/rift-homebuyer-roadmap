@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/client";
+import { clientBids, clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/client";
 import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
 import { todayFor } from "@/lib/core/today";
 import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";
@@ -11,6 +11,7 @@ import { ClientShell } from "../../ClientShell";
 import { ClientBrief } from "./ClientBrief";
 import { ClientHomes } from "./ClientHomes";
 import { Today, type BuyerWork } from "./Today";
+import { ClientOffers } from "./ClientOffers";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -53,11 +54,12 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const member = m.data;
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
-  const [brief, homes, tours, prog] = await Promise.all([
+  const [brief, homes, tours, prog, offers] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
     member.side === "buy" ? clientProgress(member) : Promise.resolve(null),
+    member.side === "buy" && member.scopes.includes("money") ? clientBids(member) : Promise.resolve(null),
   ]);
   /* Worded here, on the server, so nothing but the buyer's line leaves it:
      not the agent's notes, not the ShowingTime reference, not why a showing
@@ -83,6 +85,13 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   /* Today (W07). The order is lib/core/today.ts; every line is worded here
      so the workstreams' raw notes and sources leave only as sentences. */
   const p = prog && prog.ok && "data" in prog ? prog.data : null;
+  const o = offers && offers.ok && "data" in offers ? offers.data : null;
+  /* Only what the component shows: which documents were ever shared is the server's to check. */
+  const buyerBids = (o?.bids ?? []).map((x) => {
+    const rest: Omit<typeof x, "sharedDocumentIds"> & { sharedDocumentIds?: string[] } = { ...x };
+    delete rest.sharedDocumentIds;
+    return rest;
+  });
   const address = new Map((h ?? []).map((x) => [x.id, x.address]));
   const today = p && !p.unavailable
     ? todayFor({
@@ -92,6 +101,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       plan: p.plan,
       briefToConfirm: respond && !!b?.revision && !b.myResponse,
       showingsToAnswer: respond ? showings.filter((x) => x.completed && !x.answeredByMe).map((x) => address.get(x.homeId) ?? "A home you saw") : [],
+      offersToAnswer: respond ? buyerBids.filter((x) => x.asked?.open && x.asked.mineNeeded && !x.asked.myAnswer && !x.newerDraft).map((x) => x.address) : [],
     })
     : null;
   const contract = p?.open ? {
@@ -150,6 +160,19 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
               canRespond={false}
               agentFirst={agentFirst}
             />
+          )}
+        </section>
+      ) : null}
+
+      {member.side === "buy" && offers && (!o || o.unavailable || buyerBids.length) ? (
+        <section id="offers" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="offers-h">
+          <h2 id="offers-h" className="t-md w6">Offers</h2>
+          {!o ? (
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>Your offers did not load. That is not the same as there being none; reload in a moment.</p>
+          ) : o.unavailable ? (
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>This part is being set up. Ask {agentFirst} about any offer.</p>
+          ) : (
+            <ClientOffers journeyId={member.journeyId} bids={buyerBids} canRespond={respond} agentFirst={agentFirst} />
           )}
         </section>
       ) : null}

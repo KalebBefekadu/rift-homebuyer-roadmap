@@ -6,7 +6,7 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
-  proposeRevision, reactAsMember, reportWorkAsMember, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
+  proposeRevision, reactAsMember, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
 } from "@/lib/db/client";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
@@ -159,6 +159,15 @@ export async function POST(req: Request) {
         return json({ ok: false, error: "That page is out of date. Reload it." }, 400);
       }
       r = await reportWorkAsMember(member, contractId, workstream, str(b.note, 500) || null, Number(b.expectedSeq), requestId);
+      break;
+    }
+    case "bid-answer": {
+      const bidId = str(b.bidId, 40);
+      const requestId = str(b.requestId, 40);
+      const instruction = str(b.instruction, 10);
+      if (!isUuid(bidId) || !isUuid(requestId)) return json({ ok: false, error: "That page is out of date. Reload it." }, 400);
+      if (!["proceed", "change", "stop"].includes(instruction)) return json({ ok: false, error: "Choose an answer." }, 400);
+      r = await respondToBid(member, bidId, Number(b.version), instruction as "proceed" | "change" | "stop", str(b.note, 500) || null, requestId);
       break;
     }
     case "add-home": {

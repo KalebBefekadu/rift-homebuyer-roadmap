@@ -7,7 +7,9 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem,
 } from "@/app/(studio)/studio/journey/ops";
+import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
 import {
   JOURNEY_STATUSES, STAGES, WORKSTREAMS, WORK_STATES,
@@ -56,6 +58,26 @@ function brief(v: unknown): SearchBrief | null {
   if (!b || typeof b !== "object" || !Array.isArray(b.criteria) || !Array.isArray(b.questions)) return null;
   return { criteria: b.criteria, questions: b.questions.filter((q): q is string => typeof q === "string") } as SearchBrief;
 }
+
+/** Only the known terms, each as its own type, whatever else was posted: this becomes jsonb. */
+function terms(v: unknown): Terms | null {
+  const t = (v ?? {}) as Record<string, unknown>;
+  const int = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? Math.round(x) : NaN);
+  const text = (x: unknown, max: number) => (typeof x === "string" && x.trim() ? x.trim().slice(0, max) : null);
+  const financing = str(t.financing, 20) as BidFinancing;
+  if (!BID_FINANCING.includes(financing)) return null;
+  return {
+    price: int(t.price), earnestMoney: int(t.earnestMoney), financing,
+    downPct: financing === "cash" ? null : typeof t.downPct === "number" ? t.downPct : NaN,
+    concessions: int(t.concessions ?? 0),
+    dueDiligenceDays: t.dueDiligenceDays === null || t.dueDiligenceDays === undefined ? null : int(t.dueDiligenceDays),
+    financingContingency: t.financingContingency === true, appraisalContingency: t.appraisalContingency === true,
+    closingDate: text(t.closingDate, 10), respondBy: text(t.respondBy, 40), respondBySource: text(t.respondBySource, 200),
+    other: text(t.other, 1000),
+  };
+}
+
+const ids = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").slice(0, 20) : []);
 
 function facts(v: unknown): PropertyFacts {
   /* Only the known facts, whatever else was posted: this becomes jsonb. */
@@ -165,6 +187,31 @@ export async function POST(req: Request) {
         state, owner, ownerName: str(b.ownerName, 160) || null, source: str(b.source, 160) || null,
         confirmedOn: str(b.confirmedOn, 10) || null, note: str(b.note, 500) || null,
       }, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "doc-slot":
+      return json(await documentSlot(journeyId));
+    case "doc-finish":
+      return json(await documentFinish(journeyId, str(b.path, 200), str(b.filename, 300), str(b.type, 100), str(b.family, 20), str(b.label, 160)));
+    case "bid-start": {
+      const t = terms(b.terms);
+      if (!t) return json({ ok: false, error: "Choose how it is paid for." }, 400);
+      return json(await openBid(journeyId, str(b.homeId, 40), t, ids(b.documentIds), str(b.requestId, 40)));
+    }
+    case "bid-step": {
+      const kind = str(b.kind, 20) as StepKind;
+      if (!STEP_KINDS.includes(kind)) return json({ ok: false, error: "That is not a step an offer can take." }, 400);
+      const t = kind === "terms" ? terms(b.terms) : null;
+      if (kind === "terms" && !t) return json({ ok: false, error: "Choose how it is paid for." }, 400);
+      const origin = str(b.origin, 10) === "theirs" ? "theirs" : "ours";
+      return json(await bidStep(journeyId, str(b.bidId, 40), {
+        kind, terms: t, origin, note: str(b.note, 500) || null, documentIds: ids(b.documentIds),
+      }, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "bid-answer": {
+      const instruction = str(b.instruction, 10);
+      if (!["proceed", "change", "stop"].includes(instruction)) return json({ ok: false, error: "Choose their answer." }, 400);
+      return json(await bidAnswerForThem(journeyId, str(b.bidId, 40), str(b.memberId, 40), num(b.version),
+        instruction as "proceed" | "change" | "stop", str(b.note, 500) || null, str(b.how, 200), str(b.requestId, 40)));
     }
     case "take-off":
       return json(await takeHomeOff(journeyId, str(b.homeId, 40), str(b.reason, 500)));

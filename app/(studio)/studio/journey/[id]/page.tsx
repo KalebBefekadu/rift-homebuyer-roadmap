@@ -18,6 +18,10 @@ import { Homes } from "./Homes";
 import { Showings } from "./Showings";
 import { Progress } from "./Progress";
 import { progressFor } from "@/lib/db/progress";
+import { STAGE_LABEL } from "@/lib/core/progress";
+import { bidsFor } from "@/lib/db/bids";
+import { documentsFor } from "@/lib/db/documents";
+import { Offers } from "./Offers";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -69,7 +73,8 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const journey = j.data;
   const buying = journey.side === "buy";
 
-  const [search, members, homes, lead, start, tours, progress] = await Promise.all([
+  const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
+  const [search, members, homes, lead, start, tours, progress, bids, docs] = await Promise.all([
     buying ? searchState(id) : Promise.resolve(null),
     membersOf(id),
     homesOf(id),
@@ -77,6 +82,8 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
     buying ? readoutStart(journey.leadId) : Promise.resolve(null),
     buying ? toursOf(id) : Promise.resolve(null),
     buying ? progressFor(id) : Promise.resolve(null),
+    buying ? bidsFor(id, agentFirst) : Promise.resolve(null),
+    buying ? documentsFor(id) : Promise.resolve(null),
   ]);
 
   const s = search && search.ok && "data" in search ? search.data : null;
@@ -89,6 +96,19 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const startPoint = start && start.ok && "data" in start ? start.data : null;
   const tourData = tours && tours.ok && "data" in tours ? tours.data : null;
   const prog = progress && progress.ok && "data" in progress ? progress.data : null;
+  const bidData = bids && bids.ok && "data" in bids ? bids.data : null;
+  const docData = docs && docs.ok && "data" in docs ? docs.data : null;
+  /* The stage never moves by itself (REQ-STATE-05); the page only says when
+     the offers suggest it is behind. */
+  const accepted = bidData?.bids.find((b) => b.view.status === "accepted");
+  const liveBid = bidData?.bids.find((b) => !b.view.final);
+  const nudge = prog && !prog.open
+    ? accepted
+      ? `The offer on ${accepted.address} was accepted. Once the contract is executed, record it below: that is what moves the journey to Under contract.`
+      : liveBid && ["prepare", "search", "tour"].includes(prog.progress.stage)
+        ? `An offer on ${liveBid.address} is in progress, but the stage says ${STAGE_LABEL[prog.progress.stage]}. Change it to Offer if that is where things are.`
+        : null
+    : null;
 
   /* Homes are compared with the search as it runs in Matrix when there is
      one, otherwise with the latest brief: and the card says which. */
@@ -134,6 +154,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
                 leadId={journey.leadId}
                 person={journey.person.split(/\s+/)[0] ?? journey.person}
                 unavailable={prog.unavailable}
+                nudge={nudge}
               />
             ) : (
               <p className="t-xs c-neg">Where this journey stands did not load. That is not the same as it being at Prepare.</p>
@@ -298,6 +319,30 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
               />
             ) : (
               <p className="t-xs c-neg">The showings did not load. That is not the same as there being none.</p>
+            )}
+          </section>
+        ) : null}
+
+        {buying ? (
+          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="offers-h">
+            <h2 id="offers-h" className="t-md w6">Offers</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
+              The terms, each version, and what the household told you. The forms are prepared, signed and delivered in Remine; this records that they were.
+            </div>
+            {bidData && docData ? (
+              <Offers
+                journeyId={id}
+                bids={bidData.bids}
+                docs={docData.documents}
+                homes={(homeList ?? []).filter((h) => !h.withdrawnAt).map((h) => ({ id: h.id, address: h.address }))}
+                deciders={bidData.deciders}
+                coverage={bidData.coverage}
+                leadId={journey.leadId}
+                person={journey.person.split(/\s+/)[0] ?? journey.person}
+                unavailable={bidData.unavailable ?? docData.unavailable}
+              />
+            ) : (
+              <p className="t-xs c-neg">The offers did not load. That is not the same as there being none.</p>
             )}
           </section>
         ) : null}

@@ -451,7 +451,8 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
 | W06 | Built 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Needs migration `20260924000000` and a deploy |
 | W07 | Built 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Needs migration `20260924010000` and a deploy. Seller stages wait for D08 |
-| W08 onward | Not started | W08 and W09 wait for the broker's rules (D06, D07); W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
+| W08 | Built 23 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Needs migration `20260924020000` and a deploy |
+| W09 onward | Not started | W09 (contract dates and deadlines) is next, also on today's rules; W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
@@ -496,6 +497,26 @@ journey stage is separate from the lead's pipeline stage and does not change it;
 moves one should move the other. Moving forward past Prepare uses the pipeline's agreement
 gate until D06. Retention of contract records (F16) is still open: they cascade with the
 journey today. Migration `20260924010000_rift_progress.sql`, additive.
+
+Offers and documents (W08, 23 September 2026). An offer on a home is a list of steps like a
+showing: each version of the terms (ours, or a counter received), asking the household, prepared
+in Remine, signed, delivered, and how it ended. An answer belongs to one version, so a counter
+makes earlier answers stop counting while keeping them (AT22). Everyone whose say was asked for
+must say go ahead; one yes and one no is a disagreement, and nothing can be prepared until it is
+settled (AT23). Go ahead is an instruction, not a signature: prepared, signed, delivered and
+accepted are separate steps with evidence, and an accepted offer creates no contract and moves
+no stage; the agent records the executed contract under Where it stands (AT24). The agent can
+record an answer a buyer gave by phone, with how they said it. Buyers see only versions they
+were asked about, and only with the money scope. Documents: the agent's browser uploads straight
+to a quarantine folder in the private `rift-documents` bucket through a one-time link (so large
+PDFs never pass through a Vercel function); the server then checks the bytes (PDF, JPEG or PNG
+by content; no scripts, launch actions, embedded files or passwords in a PDF) and only then
+keeps the file with its SHA-256 (AT25). This is a structural check, not a virus scan, and the
+screen says so; nothing reads a document's words. Files open through a link that lasts a
+minute. Erasing a person removes their files from Storage before their records. Terms are typed
+in by hand (no extraction yet). The local stack now runs Supabase's storage server; see
+`scripts/local/up.sh`. Migration `20260924020000_rift_offers_documents.sql`, additive; it also
+creates the bucket.
 
 ---
 

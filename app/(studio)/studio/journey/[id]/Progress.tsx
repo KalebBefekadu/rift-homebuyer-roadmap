@@ -46,7 +46,7 @@ const MANUAL: Stage[] = ["prepare", "search", "tour", "offer", "close"];
  * disagree. Each workstream has its own owner and the date of the last word
  * from whoever gave it; one gone quiet for a week says so.
  */
-export function Progress({ journeyId, progress, events, open, past, homes, coverage, leadId, person, unavailable }: {
+export function Progress({ journeyId, progress, events, open, past, homes, coverage, leadId, person, unavailable, nudge }: {
   journeyId: string;
   progress: ProgressState;
   events: JourneyEvent[];
@@ -57,6 +57,8 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
   leadId: string;
   person: string;
   unavailable?: string;
+  /** A suggestion from the rest of the page, e.g. an offer in progress. Never moves anything. */
+  nudge?: string | null;
 }) {
   const stamp = `${progress.seq}|${open ? open.work.map((w) => w.seq).join(",") : "-"}`;
   const { busy, error, write } = useWrite(stamp);
@@ -101,6 +103,7 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
         {progress.stageSince ? ` since ${DAY(progress.stageSince)}` : ", nothing recorded yet"}
         {progress.status !== "active" ? <> · <span className="c-warn">{STATUS_LABEL[progress.status]}</span></> : null}
       </p>
+      {nudge ? <p className="t-xs c-warn" style={{ marginTop: 6, lineHeight: 1.55 }}>{nudge}</p> : null}
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
 
       <div className="row gap-2 wrap" style={{ marginTop: 10 }}>

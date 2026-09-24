@@ -42,6 +42,8 @@ export interface TodayInput {
   plan: PlanItem[];
   briefToConfirm: boolean;
   showingsToAnswer: string[];
+  /** Offers whose current version is waiting on this person's instruction: the home's address. */
+  offersToAnswer?: string[];
 }
 
 export interface Today {
@@ -71,7 +73,14 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
     items.push({ kind: "overdue", title: i.title, detail: `Was due ${whenPhrase(daysUntil(i.dueOn!, today))}. Yours to do.`, anchor: null });
   }
 
-  /* 2. Decisions for this person. */
+  /* 2. Decisions for this person. An offer waiting on them comes first: it
+     usually has a deadline the listing side set. */
+  for (const address of input.offersToAnswer ?? []) {
+    items.push({
+      kind: "decision", title: `Your offer on ${address}`,
+      detail: `Tell ${agentFirst} how to proceed on the current terms. Your answer is an instruction, not a signature.`, anchor: "offers",
+    });
+  }
   if (input.briefToConfirm) {
     items.push({
       kind: "decision", title: "Check your search priorities",

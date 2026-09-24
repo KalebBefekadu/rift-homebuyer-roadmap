@@ -38,3 +38,8 @@ export const boundedWrite = <T>(query: Query<T>, what: string) =>
 /** For a read that has no fallback and must not hold a request open. */
 export const boundedRead = <T>(query: Query<T>, what: string) =>
   run(query, READ_DEADLINE_MS, what);
+
+/** Moving a file's bytes (a document up to 20 MB). Longer, because size is the point. */
+export const TRANSFER_DEADLINE_MS = 30_000;
+export const boundedTransfer = <T>(query: Query<T>, what: string) =>
+  run(query, TRANSFER_DEADLINE_MS, what);

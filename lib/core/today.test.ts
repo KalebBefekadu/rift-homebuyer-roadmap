@@ -44,6 +44,12 @@ describe("Today's order (blueprint v4 §6)", () => {
     expect(t.items[0]!.detail).toMatch(/3 days ago/);
   });
 
+  it("puts an offer waiting on them first among decisions, as an instruction not a signature", () => {
+    const t = todayFor({ ...base, briefToConfirm: true, offersToAnswer: ["12 Oak St"] }, NOW);
+    expect(t.items[0]).toMatchObject({ kind: "decision", title: "Your offer on 12 Oak St", anchor: "offers" });
+    expect(t.items[0]!.detail).toMatch(/instruction, not a signature/);
+  });
+
   it("never lets one action hide a second real deadline", () => {
     const t = todayFor({
       ...base,

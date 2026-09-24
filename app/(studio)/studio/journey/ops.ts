@@ -11,6 +11,9 @@ import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
 import type { FeedbackInput, StepInput } from "@/lib/core/tour";
 import { changeStage, changeStatus, endContract, recordContract, recordWorkAsAgent } from "@/lib/db/progress";
+import { recordBidStep, responseAsAgent, startBid } from "@/lib/db/bids";
+import { finishUpload, uploadSlot } from "@/lib/db/documents";
+import type { Instruction, StepInput as BidStepInput, Terms } from "@/lib/core/bid";
 import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
 
 /**
@@ -247,4 +250,63 @@ export async function updateWork(
   const r = await recordWorkAsAgent(journeyId, contractId, workstream, input, expectedSeq, g.name, requestId);
   revalidatePath(`/studio/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
+}
+
+/* ------------------------------------------------------------------ *
+ * Documents and offers (W08)
+ * ------------------------------------------------------------------ */
+
+const first = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+
+/** A one-time link for the browser to upload a file into quarantine. */
+export async function documentSlot(journeyId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId)) return { ok: false as const, error: "Reload the page and try again" };
+  return out(await uploadSlot(journeyId), (d) => ({ path: d.path, url: d.url }));
+}
+
+/** The upload arrived: check it, and keep it only if it passes. */
+export async function documentFinish(journeyId: string, path: string, filename: string, type: string, family: string, label: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await finishUpload(journeyId, path, filename, type, family, label, g.name);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  if (r.ok && "data" in r && "refused" in r.data) {
+    return { ok: false as const, error: `That file was not kept: ${r.data.refused.join("; ")}.`, refused: r.data.refused };
+  }
+  return out(r, (d) => ("id" in d ? { id: d.id } : {}));
+}
+
+export async function openBid(journeyId: string, homeId: string, terms: Terms, documentIds: string[], requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(homeId) || !isUuid(requestId) || !documentIds.every(isUuid)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await startBid(journeyId, homeId, terms, documentIds, g.name, first(g.name), requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ id: d.id }));
+}
+
+export async function bidStep(journeyId: string, bidId: string, input: BidStepInput, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(bidId) || !isUuid(requestId) || !(input.documentIds ?? []).every(isUuid)) {
+    return { ok: false as const, error: "Reload the page and try again" };
+  }
+  const r = await recordBidStep(journeyId, bidId, input, expectedSeq, g.name, first(g.name), requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+/** An instruction the buyer gave by phone or message, recorded with how. */
+export async function bidAnswerForThem(
+  journeyId: string, bidId: string, memberId: string, version: number, instruction: Instruction, note: string | null, how: string, requestId: string,
+) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(bidId) || !isUuid(memberId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await responseAsAgent(journeyId, bidId, memberId, version, instruction, note, how, g.name, first(g.name), requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r);
 }

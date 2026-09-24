@@ -355,6 +355,29 @@ await check("work replay (recordWork)", () => db.from("rift_workstream_updates")
   .select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
 await check("journey plan (planItemsFor)", () => db.from("rift_plan_items")
   .select("id,title,owner,owner_name,due_on,done_at,sort").eq("lead_id", NIL).eq("agent_id", NIL).order("sort", { ascending: true }).limit(1));
+await check("offers (readBids)", () => db.from("rift_bids").select("id,home_id,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at", { ascending: false }).limit(1));
+await check("offer steps (readBids)", () => db.from("rift_bid_steps")
+  .select("bid_id,seq,kind,version,terms,origin,required,document_ids,note,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("seq").limit(1));
+await check("offer answers (readBids)", () => db.from("rift_bid_responses")
+  .select("bid_id,member_id,version,instruction,note,told_agent,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("household (readBids)", () => db.from("rift_journey_members")
+  .select("id,display_name,email,role,accepted_at,revoked_at,invite_expires_at").eq("journey_id", NIL).eq("agent_id", NIL).limit(1));
+await check("offer step replay (recordBidStep)", () => db.from("rift_bid_steps")
+  .select("seq").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("answer replay (recordResponse)", () => db.from("rift_bid_responses")
+  .select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("documents (readDocuments)", () => db.from("rift_documents")
+  .select("id,family,label,filename,kind,bytes,sha256,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at", { ascending: false }).limit(1));
+await check("document path (documentLink)", () => db.from("rift_documents")
+  .select("storage_path,filename").eq("id", NIL).eq("journey_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("files to erase (removeJourneyFiles)", () => db.from("rift_documents")
+  .select("storage_path").eq("agent_id", NIL).in("journey_id", [NIL]).limit(1));
+await check("their journeys (forget)", () => db.from("rift_journeys")
+  .select("id").eq("agent_id", NIL).in("origin_lead_id", [NIL]));
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);
