@@ -6,7 +6,7 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
-  proposeRevision, reactAsMember, respondToBrief,
+  proposeRevision, reactAsMember, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
 } from "@/lib/db/client";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
@@ -131,6 +131,23 @@ export async function POST(req: Request) {
       const homeId = str(b.homeId, 40);
       if (!isUuid(homeId)) return json({ ok: false, error: "That home could not be found. Reload." }, 400);
       r = await reactAsMember(member, homeId, str(b.reaction, 20), str(b.reason, 500) || null);
+      break;
+    }
+    case "request-tour": {
+      const homeId = str(b.homeId, 40);
+      const requestId = str(b.requestId, 40);
+      if (!isUuid(homeId) || !isUuid(requestId)) return json({ ok: false, error: "That home could not be found. Reload." }, 400);
+      r = await requestTourAsMember(member, homeId, str(b.availability, 300) || null, requestId);
+      break;
+    }
+    case "tour-feedback": {
+      const stopId = str(b.stopId, 40);
+      if (!isUuid(stopId)) return json({ ok: false, error: "That showing could not be found. Reload." }, 400);
+      const offer = str(b.offer, 10);
+      if (!["yes", "maybe", "no"].includes(offer)) return json({ ok: false, error: "Choose an answer." }, 400);
+      r = await tourFeedbackAsMember(member, stopId, {
+        offer: offer as "yes" | "maybe" | "no", reason: str(b.reason, 500) || null, searchChange: str(b.searchChange, 500) || null,
+      });
       break;
     }
     case "add-home": {

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { clientBrief, clientHomes, clientSession, memberOf } from "@/lib/db/client";
+import { clientBrief, clientHomes, clientSession, clientTours, memberOf } from "@/lib/db/client";
+import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";
 import { buyerSearchOn, canRespond, ROLE_LABEL } from "@/lib/core/journey";
 import { describe, diffBriefs, FIELDS, STRENGTH_LABEL, type SearchStatus } from "@/lib/core/search";
 import { ClientShell } from "../../ClientShell";
@@ -49,10 +50,27 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const member = m.data;
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
-  const [brief, homes] = await Promise.all([
+  const [brief, homes, tours] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
+    member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
   ]);
+  /* Worded here, on the server, so nothing but the buyer's line leaves it:
+     not the agent's notes, not the ShowingTime reference, not why a showing
+     is on hold. A read that failed shows no showings rather than wrong ones;
+     the homes still load. */
+  const showings = (tours && tours.ok && "data" in tours ? tours.data.stops : []).map((s) => ({
+    stopId: s.id,
+    homeId: s.homeId,
+    open: s.view.status !== "cancelled" && s.view.status !== "completed",
+    completed: s.view.status === "completed",
+    label: buyerLabel(s.view, agentFirst),
+    answeredByMe: s.feedback.some((f) => f.memberId === member.memberId),
+    myAnswer: (() => {
+      const f = s.feedback.filter((x) => x.memberId === member.memberId).at(-1);
+      return f ? OFFER_LABEL[f.offer] : null;
+    })(),
+  }));
   const b = brief && brief.ok && "data" in brief ? brief.data : null;
   const diff = b?.revision && b.previous ? diffBriefs(b.previous.brief, b.revision.brief) : null;
   const h = homes && homes.ok && "data" in homes ? homes.data : null;
@@ -151,6 +169,8 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
               criteria={b?.revision?.brief.criteria ?? []}
               me={member.memberId}
               canRespond={respond}
+              showings={showings}
+              agentFirst={agentFirst}
             />
           ) : (
             <p className="t-sm c-3" style={{ marginTop: 8 }}>The homes did not load. That is not the same as an empty list; reload in a moment.</p>

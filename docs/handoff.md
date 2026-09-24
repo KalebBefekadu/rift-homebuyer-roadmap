@@ -449,7 +449,8 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | D11, F08, F09 | Decided 23 Sep | The specification's ledger and labels are adopted. W10 is built after the buyer pilot starts, keeping every saved readout exactly as it was; the current engine stays until then |
 | D12, F15 | Decided 23 Sep | Review requests stop depending on how the client felt: everyone who closes gets the same neutral request, and an unhappy client gets a separate follow-up that never decides whether they are asked (Google forbids review gating) |
 | F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
-| W07, W11 to W13 | Not started | W07 and W11 can start; W08 and W09 wait for the broker's rules (D06); W13 waits for pilot results (D08) |
+| W06 | Built 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Needs migration `20260924000000` and a deploy |
+| W07 onward | Not started | W07 is next; W08 and W09 wait for the broker's rules; W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
@@ -464,6 +465,18 @@ suspended (the full diagnosis is in that file). Server actions wait for that sam
 a saved brief sat on "Saving…" for good. Invitation links are shown once and never stored,
 so those two writes refresh without the reload. Retry the plain pattern when Next ships a
 newer React.
+
+Showings (W06, 23 September 2026). The manual ShowingTime path, the same shape as the Matrix
+record: a buyer's "Would like to see it" (or the agent) records a request; the agent records
+each step as it happens in ShowingTime (asked, confirmed with the time ShowingTime gave,
+changed, cancelled with a reason, happened); the buyer then answers "Would you consider an
+offer?" with optional reasons and a note on the search. Asking for or confirming a time
+needs a signed buyer agreement in force today (lib/core/representation), checked at every
+step; a confirmed showing whose agreement lapses shows as blocked with the fix, and the
+buyer sees only "On hold". Once answered, the home keeps a line saying it was seen and what
+they said, and a second viewing can be asked for. Nothing about access is stored. When the broker answers when an
+agreement is required (D06), that rule changes in `stepError`, not in the screens.
+Migration `20260924000000_rift_tours.sql`, additive.
 
 ---
 

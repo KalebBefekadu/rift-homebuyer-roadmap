@@ -5,7 +5,9 @@ import { CADENCE_LABEL, EMPTY_FACTS, type Cadence, type PropertyFacts, type Sear
 import {
   startJourney, relabelJourney, saveBrief, approveSearch, confirmSearchSetUp, pauseSearch,
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
+  requestShowing, recordShowingStep, recordShowingAnswer,
 } from "@/app/(studio)/studio/journey/ops";
+import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +108,23 @@ export async function POST(req: Request) {
         address: str(h.address, 200), url: str(h.url, 500), facts: facts(h.facts),
         factsSource: str(h.factsSource, 200), factsAsOf: str(h.factsAsOf, 10),
       }));
+    }
+    case "tour-request":
+      return json(await requestShowing(journeyId, str(b.homeId, 40), str(b.availability, 300) || null, str(b.requestId, 40)));
+    case "tour-step": {
+      const to = str(b.to, 30) as TourStatus;
+      if (!TOUR_STATUSES.includes(to)) return json({ ok: false, error: "That is not a step a showing can take." }, 400);
+      return json(await recordShowingStep(journeyId, str(b.stopId, 40), {
+        to, startsAt: str(b.startsAt, 40) || null, endsAt: str(b.endsAt, 40) || null,
+        ref: str(b.ref, 200) || null, note: str(b.note, 500) || null,
+      }, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "tour-feedback": {
+      const offer = str(b.offer, 10);
+      if (!["yes", "maybe", "no"].includes(offer)) return json({ ok: false, error: "Choose an answer." }, 400);
+      return json(await recordShowingAnswer(journeyId, str(b.stopId, 40), {
+        offer: offer as "yes" | "maybe" | "no", reason: str(b.reason, 500) || null, searchChange: str(b.searchChange, 500) || null,
+      }, str(b.onBehalfOf, 120)));
     }
     case "take-off":
       return json(await takeHomeOff(journeyId, str(b.homeId, 40), str(b.reason, 500)));

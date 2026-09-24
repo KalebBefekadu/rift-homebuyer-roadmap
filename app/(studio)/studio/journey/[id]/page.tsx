@@ -7,6 +7,7 @@ import { StudioHeader } from "../../StudioHeader";
 import { journeyFor, membersOf } from "@/lib/db/journeys";
 import { searchState, readoutStart } from "@/lib/db/search";
 import { homesOf } from "@/lib/db/shortlist";
+import { toursOf } from "@/lib/db/tours";
 import { readLead } from "@/lib/db/clients";
 import { buyerSearchOn, SIDE_LABEL } from "@/lib/core/journey";
 import { describe, diffBriefs, FIELDS, STRENGTH_LABEL } from "@/lib/core/search";
@@ -14,6 +15,7 @@ import { AgentBrief } from "./AgentBrief";
 import { SearchSetup } from "./SearchSetup";
 import { Household } from "./Household";
 import { Homes } from "./Homes";
+import { Showings } from "./Showings";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -65,12 +67,13 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const journey = j.data;
   const buying = journey.side === "buy";
 
-  const [search, members, homes, lead, start] = await Promise.all([
+  const [search, members, homes, lead, start, tours] = await Promise.all([
     buying ? searchState(id) : Promise.resolve(null),
     membersOf(id),
     homesOf(id),
     readLead(journey.leadId),
     buying ? readoutStart(journey.leadId) : Promise.resolve(null),
+    buying ? toursOf(id) : Promise.resolve(null),
   ]);
 
   const s = search && search.ok && "data" in search ? search.data : null;
@@ -81,6 +84,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const homeList = homes.ok && "data" in homes ? homes.data : null;
   const leadRow = lead.ok && "data" in lead ? lead.data?.lead ?? null : null;
   const startPoint = start && start.ok && "data" in start ? start.data : null;
+  const tourData = tours && tours.ok && "data" in tours ? tours.data : null;
 
   /* Homes are compared with the search as it runs in Matrix when there is
      one, otherwise with the latest brief: and the card says which. */
@@ -243,6 +247,28 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
               />
             ) : (
               <p className="t-xs c-neg">The shortlist did not load. That is not the same as an empty list.</p>
+            )}
+          </section>
+        ) : null}
+
+        {buying ? (
+          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="showings-h">
+            <h2 id="showings-h" className="t-md w6">Showings</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
+              What you arranged in ShowingTime, step by step. A request is not an appointment until you record the confirmed time.
+            </div>
+            {tourData ? (
+              <Showings
+                journeyId={id}
+                stops={tourData.stops}
+                homes={(homeList ?? []).filter((h) => !h.withdrawnAt).map((h) => ({ id: h.id, address: h.address }))}
+                coverage={tourData.coverage}
+                leadId={journey.leadId}
+                person={journey.person.split(/\s+/)[0] ?? journey.person}
+                unavailable={tourData.unavailable}
+              />
+            ) : (
+              <p className="t-xs c-neg">The showings did not load. That is not the same as there being none.</p>
             )}
           </section>
         ) : null}

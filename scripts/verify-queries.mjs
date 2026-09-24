@@ -321,6 +321,22 @@ await check("confirm rpc exists (refuses a stranger)", async () => {
   return r.error && /not in your book/.test(r.error.message) ? { data: null, error: null } : r;
 });
 
+await check("tour stops (readTours)", () => db.from("rift_tour_stops")
+  .select("id,home_id,requested_by_label,requested_by_member,availability,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at", { ascending: false }).limit(1));
+await check("tour steps (readTours)", () => db.from("rift_tour_steps")
+  .select("stop_id,seq,status,starts_at,ends_at,ref,note,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("seq").limit(1));
+await check("tour feedback (readTours)", () => db.from("rift_tour_feedback")
+  .select("stop_id,member_id,actor_label,offer,reason,search_change,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("tour homes (readTours)", () => db.from("rift_shortlist_homes")
+  .select("id,address,withdrawn_at").eq("journey_id", NIL).eq("agent_id", NIL).limit(1));
+await check("tour step replay (recordTourStep)", () => db.from("rift_tour_steps")
+  .select("seq").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("buyer agreement (coverageFor)", () => db.from("rift_leads")
+  .select("representation,representation_signed_on,representation_expires_on").eq("id", NIL).eq("agent_id", NIL).maybeSingle());
+
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);
 }

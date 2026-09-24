@@ -359,12 +359,86 @@ describe("shortlist and reactions (AT14)", () => {
   });
 });
 
+describe("tours (W06; AT17, AT18 in the record)", () => {
+  const H2 = "a6666666-0000-4000-8000-000000000002";
+  const S1 = "a7777777-0000-4000-8000-000000000001";
+  const req = (n: number) => `a8888888-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  const step = (seq: number, status: string, extra = "", vals: unknown[] = []): [string, unknown[]] =>
+    [`insert into rift_tour_steps (agent_id, journey_id, stop_id, seq, status, actor_label, request_id${extra ? ", " + extra : ""})
+      values ($1,$2,$3,$4,$5,'Agent A',$6${vals.map((_, i) => `,$${7 + i}`).join("")})`, [A, J1, S1, seq, status, req(seq * 10 + vals.length), ...vals]];
+  const insert = (c: Client, [sql, params]: [string, unknown[]]) => c.query(sql, params as never[]);
+
+  test("fixtures", async (c) => {
+    await c.query(
+      `insert into rift_shortlist_homes (id, agent_id, journey_id, address, facts_source, facts_as_of, added_by_kind, added_by_label)
+       values ($1,$2,$3,'40 Pine Ct, Duluth','Matrix listing','2026-09-21','agent','Agent A')`, [H2, A, J1]);
+    await c.query(
+      `insert into rift_tour_stops (id, agent_id, journey_id, home_id, requested_by_kind, requested_by_label, availability)
+       values ($1,$2,$3,$4,'agent','Agent A','Saturday afternoon')`, [S1, A, J1, H2]);
+    await insert(c, step(1, "requested"));
+  });
+
+  test("the first step is always the request, and only the first", async (c) => {
+    await refused(c, ...step(2, "requested"), /first_is_request/);
+    const [sql, params] = step(1, "confirmed", "starts_at, ends_at", ["2026-10-03T18:00:00Z", "2026-10-03T18:30:00Z"]);
+    await refused(c, sql, [...params.slice(0, 5), req(99), ...params.slice(6)], /first_is_request|rift_tour_steps_seq/);
+  });
+
+  test("two people recording the same next step: one wins", async (c) => {
+    await insert(c, step(2, "awaiting-confirmation"));
+    await refused(c, `insert into rift_tour_steps (agent_id, journey_id, stop_id, seq, status, actor_label, request_id, note)
+       values ($1,$2,$3,2,'cancelled','Agent A',$4,'x')`, [A, J1, S1, req(500)], /rift_tour_steps_seq/);
+  });
+
+  test("a confirmation needs a whole slot, forwards in time", async (c) => {
+    await refused(c, ...step(3, "confirmed"), /slot_when_timed/);
+    await refused(c, ...step(3, "confirmed", "starts_at, ends_at", ["2026-10-03T18:30:00Z", "2026-10-03T18:00:00Z"]), /slot_forward/);
+    await refused(c, ...step(3, "confirmed", "starts_at", ["2026-10-03T18:00:00Z"]), /slot_is_whole/);
+    await insert(c, step(3, "confirmed", "starts_at, ends_at", ["2026-10-03T18:00:00Z", "2026-10-03T18:30:00Z"]));
+  });
+
+  test("a cancellation says why", async (c) => {
+    await refused(c, ...step(4, "cancelled"), /cancel_says_why/);
+  });
+
+  test("the same request twice is one step", async (c) => {
+    await refused(c, `insert into rift_tour_steps (agent_id, journey_id, stop_id, seq, status, actor_label, request_id)
+       values ($1,$2,$3,4,'completed','Agent A',$4)`, [A, J1, S1, req(20)], /request_id/);
+  });
+
+  test("steps, stops and answers are history", async (c) => {
+    await refused(c, "update rift_tour_steps set status = 'completed' where stop_id = $1 and seq = 3", [S1], /is history/);
+    await refused(c, "update rift_tour_stops set availability = 'any time' where id = $1", [S1], /is history/);
+    await c.query(`insert into rift_tour_feedback (agent_id, journey_id, stop_id, actor_label, offer) values ($1,$2,$3,'Devon (told the agent)','maybe')`, [A, J1, S1]);
+    await refused(c, "update rift_tour_feedback set offer = 'yes' where stop_id = $1", [S1], /is history/);
+  });
+
+  test("a showing cannot point at a home on another journey", async (c) => {
+    await refused(c,
+      `insert into rift_tour_stops (agent_id, journey_id, home_id, requested_by_kind, requested_by_label) values ($1,$2,$3,'agent','A')`,
+      [A, J2, H2], /home_on_journey/);
+  });
+
+  test("another agent sees none of it", async (c) => {
+    const mine = await as(c, A_USER, async () => (await c.query("select count(*)::int n from rift_tour_steps")).rows[0].n);
+    const theirs = await as(c, B_USER, async () => (await c.query("select count(*)::int n from rift_tour_steps")).rows[0].n);
+    expect(mine).toBeGreaterThan(0);
+    expect(theirs).toBe(0);
+  });
+
+  test("there is nowhere to put access or lockbox details", async (c) => {
+    const { rows } = await c.query(
+      "select table_name, column_name from information_schema.columns where table_name like 'rift_tour%' and column_name ~* '(access|lockbox|code|gate|key)'");
+    expect(rows).toEqual([]);
+  });
+});
+
 describe("deletion (first-migration-proposal §deletion compatibility)", () => {
   test("removing the journeys first lets the relationship go, and takes everything under them", async (c) => {
     await c.query("begin");
     await c.query("delete from rift_journeys where origin_lead_id = $1 and agent_id = $2", [A_LEAD, A]);
     await c.query("delete from rift_leads where id = $1", [A_LEAD]);
-    for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses"]) {
+    for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses", "rift_tour_stops", "rift_tour_steps", "rift_tour_feedback"]) {
       const { rows } = await c.query(`select count(*)::int n from ${t} where agent_id = $1`, [A]);
       expect(rows[0].n, t).toBe(0);
     }

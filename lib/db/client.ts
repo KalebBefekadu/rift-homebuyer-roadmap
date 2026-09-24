@@ -6,6 +6,8 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { inviteTokenHash, journeyTablesMissing } from "./journeys";
 import { shapeRevision, type Revision } from "./search";
 import { insertHome, insertReaction, readHomes, type Home, type NewHome } from "./shortlist";
+import { insertFeedback, readTours, requestTour, type Tours } from "./tours";
+import type { FeedbackInput } from "@/lib/core/tour";
 import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
 import {
   acceptError, canRespond, memberState, normaliseEmail,
@@ -419,4 +421,35 @@ export async function reactAsMember(m: Membership, homeId: string, reaction: str
 export async function addHomeAsMember(m: Membership, h: NewHome) {
   if (!canRespond(m.role) || !m.scopes.includes("homes")) return failed("Your access lets you look, not add homes");
   return insertHome(m.journeyId, m.agentId, h, { kind: "client", memberId: m.memberId, label: m.name });
+}
+
+/* ------------------------------------------------------------------ *
+ * Showings (journey contract B06)
+ * ------------------------------------------------------------------ */
+
+/** The showings on this journey, for anybody who can see its homes. */
+export async function clientTours(m: Membership): Promise<DbResult<Tours>> {
+  if (!m.scopes.includes("homes")) return done({ stops: [], coverage: { covered: false, note: "" } });
+  return readTours(m.journeyId, m.agentId);
+}
+
+/**
+ * "Would like to see it": asks for a showing and records the reaction, so the
+ * agent sees both the request and who wanted it. Asking is never booking
+ * (AT17); the agent arranges it in ShowingTime.
+ */
+export async function requestTourAsMember(m: Membership, homeId: string, availability: string | null, requestId: string) {
+  if (!canRespond(m.role) || !m.scopes.includes("homes")) return failed("Your access lets you look, not ask for showings");
+  const r = await requestTour(m.journeyId, m.agentId, homeId, availability, { kind: "client", memberId: m.memberId, label: m.name }, requestId);
+  if (!r.ok || !("data" in r)) return r;
+  if (!r.data.existing) {
+    await insertReaction(m.journeyId, m.agentId, homeId, { memberId: m.memberId, label: m.name }, "tour-requested", null);
+  }
+  return r;
+}
+
+/** The short answer after a showing. */
+export async function tourFeedbackAsMember(m: Membership, stopId: string, f: FeedbackInput) {
+  if (!canRespond(m.role) || !m.scopes.includes("homes")) return failed("Your access lets you look, not answer");
+  return insertFeedback(m.journeyId, m.agentId, stopId, f, { memberId: m.memberId, label: m.name });
 }

@@ -8,6 +8,8 @@ import type { DbResult } from "@/lib/db/result";
 import { createJourney, invite, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
+import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
+import type { FeedbackInput, StepInput } from "@/lib/core/tour";
 
 /**
  * Operations writes for journeys, the search brief, the Matrix search and
@@ -157,6 +159,36 @@ export async function takeHomeOff(journeyId: string, homeId: string, reason: str
   const g = await gate();
   if ("error" in g) return { ok: false as const, error: g.error };
   const r = await withdrawHome(homeId, reason);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r);
+}
+
+/** Ask for a showing on the buyer's behalf. Not a booking: that is ShowingTime. */
+export async function requestShowing(journeyId: string, homeId: string, availability: string | null, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(homeId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await requestTourAsAgent(journeyId, homeId, availability, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ id: d.id, existing: d.existing }));
+}
+
+/** Record the next step of a showing as it happened in ShowingTime. */
+export async function recordShowingStep(journeyId: string, stopId: string, input: StepInput, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(stopId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordTourStep(journeyId, stopId, input, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+/** What the buyer said after the showing, when they told the agent rather than the page. */
+export async function recordShowingAnswer(journeyId: string, stopId: string, f: FeedbackInput, onBehalfOf: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(stopId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await feedbackAsAgent(journeyId, stopId, f, onBehalfOf);
   revalidatePath(`/studio/journey/${journeyId}`);
   return out(r);
 }
