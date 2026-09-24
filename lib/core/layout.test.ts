@@ -30,7 +30,7 @@ import { join } from "node:path";
  * single element, so the flex container still sees one text column.
  */
 
-const ROOTS = ["app/(rift)", "app/(studio)", "components/rift"];
+const ROOTS = ["app/(rift)", "app/(operations)", "components/rift"];
 
 function tsxFiles(dir: string): string[] {
   let out: string[] = [];

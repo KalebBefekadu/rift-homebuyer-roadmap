@@ -150,7 +150,7 @@ export async function POST(req: Request) {
         county: county || undefined,
         value: scored.value,
         source: scored.source,
-        studioUrl: `${base ?? ""}/studio/lead/${r.data.id}`,
+        studioUrl: `${base ?? ""}/operations/lead/${r.data.id}`,
       });
       alerted = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
       if (!sent.ok) {

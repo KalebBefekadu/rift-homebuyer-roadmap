@@ -64,7 +64,7 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
        This asked for `rift_leads.figure_id`, WHICH DOES NOT EXIST. `figure_id`
        is a column on rift_review_items; the intent was copied from there onto
        the wrong table. PostgREST answers an unknown column with an error about
-       a schema cache, so every read in this module failed and /studio/referrals
+       a schema cache, so every read in this module failed and /operations/referrals
        was broken from the moment its migration applied. Nothing caught it: the
        fake database used by the unit tests does not validate column names, and
        the screen had never been opened against a real schema.

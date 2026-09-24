@@ -17,7 +17,7 @@ function safeNext(path: string | null): string {
   /* Only same-origin paths. An open redirect on an auth callback is how a
      sign-in link becomes a phishing link. */
   if (path && path.startsWith("/") && !path.startsWith("//")) return path;
-  return "/studio";
+  return "/operations";
 }
 
 export async function GET(request: Request) {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const next = safeNext(searchParams.get("next"));
   /* A buyer's link fails back to the buyer's sign-in page, never to the
      agent's: "Operations: sign in" is not something a client should see. */
-  const signIn = next.startsWith("/app") ? "/app/sign-in" : "/studio/sign-in";
+  const signIn = next.startsWith("/app") ? "/app/sign-in" : "/operations/sign-in";
 
   if (!code) return NextResponse.redirect(`${origin}${signIn}?error=missing_code`);
 

@@ -38,7 +38,7 @@ async function run(req: Request) {
   }
   if ("skipped" in parts) return NextResponse.json({ ok: true, sent: false, reason: parts.reason });
 
-  const built = buildDailySummary({ day: window.day, ...parts.data, studioUrl: `${siteUrl() ?? ""}/studio` });
+  const built = buildDailySummary({ day: window.day, ...parts.data, studioUrl: `${siteUrl() ?? ""}/operations` });
   const counts = {
     activity: parts.data.activity.length, dates: parts.data.dates.length,
     jobs: parts.data.jobs.length, leads: parts.data.leads.length,

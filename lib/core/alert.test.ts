@@ -33,7 +33,7 @@ const base: NewLeadEmail = {
   county: "DeKalb",
   value: 325_000,
   source: "readout",
-  studioUrl: "https://rift.example.com/studio/lead/abc",
+  studioUrl: "https://rift.example.com/operations/lead/abc",
 };
 
 const render = (o: Partial<NewLeadEmail> = {}) => buildNewLead({ ...base, ...o });
@@ -108,7 +108,7 @@ describe("what the body has to carry", () => {
   });
 
   it("links straight to the person", () => {
-    expect(render()!.html).toContain("https://rift.example.com/studio/lead/abc");
+    expect(render()!.html).toContain("https://rift.example.com/operations/lead/abc");
   });
 
   it("shows the three strongest signals, by magnitude", () => {

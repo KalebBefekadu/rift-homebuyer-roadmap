@@ -1,0 +1,748 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { currentAgent } from "@/lib/db/session";
+import { promoteItem } from "@/lib/db/review";
+import { stop } from "@/lib/db/nurture";
+import { markReplied } from "@/lib/db/leads";
+import { addLead, addNote, setStage, archiveLead, setNextAction, type NewLead, type NoteKind, type Stage } from "@/lib/db/clients";
+import type { StopId } from "@/lib/core/nurture";
+import { saveRule, clearRule } from "@/lib/db/settings";
+import type { BusinessRules } from "@/lib/core/settings";
+import { publishWording } from "@/lib/db/funnel";
+import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
+import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer } from "@/lib/db/offers";
+import { approveTake, withdrawTake, reopenChoice } from "@/lib/db/offer-room";
+import type { Owner } from "@/lib/core/plan";
+import type { Wording } from "@/lib/core/funnel";
+import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
+import { compareToSnapshot } from "@/lib/db/seam";
+import { representationOf, setRepresentation, type RepStatus } from "@/lib/db/clients";
+import { standingOf } from "@/lib/core/representation";
+import { canPublish } from "@/lib/core/seam";
+import {
+  createDecision, addOption, removeOption, release, unrelease,
+  recordOutcome, clearOutcome, removeDecision,
+} from "@/lib/db/decisions";
+import type { Kind as DecisionKind } from "@/lib/core/decision";
+import type { Mood, MomentId, MomentState } from "@/lib/core/referral";
+
+/**
+ * Studio's write actions.
+ *
+ * Every one re-checks the session. A server action is a public HTTP endpoint
+ * with a generated name: it is not protected by the page that renders the
+ * button, and treating it as if it were is how an action ends up callable by
+ * anybody who reads the network tab.
+ *
+ * And every one passes `agent.agentId` down to the write. "Somebody is signed
+ * in" and "this record is theirs" are different questions, and three of these
+ * used to ask only the first: the data layer runs on the service-role client,
+ * which bypasses RLS, so the policies that would have caught a cross-agent
+ * write are never consulted and a bare id is authority. One agent exists
+ * today, which is exactly why this was cheap to fix now.
+ */
+
+export async function advanceReview(id: string, confirmedBy?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await promoteItem(id, agent.agentId, confirmedBy);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, state: r.data.state };
+}
+
+/**
+ * "I have replied to this."
+ *
+ * Stops the clock and stops the sequence in one action, because they are the
+ * same event from the agent's side, and asking him to do two things after one
+ * conversation is how the second one stops happening.
+ */
+export async function markRepliedTo(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const replied = await markReplied(leadId, agent.agentId);
+  /* A reply stops the sequence. Contract 4.11, and it is the same fact. */
+  await stop(leadId, "replied", agent.agentId);
+  revalidatePath("/operations");
+
+  if (!replied.ok) return { ok: false as const, error: replied.error };
+  if ("skipped" in replied) return { ok: false as const, error: replied.reason };
+  return { ok: true as const, repliedAt: replied.data.repliedAt };
+}
+
+export async function stopSequence(leadId: string, reason: StopId) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await stop(leadId, reason, agent.agentId);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  return { ok: true as const };
+}
+
+
+/**
+ * Signs out.
+ *
+ * Studio lists strangers' finances, and the agent works from a laptop that
+ * leaves the house. Being able to end a session is not a courtesy on a surface
+ * like this, and a product that can be signed into and not out of is one
+ * people stay signed into on shared machines.
+ */
+export async function signOut() {
+  const supabase = await createClient();
+  if (supabase) await supabase.auth.signOut();
+  redirect("/operations/sign-in");
+}
+
+/* ------------------------------------------------------------------ *
+ * Managing people who never took an assessment
+ * ------------------------------------------------------------------ */
+
+/**
+ * Put somebody in by hand.
+ *
+ * Returns the id so the caller can go straight to their record. An agent who
+ * has just typed in everything he knows about a client wants to be looking at
+ * that client, not back at a list wondering whether it saved.
+ */
+export async function createLead(input: NewLead) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addLead(input);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function logContact(leadId: string, kind: NoteKind, body: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addNote(leadId, kind, body);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function moveStage(leadId: string, stage: Stage, why?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setStage(leadId, stage, why);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, stage: r.data.stage };
+}
+
+export async function archive(leadId: string, reason: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await archiveLead(leadId, reason);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function planNextAction(leadId: string, action: string | null, due: string | null, completedNote?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setNextAction(leadId, action, due, completedNote);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, cleared: r.data.cleared };
+}
+
+/* ------------------------------------------------------------------ *
+ * Offers
+ * ------------------------------------------------------------------ */
+
+export async function recordOffer(leadId: string, input: Omit<NewOffer, "leadId">) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addOffer({ ...input, leadId });
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+/**
+ * Release an offer to the seller, or take it back.
+ *
+ * Its own action rather than a field on the form, because it is its own
+ * decision. An offer arrives while the agent is driving; presenting it
+ * unreviewed is how somebody replies to a number before anybody has read the
+ * terms under it.
+ */
+export async function releaseOffer(leadId: string, offerId: string, released: boolean) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setOfferReleased(offerId, released);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, released: r.data.released };
+}
+
+export async function deleteOffer(leadId: string, offerId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removeOffer(offerId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  /* The database refuses to delete an offer the seller chose: a recorded
+     choice pointing at nothing is a record of nothing. Said in English. */
+  if (!r.ok && /rift_offer_rooms_chosen_is_theirs/.test(r.error)) {
+    return { ok: false as const, error: "The seller chose this offer. Reopen their choice before deleting it" };
+  }
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * The offer room: approve the take, withdraw it, reopen the seller's choice.
+ *
+ * Approval takes only the words. The draft it is recorded against and the set
+ * of offers it covers are recomputed on the server: see lib/db/offer-room.ts
+ *, so the audit trail is what Rift actually drafted, not what a form posted.
+ */
+export async function approveOfferTake(leadId: string, take: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  if (typeof take !== "string") return { ok: false as const, error: "write something first" };
+
+  const r = await approveTake(leadId, take);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function withdrawOfferTake(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await withdrawTake(leadId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function reopenOfferChoice(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await reopenChoice(leadId);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * The two figures every net depends on.
+ *
+ * Asked for rather than assumed. A comparison run against a payoff of zero
+ * ranks the offers correctly and reports a net out by the size of somebody's
+ * mortgage, and it reads perfectly.
+ */
+export async function saveSellerCosts(leadId: string, payoff: number, commissionPct: number) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setSellerCosts(leadId, payoff, commissionPct);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/* ------------------------------------------------------------------ *
+ * The client's plan
+ * ------------------------------------------------------------------ */
+
+/**
+ * Open the client's own page, or hand back the link that is already open.
+ *
+ * Idempotent on the database side. An agent who clicks twice must not
+ * invalidate the link he sent an hour ago: the client would open it, see
+ * nothing, and have no way to tell that from the product being broken.
+ */
+/**
+ * Publish a plan, and refuse to do it quietly.
+ *
+ * `lib/core/seam.ts` settles what happens when a free readout becomes a
+ * published plan, and the rule that matters is its second one: the plan
+ * recomputes, and it says so when it disagrees. Somebody who was shown "you
+ * need $27,875" has told their partner that number, written it down, and
+ * organised their saving around it. A plan that opens showing $29,400 with no
+ * explanation is not a correction: it is the product changing its story on
+ * the first day of the relationship, and the client has no way to tell whether
+ * the first number was wrong or the second one is.
+ *
+ * So publishing is blocked while a material drift is undisclosed. `disclosed`
+ * is the agent saying "I have seen what moved and I am telling them": passing
+ * it is a deliberate act on a screen that has just listed the changes, not a
+ * default.
+ *
+ * Note which way this fails. If the comparison cannot be made at all: no
+ * database, a read that timed out: it does NOT wave the plan through. It
+ * returns the reason, because "we could not check whether their numbers moved"
+ * and "their numbers did not move" are different facts, and only one of them
+ * is a reason to publish.
+ */
+export async function openClientPlan(leadId: string, disclosed = false) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const compared = await compareToSnapshot(leadId);
+  if (!compared.ok) return { ok: false as const, error: compared.error };
+  if ("skipped" in compared) return { ok: false as const, error: compared.reason };
+  const snap = compared.data;
+
+  /* Representation, read rather than asserted.
+
+     This was `hasAgreement: true`: a literal, inside the one function in the
+     product whose entire job is refusing to publish when something is not
+     true. The comment above it said the column did not exist, which was
+     accurate and is no longer.
+
+     A read that FAILED does not block. "We could not check whether an
+     agreement exists" and "no agreement exists" are different facts, exactly
+     as the docblock above says of drift, and only one of them is a reason to
+     refuse. A database blip must not read to the agent as a compliance
+     problem, because he cannot tell them apart from the message. */
+  const rep = await representationOf(leadId);
+  const hasAgreement = rep.ok && "data" in rep
+    ? standingOf(rep.data).covered
+    : true;
+
+  const check = canPublish({
+    hasAgreement,
+    hasSnapshot: snap.hasSnapshot,
+    drifts: snap.drifts,
+    disclosed,
+    trustStates: snap.trustStates,
+  });
+
+  if (!check.ok) {
+    return {
+      ok: false as const,
+      error: check.blocks.join(" "),
+      blocks: check.blocks,
+      drifts: snap.material,
+      warns: check.warns,
+    };
+  }
+
+  const r = await openPlan(leadId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, token: r.data.token, warns: check.warns, drifts: snap.material };
+}
+
+/** What moved since their readout, for the screen that has to show it. */
+export async function driftSinceReadout(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await compareToSnapshot(leadId);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, ...r.data };
+}
+
+/**
+ * Revoke it.
+ *
+ * Nulling the token breaks every copy of the link at once, which is the only
+ * way to take back something that has been forwarded. The steps are kept: the
+ * relationship may resume, and deleting somebody's agreed plan because a link
+ * travelled too far is a second mistake on top of the first.
+ */
+export async function closeClientPlan(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await closePlan(leadId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function addStep(leadId: string, title: string, owner: Owner, ownerName: string | null, dueOn: string | null) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addPlanItem({ leadId, title, owner, ownerName, dueOn });
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function tickStep(leadId: string, itemId: string, isDone: boolean) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setPlanItemDone(itemId, isDone);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, done: r.data.done };
+}
+
+export async function dropStep(leadId: string, itemId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removePlanItem(itemId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * One business rule, decided.
+ *
+ * These were in localStorage, on one device, readable by nothing the server
+ * computes. `commissionPct` is the only number in the product that turns
+ * pipeline into money and it ran on a default Kaleb could not see.
+ *
+ * The decider's name is recorded with the value. Two of the six are not his
+ * to decide alone: client retention has a legal floor the broker sets, and
+ * marketing to an unrepresented counterparty is a conflict question, and a
+ * settings table that cannot distinguish "the broker confirmed this" from
+ * "nobody has ever touched it" converts a default into a policy in silence.
+ */
+export async function decideRule<K extends keyof BusinessRules>(
+  key: K, value: BusinessRules[K]["value"],
+) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await saveRule(agent.agentId, key, value, agent.name || agent.email || "the agent");
+  revalidatePath("/operations/settings");
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/** Back to the default, and visibly undecided again. */
+export async function undecideRule(key: keyof BusinessRules) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await clearRule(agent.agentId, key);
+  revalidatePath("/operations/settings");
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * The agent's own words, published as a new version.
+ *
+ * Wording only, and the server does not trust the client about that: it
+ * rebuilds the questions from `lib/core/funnel.ts` and applies the words on
+ * top. A payload claiming to change a question's type or what it is bound to
+ * gets its title applied and everything else ignored.
+ *
+ * A new version rather than an edit in place, so that a lead captured last
+ * Tuesday still points at the words that person actually read.
+ */
+export async function publishQuestions(
+  side: "buy" | "sell", wording: Record<string, Wording>, note: string,
+) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await publishWording(side, wording, agent.name || agent.email || "the agent", note);
+  revalidatePath("/operations/questions");
+  revalidatePath(`/${side}/start`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, version: r.data.version };
+}
+
+/* ------------------------------------------------------------------ *
+ * Referral moments
+ * ------------------------------------------------------------------ */
+
+/**
+ * Answer the private satisfaction check.
+ *
+ * The one write in this product that decides whether anything public may ever
+ * be asked of a person, which is why it is its own action rather than a field
+ * on a bigger form. Nothing here can set it to a default: the three answers
+ * and `null` are the whole vocabulary, and `null` means nobody has asked.
+ */
+export async function setMood(leadId: string, mood: Mood) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await recordMood(leadId, mood);
+  revalidatePath("/operations/referrals");
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * Record what was decided about one moment.
+ *
+ * `occurrence` is carried from the screen rather than recomputed here, so the
+ * decision lands on the moment the agent was actually looking at. Recomputing
+ * it would attach a decision taken on the second anniversary to whichever
+ * anniversary the clock says it is by the time the action runs, which is the
+ * same year in every case that matters and the wrong one on the day it is not.
+ */
+export async function decideMoment(
+  leadId: string,
+  momentId: MomentId,
+  occurrence: number,
+  state: MomentState,
+  note?: string,
+) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await recordMoment({ leadId, momentId, occurrence, state, note: note ?? null });
+  revalidatePath("/operations/referrals");
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * Record the closing date, which is what starts the post-closing cadence.
+ *
+ * Deliberately not a side effect of moving somebody to the Closed stage. The
+ * two are usually the same day and occasionally are not: a stage corrected
+ * weeks later would otherwise move every anniversary that person will ever
+ * have, and the only visible symptom is a message arriving on the wrong day.
+ */
+export async function setClosingDate(leadId: string, closedOn: string | null) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await recordClosing(leadId, closedOn);
+  revalidatePath("/operations/referrals");
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/* ------------------------------------------------------------------ *
+ * Representation
+ * ------------------------------------------------------------------ */
+
+/**
+ * Record where the representation agreement stands.
+ *
+ * Rift never signs and never sends for signature: docs/vision.md is explicit
+ * that those are among the actions which never become automatic in any mode.
+ * This records a paper event that happened elsewhere, which is the whole of
+ * what a product is entitled to do here.
+ */
+export async function recordRepresentation(
+  leadId: string,
+  status: RepStatus,
+  signedOn?: string | null,
+  expiresOn?: string | null,
+) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await setRepresentation(leadId, status, { signedOn, expiresOn });
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, status: r.data.status };
+}
+
+/* ------------------------------------------------------------------ *
+ * Decision Rooms
+ * ------------------------------------------------------------------ */
+
+export async function newDecision(input: {
+  leadId: string;
+  kind: DecisionKind;
+  question: string;
+  context?: string | null;
+  decideBy?: string | null;
+}) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await createDecision(input);
+  revalidatePath(`/operations/lead/${input.leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function addDecisionOption(leadId: string, input: {
+  decisionId: string;
+  label: string;
+  detail?: string | null;
+  amountCents?: number | null;
+  amountLabel?: string | null;
+  upside?: string | null;
+  downside?: string | null;
+}) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await addOption(input);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function dropDecisionOption(leadId: string, optionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removeOption(optionId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * Let the client see a room.
+ *
+ * Returns the blocks rather than throwing them, so the form can show the agent
+ * what is wrong with the comparison instead of a failure. `release` re-runs
+ * `canRelease` against the stored room rather than trusting the page, because
+ * a check the caller can skip is not a check.
+ */
+export async function releaseDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await release(decisionId);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath(`/plan`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  if (r.data.blocks.length) {
+    return { ok: false as const, error: r.data.blocks.join(" "), blocks: r.data.blocks };
+  }
+  return { ok: true as const, warns: r.data.warns };
+}
+
+export async function withdrawDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await unrelease(decisionId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function decide(leadId: string, decisionId: string, optionId: string, note?: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await recordOutcome({ decisionId, optionId, note });
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function reopenDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await clearOutcome(decisionId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function deleteDecision(leadId: string, decisionId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await removeDecision(decisionId);
+  revalidatePath(`/operations/lead/${leadId}`);
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}

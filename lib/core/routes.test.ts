@@ -23,7 +23,7 @@ import { join, dirname, resolve } from "node:path";
  * at /prototype right up until the moment production starts rendering it.
  */
 
-const SEED_ROOTS = ["app/(rift)", "app/(studio)"];
+const SEED_ROOTS = ["app/(rift)", "app/(operations)"];
 const EXTS = [".tsx", ".ts"];
 
 function walk(dir: string): string[] {
@@ -118,7 +118,7 @@ describe("middleware runs where sessions exist, and nowhere else", () => {
      should cost nothing to keep.
      
      The risk in the other direction is real too, which is why both halves are
-     asserted: drop /studio from the matcher and sessions stop being
+     asserted: drop /operations from the matcher and sessions stop being
      refreshed, which shows up as an agent being logged out mid-week for no
      visible reason. */
   const src = readFileSync("middleware.ts", "utf8");
@@ -136,7 +136,7 @@ describe("middleware runs where sessions exist, and nowhere else", () => {
   });
 
   it("covers the agent's surfaces", () => {
-    for (const p of ["/studio", "/studio/settings", "/studio/lead/abc", "/auth/callback"]) {
+    for (const p of ["/operations", "/operations/settings", "/operations/lead/abc", "/auth/callback"]) {
       expect(covers(p), `${p} is not covered, so its session is never refreshed`).toBe(true);
     }
   });
@@ -149,7 +149,7 @@ describe("middleware runs where sessions exist, and nowhere else", () => {
   });
 
   it("skips the refresh when the request carries no session cookie", () => {
-    /* Belt and braces for the surfaces that ARE matched: /studio/sign-in is
+    /* Belt and braces for the surfaces that ARE matched: /operations/sign-in is
        the first page anybody loads there and by definition has no cookie. */
     const mw = readFileSync("lib/supabase/middleware.ts", "utf8");
     expect(mw).toContain('c.name.startsWith("sb-")');

@@ -201,7 +201,7 @@ export interface Reach {
 export const RULE_REACH: Record<keyof BusinessRules, Reach> = {
   commissionPct: {
     live: false,
-    where: "Recorded only. The forward view it prices lives in the prototype; nothing in Studio renders a revenue figure yet.",
+    where: "Recorded only. The forward view it prices lives in the prototype; nothing in Operations renders a revenue figure yet.",
   },
   autoEmailReadout: {
     live: false,
@@ -213,7 +213,7 @@ export const RULE_REACH: Record<keyof BusinessRules, Reach> = {
   },
   registryDays: {
     live: true,
-    where: "Programmes not verified within this many days stop being shown to buyers. Immediate in Studio; /buy/programs is cached for an hour, so the public page catches up within one.",
+    where: "Programmes not verified within this many days stop being shown to buyers. Immediate in Operations; /buy/programs is cached for an hour, so the public page catches up within one.",
   },
   clientRetentionYears: {
     live: false,

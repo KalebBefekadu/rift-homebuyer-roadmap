@@ -83,7 +83,7 @@ test.describe("what must not be reachable", () => {
   /* Private, which is a different thing. Next serves an unauthenticated page
      with a 200 either way, so the status code proves nothing: what matters is
      that no client data is on it and the visitor is told where to sign in. */
-  for (const path of ["/studio", "/studio/clients", "/studio/calendar", "/studio/settings", "/studio/questions", "/studio/add", "/studio/pilot", "/studio/lead/some-id"]) {
+  for (const path of ["/operations", "/operations/clients", "/operations/calendar", "/operations/settings", "/operations/questions", "/operations/add", "/operations/pilot", "/operations/lead/some-id"]) {
     test(`${path} shows a stranger nothing`, async ({ page }) => {
       await page.goto(path);
 

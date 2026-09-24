@@ -73,7 +73,7 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
   /* The agent's own window when he has set one, the default otherwise.
      
      This read `DEFAULT_RULES.registryDays.value` directly, which made the
-     re-check window a constant wearing a setting's clothes: /studio/settings
+     re-check window a constant wearing a setting's clothes: /operations/settings
      could record a decision about it and every programme would go on being
      suppressed at ninety days regardless. A settings page whose dials are not
      connected is worse than no settings page: see RULE_REACH in

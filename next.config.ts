@@ -58,6 +58,16 @@ const nextConfig: NextConfig = {
      nothing. */
   poweredByHeader: false,
 
+  /* The agent side was called Studio until blueprint v5 renamed it Operations
+     everywhere a person can see it. Old links (bookmarks, and the sign-in and
+     summary emails already sent) keep working. */
+  async redirects() {
+    return [
+      { source: "/studio", destination: "/operations", permanent: true },
+      { source: "/studio/:path*", destination: "/operations/:path*", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       { source: "/:path*", headers: SECURITY_HEADERS },

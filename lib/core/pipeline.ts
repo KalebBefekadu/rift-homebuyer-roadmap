@@ -218,7 +218,7 @@ export const BASIS_CHIP: Record<Basis, { l: string; c: string }> = {
  * top of the funnel, which is exactly the shape that makes an unshrunk average
  * dangerous.
  *
- * Nothing under `app/(studio)` or `lib/db` may import this. These are invented
+ * Nothing under `app/(operations)` or `lib/db` may import this. These are invented
  * closings, and the chips that render alongside them say "His own history".
  * `lib/core/pipeline-history.test.ts` enforces it.
  */

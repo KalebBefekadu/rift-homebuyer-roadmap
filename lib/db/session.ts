@@ -28,7 +28,7 @@ export interface AgentSession {
  * `currentAgent()` returned `AgentSession | null`, and null meant four
  * different things: nobody is signed in, Supabase is not configured, the auth
  * call did not answer within two seconds, and the agent row could not be read.
- * Every caller turned all four into `redirect("/studio/sign-in")`.
+ * Every caller turned all four into `redirect("/operations/sign-in")`.
  *
  * So a two-second blip signed the agent out. Not really: the cookie was still
  * there and the next request worked, but he was looking at a sign-in page,

@@ -5,7 +5,7 @@ import { readRegistry } from "./programs";
  * The re-check window is a setting, not a constant.
  *
  * `readRegistry` read `DEFAULT_RULES.registryDays.value` directly, which made
- * it a constant wearing a setting's clothes: /studio/settings could record a
+ * it a constant wearing a setting's clothes: /operations/settings could record a
  * decision about it and every programme would go on being suppressed at
  * ninety days regardless. That is the specific failure a settings page
  * introduces if nobody checks: a dial the agent turns, that changes nothing,

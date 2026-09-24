@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
  * asking for `rift_leads.figure_id`: a column that exists on
  * rift_review_items and has never existed on rift_leads. PostgREST answers an
  * unknown column with an error about a schema cache, so every read in that
- * module failed and /studio/referrals was broken from the moment its migration
+ * module failed and /operations/referrals was broken from the moment its migration
  * reached production. 1112 unit tests were green throughout, because the fake
  * database they run against does not validate column names, and neither
  * TypeScript nor the build can check a string.

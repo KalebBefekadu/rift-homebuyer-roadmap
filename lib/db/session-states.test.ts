@@ -8,7 +8,7 @@ import { join } from "node:path";
  * `currentAgent()` returned `AgentSession | null`, and null meant four things:
  * nobody is signed in, Supabase is not configured, the auth call did not
  * answer within two seconds, and the agent row could not be read. Every page
- * turned all four into `redirect("/studio/sign-in")`.
+ * turned all four into `redirect("/operations/sign-in")`.
  *
  * So a two-second blip signed the agent out: not really, the cookie was still
  * there and the next request worked, but he was looking at a sign-in page,
@@ -32,7 +32,7 @@ function pages(dir: string): string[] {
   return out;
 }
 
-const STUDIO = pages("app/(studio)");
+const STUDIO = pages("app/(operations)");
 
 describe("every Studio page", () => {
   it("was found at all", () => {
@@ -50,13 +50,13 @@ describe("every Studio page", () => {
        which is both what it would have done anyway and the right answer:
        somebody who cannot be confirmed should be offered a way in. Every other
        page runs the other direction, and that direction is where the lie is. */
-    const sendsToSignIn = /redirect\("\/studio\/sign-in"\)/.test(src);
+    const sendsToSignIn = /redirect\("\/operations\/sign-in"\)/.test(src);
     const isSignIn = page.includes("sign-in");
 
     it(`${page} asks for three answers, not two`, () => {
       if (isSignIn) {
         expect(src, "the sign-in page may use currentAgent(), but only to redirect a signed-in agent AWAY")
-          .toMatch(/if \(agent\) redirect\("\/studio"\)/);
+          .toMatch(/if \(agent\) redirect\("\/operations"\)/);
         return;
       }
       expect(src, "uses currentAgent(), which collapses an outage into a signed-out visitor")
@@ -70,7 +70,7 @@ describe("every Studio page", () => {
       /* The redirect must be guarded by the signed-out state specifically.
          `if (!agent) redirect(...)` is the shape that caused this. */
       expect(src, "redirects to sign-in without first distinguishing 'unknown'")
-        .toMatch(/session\.state === "signed-out"[\s\S]{0,80}redirect\("\/studio\/sign-in"\)/);
+        .toMatch(/session\.state === "signed-out"[\s\S]{0,80}redirect\("\/operations\/sign-in"\)/);
       expect(src, "nothing handles the 'unknown' state")
         .toMatch(/session\.state === "unknown"/);
     });
@@ -78,7 +78,7 @@ describe("every Studio page", () => {
 });
 
 describe("what the unknown state renders", () => {
-  const src = readFileSync("app/(studio)/studio/Unavailable.tsx", "utf8");
+  const src = readFileSync("app/(operations)/operations/Unavailable.tsx", "utf8");
 
   it("says outright that this is not being signed out", () => {
     /* The whole reason the page exists. A sign-in form makes a claim about
@@ -87,7 +87,7 @@ describe("what the unknown state renders", () => {
   });
 
   it("gives a way back that is not a sign-in form", () => {
-    expect(src).toMatch(/href="\/studio"/);
+    expect(src).toMatch(/href="\/operations"/);
   });
 
   it("says what actually failed", () => {

@@ -7,7 +7,7 @@ import { activityLine, buildDailySummary, summaryWindow, type Activity, type Dai
  */
 
 const base = { journeyId: "j1", journey: "First home in Gwinnett", person: "Devon Drill", who: "Devon", at: "2026-09-24T15:00:00Z" };
-const empty: DailySummary = { day: "2026-09-25", activity: [], dates: [], jobs: [], leads: [], studioUrl: "https://rift.example/studio" };
+const empty: DailySummary = { day: "2026-09-25", activity: [], dates: [], jobs: [], leads: [], studioUrl: "https://rift.example/operations" };
 
 describe("what one summary covers", () => {
   it("covers the previous business day, and Monday's covers the weekend", () => {
@@ -59,7 +59,7 @@ describe("what it says", () => {
     expect(s.subject).toBe("Rift, Fri, Sep 25: 1 date passed, 1 thing from buyers, 1 date to look at, 1 new person");
     expect(s.html.indexOf("Needs you first")).toBeLessThan(s.html.indexOf("From your buyers"));
     expect(s.html).toMatch(/Due diligence ends<\/strong>, Wed, Sep 23 \(no time stated\), passed and not recorded as met\. Record what actually happened/);
-    expect(s.html).toContain("https://rift.example/studio");
+    expect(s.html).toContain("https://rift.example/operations");
   });
 
   it("escapes everything a person typed", () => {

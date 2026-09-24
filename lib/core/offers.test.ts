@@ -194,7 +194,7 @@ describe("release", () => {
  */
 describe("what both pages show", () => {
   const src = readFileSync("app/(rift)/plan/[token]/page.tsx", "utf8");
-  const agentSrc = readFileSync("app/(studio)/studio/lead/[id]/Offers.tsx", "utf8");
+  const agentSrc = readFileSync("app/(operations)/operations/lead/[id]/Offers.tsx", "utf8");
 
   it("puts the paperwork gaps on the seller's page too", () => {
     expect(src, "the seller is not told what is missing from an offer").toMatch(/gapsIn\(/);

@@ -47,7 +47,7 @@ describe("every rule accounts for itself", () => {
       return out;
     }
 
-    const body = ["lib/db", "app/(rift)", "app/(studio)"]
+    const body = ["lib/db", "app/(rift)", "app/(operations)"]
       .flatMap(files)
       .filter((f) => !f.includes("settings"))
       .map((f) => readFileSync(f, "utf8"))
@@ -130,7 +130,7 @@ describe("the re-check window actually reaches the registry", () => {
   });
 
   it("is passed the agent's own value by both callers", () => {
-    const studio = readFileSync("app/(studio)/studio/page.tsx", "utf8");
+    const studio = readFileSync("app/(operations)/operations/page.tsx", "utf8");
     const buyers = readFileSync("app/(rift)/buy/programs/page.tsx", "utf8");
     expect(studio).toContain("registryDays.value");
     expect(buyers).toContain("registryDays.value");

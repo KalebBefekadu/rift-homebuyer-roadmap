@@ -14,7 +14,7 @@ There are no passwords anywhere. Both sides sign in with a link sent by email.
 
 | Who | Where | How |
 | --- | --- | --- |
-| You, as the agent (Operations) | `/studio/sign-in` | Enter `kalebbefekadu@gmail.com`, then open the link in the email. Only that address is an agent; any other address is refused. |
+| You, as the agent (Operations) | `/operations/sign-in` | Enter `kalebbefekadu@gmail.com`, then open the link in the email. Only that address is an agent; any other address is refused. |
 | A buyer | `/app/invite/<token>` | You make an invitation link in Operations (section 4, Household) for an email address you own. Open the link, ask for a sign-in link, open the email, accept. |
 
 Things that will trip you up if you do not know them:
@@ -49,7 +49,7 @@ The private buyer journey did not exist before. It now covers, end to end:
 8. Contract dates, as checked history, with deadlines on Today.
 9. The buyer's own pages: Today, priorities, homes, offers, and a printable records page.
 10. The morning summary email (9 AM Eastern, business days) of what buyers did.
-11. The pilot report at `/studio/pilot`.
+11. The pilot report at `/operations/pilot`.
 
 The public site (the front door, buyer, seller and abroad readouts, `/offer`, `/book`) was
 already live and is unchanged in how it works, so it needs only a light pass (section 6).
@@ -59,7 +59,7 @@ already live and is unchanged in how it works, so it needs only a light pass (se
 Do this first. It touches every new page in the order a real client would. Allow about an
 hour. Browser A is you as the agent, browser B is the buyer.
 
-1. **A:** sign in at `/studio/sign-in`.
+1. **A:** sign in at `/operations/sign-in`.
 2. **A:** Add someone (top right). Name "Test Buyer", your second email, buying, any answers.
 3. **A:** on their record, under Agreement, record a signed buyer agreement that runs out
    in a few months. Showing times are refused without one; skip this step first if you want
@@ -87,7 +87,7 @@ hour. Browser A is you as the agent, browser B is the buyer.
     against the document" on each. **B:** the checked dates now appear for the buyer.
 17. **B:** on Today, report one of their tasks done ("I have done this" or "I sent it").
     **A:** confirm it on the workstream.
-18. **A:** open `/studio/pilot`. Your replies from steps 9, 13, 14 and 17 are counted there.
+18. **A:** open `/operations/pilot`. Your replies from steps 9, 13, 14 and 17 are counted there.
     Record a check for the journey.
 19. **B:** open the records page (link on their journey page) and print it or save it as a PDF.
 20. **A:** Where it stands: "It closed, or was terminated", closed, with the closing confirmed.
@@ -99,7 +99,7 @@ hour. Browser A is you as the agent, browser B is the buyer.
 Sign in first. The menu across the top: Today, Relationships, Search, Offers, Calendar,
 Advocacy, Pilot, plus Add someone, Your questions and Your decisions on the right.
 
-### Today `/studio`
+### Today `/operations`
 
 - [ ] Leads are ranked, and each shows why it ranks where it does.
 - [ ] A contract date that has passed shows as urgent until you record what happened.
@@ -107,12 +107,12 @@ Advocacy, Pilot, plus Add someone, Your questions and Your decisions on the righ
       refresh read "never" until their first recorded run (03:00 UTC daily, and Fridays).
 - [ ] Nothing on it overflows or needs a sideways scroll on your phone.
 
-### Relationships `/studio/clients`
+### Relationships `/operations/clients`
 
 - [ ] Everyone is listed newest first, and search by name or email finds them.
 - [ ] Clicking a person opens their record.
 
-### A person's record `/studio/lead/<id>`
+### A person's record `/operations/lead/<id>`
 
 - [ ] Contact details, where they are in the pipeline, and history newest first.
 - [ ] "The next thing to do" with a due date saves.
@@ -122,12 +122,12 @@ Advocacy, Pilot, plus Add someone, Your questions and Your decisions on the righ
 - [ ] Decisions: create a decision room with two options.
 - [ ] Archive the record, then find it again.
 
-### Add someone `/studio/add`
+### Add someone `/operations/add`
 
 - [ ] Refuses with neither email nor phone; one of the two is enough.
 - [ ] Asks why you can contact them, and saves.
 
-### A buying journey `/studio/journey/<id>`
+### A buying journey `/operations/journey/<id>`
 
 This is the main new page. Each section on it:
 
@@ -192,26 +192,26 @@ This is the main new page. Each section on it:
 - [ ] Record an amendment that moves two dates at once. Correct it. No longer applies.
 - [ ] A passed date shows on Today until you record what happened.
 
-### Search `/studio/search`
+### Search `/operations/search`
 
 - [ ] Each buyer's search with what is yours to do first: write the brief, approve it, set it
       up in Matrix and record it, or "The brief changed. Review it and update Matrix". A
       search that is running says "Nothing to do".
 
-### Offers `/studio/offers`
+### Offers `/operations/offers`
 
 - [ ] Offers sent through the public `/offer` form, read with the same arithmetic the sender saw.
 - [ ] On a seller's record, compare offers and write "Your take", then "Approve and show seller".
 
-### Calendar `/studio/calendar`
+### Calendar `/operations/calendar`
 
 - [ ] The next five weeks across everyone, as a list, leading with what a client can see.
 
-### Advocacy `/studio/referrals`
+### Advocacy `/operations/referrals`
 
 - [ ] After a closing: the same neutral review request for everyone, and a referral link to copy.
 
-### Pilot `/studio/pilot`
+### Pilot `/operations/pilot`
 
 - [ ] "Same-day replies": every buyer request is counted as same day, later, past due or
       waiting. Something a buyer did on Saturday is due Monday.
@@ -222,7 +222,7 @@ This is the main new page. Each section on it:
 - [ ] Sign-in and scheduled work counts are right.
 - [ ] Print: the menu and buttons are left off the printed copy.
 
-### Your questions `/studio/questions` and Your decisions `/studio/settings`
+### Your questions `/operations/questions` and Your decisions `/operations/settings`
 
 - [ ] Edit a funnel question's wording and publish it; `/buy/start` shows the new wording.
 - [ ] Each setting says what it changes, and changing one is saved.

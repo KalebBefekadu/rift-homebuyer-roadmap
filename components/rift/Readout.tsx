@@ -28,7 +28,7 @@ import { Trust, TrustLadder } from "./Trust";
  *
  * They point at the real routes now. "Sign in" is gone rather than repointed:
  * it went to the client portal, which does not exist outside the prototype,
- * and /studio is the agent's door, not the reader's.
+ * and /operations is the agent's door, not the reader's.
  */
 export function ReadoutShell({ v, children, ask }: {
   v: "buy" | "sell";

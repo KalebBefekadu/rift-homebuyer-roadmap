@@ -132,9 +132,9 @@ export function buildDailySummary(s: DailySummary): { subject: string; html: str
     ${list(acts.map((a) => escapeHtml(activityLine(a))))}`).join("")}` : ""}
   ${other.length ? `${h("Contract dates")}${list(other.map(dateItem))}` : ""}
   ${s.leads.length ? `${h("New people")}${list(s.leads.map((l) => `${escapeHtml(l.name ?? "Someone")}, ${l.side === "buy" ? "buying" : "selling"} · ${BAND_LABEL[l.band]}`))}` : ""}
-  <p style="font-size:15px;margin:22px 0 8px"><a href="${s.studioUrl}" style="color:#c2351e">Open Today in Studio</a></p>
+  <p style="font-size:15px;margin:22px 0 8px"><a href="${s.studioUrl}" style="color:#c2351e">Open Today in Operations</a></p>
   <p style="font-size:12px;color:#888">
-    One summary each business morning. Everything here is also on Today in Studio.
+    One summary each business morning. Everything here is also on Today in Operations.
   </p>
 </div>`.trim();
 

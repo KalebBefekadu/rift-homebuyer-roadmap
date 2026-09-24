@@ -15,7 +15,7 @@ import {
  *
  * Every function here resolves the agent itself and scopes every query by it.
  * The service-role client bypasses RLS, so a bare journey id from a form is
- * never authority on its own (the same rule as app/(studio)/studio/actions.ts).
+ * never authority on its own (the same rule as app/(operations)/operations/actions.ts).
  */
 
 /* The tables arrive in migrations. A deployment that runs ahead of them must

@@ -31,6 +31,16 @@ export default async function ClientSignIn({ searchParams }: { searchParams: Pro
         {reason ? <p className="t-xs c-3" style={{ marginTop: 10 }}>{reason}</p> : null}
         <SignInForm />
       </div>
+      {/* Blueprint v5 §7.3. The form sends nothing to an address nobody
+          invited, and cannot say so without revealing who is a client, so the
+          way in is explained here instead, for everyone. */}
+      <div className="t-sm c-3" style={{ marginTop: 18, lineHeight: 1.6, paddingInline: 4 }}>
+        <div className="w6 c-2">First time here?</div>
+        <p style={{ marginTop: 4 }}>
+          Access starts with an invitation link from your agent. Open that link once and you are in; after
+          that, sign in here with the same email. If you have not had an invitation, ask your agent for one.
+        </p>
+      </div>
     </main>
   );
 }

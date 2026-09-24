@@ -110,5 +110,5 @@ Next:
        psql "$DATABASE_URL" -f supabase/seed/rift_programs.sql
   2. Decide the six business rules. Two are the broker's call and one has a
      legal floor; see docs/handoff.md section 8.
-  3. Open /studio.
+  3. Open /operations.
 `);

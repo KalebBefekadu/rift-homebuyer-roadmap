@@ -35,7 +35,7 @@ describe("the switch", () => {
 
 describe("switched off, every new writer refuses", () => {
   it("gates every Studio journey write before it does anything", () => {
-    const src = read("app/(studio)/studio/journey/ops.ts");
+    const src = read("app/(operations)/operations/journey/ops.ts");
     const ops = src.split("\nexport async function ").slice(1);
     expect(ops.length).toBeGreaterThan(20);
     for (const op of ops) {
@@ -55,7 +55,7 @@ describe("switched off, every new writer refuses", () => {
     for (const [file, fn] of [
       ["app/api/app/route.ts", "export async function POST"],
       ["app/api/app/document/route.ts", "export async function GET"],
-      ["app/api/studio/document/route.ts", "export async function GET"],
+      ["app/api/operations/document/route.ts", "export async function GET"],
     ]) {
       const src = read(file);
       const body = src.slice(src.indexOf(fn));
@@ -71,7 +71,7 @@ describe("switched off, every new writer refuses", () => {
   it("closes the buyer's pages and the Studio journey page", () => {
     for (const file of [
       "app/(client)/app/page.tsx", "app/(client)/app/invite/[token]/page.tsx", "app/(client)/app/j/[id]/page.tsx",
-      "app/(studio)/studio/journey/[id]/page.tsx",
+      "app/(operations)/operations/journey/[id]/page.tsx",
     ]) expect(read(file), file).toContain("buyerSearchOn(process.env)");
   });
 });

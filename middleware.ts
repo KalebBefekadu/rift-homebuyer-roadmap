@@ -24,5 +24,5 @@ export const config = {
   /* Studio, the auth callback, and the buyer's signed-in pages at /app with
      the API they write through. Nothing else in this product reads a
      session, and a page that ever does must be added here deliberately. */
-  matcher: ["/studio/:path*", "/auth/:path*", "/app/:path*", "/api/app/:path*", "/api/studio/:path*"],
+  matcher: ["/operations/:path*", "/auth/:path*", "/app/:path*", "/api/app/:path*", "/api/operations/:path*"],
 };

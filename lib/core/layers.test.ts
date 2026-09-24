@@ -74,7 +74,7 @@ describe("layer boundaries", () => {
     /* The prototype is the specification, not a data source. A production page
        reading fixtures looks like it works right up until somebody asks why a
        real client is called Maya Ellison. */
-    const offenders = [...sources("app/(rift)"), ...sources("app/(studio)"), ...sources("lib/db")]
+    const offenders = [...sources("app/(rift)"), ...sources("app/(operations)"), ...sources("lib/db")]
       .filter((f) => /from "@\/lib\/prototype\/(fixtures|clients)"/.test(read(f)));
     expect(offenders).toEqual([]);
   });

@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
  * build bundled with Next 15.5 renders the refreshed tree, waits on one of its
  * streamed chunks, and loses the wake-up when that chunk resolves: the root
  * stays suspended with nothing scheduled, and the page shows the old data
- * for good. Found on a production build of /studio/journey (about half of all
+ * for good. Found on a production build of /operations/journey (about half of all
  * full page loads) by reading React's root state on the hung page: the update
  * rendered, every promise it waited on was fulfilled, nothing pinged it (local
  * walk-through, 23 Sep 2026). Buffering the reply whole always avoided it, so

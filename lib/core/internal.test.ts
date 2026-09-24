@@ -61,7 +61,8 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     "/sell/results": "a readout is public by design; that is the product",
     "/abroad/results": "a readout is public by design; that is the product",
     "/book": "public by design",
-    "/studio": "behind Supabase auth: app/(studio)/studio/page.tsx",
+    "/operations": "behind Supabase auth: app/(operations)/operations/page.tsx",
+    "/studio": "the old name for /operations: a permanent redirect in next.config.ts",
     "/plan/": "the token IS the credential: app/(rift)/plan/[token]/page.tsx",
     "/app": "behind Supabase auth AND a journey membership: lib/db/client.ts memberOf",
   };

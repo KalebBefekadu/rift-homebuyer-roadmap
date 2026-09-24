@@ -20,7 +20,7 @@ const BUILT = [
   { href: "/buy/how", name: "How this works", note: "Where the numbers come from, and how Kaleb is paid." },
   { href: "/sell", name: "Rift for sellers", note: "Net proceeds, unclaimed value, and repair triage. Live." },
   { href: "/sell/unclaimed", name: "Unclaimed value", note: "Exemptions, appeals and the gains exclusion. Standalone, asks for nothing." },
-  { href: "/studio", name: "Studio", note: "The agent surface. Ranked leads, review queue, follow-up, drop-off." },
+  { href: "/operations", name: "Operations", note: "The agent surface. Ranked leads, review queue, follow-up, drop-off." },
 ];
 
 const SPEC = [

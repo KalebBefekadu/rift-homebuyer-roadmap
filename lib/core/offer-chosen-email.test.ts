@@ -3,7 +3,7 @@ import { buildOfferChosen } from "./email";
 
 const base = {
   to: "k@example.com", seller: "Nadia Okafor", from: "The Whitfields", price: 400_000,
-  net: 196_925, bestNet: true, of: 3, note: null, studioUrl: "https://example.com/studio/lead/1",
+  net: 196_925, bestNet: true, of: 3, note: null, studioUrl: "https://example.com/operations/lead/1",
 };
 
 describe("the alert that a seller chose an offer", () => {

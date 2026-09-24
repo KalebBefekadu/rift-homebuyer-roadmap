@@ -476,7 +476,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
                       invented here would be exactly the guess the whole
                       dictionary exists to avoid. */}
                   <Link href="/privacy" className="t-sm c-3">What we keep</Link>
-                  <Link href="/studio" className="t-sm c-3">Sign in</Link>
+                  <Link href="/operations" className="t-sm c-3">Sign in</Link>
                 </div>
               </div>
             </div>

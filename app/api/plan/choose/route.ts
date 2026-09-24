@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       bestNet: r.data.snapshot.bestNet,
       of: r.data.snapshot.of,
       note: note?.trim() || null,
-      studioUrl: `${siteUrl() ?? ""}/studio/lead/${r.data.leadId}`,
+      studioUrl: `${siteUrl() ?? ""}/operations/lead/${r.data.leadId}`,
     });
     if (!sent.ok) captureOpError(new Error(sent.error), { op: "email.offerChosen" });
   }

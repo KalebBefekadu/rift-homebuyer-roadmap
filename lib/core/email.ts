@@ -218,10 +218,10 @@ export function buildNewLead(l: NewLeadEmail): { subject: string; html: string }
     <strong>${escapeHtml(l.action)}</strong>
   </p>
   <p style="font-size:15px">
-    <a href="${l.studioUrl}" style="color:#e8442a">Open them in Studio</a>
+    <a href="${l.studioUrl}" style="color:#e8442a">Open them in Operations</a>
   </p>
   <p style="font-size:12px;color:#888">
-    Sent because a readout was completed. The cadence has already started; replying in Studio
+    Sent because a readout was completed. The cadence has already started; replying in Operations
     stops it.
   </p>
 </div>`.trim();
@@ -274,7 +274,7 @@ export function buildOfferChosen(c: OfferChosenEmail): { subject: string; html: 
   <p style="font-size:13px;color:#666;margin:0 0 14px">
     This is their choice, not an acceptance. Nothing is binding until they sign it.
   </p>
-  <p style="font-size:15px"><a href="${c.studioUrl}" style="color:#e8442a">Open them in Studio</a></p>
+  <p style="font-size:15px"><a href="${c.studioUrl}" style="color:#e8442a">Open them in Operations</a></p>
 </div>`.trim();
 
   return { subject, html };

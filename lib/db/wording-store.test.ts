@@ -116,7 +116,7 @@ describe("publishing invalidates the page it changes", () => {
      and the questions a visitor reads keep saying the old thing for five
      minutes, which is exactly long enough for the agent to conclude the
      feature is broken, or worse, to not notice. */
-  const actions = readFileSync("app/(studio)/studio/actions.ts", "utf8");
+  const actions = readFileSync("app/(operations)/operations/actions.ts", "utf8");
   const body = actions.slice(actions.indexOf("export async function publishQuestions"));
 
   it("revalidates the assessment page for the side it published", () => {
@@ -124,6 +124,6 @@ describe("publishing invalidates the page it changes", () => {
   });
 
   it("and the page the agent is looking at", () => {
-    expect(body).toContain('revalidatePath("/studio/questions")');
+    expect(body).toContain('revalidatePath("/operations/questions")');
   });
 });

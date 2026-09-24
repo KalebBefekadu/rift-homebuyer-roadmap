@@ -1,0 +1,682 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { agentSession } from "@/lib/db/session";
+import { Unavailable } from "./Unavailable";
+import { rankedLeads } from "@/lib/db/leads";
+import { funnelReport } from "@/lib/db/events";
+import { board, dueActions, lapsingAgreements } from "@/lib/db/clients";
+import { recentChoices } from "@/lib/db/offer-room";
+import { STALL_CHIP } from "@/lib/core/pipeline";
+import { readStale } from "@/lib/db/programs";
+import { rulesOrDefaults } from "@/lib/db/settings";
+import { openItems } from "@/lib/db/review";
+import { due } from "@/lib/db/nurture";
+import { abandoned } from "@/lib/db/recovery";
+import { currentRate } from "@/lib/db/rates";
+import { REVIEW_SLA_HOURS } from "@/lib/core/review";
+import { CHANNEL_LABEL } from "@/lib/core/nurture";
+import { ReviewRow } from "./ReviewRow";
+import { LeadRow } from "./LeadRow";
+import { StudioHeader } from "./StudioHeader";
+
+import { sla, type Band } from "@/lib/core/lead";
+import { diagnose } from "./diagnose";
+import { Ico } from "@/components/rift/icons";
+import { captureOpError } from "@/lib/monitoring/capture";
+import { datesNeedingAttention } from "@/lib/db/deadlines";
+import { jobsHealth } from "@/lib/db/jobs";
+import { inDays } from "@/lib/core/deadline";
+
+export const metadata: Metadata = { title: "Today" };
+export const dynamic = "force-dynamic";
+
+/**
+ * Studio, the minimum agent surface for the MVP.
+ *
+ * Two things only: the leads the readout produced, ranked by what their answers
+ * say rather than by when they arrived, and the funnel's own drop-off. Not the
+ * whole of Studio: the board, offers, calendar and client records are phase 5,
+ * and building them now would mean building against guesses, because there is
+ * no live traffic yet for them to operate on.
+ *
+ * The ranking shows its own arithmetic. An agent who cannot see why a lead
+ * ranks where it does stops trusting the ranking inside a week, and a ranking
+ * nobody trusts still costs attention.
+ */
+export default async function StudioToday() {
+  const session = await agentSession();
+
+  /* A session check that did not answer is not a signed-out visitor. Today is
+     the first thing the agent opens in the morning, which is the request most
+     likely to pay for a cold start, and telling him to sign in when his
+     cookie is fine says his session expired. See lib/db/session.ts. */
+  if (session.state === "unknown") return <Unavailable reason={session.reason} />;
+
+  const agent = session.state === "signed-in" ? session.agent : null;
+
+  if (!agent) {
+    return (
+      <main className="shell-w sec">
+        <h1 className="serif" style={{ fontSize: 28 }}>Operations is for the agent.</h1>
+        <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
+          Sign in to see the people your readout has produced. If you arrived here by accident,
+          the buyer product is a better place to be.
+        </p>
+        <div className="row gap-2 wrap" style={{ marginTop: 18 }}>
+          <Link href="/operations/sign-in" className="btn btn-p">Sign in</Link>
+          <Link href="/buy" className="btn btn-g">Rift for buyers</Link>
+        </div>
+      </main>
+    );
+  }
+
+  /* One round, not two. None of these depends on another, and splitting them
+     made the page wait for the slowest of the first five before starting the
+     last two: for no reason beyond the order they were written in. Studio is
+     the screen the agent opens first thing, so its latency is the product's
+     felt speed. */
+  /* His own re-check window, before the reads that depend on it. One extra
+     round trip, and the alternative is a settings page that records a
+     decision the product then ignores. */
+  const agentRules = await rulesOrDefaults(agent.agentId);
+  const { rules } = agentRules;
+  const recheckDays = rules.registryDays.value;
+  const undecidedCount = agentRules.undecided.length;
+
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead, datesRead, jobsRead] =
+    await Promise.all([
+      rankedLeads(50),
+      funnelReport("buy"),
+      funnelReport("sell"),
+      board(),
+      dueActions(),
+      readStale(new Date(), recheckDays),
+      openItems(),
+      due(new Date()),
+      abandoned(),
+      currentRate(),
+      lapsingAgreements(),
+      recentChoices(),
+      datesNeedingAttention(),
+      jobsHealth(),
+    ]);
+  /* Null means not tracked yet (the tables are not there); a failed read is
+     shown as one, never as nothing to do. */
+  const dates = datesRead.ok && "data" in datesRead ? datesRead.data : null;
+  const datesFailed = !datesRead.ok;
+  const jobProblems = jobsRead.ok && "data" in jobsRead && jobsRead.data ? jobsRead.data.filter((j) => j.problem) : [];
+
+  const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
+  const lapsing = lapsingRead.ok && "data" in lapsingRead ? lapsingRead.data : [];
+  const choices = choicesRead.ok && "data" in choicesRead ? choicesRead.data : [];
+
+  const leads = leadsRead.ok && "data" in leadsRead ? leadsRead.data : [];
+  const report = reportRead.ok && "data" in reportRead ? reportRead.data : null;
+  const sellReport = sellReportRead.ok && "data" in sellReportRead ? sellReportRead.data : null;
+  const working = boardRead.ok && "data" in boardRead ? boardRead.data : [];
+  const owed = owedRead.ok && "data" in owedRead ? owedRead.data : [];
+  const stale = staleRead.ok && "data" in staleRead ? staleRead.data : [];
+  const review = reviewRead.ok && "data" in reviewRead ? reviewRead.data : [];
+  const touches = dueRead.ok && "data" in dueRead ? dueRead.data : [];
+  const pending = review.filter((r) => r.state === "pending-review");
+  const overdue = pending.filter((r) => r.waitingHours > REVIEW_SLA_HOURS);
+
+  /* Three states, not two.
+     
+     "Nobody has arrived" and "nothing is being recorded" were already held
+     apart. A query that FAILED was falling into neither: it produced an empty
+     list, so a database error rendered "No leads yet" alongside copy assuring
+     the agent that the readout is live and instrumented. That is the product
+     telling him a comforting thing it cannot know. */
+  const reads = [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead];
+  const notRecording = reads.some((r) => "skipped" in r);
+  const failures = reads.filter((r) => !r.ok).map((r) => (r as { error: string }).error);
+  /* Shown to the agent AND reported. He can see something is wrong; only the
+     capture says what, and only somebody looking at Sentry will fix it. */
+  for (const error of failures) captureOpError(new Error(error), { op: "studio.today" });
+
+  /* No cast. The previous version fabricated the input and cast it to `never`,
+     which hid a missing `contactable` and made every lead report as unbreached
+    : an indicator that read as "doing well" because it could not fire. */
+  const slaOf = (l: (typeof leads)[number]) =>
+    sla(
+      {
+        completion: l.completion,
+        contactable: l.contactable,
+        hoursSince: l.hoursSince,
+        humanRepliedMins: l.humanRepliedAt
+          ? Math.max(0, (new Date(l.humanRepliedAt).getTime() - new Date(l.createdAt).getTime()) / 60_000)
+          : null,
+      },
+      l.band as Band,
+    );
+
+  const breached = leads.filter((l) => slaOf(l).breached).length;
+
+  return (
+    <>
+      <StudioHeader agentName={agent.name} undecided={undecidedCount} current="today" />
+
+      <main className="shell-w sec">
+        <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Today</h1>
+
+        {failures.length ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
+            <div className="row gap-2">
+              <Ico.alert size={15} className="c-neg" />
+              <span className="t-sm w6">
+                {failures.length} of this page&apos;s {reads.length} queries failed.
+              </span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              What is missing below is missing because a query broke, not because it is not
+              there. Treat every empty section on this screen as unknown rather than as zero:
+              it has been reported, and the first one said: {failures[0]}
+            </p>
+          </div>
+        ) : notRecording ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--warn, #b8791f)" }}>
+            <div className="row gap-2">
+              <Ico.alert size={15} className="c-warn" />
+              <span className="t-sm w6">Nothing is being recorded right now.</span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              The database is not reachable, so this screen is empty because nothing is being
+              stored, not because nobody has arrived. Those are different problems and this one
+              is yours to fix.
+            </p>
+          </div>
+        ) : null}
+
+        {/* The rate is the assumption the most figures depend on and the only
+            one that moves weekly. Recording it is a manual habit, so the one
+            thing that must not happen is nobody noticing it has lapsed:
+            every monthly figure in the product quietly drifts with it. */}
+        {rate.freshness !== "fresh" ? (
+          <div className="card p-4" style={{ marginTop: 16 }}>
+            <div className="between wrap gap-2">
+              <div className="row gap-2">
+                <Ico.chart size={15} className="c-3" />
+                <span className="t-sm w6">
+                  The rate everyone is being shown is {rate.pct.toFixed(2)}%
+                </span>
+              </div>
+              <span className={`chip ${rate.freshness === "stale" ? "chip-neg" : "chip-warn"}`}>
+                {rate.asOf ? `${rate.ageDays} days old` : "Never recorded"}
+              </span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {rate.note} Record this week&apos;s with{" "}
+              <span className="mono t-xs">npm run rift:rate -- 6.72</span>.
+            </p>
+          </div>
+        ) : null}
+
+        {stale.length ? (
+          <div className="card p-4" style={{ marginTop: 16 }}>
+            <div className="between wrap gap-2">
+              <div className="row gap-2">
+                <Ico.shield size={15} className="c-3" />
+                <span className="t-sm w6">
+                  {stale.length} program{stale.length === 1 ? "" : "s"} withheld from customers
+                </span>
+              </div>
+              <span className="chip chip-warn">Needs re-verifying</span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {stale.map((s) => s.name).join(", ")}. Nobody is being shown {stale.length === 1 ? "it" : "them"}
+              {" "}until {stale.length === 1 ? "it is" : "they are"} checked again. Suppression is
+              silent to the customer and loud here, which is the right way round.
+            </p>
+            {/* The task has a name on it. An unowned cadence is not a cadence:
+                programmes rot, stop being shown, and the list quietly shortens
+                with nobody having decided that. `registryOwner` is a setting
+                precisely so this sentence is somebody's decision rather than a
+                literal in a file. */}
+            <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.55 }}>
+              {rules.registryOwner.value} re-checks these, within {recheckDays} days of the last
+              verification. <Link href="/operations/settings" className="c-brand">Change either</Link>.
+            </p>
+          </div>
+        ) : null}
+
+        {/* Contract dates and scheduled jobs (W09). A missed date or a job
+            that did not run is urgent and has an owner; neither says what it
+            means legally or clears itself. */}
+        {datesFailed ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
+            <span className="t-sm w6">The contract dates did not load.</span>
+            <p className="t-sm c-3" style={{ marginTop: 6 }}>That is not the same as none being due. Reload in a moment.</p>
+          </div>
+        ) : dates && dates.length ? (
+          <section style={{ marginTop: 28 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>Contract dates</h2>
+            <div className="card" style={{ marginTop: 12, overflow: "hidden" }}>
+              {dates.map((d, i) => (
+                <Link key={`${d.journeyId}-${d.label}-${i}`} href={`/operations/journey/${d.journeyId}`} className="between gap-3"
+                  style={{ display: "flex", padding: "12px 16px", alignItems: "center", borderBottom: i === dates.length - 1 ? 0 : "1px solid var(--line-3)" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-sm w6 trunc">{d.person}: {d.label}</div>
+                    <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                      {d.when}. {d.why === "missed" ? "Passed and not recorded as met. Record what actually happened." : d.why === "unchecked" ? "Not checked against the document yet, so the buyer does not see it." : `Due ${inDays(d.days!)}.`}
+                    </div>
+                  </div>
+                  <span className={`chip t-2xs ${d.why === "missed" ? "chip-neg" : "chip-warn"}`} style={{ flex: "none" }}>
+                    {d.why === "missed" ? "Passed" : d.why === "unchecked" ? "Check it" : "Soon"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {jobProblems.length ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
+            <div className="row gap-2">
+              <Ico.alert size={15} className="c-neg" />
+              <span className="t-sm w6">{jobProblems.length === 1 ? "A scheduled job needs you" : `${jobProblems.length} scheduled jobs need you`}</span>
+            </div>
+            <ul className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6, display: "grid", gap: 4 }}>
+              {jobProblems.map((j) => <li key={j.job}>{j.problem}</li>)}
+            </ul>
+            <p className="t-xs c-4" style={{ marginTop: 8 }}>Yours to look into: the Vercel project&apos;s cron logs show the run, and Sentry has any error. Nothing is retried on its own.</p>
+          </div>
+        ) : null}
+
+        {/* Waiting on a person */}
+        {pending.length || touches.length ? (
+          <section style={{ marginTop: 28 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Waiting on you
+            </h2>
+
+            {pending.length ? (
+              <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+                <div className="between wrap gap-2" style={{ padding: "11px 15px", borderBottom: "1px solid var(--line-2)" }}>
+                  <span className="t-sm w6">Asked you to check a figure</span>
+                  {overdue.length
+                    ? <span className="chip chip-neg"><Ico.clock size={11} />{overdue.length} past {REVIEW_SLA_HOURS}h</span>
+                    : <span className="chip chip-pos">All inside {REVIEW_SLA_HOURS}h</span>}
+                </div>
+                {pending.map((r, i) => (
+                  <ReviewRow key={r.id} item={r} last={i === pending.length - 1} />
+                ))}
+              </div>
+            ) : null}
+
+            {touches.length ? (
+              <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+                <div className="between wrap gap-2" style={{ padding: "11px 15px", borderBottom: "1px solid var(--line-2)" }}>
+                  <span className="t-sm w6">Follow-up due today</span>
+                  <span className="chip">{touches.filter((t) => t.auto).length} of {touches.length} go out on their own</span>
+                </div>
+                {touches.map((t, i) => (
+                  <div key={t.enrolmentId + t.stepId} style={{ padding: "12px 15px", borderBottom: i === touches.length - 1 ? undefined : "1px solid var(--line-3)" }}>
+                    <div className="row wrap gap-2">
+                      <span className="t-sm w6">{t.name}</span>
+                      <span className="chip">{CHANNEL_LABEL[t.channel]}</span>
+                      {t.auto ? <span className="chip chip-pos"><Ico.bolt size={10} />Automatic</span> : <span className="chip chip-warn">Needs you</span>}
+                      {t.daysLate > 0 ? <span className="chip chip-neg">{t.daysLate}d late</span> : null}
+                    </div>
+                    <p className="t-sm" style={{ marginTop: 4 }}>{t.says}</p>
+                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}>
+                      <span className="w6">Gives them: </span>{t.gives}
+                    </p>
+                    {t.downgraded ? (
+                      <p className="t-xs c-4 row gap-2" style={{ marginTop: 5 }}>
+                        <Ico.lock size={11} style={{ flex: "none", marginTop: 2 }} />{t.downgraded}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* Leads */}
+        <section style={{ marginTop: 28 }}>
+          <div className="between wrap gap-2">
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Who to call
+            </h2>
+            {breached ? <span className="chip chip-neg"><Ico.clock size={11} />{breached} past the reply target</span> : null}
+          </div>
+          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+            Ranked by what the answers say, not by when they arrived. An inbox makes everyone
+            look equally urgent, which is the same as making nobody urgent.
+          </p>
+
+          {leads.length === 0 ? (
+            <div className="card p-5 center col gap-2" style={{ marginTop: 14 }}>
+              <Ico.users size={20} className="c-4" />
+              <span className="t-sm w55">No leads yet.</span>
+              <span className="t-xs c-4" style={{ maxWidth: 380, textAlign: "center", lineHeight: 1.55 }}>
+                {failures.length
+                  ? "Or a query failed and this is unknown rather than empty. See the notice above."
+                  : notRecording
+                    ? "And none would be recorded if there were. See the notice above."
+                    : "The readout is live and instrumented. The first 200 completed assessments are what turns every assumption in this product into a measurement."}
+              </span>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {leads.map((l, i) => (
+                <LeadRow
+                  key={l.id}
+                  lead={{
+                    ...l,
+                    signals: l.signals as { label: string; points: number; note: string }[],
+                    slaLabel: slaOf(l).humanLabel,
+                    breached: slaOf(l).breached,
+                  }}
+                  last={i === leads.length - 1}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Sellers who chose an offer.
+
+            Above the agreements, because an offer carries a response deadline
+            measured in hours. The alert email may not have arrived: email is
+            the one integration this product has never been able to prove:
+            so the choice is here whether or not it did. */}
+        {choices.length ? (
+          <section style={{ marginTop: 32 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Sellers who chose an offer
+            </h2>
+            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+              From their plan page, in the last week. A choice is not an acceptance; the next
+              step is the paperwork, before the buyer&rsquo;s deadline.
+            </p>
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {choices.map((c, i) => (
+                <Link
+                  key={c.leadId}
+                  href={`/operations/lead/${c.leadId}`}
+                  className="between gap-3"
+                  style={{
+                    display: "flex", padding: "12px 16px", alignItems: "center",
+                    borderBottom: i === choices.length - 1 ? 0 : "1px solid var(--line-3)",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-sm w6 trunc">{c.name} chose {c.seen.from}</div>
+                    <div className="t-xs c-4 trunc" style={{ marginTop: 2 }}>
+                      {c.note ? `\u201c${c.note}\u201d` : `$${Math.round(c.seen.price).toLocaleString()} offered`}
+                    </div>
+                  </div>
+                  <span className="chip chip-pos t-2xs" style={{ flex: "none" }}>
+                    {new Date(c.chosenAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Agreements running out.
+        
+            docs/product.md: "Expiration is a monitored deadline that raises
+            attention before it lapses, not after." High on the page because an
+            agreement that lapses uncovers everything it covered from the day
+            it ran out, not from the day somebody noticed, and the notice is
+            the only thing standing between those two dates. */}
+        {lapsing.length ? (
+          <section style={{ marginTop: 32 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Agreements running out
+            </h2>
+            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+              Representation lapses on a date, and everything it covered is uncovered from that
+              day rather than from the day it is noticed. Renewing one is a conversation; finding
+              out afterwards is not.
+            </p>
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {lapsing.map((l, i) => (
+                <Link
+                  key={l.id}
+                  href={`/operations/lead/${l.id}`}
+                  className="between gap-3"
+                  style={{
+                    display: "flex", padding: "12px 16px", alignItems: "center",
+                    borderBottom: i === lapsing.length - 1 ? 0 : "1px solid var(--line-3)",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-sm w6 trunc">{l.name}</div>
+                    <div className="t-xs c-4" style={{ marginTop: 2 }}>{l.standing.note}</div>
+                  </div>
+                  <span
+                    className={`chip t-2xs ${l.standing.covered ? "chip-warn" : "chip-neg"}`}
+                    style={{ flex: "none" }}
+                  >
+                    {l.standing.covered ? "Running out" : "Expired"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Abandoned */}
+        {partial.length ? (
+          <section style={{ marginTop: 32 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Started, not finished
+            </h2>
+            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+              The largest source of lost leads in this product, and a normal state rather than a
+              failure. Most of these people have given no way to reach them, which is the correct
+              outcome: a resumable link goes only to somebody who gave an address for that
+              purpose.
+            </p>
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {partial.slice(0, 12).map((a, i) => (
+                <div key={a.assessmentId} className="between wrap gap-2" style={{
+                  padding: "11px 15px", borderBottom: i === Math.min(partial.length, 12) - 1 ? undefined : "1px solid var(--line-3)",
+                }}>
+                  <div>
+                    <div className="row wrap gap-2">
+                      <span className="t-sm w55">{a.email ?? "No contact details"}</span>
+                      <span className="chip">{a.side === "buy" ? "Buyer" : "Seller"}</span>
+                      {a.county ? <span className="chip">{a.county}</span> : null}
+                    </div>
+                    <div className="t-xs c-4" style={{ marginTop: 3 }}>
+                      {a.answered} question{a.answered === 1 ? "" : "s"} answered · quiet for {a.hoursSince}h
+                    </div>
+                  </div>
+                  {a.email
+                    ? <span className="chip chip-acc">Can be sent a resume link</span>
+                    : <span className="chip">Nothing to send</span>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* What is owed, before anything else on the page */}
+        <section style={{ marginTop: 28 }}>
+          <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+            What you owe this week
+          </h2>
+          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+            Overdue first, then the next seven days. An action that came due on Tuesday does not
+            stop being owed on Wednesday, so nothing drops off this list by getting old.
+          </p>
+
+          {owed.length === 0 ? (
+            <div className="card p-4" style={{ marginTop: 14, background: "var(--sunk)" }}>
+              <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+                Nothing scheduled. Open anyone below and set the one thing you owe them next.
+              </p>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {owed.map((p, i) => {
+                const today = new Date().toISOString().slice(0, 10);
+                const late = Boolean(p.nextDue && p.nextDue < today);
+                const label = p.nextDue === today
+                  ? "today"
+                  : late
+                    ? "overdue"
+                    : new Date(p.nextDue + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/operations/lead/${p.id}`}
+                    className="between wrap gap-2"
+                    style={{
+                      padding: "13px 16px", textDecoration: "none",
+                      borderBottom: i === owed.length - 1 ? undefined : "1px solid var(--line-3)",
+                    }}
+                  >
+                    <div>
+                      <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
+                      <div className="t-sm c-2" style={{ marginTop: 3 }}>{p.nextAction}</div>
+                      <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                        {p.stage} · {p.side === "buy" ? "buyer" : "seller"}
+                      </div>
+                    </div>
+                    <span className={`chip ${late ? "chip-neg" : p.nextDue === today ? "chip-warn" : ""}`}>{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* The people being worked */}
+        <section style={{ marginTop: 32 }}>
+          <div className="between wrap gap-2">
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+              Who you are working
+            </h2>
+            <Link href="/operations/add" className="btn btn-p btn-sm">Add someone</Link>
+          </div>
+          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+            Ordered by how long they have sat where they are, not by when they arrived. A
+            relationship rarely dies of a decision; it dies of forty quiet days, and this list
+            is sorted to put those at the top.
+          </p>
+
+          {working.length === 0 ? (
+            <div className="card p-4" style={{ marginTop: 14, background: "var(--sunk)" }}>
+              <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+                Nobody on the board yet. People who come through the funnel arrive below; anyone
+                you are already working with has to be added by hand once.
+              </p>
+              <Link href="/operations/add" className="btn btn-p btn-sm" style={{ marginTop: 12 }}>
+                Add your first
+              </Link>
+            </div>
+          ) : (
+            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
+              {working.map((p, i) => (
+                <Link
+                  key={p.id}
+                  href={`/operations/lead/${p.id}`}
+                  className="between wrap gap-2"
+                  style={{
+                    padding: "13px 16px", textDecoration: "none",
+                    borderBottom: i === working.length - 1 ? undefined : "1px solid var(--line-3)",
+                  }}
+                >
+                  <div>
+                    <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
+                    <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                      {p.stage} · {p.side === "buy" ? "buyer" : "seller"}
+                      {p.stall ? ` · ${p.stall.days} day${p.stall.days === 1 ? "" : "s"} here` : ""}
+                    </div>
+                    {p.stall && p.stall.level !== "moving" ? (
+                      <p className="t-xs c-3" style={{ marginTop: 4, maxWidth: 460, lineHeight: 1.5 }}>{p.stall.unstick}</p>
+                    ) : null}
+                  </div>
+                  {p.stall ? (
+                    <span className={`chip ${STALL_CHIP[p.stall.level].c}`}>{STALL_CHIP[p.stall.level].l}</span>
+                  ) : null}
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Funnel */}
+        <section style={{ marginTop: 32 }}>
+          <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
+            Where people stop
+          </h2>
+          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
+            The last {report?.days ?? 90} days, counted in distinct sessions rather than page
+            views: a person who backs up and re-reads a question is one person. Bounded in time
+            on purpose: the point of measuring drop-off is to change a question and see whether it
+            helped, and averaged against a year of the old wording it never would.
+          </p>
+
+          <Funnel label="Buyers" report={report} />
+          <Funnel label="Sellers" report={sellReport} />
+        </section>
+      </main>
+    </>
+  );
+}
+
+/**
+ * One side of the drop-off report.
+ *
+ * Both sides are always shown, including the one with no traffic. A funnel
+ * that is simply absent from this page reads as "nothing is wrong with it"
+ * rather than "nobody has been through it", and those need to look different.
+ */
+interface FunnelStep {
+  questionKey: string;
+  reached: number;
+  answered: number;
+  medianSec: number;
+  dropPct: number;
+}
+
+function Funnel({ label, report }: {
+  label: string;
+  report: { days: number; starts: number; steps: FunnelStep[] } | null;
+}) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div className="t-sm w6 c-3">{label}</div>
+      {!report || report.starts < 20 ? (
+        <div className="card p-4" style={{ marginTop: 8, background: "var(--sunk)" }}>
+          <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+            {report ? `${report.starts} assessment${report.starts === 1 ? "" : "s"} started.` : "No data yet."}{" "}
+            Nothing is reported below twenty, because a drop-off computed from four people is
+            noise wearing a percentage sign.
+          </p>
+        </div>
+      ) : (
+        <div className="card" style={{ marginTop: 8, overflow: "hidden" }}>
+          {report.steps.map((s, i) => {
+            const d = diagnose(s);
+            return (
+              <div key={s.questionKey} className="between wrap gap-2" style={{
+                padding: "12px 15px", borderBottom: i === report.steps.length - 1 ? undefined : "1px solid var(--line-3)",
+              }}>
+                <div>
+                  <span className="t-sm w55">{s.questionKey}</span>
+                  <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                    {s.reached} reached · {s.answered} answered · {s.medianSec}s median
+                  </div>
+                  {d ? <p className="t-xs c-3" style={{ marginTop: 4, maxWidth: 460, lineHeight: 1.5 }}>{d.advice}</p> : null}
+                </div>
+                <div className="row gap-2">
+                  <span className="num t-sm">{s.dropPct}%</span>
+                  {d ? <span className={`chip ${d.tone}`}>{d.label}</span> : <span className="chip chip-pos">Healthy</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

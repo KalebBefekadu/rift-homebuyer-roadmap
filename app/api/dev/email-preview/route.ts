@@ -54,7 +54,7 @@ export async function GET(req: Request) {
           county: "DeKalb",
           value: 325_000,
           source: url.searchParams.get("source") ?? "readout",
-          studioUrl: `${url.origin}/studio`,
+          studioUrl: `${url.origin}/operations`,
         })
       : type === "touch"
       ? buildTouch({
