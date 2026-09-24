@@ -277,8 +277,8 @@ requirements).
 
 ### 5.2 Buyer values
 
-Proposed catalogue, drawn from v3 (§5, §46.3, §47) and today's readout. Kaleb confirms the
-first set and their order.
+Catalogue drawn from v3 (§5, §46.3, §47) and today's readout. The first set and their order
+are decided (D20).
 
 | Value | Question it answers | Inputs (ask only these) | Answer | Notes |
 | --- | --- | --- | --- | --- |
@@ -290,7 +290,7 @@ first set and their order.
 | Lender questions | "What should I ask a lender?" | Uses earlier answers | Questions written for their situation | Existing readout section |
 | Rent vs. buy, first-time roadmap, readiness | From v3 | To define | To define | Later values |
 
-**Recommended first order (D20):** 1. Assistance (the strongest reason to start, and the
+**First order (D20, decided 24 Sep):** 1. Assistance (the strongest reason to start, and the
 assistance engine powers it); 2. Cash to close (the site's core idea: the down payment is not the
 number); 3. Monthly cost; 4. Timeline. Affordability follows once its model is tested; the rest
 come later.
@@ -305,7 +305,7 @@ come later.
 | Preparation | "Should I fix this before listing?" | Condition questions | What is worth addressing, maybe, not yet; no invented ROI |
 | Sell first or buy first, move-up | From v3 | To define | To define |
 
-**Recommended first order (D20):** 1. Net proceeds; 2. Unclaimed money (useful even to someone not
+**First order (D20, decided 24 Sep):** 1. Net proceeds; 2. Unclaimed money (useful even to someone not
 selling, and already built); 3. Selling costs; 4. Preparation.
 
 All buyer-side feedback applies to the seller side unless it is buyer-specific: separate values,
@@ -321,7 +321,7 @@ the seller journey's gate (§9).
   abroad care about the US and many do not know Georgia. Applies on the front door and every
   abroad page.
 - The abroad page is too complicated. Split it into values and do not put everything on one page.
-- **Recommended values, in order (D20):** 1. "Can I buy in the United States?" (by residency
+- **Values, in order (D20, decided 24 Sep):** 1. "Can I buy in the United States?" (by residency
   status); 2. What buying and owning would cost; 3. The return, shown only with its estimate
   label until real county rent ratios arrive (§12).
 - Collect a phone number, with the existing consent rules for calls and texts (a phone number
@@ -864,6 +864,8 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D14 | Understanding is free; keeping, acting and alerts ask for details (table in §5.1) | 24 Sep |
 | D15 | The Operations layout is approved by clicking through a mock-up before it is built (§8) | 24 Sep |
 | D16 | Claude API, hard limit $50 a month across all AI for the pilot, raised later if needed (§10.2) | 24 Sep |
+| D20 | The first values, in order. Buyer: assistance, cash to close, monthly cost, timeline. Seller: net proceeds, unclaimed money, selling costs, preparation. Abroad: can I buy in the United States, cost to buy and own, the return (§5.2 to §5.4) | 24 Sep |
+| D21 | Design and lead side first (phases 1 to 3 together), the Operations mock-up alongside; the pilot starts whenever Kaleb has 3 to 5 buyers ready (§13) | 24 Sep |
 
 ### Open
 
@@ -872,8 +874,6 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D02 | Integration rights for Matrix/OneHome, ShowingTime, Remine and Google, on Kaleb's accounts | No adapter is built without them; the manual paths stay | Kaleb with vendors and broker |
 | D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
 | D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
-| D20 | Which small tools ("values") are built first, and in what order. Recommended in §5.2 to §5.4 | Sets the lead-side build | Kaleb |
-| D21 | Delivery order (§13): design and lead side first, or the pilot first | Both are ready to start | Kaleb |
 
 ---
 
@@ -895,14 +895,14 @@ Engineering never invents these; until they arrive the product says so on screen
 
 ## 13. Delivery order
 
-Proposed; Kaleb confirms it (D21). Each phase ships in reviewable pieces, tested, migrated and
+Decided (D21, 24 Sep): design and lead side first. Each phase ships in reviewable pieces, tested, migrated and
 verified on the live site as before.
 
 | Phase | Work | Needs first |
 | --- | --- | --- |
 | 0. Housekeeping | Full rename to Operations with redirects; connect Cal.com; clearer buyer sign-in (§7.3); clear the test data | Cal.com key |
 | 1. Design system | Spacing and grid, footer, form controls, call-to-action rules, artifact language (§4) | Nothing (D13 settled) |
-| 2. Lead side | Values split and questionnaire rebuilt (§5.1, §5.6); front door and buyer landing (§5.7); readouts, programs table, how it works (§5.8); offer upload and book page (§5.9); seller and abroad with the same lens (§5.3, §5.4); Save my plan and continuity (§5.5) | D20 |
+| 2. Lead side | Values split and questionnaire rebuilt (§5.1, §5.6); front door and buyer landing (§5.7); readouts, programs table, how it works (§5.8); offer upload and book page (§5.9); seller and abroad with the same lens (§5.3, §5.4); Save my plan and continuity (§5.5) | Nothing (D20 settled) |
 | 3. Assistance engine | Program records from official sources, matching, combinations, monitoring and discovery (§6) | Nothing (D16 settled) |
 | 4. Agent OS | Mock-up, Kaleb clicks through it, then build the redesign (§8) | Kaleb's review of the mock-up |
 | 5. Pilot and client side | Run the pilot with 3 to 5 buyers; client side design pass and missing areas (§7); money v2 (W10) once the pilot starts | Pilot buyers |
@@ -919,5 +919,6 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |
