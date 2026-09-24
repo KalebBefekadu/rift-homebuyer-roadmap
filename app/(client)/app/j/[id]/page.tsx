@@ -97,7 +97,8 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     ? todayFor({
       agentFirst,
       progress: p.progress,
-      work: p.open?.work ?? [],
+      work: p.open?.work ?? p.closed?.work ?? [],
+      closing: p.closed?.closing ?? null,
       plan: p.plan,
       briefToConfirm: respond && !!b?.revision && !b.myResponse,
       showingsToAnswer: respond ? showings.filter((x) => x.completed && !x.answeredByMe).map((x) => address.get(x.homeId) ?? "A home you saw") : [],
@@ -105,11 +106,17 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       offersToAnswer: respond ? buyerBids.filter((x) => x.asked?.open && x.asked.mineNeeded && !x.asked.myAnswer && !x.newerDraft).map((x) => x.address) : [],
     })
     : null;
-  const contract = p?.open ? {
-    id: p.open.id,
-    address: p.open.address,
-    summary: workSummary(p.open.work),
-    work: p.open.work.map((w): BuyerWork => ({
+  /* Under contract, the contract's workstreams; once it closed, the home and
+     what is still worked after closing (possession). */
+  const shown = p?.open ?? p?.closed ?? null;
+  const contract = shown ? {
+    id: shown.id,
+    address: shown.address,
+    title: p?.open ? `Under contract: ${shown.address}` : `Your home: ${shown.address}`,
+    summary: p?.open
+      ? `${workSummary(shown.work)} These run at the same time; one finishing says nothing about the others.`
+      : "The closing is done. Possession and keys are recorded separately, because they can come later.",
+    work: shown.work.map((w): BuyerWork => ({
       workstream: w.workstream, label: w.label, state: w.state, stateLabel: WORK_STATE_LABEL[w.state],
       line: workLine(w, agentFirst), seq: w.seq,
       canReport: w.owner === "client" && !isSettled(w.state) && w.state !== "reported",
@@ -122,6 +129,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>{member.journeyLabel}</h1>
       <p className="t-xs c-4" style={{ marginTop: 4 }}>
         With {member.agentName} · you are signed in as {member.name} ({ROLE_LABEL[member.role].toLowerCase()})
+        {" · "}<Link className="u" href={`/app/j/${member.journeyId}/records`}>Your records</Link>
       </p>
 
       {member.side !== "buy" ? (

@@ -37,8 +37,11 @@ export interface TodayItem {
 export interface TodayInput {
   agentFirst: string;
   progress: Progress;
-  /** The open contract's workstreams, or none. */
+  /** The open contract's workstreams, or none. Once a contract has closed, the
+   *  ones still worked after closing (possession). */
   work: WorkstreamView[];
+  /** Who confirmed the closing, and the day, once the contract closed (B18). */
+  closing?: { on: string; from: string } | null;
   /** The relationship's plan, as the agent wrote it for the client. Empty for a viewer. */
   plan: PlanItem[];
   briefToConfirm: boolean;
@@ -87,20 +90,23 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
   }
 
   /* 2. Decisions for this person. An offer waiting on them comes first: it
-     usually has a deadline the listing side set. */
-  for (const address of input.offersToAnswer ?? []) {
+     usually has a deadline the listing side set. Once the home is theirs the
+     search is over, and a question left open on another home, a brief or a
+     showing is not theirs to answer any more (W11). */
+  const searching = progress.stage !== "own";
+  for (const address of searching ? input.offersToAnswer ?? [] : []) {
     items.push({
       kind: "decision", title: `Your offer on ${address}`,
       detail: `Tell ${agentFirst} how to proceed on the current terms. Your answer is an instruction, not a signature.`, anchor: "offers",
     });
   }
-  if (input.briefToConfirm) {
+  if (searching && input.briefToConfirm) {
     items.push({
       kind: "decision", title: "Check your search priorities",
       detail: `They changed. Say whether they are right so ${agentFirst} can update the search.`, anchor: "priorities",
     });
   }
-  for (const address of input.showingsToAnswer) {
+  for (const address of searching ? input.showingsToAnswer : []) {
     items.push({ kind: "decision", title: `You saw ${address}`, detail: "Would you consider an offer on it?", anchor: "homes" });
   }
 
@@ -141,6 +147,14 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
     items.push({ kind: "others", title: "Contract dates", detail: `${agentFirst} is checking some of the contract's dates against the documents. They appear here once checked.`, anchor: null });
   }
 
+  /* After closing, keys are the one thing left, and "not recorded yet" is
+     worth saying rather than leaving out (B18: possession stays explicit). */
+  if (progress.stage === "own") {
+    for (const w of work.filter((x) => x.workstream === "possession" && x.state === "not-started" && x.owner !== "client")) {
+      items.push({ kind: "others", title: w.label, detail: `Not recorded yet. ${agentFirst} records it when the keys are handed over.`, anchor: "under-contract" });
+    }
+  }
+
   /* 4. Everyone else. Workstreams first (they carry dated word), then the plan. */
   /* Only work that is moving or waiting: the not-started rest is in the
      contract list right below, and repeating it here buries what is live. */
@@ -168,11 +182,21 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
       ? "Nothing is waiting on you right now. Below is what others are doing, with the date each last gave word."
       : `Nothing is waiting on you right now. If something seems to be missing, ask ${agentFirst}.`;
 
-  return { where: whereLine(progress, agentFirst), items, nothingOwed };
+  return { where: whereLine(progress, agentFirst, input.closing ?? null), items, nothingOwed };
 }
 
-function whereLine(p: Progress, agentFirst: string): string {
+const DAY = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+
+/**
+ * "You own your home" is said only at Own, which only a closed contract with
+ * the closing confirmed by someone named can reach: never at the scheduled
+ * time, and never because the signing happened (AT34, B18).
+ */
+function whereLine(p: Progress, agentFirst: string, closing: { on: string; from: string } | null): string {
   const stage = STAGE_LABEL[p.stage];
+  if (p.stage === "own" && p.status === "active") {
+    return closing ? `You own your home. ${closing.from} confirmed the closing on ${DAY(closing.on)}.` : "You own your home.";
+  }
   switch (p.status) {
     case "paused": return `Paused at ${stage}. Anything under contract keeps its dates; ${agentFirst} will pick the rest back up with you.`;
     case "completed": return "Completed. The home is yours.";

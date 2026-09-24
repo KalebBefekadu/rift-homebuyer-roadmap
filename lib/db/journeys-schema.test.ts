@@ -489,6 +489,18 @@ describe("progress (W07; REQ-STATE-05, 06, REQ-UX-02 in the record)", () => {
     await run(c, work(2, "blocked", { note: "Needs two more pay stubs" }));
   });
 
+  test("the walkthrough and possession are workstreams too, and nothing else new is (W11)", async (c) => {
+    for (const [ws, n] of [["walkthrough", 950], ["possession", 951]] as const) {
+      await c.query(
+        `insert into rift_workstream_updates (agent_id, journey_id, transaction_id, workstream, seq, state, owner, actor_kind, actor_label, request_id)
+         values ($1,$2,$3,$4,1,'not-started','agent','agent','Agent A',$5)`, [A, J1, T1, ws, rq(n)]);
+    }
+    await refused(c,
+      `insert into rift_workstream_updates (agent_id, journey_id, transaction_id, workstream, seq, state, owner, actor_kind, actor_label, request_id)
+       values ($1,$2,$3,'keys',1,'not-started','agent','agent','Agent A',$4)`, [A, J1, T1, rq(952)], /workstream_check/);
+    await c.query(`delete from rift_workstream_updates where transaction_id = $1 and workstream in ('walkthrough', 'possession')`, [T1]);
+  });
+
   test("a contract ends once, and everything recorded against it stays", async (c) => {
     await c.query(`insert into rift_transaction_outcomes (agent_id, journey_id, transaction_id, outcome, reason, actor_label)
        values ($1,$2,$3,'terminated','Financing fell through','Agent A')`, [A, J1, T1]);

@@ -448,13 +448,14 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | D09 | Decided 23 Sep | First release: Georgia residential resale, financed and cash, several buyers on one deal, contracts that fall through and restart, signing done elsewhere. New construction, probate or estate, trusts and short sales are flagged as manual exceptions. To confirm with the broker alongside D06 |
 | D11, F08, F09 | Decided 23 Sep | The specification's ledger and labels are adopted. W10 is built after the buyer pilot starts, keeping every saved readout exactly as it was; the current engine stays until then |
 | D12, F15 | Decided 23 Sep | Review requests stop depending on how the client felt: everyone who closes gets the same neutral request, and an unhappy client gets a separate follow-up that never decides whether they are asked (Google forbids review gating) |
-| F16 | Partly | "Delete all of it" removes a person's journeys with them. Broker hold rules for future transaction records are still needed before W08 |
+| F16 | Partly | "Delete all of it" removes a person's journeys with them, except a journey with a contract on it, which is held whole as the privacy page promises (W11). Which parts the broker requires, and for how long, is still the broker's answer |
 | W06 | Live 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Migration `20260924000000` applied |
 | W07 | Live 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Migration `20260924010000` applied. Seller stages wait for D08 |
 | W08 | Live 24 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Migration `20260924020000` applied |
 | W09 | Live 24 Sep | Contract dates and scheduled-job runs, on today's rules. Migration `20260924030000` applied |
 | W12 (part) | Built 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40), and the morning summary (D07). Needs migration `20260924040000` and a deploy. Pilot evidence waits for the pilot |
-| W10, W11, W13 | Not started | W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
+| W11 | Built 25 Sep | Walkthrough and possession apart from closing, "You own your home" only after a confirmed closing, restart without inherited dates, the buyer's records page, deletion that holds a contract record and removes provider copies (AT34 to AT36). Migration `20260925000000` |
+| W10, W13 | Not started | W10 follows the pilot (D11); W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
@@ -569,6 +570,27 @@ Journeys send the agent no instant alerts. The instant alert for a new lead from
 funnel, and the one for a seller choosing an offer, are unchanged: whether they fold into the
 summary as well is the owner's call, because Studio's fifteen-minute reply target for a
 "Call today" lead depends on the first one.
+
+**Closing and after (W11, 25 September 2026).** A contract now has ten workstreams: the final
+walkthrough (before closing; recording it done says in the buyer's words that it is not a legal
+acceptance of the home's condition) and possession and keys (after closing, apart from it: a
+seller may stay on). Possession is the one workstream still updated once the contract closed.
+"You own your home" appears only at Own, which only a closed contract with the closing confirmed
+by someone named can reach; the line says who confirmed it and when (AT34). At Own, Today stops
+asking search and offer questions, and a next purchase is a new journey, not another contract.
+A terminated contract keeps its dates and history, and the next contract starts with none of
+them (AT35). The buyer has a records page (`/app/j/[id]/records`): their priorities, homes,
+showings, offers, where things stand, the current contract's checked dates and the documents
+shared with them, worded as their own pages word them, to print or save as a PDF (B20). "Delete
+all of it" now follows the privacy page's published exception: a journey with a contract on it
+is held whole with its lead, closed to sign-in, its plan link revoked and its follow-ups
+stopped; everything else goes as before, and so do the copies providers hold: the buyer's
+sign-in account when no other live journey uses it, and Brevo's log of the emails sent to them
+(`DELETE /v3/smtp/log/{email}`; the block list stays, so an opt-out outlives the record). The
+readout then says what was kept. Which parts the broker requires kept, and for how long, is the
+broker's answer (D06, F16); until then the published promise is the rule. The Amharic for the
+"kept" message is owed; the abroad readout shows it in English. Migration
+`20260925000000_rift_closing.sql`, additive.
 
 **Rolling the release back.** Set `RIFT_BUYER_SEARCH=off` on Vercel and redeploy (a variable
 reaches only new deployments). Every journey page then says it is switched off and every

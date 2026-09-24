@@ -211,6 +211,9 @@ export interface ContractInput {
 export function contractError(p: Progress, input: ContractInput, ctx: StageContext & { homeOnList: boolean }): string | null {
   if (p.status === "completed" || p.status === "cancelled") return `This journey is ${p.status}. Reopen it first`;
   if (ctx.openContract) return "A contract is already open. Record how it ended before recording another";
+  /* The home is theirs. Closing history stays intact; a next purchase is a
+     new journey, not another attempt on this one (B20). */
+  if (p.stage === "own") return "This home is theirs. A next move starts a new journey";
   if (!ctx.homeOnList) return "Choose a home on the list";
   if (input.financing !== "financed" && input.financing !== "cash") return "Say whether it is financed or cash";
   const e = input.evidence?.trim() ?? "";
@@ -248,10 +251,22 @@ export function endContractError(
  * ------------------------------------------------------------------ */
 
 export type Workstream =
-  | "earnest-money" | "inspection" | "financing" | "appraisal" | "title" | "insurance" | "repairs" | "closing";
+  | "earnest-money" | "inspection" | "financing" | "appraisal" | "title" | "insurance" | "repairs"
+  | "walkthrough" | "closing" | "possession";
+/* Walkthrough and possession were added in W11 (B17, B18): the walkthrough so
+   what was found before closing has a place, and possession because closing
+   and keys are different events. A seller may stay on after closing, and the
+   home is theirs to occupy only when possession passes. */
 export const WORKSTREAMS: Workstream[] = [
-  "earnest-money", "inspection", "financing", "appraisal", "title", "insurance", "repairs", "closing",
+  "earnest-money", "inspection", "financing", "appraisal", "title", "insurance", "repairs", "walkthrough", "closing", "possession",
 ];
+
+/**
+ * Workstreams that can still be updated once the contract has closed. Only
+ * possession: the closing is the end of everything else, and keys often
+ * change hands after it (B18).
+ */
+export const AFTER_CLOSING: Workstream[] = ["possession"];
 export const WORKSTREAM_LABEL: Record<Workstream, string> = {
   "earnest-money": "Earnest money",
   inspection: "Inspection",
@@ -260,7 +275,9 @@ export const WORKSTREAM_LABEL: Record<Workstream, string> = {
   title: "Title",
   insurance: "Insurance",
   repairs: "Repairs",
-  closing: "Closing and keys",
+  walkthrough: "Final walkthrough",
+  closing: "Closing",
+  possession: "Possession and keys",
 };
 
 export type WorkState =
@@ -322,7 +339,9 @@ export const DEFAULT_OWNER: Record<Workstream, { owner: Owner; ownerName: string
   title: { owner: "other", ownerName: "The closing attorney" },
   insurance: { owner: "client", ownerName: null },
   repairs: { owner: "agent", ownerName: null },
+  walkthrough: { owner: "agent", ownerName: null },
   closing: { owner: "other", ownerName: "The closing attorney" },
+  possession: { owner: "agent", ownerName: null },
 };
 
 /** The first row of each workstream on a new contract. A cash purchase has no lender work to track. */
@@ -439,7 +458,11 @@ export function workLine(v: WorkstreamView, agentFirst: string): string {
   const word = v.lastWord ? `Last update ${SHORT(v.lastWord.on)}, from ${v.lastWord.from}.` : "No update yet.";
   switch (v.state) {
     case "confirmed":
-      return `Confirmed${v.lastWord ? ` by ${v.lastWord.from} on ${SHORT(v.lastWord.on)}` : ""}.`;
+      /* A walkthrough done is not the buyer accepting the home's condition,
+         and the line must not read as if it were (B17). */
+      return v.workstream === "walkthrough"
+        ? `Done${v.lastWord ? ` on ${SHORT(v.lastWord.on)}` : ""}. Recording it is not a legal acceptance of the home's condition.`
+        : `Confirmed${v.lastWord ? ` by ${v.lastWord.from} on ${SHORT(v.lastWord.on)}` : ""}.`;
     case "not-applicable":
       return `Does not apply${v.note ? `: ${v.note}` : ""}.`;
     case "reported":
@@ -465,6 +488,24 @@ export function workLine(v: WorkstreamView, agentFirst: string): string {
  * name which are not. No percentage, and the open ones are named so the
  * count cannot suggest they carry equal weight.
  */
+/**
+ * The contract that closed, once there is no open one: the home that is now
+ * theirs, the workstreams still worked after closing, and who confirmed the
+ * closing on what day. Null while a contract is open or none has closed.
+ */
+export function afterClose<C extends { outcome: { outcome: ContractOutcome } | null; work: WorkstreamView[] }>(
+  contracts: C[], open: C | null,
+): { contract: C; work: WorkstreamView[]; closing: { on: string; from: string } | null } | null {
+  const last = contracts[0];
+  if (open || !last || last.outcome?.outcome !== "closed") return null;
+  const closing = last.work.find((w) => w.workstream === "closing");
+  return {
+    contract: last,
+    work: last.work.filter((w) => AFTER_CLOSING.includes(w.workstream)),
+    closing: closing?.state === "confirmed" && closing.lastWord ? { on: closing.lastWord.on, from: closing.lastWord.from } : null,
+  };
+}
+
 export function workSummary(views: WorkstreamView[]): string {
   const required = views.filter((v) => v.state !== "not-applicable");
   const confirmed = required.filter((v) => v.state === "confirmed");

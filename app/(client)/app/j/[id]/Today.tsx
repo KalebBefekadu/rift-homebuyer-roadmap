@@ -50,7 +50,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
   strip: { stage: string; label: string; state: "done" | "skipped" | "now" | "ahead" }[];
   items: TodayItem[];
   nothingOwed: string | null;
-  contract: { id: string; address: string; summary: string; work: BuyerWork[] } | null;
+  contract: { id: string; address: string; title: string; summary: string; work: BuyerWork[] } | null;
   canRespond: boolean;
   agentFirst: string;
 }) {
@@ -111,8 +111,8 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
 
       {contract ? (
         <div id="under-contract" style={{ marginTop: 16 }}>
-          <div className="t-sm w6">Under contract: {contract.address}</div>
-          <p className="t-xs c-3" style={{ marginTop: 2 }}>{contract.summary} These run at the same time; one finishing says nothing about the others.</p>
+          <div className="t-sm w6">{contract.title}</div>
+          <p className="t-xs c-3" style={{ marginTop: 2 }}>{contract.summary}</p>
           <ul style={{ marginTop: 8, display: "grid", gap: 6 }}>
             {contract.work.map((w) => (
               <li key={w.workstream} className="card p-3">

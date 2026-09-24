@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  STAGES, marketDay, visitedStages, endContractError, contractError, initialWork, progressOf, stageError, stageStrip, statusError,
+  AFTER_CLOSING, STAGES, WORKSTREAMS, afterClose, marketDay, visitedStages, endContractError, contractError, initialWork, progressOf, stageError, stageStrip, statusError,
   workError, workLine, workSummary, workstreamView,
   type JourneyEvent, type Progress, type StageContext, type WorkUpdate, type Workstream,
 } from "./progress";
@@ -181,5 +181,52 @@ describe("workstream rules", () => {
       view("title", [up(1, {})]),
     ];
     expect(workSummary(vs)).toBe("1 of 3 confirmed. Still open: financing (blocked) and title.");
+  });
+});
+
+
+describe("closing and possession (W11; B17, B18, AT34)", () => {
+  const confirmedClosing = view("closing", [up(1, {}), up(2, { state: "confirmed", source: "Smith Law", confirmedOn: "2026-09-22" })]);
+  const possession = view("possession", []);
+  const contract = (outcome: "closed" | "terminated" | null) => ({ outcome: outcome ? { outcome } : null, work: [confirmedClosing, possession] });
+
+  it("tracks the walkthrough and possession apart from the closing, for cash too", () => {
+    expect(WORKSTREAMS.indexOf("walkthrough")).toBeLessThan(WORKSTREAMS.indexOf("closing"));
+    expect(WORKSTREAMS.indexOf("possession")).toBeGreaterThan(WORKSTREAMS.indexOf("closing"));
+    for (const f of ["financed", "cash"] as const) {
+      const init = initialWork(f).map((x) => x.workstream);
+      expect(init).toContain("walkthrough");
+      expect(init).toContain("possession");
+    }
+  });
+
+  it("keeps only possession open once the contract closed", () => {
+    expect(AFTER_CLOSING).toEqual(["possession"]);
+    const after = afterClose([contract("closed")], null)!;
+    expect(after.work.map((w) => w.workstream)).toEqual(["possession"]);
+    expect(after.closing).toEqual({ on: "2026-09-22", from: "Smith Law" });
+  });
+
+  it("has nothing after closing while a contract is open, or when the last one was terminated", () => {
+    const open = contract(null);
+    expect(afterClose([open], open)).toBeNull();
+    expect(afterClose([contract("terminated")], null)).toBeNull();
+    expect(afterClose([], null)).toBeNull();
+  });
+
+  it("does not let a scheduled or signed closing stand in for a confirmed one", () => {
+    const scheduled = view("closing", [up(1, {}), up(2, { state: "in-progress", note: "Signing Thursday 2pm" })]);
+    expect(endContractError("closed", "Signed at the attorney's office", null, [scheduled])).toMatch(/closing as confirmed first/);
+  });
+
+  it("starts a next purchase as a new journey, not another contract on an owned home (B20)", () => {
+    expect(contractError(P("own"), { homeId: "h1", financing: "cash", evidence: "Executed purchase agreement" }, { ...COVERED, homeOnList: true }))
+      .toMatch(/new journey/);
+  });
+
+  it("never words a finished walkthrough as accepting the home's condition", () => {
+    const done = view("walkthrough", [up(1, { owner: "agent" }), up(2, { state: "confirmed", owner: "agent", source: "Kaleb", confirmedOn: "2026-09-21" })]);
+    expect(workLine(done, "Kaleb")).toMatch(/not a legal acceptance of the home's condition/);
+    expect(workLine(done, "Kaleb")).not.toMatch(/Confirmed by/);
   });
 });

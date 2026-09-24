@@ -115,3 +115,37 @@ describe("Today's order (blueprint v4 §6)", () => {
     expect(todayFor({ ...base, progress: { ...base.progress, status: "paused" } }, NOW).where).toMatch(/keeps its dates/);
   });
 });
+
+
+describe("owning the home (W11; B18, AT34)", () => {
+  const own = { ...base.progress, stage: "own" as const };
+  const close = { ...base.progress, stage: "close" as const };
+
+  it("says the home is theirs only at Own, with who confirmed the closing and when", () => {
+    const t = todayFor({ ...base, progress: own, closing: { on: "2026-09-22", from: "Smith Law" } }, NOW);
+    expect(t.where).toBe("You own your home. Smith Law confirmed the closing on Sep 22.");
+  });
+
+  it("does not say it at Close, however close the signing is", () => {
+    const t = todayFor({ ...base, progress: close, closing: { on: "2026-09-22", from: "Smith Law" } }, NOW);
+    expect(t.where).toBe("Now: Close.");
+    expect(t.where).not.toMatch(/own your home/i);
+  });
+
+  it("keeps possession in view after closing until it is recorded", () => {
+    const t = todayFor({ ...base, progress: own, work: [w("possession")] }, NOW);
+    expect(t.items.map((i) => i.title)).toContain("Possession and keys");
+    expect(t.items.find((i) => i.title === "Possession and keys")!.detail).toMatch(/records it when the keys are handed over/);
+  });
+
+  it("stops asking search and offer questions once the home is theirs", () => {
+    const t = todayFor({ ...base, progress: own, briefToConfirm: true, showingsToAnswer: ["1 Elm St"], offersToAnswer: ["2 Oak St"] }, NOW);
+    expect(t.items.filter((i) => i.kind === "decision")).toEqual([]);
+  });
+
+  it("stops listing possession once the keys are confirmed", () => {
+    const keys = w("possession", up(1, { owner: "agent" }), up(2, { state: "confirmed", owner: "agent", source: "Listing agent", confirmedOn: "2026-09-23" }));
+    const t = todayFor({ ...base, progress: own, work: [keys] }, NOW);
+    expect(t.items.some((i) => i.title.startsWith("Possession"))).toBe(false);
+  });
+});

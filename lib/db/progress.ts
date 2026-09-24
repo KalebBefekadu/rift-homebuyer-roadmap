@@ -6,7 +6,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { coverageFor } from "./tours";
 import {
-  WORKSTREAMS, contractError, endContractError, initialWork, progressOf, stageError, statusError, workError, workstreamView,
+  AFTER_CLOSING, WORKSTREAMS, afterClose, contractError, endContractError, initialWork, progressOf, stageError, statusError, workError, workstreamView,
   type ContractInput, type ContractOutcome, type Financing, type JourneyEvent, type JourneyStatus, type Progress,
   type Stage, type StageContext, type WorkInput, type WorkState, type WorkUpdate, type Workstream, type WorkstreamView,
 } from "@/lib/core/progress";
@@ -315,8 +315,13 @@ export async function recordWork(
   const again = await replayed(db, "rift_workstream_updates", agentId, requestId);
   if (!again.ok) return again;
   if ("data" in again && again.data) return done({ seq: expectedSeq + 1 });
-  if (!rec.open || rec.open.id !== contractId) return failed("That contract is not open any more. Reload");
-  const current = rec.open.work.find((w) => w.workstream === workstream)!;
+  /* The open contract; or, for possession only, the contract that closed:
+     keys often change hands after the closing (W11, B18). */
+  const closed = afterClose(rec.contracts, rec.open);
+  const target = rec.open?.id === contractId ? rec.open
+    : AFTER_CLOSING.includes(workstream) && closed?.contract.id === contractId ? closed.contract : null;
+  if (!target) return failed("That contract is not open any more. Reload");
+  const current = target.work.find((w) => w.workstream === workstream)!;
   if (current.seq !== expectedSeq) return failed("This changed since the page loaded. Reload and try again");
   /* A client's report keeps the owner as it was; they cannot hand it on. */
   const effective: WorkInput = actor.kind === "client"

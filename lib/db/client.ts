@@ -15,8 +15,13 @@ import type { DeadlineView } from "@/lib/core/deadline";
 import { documentLink, readDocuments } from "./documents";
 import { buyerBidLine, termsDiff, termsEffects, type BuyerBid, type Instruction } from "@/lib/core/bid";
 import { planItemsFor } from "./plan";
-import { visitedStages, type Progress, type Stage, type Workstream, type WorkstreamView } from "@/lib/core/progress";
+import { afterClose, visitedStages, type Progress, type Stage, type Workstream, type WorkstreamView } from "@/lib/core/progress";
 import type { PlanItem } from "@/lib/core/plan";
+import { describe, REACTION_LABEL, type Reaction } from "@/lib/core/search";
+import { buyerLabel, OFFER_LABEL } from "@/lib/core/tour";
+import { INSTRUCTION_LABEL } from "@/lib/core/bid";
+import { buyerDateLine } from "@/lib/core/deadline";
+import { STAGE_LABEL, workLine } from "@/lib/core/progress";
 import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
 import {
   acceptError, canRespond, memberState, normaliseEmail,
@@ -474,6 +479,10 @@ export interface ClientProgress {
   /** False for a viewer: they see where the move is, not the details of it. */
   detail: boolean;
   open: { id: string; address: string; work: WorkstreamView[] } | null;
+  /** Once the contract closed: the home, possession, and who confirmed the closing (W11). */
+  closed: { id: string; address: string; work: WorkstreamView[]; closing: { on: string; from: string } | null } | null;
+  /** Contracts that ended before the current one, newest first: the address, how it ended and when. */
+  earlier: { address: string; outcome: "closed" | "terminated"; at: string }[];
   plan: PlanItem[];
   /** The open contract's contractual dates, for Today on the server only: they carry the agent's notes. */
   dates: { label: string; workstream: Workstream | null; view: DeadlineView }[];
@@ -493,8 +502,9 @@ export async function clientProgress(m: Membership): Promise<DbResult<ClientProg
   if (!r.ok || !("data" in r)) return r as DbResult<never>;
   const rec = r.data;
   const visited = visitedStages(rec.events);
-  if (rec.unavailable) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [], dates: [], unavailable: rec.unavailable });
-  if (!canRespond(m.role)) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [], dates: [] });
+  if (rec.unavailable) return done({ progress: rec.progress, visited, detail: false, open: null, closed: null, earlier: [], plan: [], dates: [], unavailable: rec.unavailable });
+  if (!canRespond(m.role)) return done({ progress: rec.progress, visited, detail: false, open: null, closed: null, earlier: [], plan: [], dates: [] });
+  const after = afterClose(rec.contracts, rec.open);
 
   const j = await boundedRead(
     db.from("rift_journeys").select("origin_lead_id").eq("id", m.journeyId).eq("agent_id", m.agentId).maybeSingle(),
@@ -519,6 +529,9 @@ export async function clientProgress(m: Membership): Promise<DbResult<ClientProg
     visited,
     detail: true,
     open: rec.open ? { id: rec.open.id, address: rec.open.address, work: rec.open.work } : null,
+    closed: after ? { id: after.contract.id, address: after.contract.address, work: after.work, closing: after.closing } : null,
+    earlier: rec.contracts.filter((c) => c.outcome && c.id !== after?.contract.id)
+      .map((c) => ({ address: c.address, outcome: c.outcome!.outcome, at: c.outcome!.at })),
     plan: "data" in plan ? plan.data : [],
     dates,
   });
@@ -615,4 +628,119 @@ export async function clientDocumentLink(m: Membership, documentId: string): Pro
   const shared = b.data.bids.some((x) => x.sharedDocumentIds.includes(documentId));
   if (!shared) return failed("That document is not shared with you");
   return documentLink(m.journeyId, m.agentId, documentId);
+}
+
+/* ------------------------------------------------------------------ *
+ * Records (blueprint v4 W11; B20, AT36)
+ * ------------------------------------------------------------------ */
+
+export interface RecordSection {
+  title: string;
+  lines: string[];
+}
+
+export interface ClientRecords {
+  sections: RecordSection[];
+  /** Documents the household was asked about, which this member may open. */
+  documents: { id: string; label: string; family: string }[];
+}
+
+/**
+ * Everything this member may see about the journey, worded for them, on one
+ * page they can print or save (B20: exportable records). Built from the same
+ * reads as their journey page, so it shows nothing they could not already
+ * see: no agent notes, no references, no criteria outside their scopes. A
+ * section that could not be read says so rather than looking empty.
+ */
+export async function clientRecords(m: Membership): Promise<DbResult<ClientRecords>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agentFirst = m.agentName.trim().split(/\s+/)[0] ?? m.agentName;
+  const buy = m.side === "buy";
+  const [brief, homes, tours, prog, bids, deadlines] = await Promise.all([
+    buy && m.scopes.includes("search") ? clientBrief(m) : Promise.resolve(null),
+    buy && m.scopes.includes("homes") ? clientHomes(m) : Promise.resolve(null),
+    buy && m.scopes.includes("homes") ? clientTours(m) : Promise.resolve(null),
+    buy ? clientProgress(m) : Promise.resolve(null),
+    buy && m.scopes.includes("money") ? clientBids(m) : Promise.resolve(null),
+    buy && canRespond(m.role) ? readDeadlines(m.journeyId, m.agentId) : Promise.resolve(null),
+  ]);
+  const NOT_READ = "This part could not be read just now. Reload to try again.";
+  const DAY = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" });
+  const sections: RecordSection[] = [];
+  const got = <T,>(r: DbResult<T> | null): T | null | undefined => (r === null ? undefined : r.ok && "data" in r ? r.data : null);
+
+  const b = got(brief);
+  if (b !== undefined) {
+    const lines = b === null ? [NOT_READ]
+      : !b.revision ? ["No search priorities have been written down yet."]
+      : [
+        `Revision ${b.revision.revision}, ${DAY(b.revision.createdAt)}.`,
+        ...b.revision.brief.criteria.map((c) => `${describe(c, m.scopes.includes("money"))} (${c.strength === "hard" ? "must have" : c.strength === "preference" ? "preferred" : "not decided"})`),
+        ...(b.hidden ? [`${b.hidden} more ${b.hidden === 1 ? "item is" : "items are"} not shared with you.`] : []),
+        b.myResponse ? `Your answer: ${b.myResponse.response === "confirmed" ? "confirmed" : "asked for changes"}, ${DAY(b.myResponse.at)}.` : "You have not answered this revision.",
+      ];
+    sections.push({ title: "Search priorities", lines });
+  }
+
+  const h = got(homes);
+  if (h !== undefined) {
+    const lines = h === null ? [NOT_READ] : !h.length ? ["No homes on the list."] : h.map((x) => {
+      const mine = x.current.find((r) => r.memberId === m.memberId);
+      return `${x.address}${x.withdrawnAt ? ` (off the list: ${x.withdrawnReason})` : ""}. Facts from ${x.factsSource}, as of ${DAY(x.factsAsOf)}.${mine ? ` Your reaction: ${REACTION_LABEL[mine.reaction as Reaction] ?? mine.reaction}.` : ""}`;
+    });
+    sections.push({ title: "Homes", lines });
+  }
+
+  const t = got(tours);
+  if (t !== undefined) {
+    const lines = t === null ? [NOT_READ] : !t.stops.length ? ["No showings."] : t.stops.map((s) => {
+      const f = s.feedback.filter((x) => x.memberId === m.memberId).at(-1);
+      return `${s.address}: ${buyerLabel(s.view, agentFirst)}${f ? ` Your answer: ${OFFER_LABEL[f.offer]}.` : ""}`;
+    });
+    sections.push({ title: "Showings", lines });
+  }
+
+  const o = got(bids);
+  const documents: ClientRecords["documents"] = [];
+  if (o !== undefined) {
+    const lines = o === null ? [NOT_READ] : !o.bids.length ? ["No offers you were asked about."] : o.bids.map((x) => {
+      for (const d of x.asked?.documents ?? []) if (!documents.some((y) => y.id === d.id)) documents.push(d);
+      return `${x.address}: ${x.line}${x.asked?.myAnswer ? ` Your answer on version ${x.asked.version}: ${INSTRUCTION_LABEL[x.asked.myAnswer]}.` : ""}`;
+    });
+    sections.push({ title: "Offers", lines });
+  }
+
+  const p = got(prog);
+  if (p !== undefined) {
+    const lines: string[] = [];
+    if (p === null) lines.push(NOT_READ);
+    else {
+      lines.push(p.progress.stage === "own" && p.closed?.closing
+        ? `You own your home. ${p.closed.closing.from} confirmed the closing on ${DAY(p.closed.closing.on)}.`
+        : `Stage: ${STAGE_LABEL[p.progress.stage]}.`);
+      const c = p.open ?? p.closed;
+      if (c) {
+        lines.push(p.open ? `Under contract: ${c.address}.` : `Your home: ${c.address}.`);
+        for (const w of c.work) lines.push(`${w.label}: ${workLine(w, agentFirst)}`);
+      }
+      for (const e of p.earlier) lines.push(`Earlier contract on ${e.address}: ${e.outcome}, ${DAY(e.at)}.`);
+    }
+    sections.push({ title: "Where things stand", lines });
+  }
+
+  /* Only the current contract's dates: an earlier, terminated contract's
+     dates are not live, and a countdown to one would be wrong. Once the
+     contract closed, its dates are history, said without a countdown. */
+  const d = got(deadlines);
+  if (d !== undefined) {
+    const current = p ? (p.open ?? p.closed) : null;
+    const lines = d === null ? [NOT_READ] : !current ? [] : d.deadlines
+      .filter((x) => x.kind === "contractual" && x.transactionId === current.id && x.view.verified && x.view.state !== "removed")
+      .map((x) => (p?.open ? buyerDateLine(x.label, x.view, agentFirst) : `${x.label}: ${x.view.when}.`))
+      .filter((x): x is string => x !== null);
+    sections.push({ title: "Contract dates", lines: lines.length ? lines : ["No checked contract dates."] });
+  }
+
+  return done({ sections, documents });
 }

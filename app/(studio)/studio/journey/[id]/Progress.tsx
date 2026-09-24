@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   STAGE_LABEL, STATUS_LABEL, WORK_STATES, WORK_STATE_LABEL,
-  marketDay, ownerText, stageStrip, visitedStages, workSummary,
+  afterClose, marketDay, ownerText, stageStrip, visitedStages, workSummary,
   type Financing, type JourneyEvent, type JourneyStatus, type Owner, type Progress as ProgressState,
   type Stage, type WorkState, type WorkUpdate, type Workstream, type WorkstreamView,
 } from "@/lib/core/progress";
@@ -64,7 +64,9 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
   /** A suggestion from the rest of the page, e.g. an offer in progress. Never moves anything. */
   nudge?: string | null;
 }) {
-  const stamp = `${progress.seq}|${open ? open.work.map((w) => w.seq).join(",") : "-"}`;
+  /* Once a contract closed: possession is still worked on it (W11, B18). */
+  const closed = afterClose(past, open);
+  const stamp = `${progress.seq}|${open ? open.work.map((w) => w.seq).join(",") : "-"}|${closed ? closed.work.map((w) => w.seq).join(",") : "-"}`;
   const { busy, error, write } = useWrite(stamp);
   const [req, setReq] = useState(newRequest);
   const [form, setForm] = useState<null | "stage" | "status" | "contract" | "end">(null);
@@ -181,6 +183,19 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
         </ul>
       ) : null}
 
+      {closed ? (
+        <div style={{ marginTop: 16 }}>
+          <div className="t-sm w6">{person}&apos;s home: {closed.contract.address}</div>
+          <p className="t-2xs c-4" style={{ marginTop: 2, lineHeight: 1.5 }}>
+            {closed.closing ? `Closing confirmed by ${closed.closing.from} on ${DAY(closed.closing.on)}. ` : ""}
+            Possession is recorded here: it can come after the closing, and {person} sees it on Today until it is confirmed.
+          </p>
+          <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+            {closed.work.map((w) => <Work key={w.workstream} contractId={closed.contract.id} w={w} history={closed.contract.history[w.workstream]} busy={busy} run={run} person={person} />)}
+          </div>
+        </div>
+      ) : null}
+
       <div style={{ marginTop: 16 }}>
         {open ? (
           <OpenContract c={open} busy={busy} run={run} person={person}
@@ -216,10 +231,10 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
               {financing === "cash" ? " A cash purchase has no loan or lender appraisal to track, so those two are marked as not applying." : ""}
             </p>
           </div>
-        ) : !finished ? (
+        ) : !finished && progress.stage !== "own" ? (
           <button className="btn btn-s btn-sm" disabled={!homes.length} onClick={() => setForm("contract")}>Record a contract</button>
         ) : null}
-        {!open && !homes.length && !finished ? <p className="t-2xs c-4" style={{ marginTop: 6 }}>Add the home to the list first.</p> : null}
+        {!open && !homes.length && !finished && progress.stage !== "own" ? <p className="t-2xs c-4" style={{ marginTop: 6 }}>Add the home to the list first.</p> : null}
       </div>
 
       {past.length ? (
@@ -295,7 +310,7 @@ function OpenContract({ c, busy, run, person, ending, setEnding, outcome, setOut
             </div>
             <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
               The contract and everything recorded against it stay on file either way.
-              {outcome === "closed" ? " Closed needs Closing and keys confirmed first, by whoever confirmed it." : ""}
+              {outcome === "closed" ? " Closed needs the closing confirmed first, by whoever confirmed it. Possession is recorded separately, after." : ""}
             </p>
           </div>
         ) : (

@@ -204,3 +204,25 @@ export async function sendDailySummary(to: string, built: { subject: string; htm
     tags: ["agent-summary"],
   }, "email.dailySummary");
 }
+
+/**
+ * Remove Brevo's log of every transactional email sent to an address, and the
+ * stored previews with it (W11, AT36: a provider's copy goes when the person
+ * asks to be forgotten). 204 is removed; 404 is nothing there to remove. The
+ * block list is left alone on purpose: an opt-out must outlive the record.
+ */
+export async function forgetAtBrevo(email: string): Promise<{ ok: true; skipped?: true } | { ok: false; error: string }> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return { ok: true, skipped: true };
+  try {
+    const res = await fetch(`https://api.brevo.com/v3/smtp/log/${encodeURIComponent(email.trim())}`, {
+      method: "DELETE",
+      headers: { accept: "application/json", "api-key": apiKey },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.status === 204 || res.status === 404 || res.ok) return { ok: true };
+    return { ok: false, error: `Brevo ${res.status}: ${(await res.text()).slice(0, 200)}` };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Brevo could not be reached" };
+  }
+}
