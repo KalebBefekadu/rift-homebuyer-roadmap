@@ -222,7 +222,7 @@ subtle borders. What changes is the discipline around layout and interaction.
   sale price through payoff and costs to "what you keep"; a journey path Prepare to Own.
 - Every artifact reads the same computed output as its table and has a text equivalent
   (CAMP-04), and loads after the tool without shifting the layout (QUALITY-03).
-- **To confirm (D13):** that "artifact" means this custom visual.
+- **Decided (D13, 24 Sep):** "artifact" means this custom visual, one made for each value.
 
 ### 4.6 Three levels of expression
 Public: most expressive. Client: calm and personal. Operations: utilitarian (smaller type,
@@ -252,10 +252,23 @@ the experience before being asked to invest in the agent.
 - Finishing a value shows **only that value**, then "You can also get..." the next one, which
   often needs just one more question. Answers already given are reused, never asked again.
 - The landing pages can offer several values as separate ways in.
-- **Gating (D14, proposed):** the advertised answer of each value is always free and complete
-  (LEAD-01). Extras beyond it may ask for contact details or an account: saving the plan,
-  alerts when a program changes, the full program-combination report, a printable plan. Kaleb
-  asked for this on the programs page (§5.8, G3).
+- **Gating (D14, decided 24 Sep).** The rule: what a person needs to **understand their
+  situation** is free; what they need to **act on it, keep it, or be told later** asks for their
+  details. That keeps the answer honest (LEAD-01) and asks for details at the moment the person
+  gets something extra in return.
+
+  | Always free, no details | Asks for name and email (phone optional unless stated) |
+  | --- | --- |
+  | Every value's answer, in full, with its artifact and assumptions | **Save my plan:** keep the values, reopen on any device |
+  | The programs table, with filter, sort and each program's official source | **Program alerts:** tell me when a program I match opens, changes or runs out of funds |
+  | The assistance value: potential matches for their answers, what each checks, and the best potential combined amount | **My assistance plan:** every workable combination, what to do for each program in order, the documents to gather, and which kind of lender takes part, as a saved and printable plan |
+  | The next value, reusing earlier answers | **Ask Kaleb to review my numbers,** or **Book a call** (phone required for booking, as §5.9) |
+  | Sharing a readout link | **Email me my plan** as a PDF |
+
+  On the programs page this gives the stronger call to action Kaleb asked for (G3): browse
+  freely, "See which programs fit me" leads into the free assistance value, and the personal
+  plan and alerts are what ask for details. A value's answer is never cut short to force the
+  form, and declining leaves everything on the free side working.
 
 **Acceptance for every value:** the answer appears with no contact details asked; only that
 value is shown; the next value is offered and reuses earlier answers; the artifact and the text
@@ -277,6 +290,11 @@ first set and their order.
 | Lender questions | "What should I ask a lender?" | Uses earlier answers | Questions written for their situation | Existing readout section |
 | Rent vs. buy, first-time roadmap, readiness | From v3 | To define | To define | Later values |
 
+**Recommended first order (D20):** 1. Assistance (the strongest reason to start, and the
+assistance engine powers it); 2. Cash to close (the site's core idea: the down payment is not the
+number); 3. Monthly cost; 4. Timeline. Affordability follows once its model is tested; the rest
+come later.
+
 ### 5.3 Seller values (Kaleb, R2: same lens as the buyer side)
 
 | Value | Question | Inputs | Answer |
@@ -286,6 +304,9 @@ first set and their order.
 | Unclaimed money | "Am I losing money already?" | County, homestead status | Exemptions and appeal deadlines (existing `/sell/unclaimed`) |
 | Preparation | "Should I fix this before listing?" | Condition questions | What is worth addressing, maybe, not yet; no invented ROI |
 | Sell first or buy first, move-up | From v3 | To define | To define |
+
+**Recommended first order (D20):** 1. Net proceeds; 2. Unclaimed money (useful even to someone not
+selling, and already built); 3. Selling costs; 4. Preparation.
 
 All buyer-side feedback applies to the seller side unless it is buyer-specific: separate values,
 no Next button, uncapped amounts, simpler readouts, better calls to action, the footer and
@@ -300,6 +321,9 @@ the seller journey's gate (§9).
   abroad care about the US and many do not know Georgia. Applies on the front door and every
   abroad page.
 - The abroad page is too complicated. Split it into values and do not put everything on one page.
+- **Recommended values, in order (D20):** 1. "Can I buy in the United States?" (by residency
+  status); 2. What buying and owning would cost; 3. The return, shown only with its estimate
+  label until real county rent ratios arrive (§12).
 - Collect a phone number, with the existing consent rules for calls and texts (a phone number
   without consent is refused today; keep that).
 - Fix the clipped radio circles (§4.3).
@@ -368,7 +392,8 @@ the seller journey's gate (§9).
   **sort**.
 - Reword "Every Georgia program we track" to something like "Georgia programs".
 - The call to action needs work; hold some functionality back until the person creates an
-  account or gives their details (D14).
+  account or gives their details. Decided in D14 (§5.1): the table and the matches stay free;
+  the personal assistance plan and program alerts ask for details.
 - The programs themselves come from the assistance engine (§6), shown with "View official
   program source", "Last verified", and the standard caution line.
 
@@ -562,7 +587,7 @@ Update / review
   already in the database.
 - A flagged change is reviewed by a person before the record changes (AUTO-05). A check that
   fails is visible in Operations like any other scheduled job (QUALITY-04). AI cost is capped
-  (AUTO-06, D16).
+  (AUTO-06, D16: within $50 a month for the pilot).
 
 ### 6.6 Facts from official sources, not other databases
 - Facts such as maximum amounts, limits and deadlines are generally not protected just because
@@ -650,8 +675,10 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
 
 **A major UI and UX redesign.** The agent pages were not redesigned in v4 and look unchanged
 (Kaleb, R2). The layout below is **engineering's proposal**, built from v3 §0.3, v4 §9 and what
-the live pages show. It is confirmed with Kaleb in a design review, using a clickable prototype,
-before it is built (D15).
+the live pages show. **How it gets approved (D15, agreed 24 Sep):** before any real Operations
+screen is rebuilt, engineering makes a clickable mock-up of the new layout with made-up data.
+Kaleb clicks through it and says what to keep or change; only then is it built for real. This
+costs days, where building the wrong layout would cost weeks.
 
 ### 8.1 What is wrong today
 - **The name.** Addresses are still `/studio/...`, the emails say "Open them in Studio", and two
@@ -706,8 +733,8 @@ due time and its next action:
   in.
 - **Upcoming:** dates and milestones in the next two weeks.
 - A **Recent activity** strip: meaningful changes across the business, not every event.
-- New leads and "Call today" leads stay prominent (the 15-minute reply target, unless D07a
-  changes it).
+- New leads and "Call today" leads stay prominent, with the 15-minute reply target (D07a keeps
+  the instant new-lead alert).
 - Snooze with an owner and a resume time (never moving a contract date), delegate with
   acceptance, pin with a reason and expiry (OPS-02).
 
@@ -785,6 +812,10 @@ Needed before any integration writes or any AI draft is used:
 - AI cost limits per workflow and per month, with manual entry when they run out; model and
   prompt versions recorded; no training on private data (AUTO-06). Pilot budget: at most $50 a
   month on AI and integrations (D07).
+- **Provider (D16, decided 24 Sep):** Anthropic's Claude API, on the smallest model that
+  passes each job's accuracy tests (Haiku 4.5 for comparing program pages, a larger model only
+  where offer extraction needs it). A hard monthly limit of $50 across all AI use for the pilot,
+  enforced in code, with manual entry when it is reached. Kaleb may raise the limit later.
 - First AI uses: offer PDF extraction (§5.9), program page monitoring (§6.5), optionally turning
   an agent's notes into a draft search brief (v4 §3.2: candidates with source spans, never a
   ready search).
@@ -828,6 +859,11 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D17 | Georgia assistance comes from Rift's own database built from official sources; DPA One and DPR are discovery tools only (§6) | 24 Sep |
 | D18 | Booking uses Cal.com's free plan with Kaleb's Google Calendar | 24 Sep |
 | D19 | Blueprint v5 is the only source of truth for planning | 24 Sep |
+| D07a | **Keep the two instant alerts**: a new lead from the public site, and a seller choosing an offer. Everything else stays in the morning summary, which also lists new people, so nothing is missed. Why: how quickly a new lead hears back strongly affects whether they become a client, and a seller's chosen offer has a deadline attached; both are rare enough not to become noise. Buyer journey activity stays summary-only, as D07 set. The 15-minute "Call today" target stays | 24 Sep |
+| D13 | A custom artifact is a custom visual made for each value (§4.5) | 24 Sep |
+| D14 | Understanding is free; keeping, acting and alerts ask for details (table in §5.1) | 24 Sep |
+| D15 | The Operations layout is approved by clicking through a mock-up before it is built (§8) | 24 Sep |
+| D16 | Claude API, hard limit $50 a month across all AI for the pilot, raised later if needed (§10.2) | 24 Sep |
 
 ### Open
 
@@ -835,13 +871,8 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | --- | --- | --- | --- |
 | D02 | Integration rights for Matrix/OneHome, ShowingTime, Remine and Google, on Kaleb's accounts | No adapter is built without them; the manual paths stay | Kaleb with vendors and broker |
 | D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
-| D07a | Fold the instant new-lead and seller-offer alerts into the morning summary too? That retires the 15-minute "Call today" target | Changes Today and the alert emails | Kaleb |
 | D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
-| D13 | Does "custom artifact" mean a custom visual made for each value (§4.5)? | Sets the design work | Kaleb |
-| D14 | Which extras beyond a value's answer may ask for contact details or an account (§5.1, programs page)? | LEAD-01 keeps the answer itself free | Kaleb |
-| D15 | Approve the Agent OS layout (§8) after a prototype review | §8 is a proposal until then | Kaleb |
-| D16 | AI provider and monthly limit for offer extraction and program monitoring, within the $50 pilot cap | Needed before §5.9 upload and §6.5 monitoring | Kaleb |
-| D20 | The first buyer and seller values and their order (§5.2, §5.3) | Sets the lead-side build | Kaleb |
+| D20 | Which small tools ("values") are built first, and in what order. Recommended in §5.2 to §5.4 | Sets the lead-side build | Kaleb |
 | D21 | Delivery order (§13): design and lead side first, or the pilot first | Both are ready to start | Kaleb |
 
 ---
@@ -870,10 +901,10 @@ verified on the live site as before.
 | Phase | Work | Needs first |
 | --- | --- | --- |
 | 0. Housekeeping | Full rename to Operations with redirects; connect Cal.com; clearer buyer sign-in (§7.3); clear the test data | Cal.com key |
-| 1. Design system | Spacing and grid, footer, form controls, call-to-action rules, artifact language (§4) | D13 |
-| 2. Lead side | Values split and questionnaire rebuilt (§5.1, §5.6); front door and buyer landing (§5.7); readouts, programs table, how it works (§5.8); offer upload and book page (§5.9); seller and abroad with the same lens (§5.3, §5.4); Save my plan and continuity (§5.5) | D14, D16 (offer upload), D20 |
-| 3. Assistance engine | Program records from official sources, matching, combinations, monitoring and discovery (§6) | D16 for monitoring |
-| 4. Agent OS | Prototype, review, then build the redesign (§8) | D15 |
+| 1. Design system | Spacing and grid, footer, form controls, call-to-action rules, artifact language (§4) | Nothing (D13 settled) |
+| 2. Lead side | Values split and questionnaire rebuilt (§5.1, §5.6); front door and buyer landing (§5.7); readouts, programs table, how it works (§5.8); offer upload and book page (§5.9); seller and abroad with the same lens (§5.3, §5.4); Save my plan and continuity (§5.5) | D20 |
+| 3. Assistance engine | Program records from official sources, matching, combinations, monitoring and discovery (§6) | Nothing (D16 settled) |
+| 4. Agent OS | Mock-up, Kaleb clicks through it, then build the redesign (§8) | Kaleb's review of the mock-up |
 | 5. Pilot and client side | Run the pilot with 3 to 5 buyers; client side design pass and missing areas (§7); money v2 (W10) once the pilot starts | Pilot buyers |
 | 6. Seller journey and campaigns | After pilot results (§9, §5.10) | D08 evidence |
 
@@ -888,4 +919,5 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |
