@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
+import { trackedCron } from "@/lib/db/jobs";
 import { sweep } from "@/lib/db/retention";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -29,5 +30,7 @@ async function run(req: Request) {
 }
 
 /* See the note in app/api/nurture/run/route.ts. The scheduler sends GET. */
-export const GET = run;
-export const POST = run;
+/* Each scheduled run is recorded, so a failed or missing one is seen (lib/db/jobs.ts). */
+const tracked = trackedCron("retention-sweep", run);
+export const GET = tracked;
+export const POST = tracked;

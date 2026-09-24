@@ -21,7 +21,8 @@
  */
 
 import { daysUntil, ownerLabel, whenPhrase, type PlanItem } from "./plan";
-import { STAGE_LABEL, isSettled, ownerText, workLine, type Progress, type WorkstreamView } from "./progress";
+import { STAGE_LABEL, isSettled, ownerText, workLine, type Progress, type Workstream, type WorkstreamView } from "./progress";
+import { buyerDateLine, type DeadlineView } from "./deadline";
 
 export type TodayKind = "blocker" | "overdue" | "decision" | "yours" | "others";
 
@@ -44,7 +45,12 @@ export interface TodayInput {
   showingsToAnswer: string[];
   /** Offers whose current version is waiting on this person's instruction: the home's address. */
   offersToAnswer?: string[];
+  /** The open contract's contractual dates. Only checked ones are ever shown (REQ-DATE-02). */
+  contractDates?: { label: string; workstream: Workstream | null; view: DeadlineView }[];
 }
+
+/** How far ahead a checked contract date appears on Today. */
+export const DATES_AHEAD = 14;
 
 export interface Today {
   /** One line on where the journey is. */
@@ -71,6 +77,13 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
     .sort((a, b) => a.dueOn!.localeCompare(b.dueOn!));
   for (const i of overdue) {
     items.push({ kind: "overdue", title: i.title, detail: `Was due ${whenPhrase(daysUntil(i.dueOn!, today))}. Yours to do.`, anchor: null });
+  }
+
+  /* A contract date that passed is urgent, whoever owns the work. The line
+     never says what it means legally (REQ-DATE-03). */
+  const dates = (input.contractDates ?? []).filter((d) => d.view.state === "active");
+  for (const d of dates.filter((x) => x.view.verified && x.view.missed)) {
+    items.push({ kind: "blocker", title: `${d.label} has passed`, detail: buyerDateLine(d.label, d.view, agentFirst)!.replace(`${d.label} was `, "It was "), anchor: "under-contract" });
   }
 
   /* 2. Decisions for this person. An offer waiting on them comes first: it
@@ -102,6 +115,13 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
   for (const w of work.filter((x) => x.owner === "client" && !isSettled(x.state) && x.state !== "blocked" && x.state !== "reported")) {
     items.push({ kind: "yours", title: w.label, detail: workLine(w, agentFirst), anchor: "under-contract" });
   }
+  const upcoming = dates
+    .filter((d) => d.view.verified && !d.view.missed && d.view.days !== null && d.view.days <= DATES_AHEAD)
+    .sort((a, b) => a.view.days! - b.view.days!);
+  const theirs0 = (d: (typeof dates)[number]) => !!d.workstream && work.find((w) => w.workstream === d.workstream)?.owner === "client";
+  for (const d of upcoming.filter(theirs0)) {
+    items.push({ kind: "yours", title: d.label, detail: buyerDateLine(d.label, d.view, agentFirst)!.replace(`${d.label}: `, "Due "), anchor: "under-contract" });
+  }
   if (!soon.length) {
     const next = [...mineDated, ...openPlan.filter((i) => i.owner === "client" && !i.dueOn).sort((a, b) => a.sort - b.sort)][0];
     if (next) {
@@ -113,6 +133,13 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
   }
 
   const owed = items.length > 0;
+
+  for (const d of upcoming.filter((x) => !theirs0(x))) {
+    items.push({ kind: "others", title: d.label, detail: buyerDateLine(d.label, d.view, agentFirst)!.replace(`${d.label}: `, "Due "), anchor: "under-contract" });
+  }
+  if (dates.some((d) => !d.view.verified)) {
+    items.push({ kind: "others", title: "Contract dates", detail: `${agentFirst} is checking some of the contract's dates against the documents. They appear here once checked.`, anchor: null });
+  }
 
   /* 4. Everyone else. Workstreams first (they carry dated word), then the plan. */
   /* Only work that is moving or waiting: the not-started rest is in the

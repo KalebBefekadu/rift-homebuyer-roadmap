@@ -13,6 +13,8 @@ import type { FeedbackInput, StepInput } from "@/lib/core/tour";
 import { changeStage, changeStatus, endContract, recordContract, recordWorkAsAgent } from "@/lib/db/progress";
 import { recordBidStep, responseAsAgent, startBid } from "@/lib/db/bids";
 import { finishUpload, uploadSlot } from "@/lib/db/documents";
+import { addDeadline, recordAmendment, reviseDeadline, type Revise } from "@/lib/db/deadlines";
+import type { AmendmentChange, DeadlineInput, DeadlineKind } from "@/lib/core/deadline";
 import type { Instruction, StepInput as BidStepInput, Terms } from "@/lib/core/bid";
 import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
 
@@ -309,4 +311,35 @@ export async function bidAnswerForThem(
   const r = await responseAsAgent(journeyId, bidId, memberId, version, instruction, note, how, g.name, first(g.name), requestId);
   revalidatePath(`/studio/journey/${journeyId}`);
   return out(r);
+}
+
+/* ------------------------------------------------------------------ *
+ * Contract dates (W09)
+ * ------------------------------------------------------------------ */
+
+export async function addDate(journeyId: string, label: string, kind: DeadlineKind, workstream: Workstream | null, input: DeadlineInput, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId) || (input.sourceDocumentId && !isUuid(input.sourceDocumentId))) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await addDeadline(journeyId, label, kind, workstream, input, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ id: d.id }));
+}
+
+export async function reviseDate(journeyId: string, deadlineId: string, change: Revise, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(deadlineId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await reviseDeadline(journeyId, deadlineId, change, expectedSeq, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+export async function amendDates(journeyId: string, reference: string, changes: (AmendmentChange & { expectedSeq: number })[], requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId) || !changes.every((c) => isUuid(c.deadlineId))) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordAmendment(journeyId, reference, changes, g.name, requestId);
+  revalidatePath(`/studio/journey/${journeyId}`);
+  return out(r, (d) => ({ changed: d.changed }));
 }

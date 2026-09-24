@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
+import { trackedCron } from "@/lib/db/jobs";
 import { readPmms, PMMS_HISTORY_URL, PMMS_SOURCE } from "@/lib/core/pmms";
 import { recordRate, currentRate } from "@/lib/db/rates";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -105,5 +106,7 @@ async function run(req: Request) {
 
 /* Both verbs: Vercel's scheduler sends GET. See lib/core/cron.ts for what
    exporting only POST cost this product last time. */
-export const GET = run;
-export const POST = run;
+/* Each scheduled run is recorded, so a failed or missing one is seen (lib/db/jobs.ts). */
+const tracked = trackedCron("rates-refresh", run);
+export const GET = tracked;
+export const POST = tracked;

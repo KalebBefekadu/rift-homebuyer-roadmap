@@ -378,6 +378,15 @@ await check("files to erase (removeJourneyFiles)", () => db.from("rift_documents
   .select("storage_path").eq("agent_id", NIL).in("journey_id", [NIL]).limit(1));
 await check("their journeys (forget)", () => db.from("rift_journeys")
   .select("id").eq("agent_id", NIL).in("origin_lead_id", [NIL]));
+await check("contract dates (readDeadlines)", () => db.from("rift_deadlines").select("id,transaction_id,label,kind,workstream,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("date revisions (readDeadlines)", () => db.from("rift_deadline_revisions")
+  .select("deadline_id,seq,state,due_date,due_time,timezone,due_at,rule,trigger_label,trigger_date,days,source_term,source_page,source_document_id,amendment,verified,note,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("seq").limit(1));
+await check("all dates (datesNeedingAttention)", () => db.from("rift_deadlines").select("id,journey_id,transaction_id,label,kind").eq("agent_id", NIL).limit(1));
+await check("ended contracts (datesNeedingAttention)", () => db.from("rift_transaction_outcomes").select("transaction_id").eq("agent_id", NIL).limit(1));
+await check("date replay (addDeadline)", () => db.from("rift_deadlines").select("id").eq("request_id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("job runs (jobsHealth)", () => db.from("rift_job_runs").select("job,ok,detail,started_at,finished_at").order("started_at", { ascending: false }).limit(1));
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
+import { trackedCron } from "@/lib/db/jobs";
 import { due, claimStep, markTouch } from "@/lib/db/nurture";
 import { sendTouch, sendResume } from "@/lib/db/email";
 import { runOptions } from "@/lib/core/nurture";
@@ -157,5 +158,7 @@ async function run(req: Request) {
    hand sends POST. Exporting only POST is how this endpoint spent its whole
    life returning 405 to the scheduler while every check said it was fine:
    see lib/core/cron.ts. */
-export const GET = run;
-export const POST = run;
+/* Each scheduled run is recorded, so a failed or missing one is seen (lib/db/jobs.ts). */
+const tracked = trackedCron("nurture-run", run);
+export const GET = tracked;
+export const POST = tracked;

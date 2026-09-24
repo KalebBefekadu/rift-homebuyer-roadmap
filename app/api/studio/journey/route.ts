@@ -7,8 +7,9 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates,
 } from "@/app/(studio)/studio/journey/ops";
+import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
 import {
@@ -74,6 +75,21 @@ function terms(v: unknown): Terms | null {
     financingContingency: t.financingContingency === true, appraisalContingency: t.appraisalContingency === true,
     closingDate: text(t.closingDate, 10), respondBy: text(t.respondBy, 40), respondBySource: text(t.respondBySource, 200),
     other: text(t.other, 1000),
+  };
+}
+
+/** Only the known fields of a date, each as its own type. */
+function dateInput(v: unknown): DeadlineInput | null {
+  const d = (v ?? {}) as Record<string, unknown>;
+  const rule = str(d.rule, 20) as RuleId;
+  if (!RULE_IDS.includes(rule)) return null;
+  const text = (x: unknown, max: number) => (typeof x === "string" && x.trim() ? x.trim().slice(0, max) : null);
+  return {
+    rule, date: text(d.date, 10), time: text(d.time, 5), timezone: text(d.timezone, 64) ?? undefined,
+    triggerLabel: text(d.triggerLabel, 120), triggerDate: text(d.triggerDate, 10),
+    days: typeof d.days === "number" && Number.isInteger(d.days) ? d.days : null,
+    sourceTerm: str(d.sourceTerm, 200), sourcePage: text(d.sourcePage, 40), sourceDocumentId: text(d.sourceDocumentId, 40),
+    verified: d.verified === true, note: text(d.note, 500),
   };
 }
 
@@ -212,6 +228,28 @@ export async function POST(req: Request) {
       if (!["proceed", "change", "stop"].includes(instruction)) return json({ ok: false, error: "Choose their answer." }, 400);
       return json(await bidAnswerForThem(journeyId, str(b.bidId, 40), str(b.memberId, 40), num(b.version),
         instruction as "proceed" | "change" | "stop", str(b.note, 500) || null, str(b.how, 200), str(b.requestId, 40)));
+    }
+    case "date-add": {
+      const input = dateInput(b.input);
+      if (!input) return json({ ok: false, error: "Choose how the date is reached." }, 400);
+      const kind = str(b.kind, 12) === "target" ? "target" : "contractual";
+      const ws = str(b.workstream, 20) as Workstream;
+      return json(await addDate(journeyId, str(b.label, 120), kind, WORKSTREAMS.includes(ws) ? ws : null, input, str(b.requestId, 40)));
+    }
+    case "date-revise": {
+      const to = str(b.to, 10);
+      const change = to === "active" ? (dateInput(b.input) ? { to: "active" as const, input: dateInput(b.input)! } : null)
+        : to === "checked" ? { to: "checked" as const }
+        : to === "met" || to === "removed" ? { to: to as "met" | "removed", note: str(b.note, 500) } : null;
+      if (!change) return json({ ok: false, error: "That change could not be read. Reload and try again." }, 400);
+      return json(await reviseDate(journeyId, str(b.deadlineId, 40), change, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "date-amend": {
+      const list = Array.isArray(b.changes) ? (b.changes as Record<string, unknown>[]).slice(0, 30) : [];
+      const changes = list.map((c) => ({
+        deadlineId: str(c.deadlineId, 40), remove: c.remove === true, input: c.remove === true ? null : dateInput(c.input), expectedSeq: num(c.expectedSeq),
+      }));
+      return json(await amendDates(journeyId, str(b.reference, 200), changes, str(b.requestId, 40)));
     }
     case "take-off":
       return json(await takeHomeOff(journeyId, str(b.homeId, 40), str(b.reason, 500)));

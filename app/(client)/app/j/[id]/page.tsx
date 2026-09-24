@@ -101,6 +101,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       plan: p.plan,
       briefToConfirm: respond && !!b?.revision && !b.myResponse,
       showingsToAnswer: respond ? showings.filter((x) => x.completed && !x.answeredByMe).map((x) => address.get(x.homeId) ?? "A home you saw") : [],
+      contractDates: p.dates,
       offersToAnswer: respond ? buyerBids.filter((x) => x.asked?.open && x.asked.mineNeeded && !x.asked.myAnswer && !x.newerDraft).map((x) => x.address) : [],
     })
     : null;

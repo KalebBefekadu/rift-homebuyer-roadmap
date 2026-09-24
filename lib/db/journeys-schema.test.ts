@@ -604,6 +604,73 @@ describe("offers and documents (W08; AT22 to AT25 in the record)", () => {
   });
 });
 
+describe("contract dates (W09; AT26, AT27 in the record)", () => {
+  const T9 = "a9999999-0000-4000-8000-000000000009";
+  const H9 = "a6666666-0000-4000-8000-000000000009";
+  const D1 = "acccccc1-0000-4000-8000-000000000001";
+  const D2 = "acccccc1-0000-4000-8000-000000000002";
+  const rq = (n: number) => `acccccc1-1111-4000-8000-${String(n).padStart(12, "0")}`;
+  const cols = "agent_id, journey_id, deadline_id, seq, state, due_date, due_time, timezone, due_at, rule, trigger_label, trigger_date, days, source_term, amendment, verified, note, actor_label, request_id";
+  type R = { d?: string; seq: number; state?: string; date?: string; time?: string | null; at?: string | null; rule?: string; trig?: string | null; tdate?: string | null; days?: number | null; amend?: string | null; verified?: boolean; note?: string | null; n: number };
+  const row = (r: R) => [A, J1, r.d ?? D1, r.seq, r.state ?? "active", r.date ?? "2026-10-03", r.time ?? null, "America/New_York", r.at ?? null,
+    r.rule ?? "as-written", r.trig ?? null, r.tdate ?? null, r.days ?? null, "Paragraph 12", r.amend ?? null, r.verified ?? true, r.note ?? null, "Agent A", rq(r.n)];
+  const ins = (...rs: R[]): [string, unknown[]] => {
+    const vals = rs.map((_, i) => `(${Array.from({ length: 19 }, (_, k) => `$${i * 19 + k + 1}`).join(",")})`).join(",");
+    return [`insert into rift_deadline_revisions (${cols}) values ${vals}`, rs.flatMap(row)];
+  };
+  const run = (c: Client, [sql, params]: [string, unknown[]]) => c.query(sql, params as never[]);
+
+  test("fixtures", async (c) => {
+    await c.query(`insert into rift_shortlist_homes (id, agent_id, journey_id, address, facts_source, facts_as_of, added_by_kind, added_by_label)
+       values ($1,$2,$3,'9 Pine Rd, Tucker','Matrix listing','2026-09-21','agent','Agent A')`, [H9, A, J1]);
+    await c.query(`insert into rift_transactions (id, agent_id, journey_id, home_id, financing, evidence, actor_label, request_id)
+       values ($1,$2,$3,$4,'financed','Executed purchase agreement','Agent A',$5)`, [T9, A, J1, H9, rq(900)]);
+    await c.query(`insert into rift_deadlines (id, agent_id, journey_id, transaction_id, label, kind, actor_label, request_id) values
+       ($1,$3,$4,$5,'Due diligence ends','contractual','Agent A',$6), ($2,$3,$4,$5,'Closing','contractual','Agent A',$7)`, [D1, D2, A, J1, T9, rq(901), rq(902)]);
+    await run(c, ins({ seq: 1, n: 1 }, { d: D2, seq: 1, date: "2026-10-30", n: 2 }));
+  });
+
+  test("a date without a time has no instant, and a time never comes without one (AT26)", async (c) => {
+    await refused(c, ...ins({ seq: 2, at: "2026-10-03T04:00:00Z", n: 10 }), /time_is_whole/);
+    await refused(c, ...ins({ seq: 2, time: "17:00", n: 11 }), /time_is_whole/);
+  });
+
+  test("a counted date says what it counted from; a written one does not", async (c) => {
+    await refused(c, ...ins({ seq: 2, rule: "calendar-days-v1", n: 12 }), /counted_has_trigger/);
+    await refused(c, ...ins({ seq: 2, trig: "Binding", tdate: "2026-09-23", days: 10, n: 13 }), /counted_has_trigger/);
+    await refused(c, ...ins({ seq: 2, rule: "whatever-the-form-says", trig: "Binding", tdate: "2026-09-23", days: 10, n: 14 }), /rule/);
+  });
+
+  test("met or removed says how, and an amendment's dates were checked", async (c) => {
+    await refused(c, ...ins({ seq: 2, state: "met", n: 15 }), /closing_says_how/);
+    await refused(c, ...ins({ seq: 2, amend: "Amendment 1", verified: false, n: 16 }), /amendment_checked/);
+  });
+
+  test("an amendment lands whole or not at all (AT27)", async (c) => {
+    /* The second row collides with a revision somebody else made: the first must not survive. */
+    await c.query(`insert into rift_deadline_revisions (${cols}) values ${"(" + Array.from({ length: 19 }, (_, k) => `$${k + 1}`).join(",") + ")"}`, row({ d: D2, seq: 2, date: "2026-11-02", n: 20 }));
+    await refused(c, ...ins({ seq: 2, date: "2026-10-06", amend: "Amendment 1", n: 21 }, { d: D2, seq: 2, date: "2026-11-06", amend: "Amendment 1", n: 22 }), /rift_deadline_revisions_seq/);
+    const { rows } = await c.query("select count(*)::int n from rift_deadline_revisions where deadline_id = $1", [D1]);
+    expect(rows[0].n).toBe(1);
+    await run(c, ins({ seq: 2, date: "2026-10-06", amend: "Amendment 1", n: 23 }, { d: D2, seq: 3, date: "2026-11-06", amend: "Amendment 1", n: 24 }));
+  });
+
+  test("dates are history, and another agent sees none", async (c) => {
+    await refused(c, "update rift_deadline_revisions set due_date = '2026-12-01' where deadline_id = $1", [D1], /is history/);
+    await refused(c, "update rift_deadlines set label = 'x' where id = $1", [D1], /is history/);
+    const theirs = await as(c, B_USER, async () => (await c.query("select count(*)::int n from rift_deadline_revisions")).rows[0].n);
+    expect(theirs).toBe(0);
+  });
+
+  test("job runs are the server's alone", async (c) => {
+    await c.query("insert into rift_job_runs (job, ok, finished_at) values ('nurture-run', true, now())");
+    const n = await as(c, A_USER, async () => (await c.query("select count(*)::int n from rift_job_runs")).rows[0].n);
+    expect(n).toBe(0);
+    expect((await c.query("select count(*)::int n from rift_job_runs")).rows[0].n).toBeGreaterThan(0);
+    await refused(c, "insert into rift_job_runs (job, ok) values ('mine-bitcoin', true)", [], /job/);
+  });
+});
+
 describe("deletion (first-migration-proposal §deletion compatibility)", () => {
   test("removing the journeys first lets the relationship go, and takes everything under them", async (c) => {
     await c.query("begin");
@@ -611,7 +678,7 @@ describe("deletion (first-migration-proposal §deletion compatibility)", () => {
     await c.query("delete from rift_leads where id = $1", [A_LEAD]);
     for (const t of ["rift_journey_members", "rift_search_revisions", "rift_search_packages", "rift_shortlist_homes", "rift_home_reactions", "rift_search_responses", "rift_tour_stops", "rift_tour_steps", "rift_tour_feedback",
       "rift_journey_events", "rift_transactions", "rift_transaction_outcomes", "rift_workstream_updates",
-      "rift_bids", "rift_bid_steps", "rift_bid_responses", "rift_documents"]) {
+      "rift_bids", "rift_bid_steps", "rift_bid_responses", "rift_documents", "rift_deadlines", "rift_deadline_revisions"]) {
       const { rows } = await c.query(`select count(*)::int n from ${t} where agent_id = $1`, [A]);
       expect(rows[0].n, t).toBe(0);
     }

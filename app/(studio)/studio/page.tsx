@@ -23,6 +23,9 @@ import { sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
 import { Ico } from "@/components/rift/icons";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { datesNeedingAttention } from "@/lib/db/deadlines";
+import { jobsHealth } from "@/lib/db/jobs";
+import { inDays } from "@/lib/core/deadline";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -80,7 +83,7 @@ export default async function StudioToday() {
   const recheckDays = rules.registryDays.value;
   const undecidedCount = agentRules.undecided.length;
 
-  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead, datesRead, jobsRead] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
@@ -94,7 +97,14 @@ export default async function StudioToday() {
       currentRate(),
       lapsingAgreements(),
       recentChoices(),
+      datesNeedingAttention(),
+      jobsHealth(),
     ]);
+  /* Null means not tracked yet (the tables are not there); a failed read is
+     shown as one, never as nothing to do. */
+  const dates = datesRead.ok && "data" in datesRead ? datesRead.data : null;
+  const datesFailed = !datesRead.ok;
+  const jobProblems = jobsRead.ok && "data" in jobsRead && jobsRead.data ? jobsRead.data.filter((j) => j.problem) : [];
 
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
   const lapsing = lapsingRead.ok && "data" in lapsingRead ? lapsingRead.data : [];
@@ -227,6 +237,48 @@ export default async function StudioToday() {
               {rules.registryOwner.value} re-checks these, within {recheckDays} days of the last
               verification. <Link href="/studio/settings" className="c-brand">Change either</Link>.
             </p>
+          </div>
+        ) : null}
+
+        {/* Contract dates and scheduled jobs (W09). A missed date or a job
+            that did not run is urgent and has an owner; neither says what it
+            means legally or clears itself. */}
+        {datesFailed ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
+            <span className="t-sm w6">The contract dates did not load.</span>
+            <p className="t-sm c-3" style={{ marginTop: 6 }}>That is not the same as none being due. Reload in a moment.</p>
+          </div>
+        ) : dates && dates.length ? (
+          <section style={{ marginTop: 28 }}>
+            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>Contract dates</h2>
+            <div className="card" style={{ marginTop: 12, overflow: "hidden" }}>
+              {dates.map((d, i) => (
+                <Link key={`${d.journeyId}-${d.label}-${i}`} href={`/studio/journey/${d.journeyId}`} className="between gap-3"
+                  style={{ display: "flex", padding: "12px 16px", alignItems: "center", borderBottom: i === dates.length - 1 ? 0 : "1px solid var(--line-3)" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div className="t-sm w6 trunc">{d.person}: {d.label}</div>
+                    <div className="t-xs c-4" style={{ marginTop: 2 }}>
+                      {d.when}. {d.why === "missed" ? "Passed and not recorded as met. Record what actually happened." : d.why === "unchecked" ? "Not checked against the document yet, so the buyer does not see it." : `Due ${inDays(d.days!)}.`}
+                    </div>
+                  </div>
+                  <span className={`chip t-2xs ${d.why === "missed" ? "chip-neg" : "chip-warn"}`} style={{ flex: "none" }}>
+                    {d.why === "missed" ? "Passed" : d.why === "unchecked" ? "Check it" : "Soon"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {jobProblems.length ? (
+          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
+            <div className="row gap-2">
+              <Ico.alert size={15} className="c-neg" />
+              <span className="t-sm w6">{jobProblems.length === 1 ? "A scheduled job needs you" : `${jobProblems.length} scheduled jobs need you`}</span>
+            </div>
+            <ul className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6, display: "grid", gap: 4 }}>
+              {jobProblems.map((j) => <li key={j.job}>{j.problem}</li>)}
+            </ul>
+            <p className="t-xs c-4" style={{ marginTop: 8 }}>Yours to look into: the Vercel project&apos;s cron logs show the run, and Sentry has any error. Nothing is retried on its own.</p>
           </div>
         ) : null}
 

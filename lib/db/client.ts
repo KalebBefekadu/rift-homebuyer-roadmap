@@ -10,6 +10,8 @@ import { insertFeedback, readTours, requestTour, type Tours } from "./tours";
 import type { FeedbackInput } from "@/lib/core/tour";
 import { readProgress, recordWork } from "./progress";
 import { readBids, recordResponse } from "./bids";
+import { readDeadlines } from "./deadlines";
+import type { DeadlineView } from "@/lib/core/deadline";
 import { documentLink, readDocuments } from "./documents";
 import { buyerBidLine, termsDiff, termsEffects, type BuyerBid, type Instruction } from "@/lib/core/bid";
 import { planItemsFor } from "./plan";
@@ -473,6 +475,8 @@ export interface ClientProgress {
   detail: boolean;
   open: { id: string; address: string; work: WorkstreamView[] } | null;
   plan: PlanItem[];
+  /** The open contract's contractual dates, for Today on the server only: they carry the agent's notes. */
+  dates: { label: string; workstream: Workstream | null; view: DeadlineView }[];
   unavailable?: string;
 }
 
@@ -489,8 +493,8 @@ export async function clientProgress(m: Membership): Promise<DbResult<ClientProg
   if (!r.ok || !("data" in r)) return r as DbResult<never>;
   const rec = r.data;
   const visited = visitedStages(rec.events);
-  if (rec.unavailable) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [], unavailable: rec.unavailable });
-  if (!canRespond(m.role)) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [] });
+  if (rec.unavailable) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [], dates: [], unavailable: rec.unavailable });
+  if (!canRespond(m.role)) return done({ progress: rec.progress, visited, detail: false, open: null, plan: [], dates: [] });
 
   const j = await boundedRead(
     db.from("rift_journeys").select("origin_lead_id").eq("id", m.journeyId).eq("agent_id", m.agentId).maybeSingle(),
@@ -498,14 +502,25 @@ export async function clientProgress(m: Membership): Promise<DbResult<ClientProg
   );
   if (!j.ok) return j;
   const leadId = (("data" in j ? j.data : null) as { origin_lead_id: string } | null)?.origin_lead_id;
-  const plan = leadId ? await planItemsFor(leadId, m.agentId) : done([] as PlanItem[]);
+  const [plan, deadlines] = await Promise.all([
+    leadId ? planItemsFor(leadId, m.agentId) : Promise.resolve(done([] as PlanItem[])),
+    rec.open ? readDeadlines(m.journeyId, m.agentId) : Promise.resolve(null),
+  ]);
   if (!plan.ok) return plan;
+  /* Dates that did not load leave Today without them; the page never
+     invents "nothing is due" from a failed read, because the work list and
+     plan still carry what is owed. */
+  const dates = deadlines && deadlines.ok && "data" in deadlines && rec.open
+    ? deadlines.data.deadlines.filter((d) => d.transactionId === rec.open!.id && d.kind === "contractual")
+      .map((d) => ({ label: d.label, workstream: d.workstream, view: d.view }))
+    : [];
   return done({
     progress: rec.progress,
     visited,
     detail: true,
     open: rec.open ? { id: rec.open.id, address: rec.open.address, work: rec.open.work } : null,
     plan: "data" in plan ? plan.data : [],
+    dates,
   });
 }
 

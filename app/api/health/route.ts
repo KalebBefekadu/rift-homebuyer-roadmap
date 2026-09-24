@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jobsHealth } from "@/lib/db/jobs";
 import { serviceClient, currentAgentId } from "@/lib/db/service";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { currentRate } from "@/lib/db/rates";
@@ -173,6 +174,14 @@ export async function GET(req: Request) {
     /* Yes or no, never a count. This endpoint is public, and how many people
        are in the funnel is not a figure to hand to whoever asks. */
     checks.retention = await retentionCheck();
+
+    /* Each scheduled job's last OUTCOME (W09, REQ-QUALITY-04): ok, failed,
+       missed, never or running. States only; the reasons are on the agent's
+       Today, not on a public endpoint. */
+    const jobs = await jobsHealth().catch(() => null);
+    checks.jobs = jobs && jobs.ok && "data" in jobs
+      ? jobs.data ? jobs.data.map((j) => `${j.job} ${j.state}`).join(", ") : "not tracked yet"
+      : "unknown";
   }
 
   /* Only the two that stop the product doing its job are fatal. The rest are

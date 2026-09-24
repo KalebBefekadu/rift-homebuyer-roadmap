@@ -452,7 +452,8 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | W06 | Built 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Needs migration `20260924000000` and a deploy |
 | W07 | Built 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Needs migration `20260924010000` and a deploy. Seller stages wait for D08 |
 | W08 | Built 23 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Needs migration `20260924020000` and a deploy |
-| W09 onward | Not started | W09 (contract dates and deadlines) is next, also on today's rules; W10 and W11 follow the pilot (D11); W13 waits for pilot results (D08) |
+| W09 | Built 24 Sep | Contract dates and scheduled-job runs, on today's rules. Needs migration `20260924030000` and a deploy |
+| W10 onward | Not started | W10 and W11 follow the pilot (D11); W12 hardens the release; W13 waits for pilot results (D08) |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
@@ -517,6 +518,22 @@ minute. Erasing a person removes their files from Storage before their records. 
 in by hand (no extraction yet). The local stack now runs Supabase's storage server; see
 `scripts/local/up.sh`. Migration `20260924020000_rift_offers_documents.sql`, additive; it also
 creates the bucket.
+
+Contract dates and job runs (W09, 24 September 2026). Each date on an open contract is a history of
+revisions: the date, a time only if the document states one, the zone, how it was reached (as
+written, or counted by a named rule: calendar days, or business days skipping US federal
+holidays as observed), where it comes from, and whether the agent checked it against the
+document. A date without a time has no instant, in the code and in a database check, so no
+midnight or 5 PM is invented and nothing counts down in hours (AT26). Only the named rules are
+calculated, and the agent confirms the rule matches the contract (AT28). The buyer sees a date
+only once it is checked. An amendment writes every date it changes in one statement, so they
+land together or not at all, and reminders are read from the latest revision rather than
+stored, so none is left for an old date (AT27). A passed date stays urgent on Studio Today
+until the agent records what happened; nothing says what it means legally (AT29). Each
+scheduled job now records its runs (`rift_job_runs`, through `trackedCron`); a failed or
+missing run is an urgent item on Studio Today and a state on /api/health (REQ-QUALITY-04).
+Which counting rule a Georgia contract uses is the broker's question (D06/D07), not the code's.
+Migration `20260924030000_rift_deadlines_jobs.sql`, additive.
 
 ---
 

@@ -22,6 +22,8 @@ import { STAGE_LABEL } from "@/lib/core/progress";
 import { bidsFor } from "@/lib/db/bids";
 import { documentsFor } from "@/lib/db/documents";
 import { Offers } from "./Offers";
+import { Dates } from "./Dates";
+import { deadlinesFor } from "@/lib/db/deadlines";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -74,7 +76,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const buying = journey.side === "buy";
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
-  const [search, members, homes, lead, start, tours, progress, bids, docs] = await Promise.all([
+  const [search, members, homes, lead, start, tours, progress, bids, docs, deadlines] = await Promise.all([
     buying ? searchState(id) : Promise.resolve(null),
     membersOf(id),
     homesOf(id),
@@ -84,6 +86,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
     buying ? progressFor(id) : Promise.resolve(null),
     buying ? bidsFor(id, agentFirst) : Promise.resolve(null),
     buying ? documentsFor(id) : Promise.resolve(null),
+    buying ? deadlinesFor(id) : Promise.resolve(null),
   ]);
 
   const s = search && search.ok && "data" in search ? search.data : null;
@@ -98,6 +101,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const prog = progress && progress.ok && "data" in progress ? progress.data : null;
   const bidData = bids && bids.ok && "data" in bids ? bids.data : null;
   const docData = docs && docs.ok && "data" in docs ? docs.data : null;
+  const dateData = deadlines && deadlines.ok && "data" in deadlines ? deadlines.data : null;
   /* The stage never moves by itself (REQ-STATE-05); the page only says when
      the offers suggest it is behind. */
   const accepted = bidData?.bids.find((b) => b.view.status === "accepted");
@@ -159,6 +163,13 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
             ) : (
               <p className="t-xs c-neg">Where this journey stands did not load. That is not the same as it being at Prepare.</p>
             )}
+            {prog?.open ? (
+              dateData?.unavailable ? <p className="t-xs c-warn" style={{ marginTop: 12 }}>{dateData.unavailable}</p>
+              : dateData ? (
+                <Dates journeyId={id} dates={dateData.deadlines.filter((d) => d.transactionId === prog.open!.id)}
+                  docs={(docData?.documents ?? []).map((d) => ({ id: d.id, label: d.label }))} />
+              ) : <p className="t-xs c-neg" style={{ marginTop: 12 }}>The contract dates did not load. That is not the same as there being none.</p>
+            ) : null}
           </section>
         ) : null}
 

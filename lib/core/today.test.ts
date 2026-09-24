@@ -2,6 +2,14 @@ import { describe, expect, it } from "vitest";
 import { todayFor, type TodayInput } from "./today";
 import { workstreamView, type WorkUpdate, type Workstream } from "./progress";
 import type { PlanItem } from "./plan";
+import { deadlineView, resolve, type DeadlineInput, type Revision } from "./deadline";
+
+const dateRev = (input: DeadlineInput): Revision => ({
+  ...resolve(input)!, seq: 1, state: "active", rule: input.rule, triggerLabel: null, triggerDate: null, days: null,
+  sourceTerm: input.sourceTerm, sourcePage: null, sourceDocumentId: null, amendment: null, verified: input.verified, note: null, by: "Kaleb", at: "2026-09-20T00:00:00Z",
+});
+const date = (label: string, day: string, verified = true, workstream: "inspection" | "closing" | null = null) =>
+  ({ label, workstream, view: deadlineView([dateRev({ rule: "as-written", date: day, sourceTerm: "Paragraph 12", verified })], "contractual", NOW) });
 
 const NOW = new Date("2026-09-23T15:00:00Z");
 const up = (seq: number, extra: Partial<WorkUpdate>): WorkUpdate => ({
@@ -86,6 +94,20 @@ describe("Today's order (blueprint v4 §6)", () => {
   it("ignores finished plan items and never ranks by anything but the rule", () => {
     const t = todayFor({ ...base, plan: [item("Done already", { dueOn: "2026-09-01", doneAt: "2026-09-02T00:00:00Z" })] }, NOW);
     expect(t.items).toHaveLength(0);
+  });
+
+  it("shows checked contract dates only, as dates, and a missed one first without a legal conclusion (AT26, AT29)", () => {
+    const t = todayFor({ ...base, contractDates: [
+      date("Due diligence ends", "2026-10-03"),
+      date("Closing", "2026-09-21"),
+      date("Appraisal deadline", "2026-09-30", false),
+    ] }, NOW);
+    expect(t.items[0]).toMatchObject({ kind: "blocker", title: "Closing has passed" });
+    expect(t.items[0]!.detail).toMatch(/Kaleb is handling what happens next/);
+    const dd = t.items.find((i) => i.title === "Due diligence ends")!;
+    expect(dd.detail).toBe("Due Sat, Oct 3 (no time stated), in 10 days.");
+    expect(JSON.stringify(t)).not.toMatch(/Appraisal deadline|hours/);
+    expect(t.items.some((i) => /checking some of the contract's dates/.test(i.detail))).toBe(true);
   });
 
   it("says where the journey is, including paused with the contract still running", () => {
