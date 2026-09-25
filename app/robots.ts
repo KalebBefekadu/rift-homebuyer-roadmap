@@ -35,7 +35,7 @@ export default function robots(): MetadataRoute.Robots {
            the three a crawler was free to index. The funnel written for people
            outside the country was the one without the protection. */
         disallow: [
-          "/r/", "/buy/results", "/sell/results", "/abroad/results",
+          "/r/", "/s/", "/buy/results", "/sell/results", "/abroad/results",
           "/book", "/operations", "/studio", "/api/", "/prototype/", "/dev", "/plan/", "/app", "/saved/",
         ],
       },

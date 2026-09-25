@@ -731,6 +731,11 @@ default for offers, contracts, appraisals and lender papers), recorded as histor
 `rift_document_shares` (migration `20260927020000`). Offer documents a member was asked about
 still appear. The list, the records page and the open link use one rule.
 
+**Built (25 Sep), summary links (ACCESS-02):** from the records page, a member who can answer for the
+household makes a read-only link for someone outside it: where the move stands, the checked
+contract dates, and/or the homes and showings, for 7, 30 or 90 days, never any money. The link is
+shown once, stored only as a hash, and can be stopped. Migration `20260927030000`.
+
 ### 7.3 Signing in (Kaleb, R2)
 - Kaleb could not get into the buyer portal: no email came. Cause: no invitation existed, and
   the sign-in page sends nothing to an uninvited address without saying so.
@@ -1002,6 +1007,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Read-only summary links for someone outside the household (ACCESS-02) |
 | 25 Sep 2026 | Client side: areas, Help on every page, Documents area with agent sharing (§7.2) |
 | 25 Sep 2026 | Operations mock-up for Kaleb's review (§8, D15) |
 | 25 Sep 2026 | Offer PDF upload with Claude, and the $50 AI limit in code (§5.9, §10.2) |

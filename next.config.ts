@@ -49,7 +49,7 @@ const SECURITY_HEADERS = [
  *  and a buyer's signed-in pages name their journey in the path. */
 const PRIVATE_PAGES = [
   "/r/:token*", "/buy/results", "/sell/results", "/abroad/results", "/book",
-  "/plan/:token*", "/app/:path*", "/app", "/saved/:token*",
+  "/plan/:token*", "/app/:path*", "/app", "/saved/:token*", "/s/:token*",
 ];
 
 const nextConfig: NextConfig = {
@@ -75,6 +75,15 @@ const nextConfig: NextConfig = {
         source,
         headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
       })),
+      /* ACCESS-02: a summary link is a credential for somebody else's
+         situation. Never stored by a shared cache, never indexed. */
+      {
+        source: "/s/:token*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
     ];
   },
 };

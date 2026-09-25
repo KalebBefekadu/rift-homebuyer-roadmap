@@ -65,6 +65,7 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     "/studio": "the old name for /operations: a permanent redirect in next.config.ts",
     "/plan/": "the token IS the credential: app/(rift)/plan/[token]/page.tsx",
     "/saved/": "the token IS the credential: app/(rift)/saved/[token]/page.tsx",
+    "/s/": "the token IS the credential, stored only as a hash: lib/db/summary-links.ts",
     "/app": "behind Supabase auth AND a journey membership: lib/db/client.ts memberOf",
   };
 

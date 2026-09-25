@@ -6,6 +6,10 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { ClientShell } from "../../../ClientShell";
 import { PrintButton } from "@/components/rift/PrintButton";
+import { mySummaryLinks } from "@/lib/db/summary-links";
+import { partsAllowed } from "@/lib/core/summary-link";
+import { canRespond } from "@/lib/core/journey";
+import { SummaryLinks } from "./SummaryLinks";
 
 export const metadata: Metadata = { title: "Your records", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -33,7 +37,7 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
   }
   if (!m.data) notFound();
   const member = m.data;
-  const r = await clientRecords(member);
+  const [r, links] = await Promise.all([clientRecords(member), mySummaryLinks(member)]);
   const records = r.ok && "data" in r ? r.data : null;
   const asOf = new Date().toLocaleString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -76,6 +80,12 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       )}
+
+      {/* ACCESS-02: only somebody who can answer for the household may send
+          its situation outside it. */}
+      {canRespond(member.role) ? (
+        <SummaryLinks journeyId={id} allowed={partsAllowed(member.scopes)} links={links.ok && "data" in links ? links.data : []} />
+      ) : null}
     </ClientShell>
   );
 }

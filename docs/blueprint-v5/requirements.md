@@ -154,7 +154,7 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 | ID | Requirement | Status |
 | --- | --- | --- |
 | ACCESS-01 | Email sign-in proves an address, not membership. Invitations bind a verified address to a role. Revoking access is separate from deleting history. | Built |
-| ACCESS-02 | New share links use high-entropy tokens stored as hashes, explicit scopes, revocation, expiry, no referrer, no indexing and no shared caching. Old links keep their old limited view. Tokens and financial inputs never reach previews, analytics, logs or error reports. | Partly. Old links keep their scope; selected read-only summary shares are not built (v5 §7) |
+| ACCESS-02 | New share links use high-entropy tokens stored as hashes, explicit scopes, revocation, expiry, no referrer, no indexing and no shared caching. Old links keep their old limited view. Tokens and financial inputs never reach previews, analytics, logs or error reports. | Built. Old links keep their scope. Summary links (`/s/<token>`): 32 random bytes stored only as SHA-256, parts chosen from what the member can see, 7 to 90 days, stoppable, no referrer, `private, no-store`, noindex, and no money: amounts in notes are replaced |
 | PRIV-01 | Product data, aggregate analytics and audit are separate. Answers, homes, reasons and documents are private product records; analytics never receives financial values or browsing history. | Built |
 | PRIV-02 | Published retention promises stand until a reviewed change updates policy, screens, jobs and tests together. Deletion is real; required holds have a basis and an end. | Built. The broker's hold rule (F16) is open |
 | PRIV-03 | Do not import lender files just to record preapproval status. | Built (nothing is imported) |

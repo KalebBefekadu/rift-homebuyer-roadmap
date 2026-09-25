@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/client";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
+import { createSummaryLink, revokeSummaryLink } from "@/lib/db/summary-links";
 import { WORKSTREAMS, type Workstream } from "@/lib/core/progress";
 
 export const runtime = "nodejs";
@@ -112,8 +113,23 @@ export async function POST(req: Request) {
   if (!m.data) return json({ ok: false, error: "You do not have access to this any more. Ask your agent." }, 403);
   const member = m.data;
 
+  /* ACCESS-02. The link is returned once, here, and never stored or logged:
+     only its hash is kept, so it cannot be shown again. */
+  if (action === "summary-create") {
+    const made = await createSummaryLink(member, b.parts, str(b.label, 100), b.days);
+    if (!made.ok) return json({ ok: false, error: made.error }, 409);
+    if ("skipped" in made) return json({ ok: false, error: made.reason }, 503);
+    return json({ ok: true, url: `${siteUrl() ?? ""}/s/${made.data.token}` });
+  }
+
   let r: { ok: boolean; error?: string; reason?: string } & Record<string, unknown>;
   switch (action) {
+    case "summary-revoke": {
+      const id = str(b.linkId, 40);
+      if (!isUuid(id)) return json({ ok: false, error: "That link could not be found. Reload." }, 400);
+      r = await revokeSummaryLink(member, id);
+      break;
+    }
     case "respond": {
       const revisionId = str(b.revisionId, 40);
       if (!isUuid(revisionId)) return json({ ok: false, error: "That page is out of date. Reload it." }, 400);
