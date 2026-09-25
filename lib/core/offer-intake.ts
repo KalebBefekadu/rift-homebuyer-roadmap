@@ -44,6 +44,10 @@ export const ASSUMED_COMMISSION_PCT = 6;
 export const MIN_COMMISSION_PCT = 0;
 export const MAX_COMMISSION_PCT = 10;
 
+/** Due diligence in Georgia is a number of days the parties agree; none is a
+ *  valid answer, and more than sixty is not a period anybody writes. */
+export const MAX_DUE_DILIGENCE_DAYS = 60;
+
 export const MIN_PRICE = 10_000;
 export const MAX_PRICE = 100_000_000;
 
@@ -54,6 +58,10 @@ export interface Submission {
   repairCredit: number;
   earnest: number;
   financing: Financing;
+  /** Required when financing is "other": what it actually is (Kaleb, R2). */
+  financingDetail: string | null;
+  /** Days of due diligence asked for. Null when the sender did not say. */
+  dueDiligenceDays: number | null;
   closeOn: string | null;
   contingencies: string[];
   preapproval: boolean;
@@ -64,7 +72,8 @@ export interface Submission {
   phone: string | null;
   firm: string | null;
   note: string | null;
-  /** Submitting on their own behalf, or representing the buyer. */
+  /** "buyer": a real estate agent representing the buyer. "self": the buyer.
+   *  Stated by the sender, never defaulted (Blueprint v5 §5.9). */
   representing: "self" | "buyer";
 }
 
@@ -131,6 +140,35 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
 
   const financing = isFinancing(raw.financing) ? raw.financing : null;
   if (!financing) errors.push("Say how this is being financed.");
+  const financingDetail = String(raw.financingDetail ?? "").trim().slice(0, 120) || null;
+  /* "Other" on its own tells the seller nothing about whether the money is
+     real, which is the one thing financing is there to say. */
+  if (financing === "other" && (!financingDetail || financingDetail.length < 2)) {
+    errors.push("Say what the other financing is.");
+  }
+
+  /* Required since Blueprint v5 §5.9: an offer with no way to ring its sender
+     cannot be acted on before its deadline. It is still passed on with the
+     offer only, never stored for marketing (lib/db/offer-intake.ts). */
+  const phoneRaw = String(raw.phone ?? "").trim();
+  const digits = phoneRaw.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15 || phoneRaw.length > 40) {
+    errors.push("A phone number is needed so Kaleb can reach you about this offer.");
+  }
+
+  /* Never defaulted. The form used to preselect "I represent the buyer", so a
+     buyer who did not notice the toggle arrived in Operations as an agent. */
+  const representing = raw.representing === "self" || raw.representing === "buyer" ? raw.representing : null;
+  if (!representing) errors.push("Say whether you are a real estate agent or the buyer.");
+
+  const ddRaw = raw.dueDiligenceDays;
+  let dueDiligenceDays: number | null = null;
+  if (ddRaw !== undefined && ddRaw !== null && String(ddRaw).trim() !== "") {
+    const n = Number(ddRaw);
+    if (!Number.isInteger(n) || n < 0 || n > MAX_DUE_DILIGENCE_DAYS) {
+      errors.push(`Due diligence has to be a whole number of days, from 0 to ${MAX_DUE_DILIGENCE_DAYS}.`);
+    } else dueDiligenceDays = n;
+  }
 
   const closeOnRaw = String(raw.closeOn ?? "").trim();
   const closeOn = /^\d{4}-\d{2}-\d{2}$/.test(closeOnRaw) ? closeOnRaw : null;
@@ -156,15 +194,17 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
       repairCredit: Math.round(clampNumber(raw.repairCredit, 0, price, 0)),
       earnest: Math.round(clampNumber(raw.earnest, 0, price, 0)),
       financing: financing!,
+      financingDetail: financing === "other" ? financingDetail : null,
+      dueDiligenceDays,
       closeOn,
       contingencies,
       preapproval: raw.preapproval === true,
       proofOfFunds: raw.proofOfFunds === true,
       from, email,
-      phone: trimmed(raw.phone, 40),
+      phone: phoneRaw,
       firm: trimmed(raw.firm, 120),
       note: trimmed(raw.note, 2000),
-      representing: raw.representing === "self" ? "self" : "buyer",
+      representing: representing!,
     },
   };
 }

@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
+import { SiteHeader } from "@/components/rift/site/SiteHeader";
+import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import {
   readSubmission, read, ASSUMED_COMMISSION_PCT,
-  MIN_COMMISSION_PCT, MAX_COMMISSION_PCT,
+  MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_DUE_DILIGENCE_DAYS,
 } from "@/lib/core/offer-intake";
 import { sessionId } from "@/lib/rift/session";
 
@@ -31,9 +33,10 @@ export function Form() {
   const [address, setAddress] = useState("");
   const [price, setPrice] = useState("");
   const [concessions, setConcessions] = useState("");
-  const [repairCredit, setRepairCredit] = useState("");
   const [earnest, setEarnest] = useState("");
   const [financing, setFinancing] = useState<string>("conventional");
+  const [financingDetail, setFinancingDetail] = useState("");
+  const [dueDiligence, setDueDiligence] = useState("");
   const [closeOn, setCloseOn] = useState("");
   const [contingencies, setContingencies] = useState<string[]>(["Inspection", "Appraisal"]);
   const [preapproval, setPreapproval] = useState(false);
@@ -43,9 +46,9 @@ export function Form() {
   const [from, setFrom] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [firm, setFirm] = useState("");
   const [note, setNote] = useState("");
-  const [representing, setRepresenting] = useState<"self" | "buyer">("buyer");
+  /* Nothing preselected: which one they are is theirs to say (§5.9). */
+  const [representing, setRepresenting] = useState<"self" | "buyer" | null>(null);
 
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -64,13 +67,14 @@ export function Form() {
      form that agreed by coincidence. */
   const draft = useMemo(() => ({
     address: address || "placeholder address",
-    price: num(price), concessions: num(concessions), repairCredit: num(repairCredit),
-    earnest: num(earnest), financing, closeOn, contingencies,
+    price: num(price), concessions: num(concessions), repairCredit: 0,
+    earnest: num(earnest), financing, financingDetail: financingDetail || "not said yet",
+    dueDiligenceDays: dueDiligence, closeOn, contingencies,
     preapproval, proofOfFunds,
     from: from || "Someone", email: email || "someone@example.com",
-    phone, firm, note, representing,
-  }), [address, price, concessions, repairCredit, earnest, financing, closeOn,
-       contingencies, preapproval, proofOfFunds, from, email, phone, firm, note, representing]);
+    phone: phone || "0000000", note, representing: representing ?? "buyer",
+  }), [address, price, concessions, earnest, financing, financingDetail, dueDiligence, closeOn,
+       contingencies, preapproval, proofOfFunds, from, email, phone, note, representing]);
 
   const parsed = readSubmission(draft);
   const reading = parsed.ok && num(price) > 0 ? read(parsed.value, commissionPct) : null;
@@ -79,7 +83,7 @@ export function Form() {
     setContingencies((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
 
   const send = async () => {
-    const real = readSubmission({ ...draft, address, from, email });
+    const real = readSubmission({ ...draft, address, from, email, phone, financingDetail, representing });
     if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
     setErrors([]);
     setFailedToSend(false);
@@ -103,23 +107,14 @@ export function Form() {
 
   return (
     <>
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/" className="row gap-2">
-            <Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-          </Link>
-          <Link href="/sell" className="t-sm c-3 hide-sm">Selling instead?</Link>
-        </div>
-      </header>
+      <SiteHeader side="buy" current="/offer" />
 
       <main className="shell-w sec" style={{ maxWidth: 720 }}>
-        <h1 className="serif" style={{ fontSize: "clamp(26px,3.6vw,42px)", lineHeight: 1.12, letterSpacing: "-0.025em" }}>
-          Submit an offer on any Georgia address
+        {/* The old heading promised "any Georgia address" and a paragraph of
+            reassurance before the form (Kaleb, R2): the form says it. */}
+        <h1 className="serif ctr" style={{ fontSize: "clamp(30px,4vw,46px)", lineHeight: 1.1, letterSpacing: "-0.025em" }}>
+          Submit an offer
         </h1>
-        <p className="lede" style={{ marginTop: 14, maxWidth: 620 }}>
-          And see what it is actually worth to the seller before you send it. No account,
-          nothing to install, and the arithmetic is yours whether or not you press send.
-        </p>
 
         <section className="card p-5" style={{ marginTop: 24 }}>
           <div className="t-sm w6">The offer</div>
@@ -150,9 +145,11 @@ export function Form() {
                 onChange={(e) => setConcessions(e.target.value)} placeholder="0" />
             </label>
             <label className="field">
-              <span className="label">Repair credit asked</span>
-              <input className="input" inputMode="numeric" value={repairCredit}
-                onChange={(e) => setRepairCredit(e.target.value)} placeholder="0" />
+              <span className="label">Due diligence days</span>
+              <input className="input" inputMode="numeric" value={dueDiligence}
+                onChange={(e) => setDueDiligence(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+                placeholder="10" aria-describedby="dd-hint" />
+              <span id="dd-hint" className="t-2xs c-4">0 to {MAX_DUE_DILIGENCE_DAYS}. Leave it empty if there is none.</span>
             </label>
           </div>
 
@@ -168,6 +165,14 @@ export function Form() {
               <input className="input" type="date" value={closeOn} onChange={(e) => setCloseOn(e.target.value)} />
             </label>
           </div>
+
+          {financing === "other" ? (
+            <label className="field" style={{ marginTop: 12 }}>
+              <span className="label">What is the other financing?</span>
+              <input className="input" value={financingDetail} maxLength={120}
+                onChange={(e) => setFinancingDetail(e.target.value)} placeholder="Seller financing, a 1031 exchange, a portfolio loan…" />
+            </label>
+          ) : null}
 
           <div style={{ marginTop: 14 }}>
             <span className="label">Contingencies</span>
@@ -260,15 +265,19 @@ export function Form() {
         ) : null}
 
         <section className="card p-5" style={{ marginTop: 16 }}>
-          <div className="t-sm w6">Send it to Kaleb</div>
-          <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            Optional. The arithmetic above is yours either way.
-          </p>
+          <div className="t-sm w6" id="who-h">Who is sending it?</div>
 
-          <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-            {([["buyer", "I represent the buyer"], ["self", "I am the buyer"]] as const).map(([v, l]) => (
-              <button key={v} type="button" className={`btn btn-sm ${representing === v ? "btn-p" : "btn-g"}`}
-                aria-pressed={representing === v} onClick={() => setRepresenting(v)}>{l}</button>
+          <div role="radiogroup" aria-labelledby="who-h" className="g2 gap-2" style={{ marginTop: 12 }}>
+            {([["buyer", "I'm a real estate agent", "Sending for my buyer"], ["self", "I'm the buyer", "Sending for myself"]] as const).map(([v, l, h]) => (
+              <button key={v} type="button" role="radio" className="opt" data-on={representing === v}
+                aria-checked={representing === v} onClick={() => setRepresenting(v)}
+                style={{ width: "100%", textAlign: "left" }}>
+                <span className="grow">
+                  <span className="t-md w55">{l}</span>
+                  <span className="t-xs c-4" style={{ display: "block", marginTop: 1 }}>{h}</span>
+                </span>
+                {representing === v ? <Ico.checkCircle size={16} className="c-brand" /> : null}
+              </button>
             ))}
           </div>
 
@@ -283,16 +292,10 @@ export function Form() {
             </label>
           </div>
 
-          <div className="g2 gap-2" style={{ marginTop: 12 }}>
-            <label className="field">
-              <span className="label">Phone <span className="c-4">(optional)</span></span>
-              <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="label">Brokerage <span className="c-4">(optional)</span></span>
-              <input className="input" value={firm} onChange={(e) => setFirm(e.target.value)} />
-            </label>
-          </div>
+          <label className="field" style={{ marginTop: 12 }}>
+            <span className="label">Phone</span>
+            <input className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </label>
 
           <label className="field" style={{ marginTop: 12 }}>
             <span className="label">Anything else <span className="c-4">(optional)</span></span>
@@ -348,6 +351,7 @@ export function Form() {
           )}
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

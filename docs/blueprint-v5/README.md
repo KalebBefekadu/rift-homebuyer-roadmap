@@ -425,10 +425,23 @@ the seller journey's gate (§9).
   either way." The sender must say whether they are "a real estate agent" or "the buyer", and
   phone is required.
 
+**Built (25 Sep):** heading "Submit an offer"; repair credit and brokerage removed; "Other"
+financing must say what it is; due diligence days added (0 to 60, empty means not said);
+sending is the point of the page, so "Optional" is gone; the sender says "I'm a real estate
+agent" or "I'm the buyer", with nothing preselected; phone required, and still passed on with
+the offer only, never stored for marketing. Migration `20260927000000_rift_offer_terms.sql` adds
+the two columns; Operations → Offers shows them. **Not built:** the PDF upload, which needs
+document extraction with an AI cost limit (DOC-02, AUTO-06) and belongs with that work.
+
 **Book a call `/book`** (Kaleb, R2)
 - The form is not centred.
 - Field order: name, phone, email, then time.
 - "When suits you?" becomes **"What time works best for you?"**
+- **Built (25 Sep):** one centred column; fields in the order name, phone, email, then time;
+  "What time works best for you?"; the shared footer. **Open:** §5.1 says phone is required to
+  book, but a phone number is refused without the call-and-text consent box, and that consent
+  says it is "not a condition" of anything. Requiring a phone to book would make the consent a
+  condition. Kaleb to decide (see §11).
 - **Real times from Cal.com** (decided 24 Sep): free plan, connected to Kaleb's Google Calendar,
   so bookings appear there. Rift already has the Cal.com adapter; it needs `CAL_API_KEY` and
   `CAL_EVENT_TYPE_ID`. Until then the page asks for a preferred time.
@@ -880,6 +893,8 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D02 | Integration rights for Matrix/OneHome, ShowingTime, Remine and Google, on Kaleb's accounts | No adapter is built without them; the manual paths stay | Kaleb with vendors and broker |
 | D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
 | D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
+| D22 | Is a phone number required to book a call (§5.1 says yes)? If so, is the call-and-text consent required with it, or is a manual call-back about the booking allowed without it? | Today a phone is refused without consent, and the consent says it is not a condition of anything | Kaleb, with D06 on text consent |
+| D23 | The commission range shown when a seller has not agreed one (built as 4% to 6%), and whether the front door's seller example (5.5%) and the offer page's assumption (6%) should show a range too | MONEY-06: commission is negotiated, never a standard rate | Kaleb |
 
 ---
 
@@ -925,6 +940,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Submit an offer and Book a call rebuilt to §5.9; the phone-for-booking question opened |
 | 25 Sep 2026 | Seller values, first slice: `/sell` landing, net proceeds and selling costs (§5.3) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |

@@ -51,6 +51,8 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
         repair_credit_cents: Math.round(s.repairCredit * 100),
         earnest_cents: Math.round(s.earnest * 100),
         financing: s.financing,
+        financing_detail: s.financingDetail,
+        due_diligence_days: s.dueDiligenceDays,
         close_on: s.closeOn,
         contingencies: s.contingencies,
         preapproval: s.preapproval,
@@ -142,6 +144,8 @@ export interface InboundOffer {
   repairCredit: number;
   earnest: number;
   financing: string;
+  financingDetail: string | null;
+  dueDiligenceDays: number | null;
   closeOn: string | null;
   contingencies: string[];
   preapproval: boolean;
@@ -159,7 +163,7 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
 
   const r = await boundedRead(
     db.from("rift_offers")
-      .select("id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at")
+      .select("id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,financing_detail,due_diligence_days,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at")
       .eq("agent_id", agent_id).eq("source", "inbound")
       .order("created_at", { ascending: false }).limit(limit),
     "the offers that came in",
@@ -180,6 +184,8 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
     repairCredit: Number(o.repair_credit_cents ?? 0) / 100,
     earnest: Number(o.earnest_cents ?? 0) / 100,
     financing: o.financing as string,
+    financingDetail: (o.financing_detail as string | null) ?? null,
+    dueDiligenceDays: o.due_diligence_days === null || o.due_diligence_days === undefined ? null : Number(o.due_diligence_days),
     closeOn: (o.close_on as string | null) ?? null,
     contingencies: (o.contingencies as string[] | null) ?? [],
     preapproval: o.preapproval === true,

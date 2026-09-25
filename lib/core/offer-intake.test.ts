@@ -169,3 +169,33 @@ describe("the shape the rest of the product already speaks", () => {
     expect(o.releasedAt).toBeNull();
   });
 });
+
+/* Submit an offer, Blueprint v5 §5.9 (Kaleb, R2). */
+describe("what the offer form now requires", () => {
+  it("requires a phone number, and refuses one that cannot be a number", () => {
+    expect(errs({ phone: "" }).join()).toMatch(/phone number is needed/);
+    expect(errs({ phone: "call me" }).join()).toMatch(/phone number is needed/);
+    expect(ok({ phone: "+251 91 123 4567" }).phone).toBe("+251 91 123 4567");
+  });
+
+  it("never defaults who is sending it", () => {
+    expect(errs({ representing: undefined }).join()).toMatch(/real estate agent or the buyer/);
+    expect(errs({ representing: "other" }).join()).toMatch(/real estate agent or the buyer/);
+    expect(ok({ representing: "self" }).representing).toBe("self");
+  });
+
+  it("refuses 'Other' financing that does not say what it is, and drops the detail otherwise", () => {
+    expect(errs({ financing: "other" }).join()).toMatch(/other financing/);
+    expect(ok({ financing: "other", financingDetail: "Seller financing" }).financingDetail).toBe("Seller financing");
+    expect(ok({ financing: "cash", financingDetail: "leftover text" }).financingDetail).toBeNull();
+  });
+
+  it("keeps due diligence days as said: empty is unsaid, zero is a term", () => {
+    expect(ok({ dueDiligenceDays: "" }).dueDiligenceDays).toBeNull();
+    expect(ok({}).dueDiligenceDays).toBeNull();
+    expect(ok({ dueDiligenceDays: 0 }).dueDiligenceDays).toBe(0);
+    expect(ok({ dueDiligenceDays: "10" }).dueDiligenceDays).toBe(10);
+    expect(errs({ dueDiligenceDays: 61 })).not.toEqual([]);
+    expect(errs({ dueDiligenceDays: 2.5 })).not.toEqual([]);
+  });
+});

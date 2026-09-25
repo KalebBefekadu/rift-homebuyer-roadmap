@@ -88,6 +88,7 @@ export default async function OffersInPage() {
                 address: o.address ?? "", price: o.price, concessions: o.concessions,
                 repairCredit: o.repairCredit, earnest: o.earnest,
                 financing: o.financing as Submission["financing"],
+                financingDetail: o.financingDetail, dueDiligenceDays: o.dueDiligenceDays,
                 closeOn: o.closeOn, contingencies: o.contingencies,
                 preapproval: o.preapproval, proofOfFunds: o.proofOfFunds,
                 from: o.from, email: o.email ?? "", phone: o.phone, firm: o.firm,
@@ -101,7 +102,8 @@ export default async function OffersInPage() {
                       <div className="t-md w6">{o.address ?? "No address given"}</div>
                       <div className="t-xs c-3" style={{ marginTop: 3 }}>
                         {o.from}{o.firm ? ` · ${o.firm}` : ""}
-                        {o.representing === "self" ? " · buying themselves" : " · for their buyer"}
+                        {o.representing === "self" ? " · the buyer" : " · a real estate agent, for their buyer"}
+                        {o.phone ? ` · ${o.phone}` : ""}
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flex: "none" }}>
@@ -123,7 +125,8 @@ export default async function OffersInPage() {
                   ) : null}
 
                   <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-                    <span className="chip">{o.financing}</span>
+                    <span className="chip">{o.financing === "other" && o.financingDetail ? `Other: ${o.financingDetail}` : o.financing}</span>
+                    {o.dueDiligenceDays !== null ? <span className="chip">{o.dueDiligenceDays} days due diligence</span> : null}
                     {o.closeOn ? <span className="chip">Close {o.closeOn}</span> : null}
                     {o.earnest > 0 ? <span className="chip">{money(o.earnest)} earnest</span> : null}
                     {o.contingencies.map((c) => <span key={c} className="chip">{c}</span>)}
