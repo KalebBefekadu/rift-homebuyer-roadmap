@@ -7,6 +7,7 @@ import {
   type BidResponse, type BidStep, type BidView, type Instruction, type StepKind, type Terms,
 } from "@/lib/core/bid";
 import { FAMILIES, FAMILY_LABEL, type Family } from "@/lib/core/document";
+import { AUDIENCES, AUDIENCE_LABEL, defaultAudience, type Audience } from "@/lib/core/document-share";
 import { zonedToUtc } from "@/lib/core/tour";
 import { useWrite } from "./useWrite";
 import { send } from "../send";
@@ -20,7 +21,7 @@ export interface OfferView {
   view: BidView;
 }
 
-export interface DocView { id: string; family: Family; label: string; filename: string; bytes: number; by: string; at: string }
+export interface DocView { id: string; family: Family; label: string; filename: string; bytes: number; by: string; at: string; shared?: Audience }
 
 const newRequest = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -148,6 +149,7 @@ function Documents({ journeyId, docs }: { journeyId: string; docs: DocView[] }) 
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [show, setShow] = useState(false);
+  const [sharing, setSharing] = useState<string | null>(null);
 
   const upload = async () => {
     if (!file) return;
@@ -188,6 +190,8 @@ function Documents({ journeyId, docs }: { journeyId: string; docs: DocView[] }) 
       <p className="t-2xs c-4" style={{ marginTop: 4, lineHeight: 1.5 }}>
         PDF, JPEG or PNG up to 20 MB. Each file is checked before it is kept: it must be what it says it is, and a PDF with scripts,
         launch actions, embedded files or a password is refused. That is a check, not a virus scan. Nobody reads the words inside.
+        Sharing puts a document in the household&apos;s Documents area. Stopping a share stops new links; it cannot take back a copy
+        somebody already saved.
       </p>
       {result ? <p role={result.ok ? "status" : "alert"} className={`t-xs ${result.ok ? "c-pos" : "c-neg"}`} style={{ marginTop: 6, lineHeight: 1.5 }}>{result.text}</p> : null}
       {adding ? (
@@ -213,7 +217,25 @@ function Documents({ journeyId, docs }: { journeyId: string; docs: DocView[] }) 
           {docs.map((d) => (
             <li key={d.id} className="t-xs between gap-2 wrap">
               <span><span className="w6">{d.label}</span> <span className="c-4">· {FAMILY_LABEL[d.family]} · {d.filename}, {SIZE(d.bytes)} · {DAY(d.at)}</span></span>
-              <a className="u" href={`/api/operations/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">Open</a>
+              <span className="row gap-2">
+                {/* Blueprint v5 §7.2: shared documents appear in the household's
+                    Documents area. The first choice offered is the safe one for
+                    the kind of document. */}
+                <select className="input" style={{ height: 28, fontSize: 12, padding: "0 6px" }} aria-label={`Who may open ${d.label}`}
+                  value={d.shared ?? "none"} disabled={sharing === d.id}
+                  onChange={async (e) => {
+                    setSharing(d.id);
+                    const r = await send("doc-share", { journeyId, documentId: d.id, audience: e.target.value });
+                    setSharing(null);
+                    if (!r.ok) { setResult({ ok: false, text: r.error ?? "That did not work" }); return; }
+                    window.location.reload();
+                  }}>
+                  {[...AUDIENCES].sort((a, b) => (a === defaultAudience(d.family) ? -1 : b === defaultAudience(d.family) ? 1 : 0)).map((a) => (
+                    <option key={a} value={a}>{a === "none" ? "Not shared" : `Shared: ${AUDIENCE_LABEL[a].toLowerCase()}`}</option>
+                  ))}
+                </select>
+                <a className="u" href={`/api/operations/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">Open</a>
+              </span>
             </li>
           ))}
         </ul>

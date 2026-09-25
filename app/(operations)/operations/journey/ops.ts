@@ -12,7 +12,8 @@ import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/to
 import type { FeedbackInput, StepInput } from "@/lib/core/tour";
 import { changeStage, changeStatus, endContract, recordContract, recordWorkAsAgent } from "@/lib/db/progress";
 import { recordBidStep, responseAsAgent, startBid } from "@/lib/db/bids";
-import { finishUpload, uploadSlot } from "@/lib/db/documents";
+import { finishUpload, shareDocument, uploadSlot } from "@/lib/db/documents";
+import { AUDIENCES, type Audience } from "@/lib/core/document-share";
 import { addDeadline, recordAmendment, reviseDeadline, type Revise } from "@/lib/db/deadlines";
 import type { AmendmentChange, DeadlineInput, DeadlineKind } from "@/lib/core/deadline";
 import { recordCheck } from "@/lib/db/pilot";
@@ -281,6 +282,17 @@ export async function documentFinish(journeyId: string, path: string, filename: 
     return { ok: false as const, error: `That file was not kept: ${r.data.refused.join("; ")}.`, refused: r.data.refused };
   }
   return out(r, (d) => ("id" in d ? { id: d.id } : {}));
+}
+
+/** Who in the household may open a document (Blueprint v5 §7.2). */
+export async function documentShare(journeyId: string, documentId: string, audience: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(documentId)) return { ok: false as const, error: "Reload the page and try again" };
+  if (!AUDIENCES.includes(audience as Audience)) return { ok: false as const, error: "Choose who may see it" };
+  const r = await shareDocument(journeyId, documentId, audience as Audience, g.name);
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r, (d) => ({ id: d.id }));
 }
 
 export async function openBid(journeyId: string, homeId: string, terms: Terms, documentIds: string[], requestId: string) {

@@ -124,7 +124,8 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   } : null;
 
   return (
-    <ClientShell agentName={member.agentName}>
+    <ClientShell agentName={member.agentName} journey={{ id: member.journeyId, active: "today", side: member.side }}
+      reach={{ email: member.agentEmail, phone: member.agentPhone }}>
       <Link href="/app" className="t-sm c-3">← Your move</Link>
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>{member.journeyLabel}</h1>
       <p className="t-xs c-4" style={{ marginTop: 4 }}>
@@ -139,7 +140,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       ) : null}
 
       {member.side === "buy" ? (
-        <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
+        <section id="today" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
           <h2 id="today-h" className="t-md w6">Today</h2>
           {!p ? (
             <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>

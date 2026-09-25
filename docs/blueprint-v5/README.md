@@ -722,6 +722,15 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
 - **Side-by-side home comparison** (SEARCH-05) once W10 provides monthly scenarios.
 - **Check the no-match state** (SEARCH-09).
 
+**Built (25 Sep):** the areas across the top of every journey page (Today, Homes, Search, Offers,
+Documents, Records; a seller sees Today, Documents and Records), and **Help** on every signed-in
+page: how to reach the agent, what happens next, what to do when something looks wrong. The
+**Documents area** lists everything shared with the member, newest first: the agent now shares any
+document from the journey page with everyone in the household or only those who see money (the
+default for offers, contracts, appraisals and lender papers), recorded as history in
+`rift_document_shares` (migration `20260927020000`). Offer documents a member was asked about
+still appear. The list, the records page and the open link use one rule.
+
 ### 7.3 Signing in (Kaleb, R2)
 - Kaleb could not get into the buyer portal: no email came. Cause: no invitation existed, and
   the sign-in page sends nothing to an uninvited address without saying so.
@@ -993,6 +1002,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Client side: areas, Help on every page, Documents area with agent sharing (§7.2) |
 | 25 Sep 2026 | Operations mock-up for Kaleb's review (§8, D15) |
 | 25 Sep 2026 | Offer PDF upload with Claude, and the $50 AI limit in code (§5.9, §10.2) |
 | 25 Sep 2026 | A saved plan starts the buyer's search brief (LEAD-04) |

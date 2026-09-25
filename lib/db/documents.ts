@@ -5,6 +5,7 @@ import { boundedRead, boundedTransfer, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { checkFile, cleanFilename, labelError, type DocKind, type Family } from "@/lib/core/document";
+import { AUDIENCES, currentShares, type Audience } from "@/lib/core/document-share";
 
 /**
  * Documents (blueprint v4 W08; REQ-DOC-01, AT25). The only writer of
@@ -63,10 +64,18 @@ export async function readDocuments(journeyId: string, agentId: string): Promise
   return done({ documents: (("data" in r ? r.data : []) as Record<string, unknown>[]).map(shape) });
 }
 
-export async function documentsFor(journeyId: string) {
+/** The agent's view: every document, with who in the household may open it. */
+export async function documentsFor(journeyId: string): Promise<DbResult<{ documents: (DocumentRecord & { shared: Audience })[]; unavailable?: string; sharesUnavailable?: string }>> {
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
-  return readDocuments(journeyId, agentId);
+  const [docs, shares] = await Promise.all([readDocuments(journeyId, agentId), readShares(journeyId, agentId)]);
+  if (!docs.ok || !("data" in docs)) return docs as DbResult<never>;
+  const held = shares.ok && "data" in shares ? shares.data.shares : new Map<string, Audience>();
+  return done({
+    documents: docs.data.documents.map((d) => ({ ...d, shared: held.get(d.id) ?? "none" })),
+    unavailable: docs.data.unavailable,
+    sharesUnavailable: shares.ok && "data" in shares ? shares.data.unavailable : "What is shared could not be read just now.",
+  });
 }
 
 /**
@@ -193,4 +202,53 @@ export async function removeJourneyFiles(agentId: string, journeyIds: string[]):
     if (!gone.ok) return gone;
   }
   return done({ removed: paths.length });
+}
+
+/* ------------------------------------------------------------------ *
+ * Sharing with the household (Blueprint v5 §7.2)
+ * ------------------------------------------------------------------ */
+
+const SHARES_NOT_YET = "Sharing documents needs a database update that has not been applied yet (migration 20260927020000).";
+
+/** The share decision holding for each document on a journey. */
+export async function readShares(journeyId: string, agentId: string): Promise<DbResult<{ shares: Map<string, Audience>; unavailable?: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await boundedRead(
+    db.from("rift_document_shares").select("id,document_id,audience,created_at")
+      .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: true }).limit(1000),
+    "what is shared",
+  );
+  if (!r.ok) {
+    /* Not applied yet reads as "nothing shared", said, not as an error. */
+    return /rift_document_shares/.test(r.error) ? done({ shares: new Map(), unavailable: SHARES_NOT_YET }) : r;
+  }
+  const rows = (("data" in r ? r.data : []) as { id: string; document_id: string; audience: Audience; created_at: string }[])
+    .map((x) => ({ id: x.id, documentId: x.document_id, audience: x.audience, at: x.created_at }));
+  return done({ shares: currentShares(rows) });
+}
+
+/** Records the agent's decision about who in the household may open a document. */
+export async function shareDocument(journeyId: string, documentId: string, audience: Audience, agentLabel: string): Promise<DbResult<{ id: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agentId = await currentAgentId();
+  if (!agentId) return skipped("no agent row exists yet");
+  if (!AUDIENCES.includes(audience)) return failed("Choose who may see it");
+  /* The document must be this agent's, on this journey: the foreign key
+     checks the pair, this check gives the agent a sentence instead. */
+  const doc = await boundedRead(
+    db.from("rift_documents").select("id").eq("id", documentId).eq("journey_id", journeyId).eq("agent_id", agentId).maybeSingle(),
+    "the document",
+  );
+  if (!doc.ok) return doc;
+  if (!("data" in doc) || !doc.data) return failed("That document could not be found on this journey");
+  const w = await boundedWrite(
+    db.from("rift_document_shares").insert({
+      agent_id: agentId, journey_id: journeyId, document_id: documentId, audience, actor_label: agentLabel,
+    }).select("id").single(),
+    "sharing the document",
+  );
+  if (!w.ok) return /rift_document_shares/.test(w.error) ? failed(SHARES_NOT_YET) : w;
+  return done({ id: (("data" in w ? w.data : null) as { id: string }).id });
 }

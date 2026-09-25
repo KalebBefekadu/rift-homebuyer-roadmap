@@ -12,7 +12,9 @@ import { readProgress, recordWork } from "./progress";
 import { readBids, recordResponse } from "./bids";
 import { readDeadlines } from "./deadlines";
 import type { DeadlineView } from "@/lib/core/deadline";
-import { documentLink, readDocuments } from "./documents";
+import { documentLink, readDocuments, readShares } from "./documents";
+import { mayOpen, type Audience } from "@/lib/core/document-share";
+import type { Family } from "@/lib/core/document";
 import { buyerBidLine, termsDiff, termsEffects, type BuyerBid, type Instruction } from "@/lib/core/bid";
 import { planItemsFor } from "./plan";
 import { afterClose, visitedStages, type Progress, type Stage, type Workstream, type WorkstreamView } from "@/lib/core/progress";
@@ -79,6 +81,9 @@ export interface Membership {
   journeyLabel: string;
   side: Side;
   agentName: string;
+  /** How to reach the agent, for Help on every page (Blueprint v5 §7.2). */
+  agentEmail: string | null;
+  agentPhone: string | null;
 }
 
 const MEMBERSHIP_SELECT = "id,journey_id,agent_id,role,scopes,display_name,email,accepted_at,revoked_at,invite_expires_at";
@@ -93,10 +98,12 @@ async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
   if (live.length === 0) return [];
   const [journeys, agents] = await Promise.all([
     boundedRead(db.from("rift_journeys").select("id,label,side").in("id", live.map((r) => r.journey_id as string)), "your journeys"),
-    boundedRead(db.from("rift_agents").select("id,name").in("id", [...new Set(live.map((r) => r.agent_id as string))]), "your agent"),
+    boundedRead(db.from("rift_agents").select("id,name,email,phone").in("id", [...new Set(live.map((r) => r.agent_id as string))]), "your agent"),
   ]);
   const j = new Map(((journeys.ok && "data" in journeys ? journeys.data : []) as { id: string; label: string; side: Side }[]).map((x) => [x.id, x]));
-  const a = new Map(((agents.ok && "data" in agents ? agents.data : []) as { id: string; name: string | null }[]).map((x) => [x.id, x.name ?? "Your agent"]));
+  const agentRows = (agents.ok && "data" in agents ? agents.data : []) as { id: string; name: string | null; email: string | null; phone: string | null }[];
+  const a = new Map(agentRows.map((x) => [x.id, x.name ?? "Your agent"]));
+  const reach = new Map(agentRows.map((x) => [x.id, { email: x.email ?? null, phone: x.phone ?? null }]));
   return live.filter((r) => j.has(r.journey_id as string)).map((r) => ({
     memberId: r.id as string,
     journeyId: r.journey_id as string,
@@ -107,6 +114,8 @@ async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
     journeyLabel: j.get(r.journey_id as string)!.label,
     side: j.get(r.journey_id as string)!.side,
     agentName: a.get(r.agent_id as string) ?? "Your agent",
+    agentEmail: reach.get(r.agent_id as string)?.email ?? null,
+    agentPhone: reach.get(r.agent_id as string)?.phone ?? null,
   }));
 }
 
@@ -623,11 +632,35 @@ export async function respondToBid(
  * version of an offer they were asked about, and only with the money scope.
  */
 export async function clientDocumentLink(m: Membership, documentId: string): Promise<DbResult<{ url: string }>> {
-  const b = await clientBids(m);
-  if (!b.ok || !("data" in b)) return b as DbResult<never>;
-  const shared = b.data.bids.some((x) => x.sharedDocumentIds.includes(documentId));
-  if (!shared) return failed("That document is not shared with you");
+  const list = await clientDocuments(m);
+  if (!list.ok || !("data" in list)) return list as DbResult<never>;
+  if (!list.data.documents.some((d) => d.id === documentId)) return failed("That document is not shared with you");
   return documentLink(m.journeyId, m.agentId, documentId);
+}
+
+export interface ClientDocument { id: string; label: string; family: Family; at: string; why: "shared" | "offer" }
+
+/**
+ * Every document this member may open, in one place (Blueprint v5 §7.2): the
+ * ones the agent shared with them (lib/core/document-share.ts), and the ones
+ * attached to an offer they were asked about, which they could always open.
+ * The one rule for opening a document, so the list and the link agree.
+ */
+export async function clientDocuments(m: Membership): Promise<DbResult<{ documents: ClientDocument[] }>> {
+  const [docs, shares, bids] = await Promise.all([
+    readDocuments(m.journeyId, m.agentId),
+    readShares(m.journeyId, m.agentId),
+    m.scopes.includes("money") && m.side === "buy" ? clientBids(m) : Promise.resolve(null),
+  ]);
+  if (!docs.ok || !("data" in docs)) return docs as DbResult<never>;
+  const held = shares.ok && "data" in shares ? shares.data.shares : new Map<string, Audience>();
+  const viaOffers = new Set(bids && bids.ok && "data" in bids ? bids.data.bids.flatMap((b) => b.sharedDocumentIds) : []);
+  const out: ClientDocument[] = [];
+  for (const d of docs.data.documents) {
+    const why = mayOpen(held.get(d.id), m.scopes) ? "shared" : viaOffers.has(d.id) ? "offer" : null;
+    if (why) out.push({ id: d.id, label: d.label, family: d.family, at: d.at, why });
+  }
+  return done({ documents: out });
 }
 
 /* ------------------------------------------------------------------ *
@@ -705,7 +738,6 @@ export async function clientRecords(m: Membership): Promise<DbResult<ClientRecor
   const documents: ClientRecords["documents"] = [];
   if (o !== undefined) {
     const lines = o === null ? [NOT_READ] : !o.bids.length ? ["No offers you were asked about."] : o.bids.map((x) => {
-      for (const d of x.asked?.documents ?? []) if (!documents.some((y) => y.id === d.id)) documents.push(d);
       return `${x.address}: ${x.line}${x.asked?.myAnswer ? ` Your answer on version ${x.asked.version}: ${INSTRUCTION_LABEL[x.asked.myAnswer]}.` : ""}`;
     });
     sections.push({ title: "Offers", lines });
@@ -742,5 +774,9 @@ export async function clientRecords(m: Membership): Promise<DbResult<ClientRecor
     sections.push({ title: "Contract dates", lines: lines.length ? lines : ["No checked contract dates."] });
   }
 
+  /* The same list as the Documents area, from the one rule for opening a
+     document: shared with them, or attached to an offer they were asked about. */
+  const docs = await clientDocuments(m);
+  if (docs.ok && "data" in docs) documents.push(...docs.data.documents.map((d) => ({ id: d.id, label: d.label, family: d.family })));
   return done({ sections, documents });
 }

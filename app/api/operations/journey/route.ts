@@ -7,7 +7,7 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile,
+  documentSlot, documentFinish, documentShare, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
@@ -209,6 +209,8 @@ export async function POST(req: Request) {
       return json(await documentSlot(journeyId));
     case "doc-finish":
       return json(await documentFinish(journeyId, str(b.path, 200), str(b.filename, 300), str(b.type, 100), str(b.family, 20), str(b.label, 160)));
+    case "doc-share":
+      return json(await documentShare(journeyId, str(b.documentId, 40), str(b.audience, 20)));
     case "bid-start": {
       const t = terms(b.terms);
       if (!t) return json({ ok: false, error: "Choose how it is paid for." }, 400);

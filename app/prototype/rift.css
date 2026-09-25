@@ -766,3 +766,14 @@
   .ops-today, .ops-grid2 { grid-template-columns: minmax(0, 1fr); }
   .ops-input { min-width: 0; width: 100%; }
 }
+
+/* The buyer's pages (Blueprint v5 §7.2): areas across the top, Help anywhere.
+   Calm and phone-first: the areas scroll sideways rather than wrap, and each
+   is a 44px target. */
+.client-areas { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.client-areas a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; font-size: 14px; color: var(--ink-3); border-bottom: 2px solid transparent; white-space: nowrap; }
+.client-areas a[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--brand, var(--ink)); }
+.client-help { position: relative; }
+.client-help > summary { list-style: none; cursor: pointer; }
+.client-help > summary::-webkit-details-marker { display: none; }
+.client-help-panel { position: absolute; right: 0; top: calc(100% + 8px); width: min(340px, calc(100vw - 32px)); z-index: 30; box-shadow: 0 12px 40px rgba(0,0,0,.12); }

@@ -38,7 +38,8 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
   const asOf = new Date().toLocaleString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
-    <ClientShell agentName={member.agentName}>
+    <ClientShell agentName={member.agentName} journey={{ id, active: "records", side: member.side }}
+      reach={{ email: member.agentEmail, phone: member.agentPhone }}>
       <Link href={`/app/j/${id}`} className="t-sm c-3 no-print">← {member.journeyLabel}</Link>
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>Your records</h1>
       <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
