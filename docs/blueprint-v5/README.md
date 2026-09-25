@@ -839,6 +839,13 @@ due time and its next action:
   everything by keyboard.
 - Same accessibility bar as the rest (§4.7).
 
+**Mock-up ready for Kaleb (25 Sep):** `/prototype/operations`, made-up data, nothing saved. Open
+it with `npm run dev`, or on a preview deployment with `RIFT_INTERNAL=1` set at build time
+(prototype pages are hidden in production otherwise). What to look at: Today at 1280px (every
+group's heading and first item on one screen), opening a person from Relationships and coming
+back, a journey's tabs, Transactions, and Cmd+K. Say what to keep or change; the real screens
+are rebuilt only after that (D15).
+
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
 a detail keeps the list position and filters; every item on Today names its owner and next
@@ -986,6 +993,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Operations mock-up for Kaleb's review (§8, D15) |
 | 25 Sep 2026 | Offer PDF upload with Claude, and the $50 AI limit in code (§5.9, §10.2) |
 | 25 Sep 2026 | A saved plan starts the buyer's search brief (LEAD-04) |
 | 25 Sep 2026 | Delete all of it on every answer and by a saved plan's link; §7.3 confirmed built |

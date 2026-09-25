@@ -51,6 +51,7 @@ person can actually use, each with its own front door, identity and shell.
 | `/prototype/studio/queue` | Three tabs, all of them work waiting on a person. **Follow-up** — the nurture cadence engine, what is owed today, which touches go out on their own, and where consent downgraded a channel. **Review** — the queue that produces `pending-review`, with per-item ceilings and a named-party requirement on verification. **Publishing** — the readout→plan seam, drift disclosure, and the preconditions on going live |
 | `/prototype/studio/settings` | Autonomy modes, programme registry, playbooks, profile, **the funnel editor with per-question drop-off and version history**, **Business rules** — the six decisions that were literals in source files, each with its consequence and whose call it is — and **Privacy**, retention rules and versioned consent wording |
 | `/prototype/offer` | Account-free offer submission for cooperating agents and unrepresented buyers |
+| `/prototype/operations` | **The Operations redesign mock-up for Kaleb's review (Blueprint v5 §8, D15).** Left sidebar, Today in five groups with snooze, delegate and pin, Relationships as a table with a side panel that keeps the filter, the journey as a workspace with tabs, the new Transactions view, and a Cmd+K quick switcher. Made-up data; nothing is saved |
 
 ## Purpose
 
