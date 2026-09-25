@@ -373,7 +373,9 @@ the seller journey's gate (§9).
   $24,788 · no call booked") on each lead in Today and on the person's page, with a chip per
   saved value that reopens it with their answers. It is built only from the saved plan and
   whether they booked; a lead who did neither shows no line rather than an invented one.
-  **Not built:** continuity into the client brief (LEAD-04).
+- **Built (25 Sep), continuity (LEAD-04):** when a buyer's journey starts, the brief editor starts
+  from the newer of their readout and their saved plan: the price as a ceiling and the county as
+  the area, dated, sourced, and "Not decided" until they confirm it.
 - **Built (25 Sep), deletion and reset:** "Delete all of it" sits at the bottom of every value's
   answer and resets this device's answers and plan (LEAD-06). The saved plan's page deletes by
   its link, so it works from any device: before this, a person who opened their plan from the
@@ -977,6 +979,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | A saved plan starts the buyer's search brief (LEAD-04) |
 | 25 Sep 2026 | Delete all of it on every answer and by a saved plan's link; §7.3 confirmed built |
 | 25 Sep 2026 | Lead summary in Operations from the saved plan and booking (§5.5) |
 | 25 Sep 2026 | Abroad values: can I buy, cost to buy and own, the return (§5.4); answer chips wrap on phones |

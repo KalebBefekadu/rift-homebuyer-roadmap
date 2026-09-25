@@ -4,6 +4,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyFor, journeyTablesMissing } from "./journeys";
+import { briefStartFromPlan, type SavedPlan } from "@/lib/core/saved-plan";
 import {
   briefErrors, buildPackage, canonicalPackage, disagreementOn, statusOf, SEARCH_SCHEMA_VERSION,
   type Cadence, type Response, type SearchBrief, type SearchCriterion, type SearchPackage, type SearchStatus,
@@ -335,12 +336,19 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   if (!agentId) return skipped("no agent row exists yet");
 
   const lead = await boundedRead(
-    db.from("rift_leads").select("assessment_id,side").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
+    db.from("rift_leads").select("assessment_id,side,plan,plan_saved_at").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the relationship",
   );
   if (!lead.ok) return lead;
-  const row = ("data" in lead ? lead.data : null) as { assessment_id: string | null; side: string } | null;
-  if (!row?.assessment_id || row.side !== "buy") return done(null);
+  const row = ("data" in lead ? lead.data : null) as { assessment_id: string | null; side: string; plan: SavedPlan | null; plan_saved_at: string | null } | null;
+  if (!row || row.side !== "buy") return done(null);
+
+  /* LEAD-04: a buyer who came through the values has a saved plan, not a
+     readout. The plan is used when there is no readout, or when it is the
+     newer of the two: the latest thing they told us is what the agent starts
+     from, with its own date. */
+  const fromPlan = row.plan ? briefStartFromPlan(row.plan) : null;
+  if (!row.assessment_id) return done(fromPlan);
 
   const readout = await boundedRead(
     db.from("rift_readouts").select("inputs,created_at,side").eq("assessment_id", row.assessment_id).eq("agent_id", agentId)
@@ -349,7 +357,8 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   );
   if (!readout.ok) return readout;
   const snap = ("data" in readout ? readout.data : null) as { inputs: Record<string, unknown>; created_at: string; side: string } | null;
-  if (!snap || snap.side !== "buy") return done(null);
+  if (!snap || snap.side !== "buy") return done(fromPlan);
+  if (fromPlan && row.plan_saved_at && row.plan_saved_at > snap.created_at) return done(fromPlan);
 
   const on = snap.created_at.slice(0, 10);
   const from = `readout of ${on}`;
@@ -363,7 +372,7 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   if (county && county.length <= 60) {
     criteria.push({ id: "readout-county", field: "geography", operator: "oneOf", value: [`${county} County`], unit: null, ...base });
   }
-  return done(criteria.length ? { criteria, from } : null);
+  return done(criteria.length ? { criteria, from } : fromPlan);
 }
 
 export interface SearchRow {

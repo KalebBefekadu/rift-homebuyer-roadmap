@@ -24,3 +24,24 @@ describe("the lead summary in Operations (§5.5)", () => {
     expect(leadSummary(p, false)).toBe("Saved a plan · no call booked");
   });
 });
+
+describe("a saved plan as the start of the search brief (LEAD-04)", () => {
+  it("gives the price as a ceiling and the county as the area, dated and not decided", async () => {
+    const { briefStartFromPlan } = await import("./saved-plan");
+    const { criterionError } = await import("./search");
+    const start = briefStartFromPlan(plan({ answers: { price: 425_000, county: "DeKalb" } }))!;
+    expect(start.from).toBe("saved plan of 2026-09-25");
+    expect(start.criteria.map((c) => [c.field, c.operator, c.value, c.strength])).toEqual([
+      ["price", "atMost", 425_000, "undecided"],
+      ["geography", "oneOf", ["DeKalb County"], "undecided"],
+    ]);
+    /* Valid criteria, so the editor can save them as they are. */
+    for (const c of start.criteria) expect(criterionError(c)).toBeNull();
+  });
+
+  it("gives nothing for a seller's plan, or a plan with nothing that describes a home", async () => {
+    const { briefStartFromPlan } = await import("./saved-plan");
+    expect(briefStartFromPlan(plan({ side: "sell" }))).toBeNull();
+    expect(briefStartFromPlan(plan({ answers: { downPct: "3.5" } }))).toBeNull();
+  });
+});

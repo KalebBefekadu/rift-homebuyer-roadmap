@@ -13,6 +13,7 @@
 
 import { ASKS, parseAnswers, answersToQuery, type Answers } from "./asks";
 import { valueById, type InputKey } from "./values";
+import type { SearchCriterion } from "./search";
 
 export interface SavedValue {
   tool: string;
@@ -89,4 +90,30 @@ export function leadSummary(plan: SavedPlan | null, booked: boolean): string | n
   const did = plan ? planSummary(plan) : null;
   if (!did) return booked ? "Booked a call" : null;
   return `${did} · ${booked ? "call booked" : "no call booked"}`;
+}
+
+/**
+ * LEAD-04: a saved plan as the starting point of a buyer's search brief.
+ *
+ * The same two criteria the old readout gave (the price as a ceiling and the
+ * county as the area), marked as the buyer's saved plan with the day they
+ * saved it, and "Not decided": a price somebody planned with is not yet a
+ * price they will search at, so approval waits for them to confirm it
+ * (lib/core/search.ts). Nothing else in a plan describes a home.
+ */
+export function briefStartFromPlan(plan: SavedPlan): { criteria: SearchCriterion[]; from: string } | null {
+  if (plan.side !== "buy") return null;
+  const on = plan.savedOn;
+  const from = `saved plan of ${on}`;
+  const base = { strength: "undecided" as const, statedBy: "Their saved plan", statedAt: on, sourceRef: from };
+  const criteria: SearchCriterion[] = [];
+  const price = Number(plan.answers.price);
+  if (Number.isFinite(price) && price > 0) {
+    criteria.push({ id: "plan-price", field: "price", operator: "atMost", value: Math.round(price), unit: "USD", ...base });
+  }
+  const county = typeof plan.answers.county === "string" ? plan.answers.county : "";
+  if (county) {
+    criteria.push({ id: "plan-county", field: "geography", operator: "oneOf", value: [`${county} County`], unit: null, ...base });
+  }
+  return criteria.length ? { criteria, from } : null;
 }
