@@ -736,6 +736,12 @@ household makes a read-only link for someone outside it: where the move stands, 
 contract dates, and/or the homes and showings, for 7, 30 or 90 days, never any money. The link is
 shown once, stored only as a hash, and can be stopped. Migration `20260927030000`.
 
+**Built (25 Sep), move-in handoff (B19):** "Add the move-in steps" on the person's plan in
+Operations adds six first-weeks steps (utilities, locks and codes, address changes, closing papers,
+homestead, HOA), each with an owner and no date, and never twice. The homestead step names the
+tax commissioner as holding the deadline: Rift has no maintained county source for it yet (§12),
+so the agent adds the date after checking it.
+
 ### 7.3 Signing in (Kaleb, R2)
 - Kaleb could not get into the buyer portal: no email came. Cause: no invitation existed, and
   the sign-in page sends nothing to an uninvited address without saying so.
@@ -1007,6 +1013,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Move-in handoff steps (B19) |
 | 25 Sep 2026 | Read-only summary links for someone outside the household (ACCESS-02) |
 | 25 Sep 2026 | Client side: areas, Help on every page, Documents area with agent sharing (§7.2) |
 | 25 Sep 2026 | Operations mock-up for Kaleb's review (§8, D15) |

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { ownerLabel, type Owner, type PlanItem } from "@/lib/core/plan";
-import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep } from "../../actions";
+import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep, addMoveInSteps } from "../../actions";
 import type { Drift } from "@/lib/core/seam";
 
 /**
@@ -274,6 +274,13 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
         {/* No date is a real answer and says so. A date invented to look
             organised is worse than none, because they measure you against it. */}
         <p className="t-2xs c-4">A date is optional. Without one it sits under “After that” on their page.</p>
+        {/* B19: after a confirmed closing. Six steps with owners and no dates;
+            the homestead deadline is the tax commissioner's to state, so add
+            it once you have checked it for their county. */}
+        <button className="btn btn-g btn-sm" style={{ alignSelf: "flex-start" }} disabled={pending}
+          onClick={() => run(() => addMoveInSteps(leadId))}>
+          <Ico.key size={13} />Add the move-in steps
+        </button>
       </div>
     </section>
   );

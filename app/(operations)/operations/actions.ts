@@ -1,5 +1,6 @@
 "use server";
 
+import { moveInSteps, missingSteps } from "@/lib/core/move-in";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +13,7 @@ import type { StopId } from "@/lib/core/nurture";
 import { saveRule, clearRule } from "@/lib/db/settings";
 import type { BusinessRules } from "@/lib/core/settings";
 import { publishWording } from "@/lib/db/funnel";
-import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
+import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem, readPlanForAgent } from "@/lib/db/plan";
 import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer } from "@/lib/db/offers";
 import { approveTake, withdrawTake, reopenChoice } from "@/lib/db/offer-room";
 import type { Owner } from "@/lib/core/plan";
@@ -423,6 +424,26 @@ export async function addStep(leadId: string, title: string, owner: Owner, owner
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const, id: r.data.id };
+}
+
+/**
+ * The move-in handoff (B19): the standard first-weeks steps, added to the
+ * client's plan in one go, skipping any already there. No dates: see
+ * lib/core/move-in.ts.
+ */
+export async function addMoveInSteps(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const current = await readPlanForAgent(leadId);
+  if (!current.ok) return { ok: false as const, error: current.error };
+  if ("skipped" in current) return { ok: false as const, error: current.reason };
+  const todo = missingSteps(moveInSteps(null), current.data.items.map((i) => i.title));
+  for (const s of todo) {
+    const r = await addPlanItem({ leadId, title: s.title, owner: s.owner, ownerName: s.ownerName, dueOn: null });
+    if (!r.ok) { revalidatePath(`/operations/lead/${leadId}`); return { ok: false as const, error: r.error }; }
+  }
+  revalidatePath(`/operations/lead/${leadId}`);
+  return { ok: true as const, added: todo.length };
 }
 
 export async function tickStep(leadId: string, itemId: string, isDone: boolean) {
