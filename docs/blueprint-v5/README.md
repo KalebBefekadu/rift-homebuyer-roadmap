@@ -305,6 +305,12 @@ come later.
 | Preparation | "Should I fix this before listing?" | Condition questions | What is worth addressing, maybe, not yet; no invented ROI |
 | Sell first or buy first, move-up | From v3 | To define | To define |
 
+**Built (25 Sep):** the seller landing `/sell` offers the values as separate ways in; net proceeds
+at `/sell/proceeds` and selling costs at `/sell/costs`, each with its own questions and drawing.
+Commission is asked, and "Not agreed yet" shows a 4% to 6% range rather than a rate. Neither
+asks the county, because nothing in a seller's costs changes by county yet; the county returns
+when a county tax rate does. Preparation, `/sell/start` and `/sell/results` are not rebuilt yet.
+
 **First order (D20, decided 24 Sep):** 1. Net proceeds; 2. Unclaimed money (useful even to someone not
 selling, and already built); 3. Selling costs; 4. Preparation.
 
@@ -919,6 +925,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Seller values, first slice: `/sell` landing, net proceeds and selling costs (§5.3) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

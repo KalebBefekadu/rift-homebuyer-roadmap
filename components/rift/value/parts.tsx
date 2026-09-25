@@ -36,7 +36,7 @@ export function AnswerHead({ def, figure, sentence, art, tone }: {
       <div>
         <div className="kicker c-brand">{def.name}</div>
         <h1 id="answer-h" className="t-lg w55 c-2" style={{ marginTop: 10 }}>{def.question}</h1>
-        <div className={`answer-fig mt-3 ${tone === "neg" ? "c-neg" : ""}`}>{figure}</div>
+        <div className={`answer-fig mt-3 ${figure.includes("–") ? "is-range" : ""} ${tone === "neg" ? "c-neg" : ""}`}>{figure}</div>
         <p className="t-lg c-2 mt-3" style={{ lineHeight: 1.5, fontWeight: 450, maxWidth: 480 }}>{sentence}</p>
       </div>
       <figure className="art-box">{art}</figure>

@@ -330,13 +330,20 @@ export interface ProceedLine {
    second thing to forget when it changes. */
 export const GA_TRANSFER_TAX_RATE = 0.001;
 
+/* The fixed seller lines, once. The seller readout, the offer table and the
+   seller values all read these, so no two of them can quote different closing
+   costs for the same house. */
+export const SELLER_SETTLEMENT = 850;
+export const SELLER_PRORATED_TAX = 1_450;
+export const SELLER_PAYOFF_ADMIN = 375;
+
 export function netProceeds(s: SellerInputs) {
   const commission = (s.price * s.commissionPct) / 100;
   const concessions = (s.price * s.concessionsPct) / 100;
   const transferTax = s.price * GA_TRANSFER_TAX_RATE;
-  const settlement = 850;
-  const proratedTax = 1_450;
-  const payoffAdmin = 375;
+  const settlement = SELLER_SETTLEMENT;
+  const proratedTax = SELLER_PRORATED_TAX;
+  const payoffAdmin = SELLER_PAYOFF_ADMIN;
 
   const costs: ProceedLine[] = [
     { label: "Mortgage payoff", amount: s.payoff, note: "Principal balance plus interest to the closing date" },
@@ -367,6 +374,93 @@ export function netProceeds(s: SellerInputs) {
     ],
     couldBeWrong:
       "Your payoff changes daily with interest and is only exact on a lender payoff statement. Commission is negotiable and concessions depend on what a buyer asks for. Prorated taxes depend on the closing date, and repairs almost always move after an inspection.",
+  };
+}
+
+/**
+ * The seller values (Blueprint v5 §5.3): selling costs, and what you'd keep.
+ *
+ * Separate from `netProceeds` on purpose. That function feeds the older
+ * readout and its issued snapshots, and it counts repairs and moving, which
+ * are not paid out of the sale: the same reasoning that took moving out of
+ * the buyer's cash to close (Kaleb, R1). Concessions are left out too: they
+ * are whatever a particular buyer asks for, so they belong to an offer (the
+ * offer table counts them), not to a planning figure.
+ *
+ * Commission is the seller's own number (MONEY-06: negotiated, never a
+ * "standard rate"). When they have not agreed one, `commissionPct` is null and
+ * every figure is a range across the band below, labelled as such. A single
+ * number there would be a standard rate by another name.
+ */
+export const COMMISSION_BAND = { low: 4, high: 6 } as const;
+
+export interface SaleCostLine { label: string; amount: number; note: string }
+
+export interface SaleCosts {
+  /** At the agreed commission, or at the low end of the band when none is agreed. */
+  lines: SaleCostLine[];
+  total: number;
+  /** Only when no commission is agreed: the total at the high end of the band. */
+  totalHigh: number | null;
+  assumptions: Assumption[];
+  couldBeWrong: string;
+}
+
+export function sellingCosts(price: number, commissionPct: number | null, payoff = 0): SaleCosts {
+  const agreed = commissionPct !== null;
+  const lo = agreed ? commissionPct : COMMISSION_BAND.low;
+  const fixed = (withPayoff: boolean): SaleCostLine[] => [
+    { label: "Georgia transfer tax", amount: price * GA_TRANSFER_TAX_RATE, note: "$1.00 per $1,000 of the sale price" },
+    { label: "Settlement and recording", amount: SELLER_SETTLEMENT, note: "Closing attorney, deed preparation, recording fees" },
+    { label: "Prorated property tax", amount: SELLER_PRORATED_TAX, note: "Your share of the tax year up to closing, an estimate" },
+    /* No loan, no payoff statement, no wire to a lender. */
+    ...(withPayoff ? [{ label: "Payoff and wire fees", amount: SELLER_PAYOFF_ADMIN, note: "Lender statement, wire and courier charges" }] : []),
+  ];
+  const lines: SaleCostLine[] = [
+    {
+      label: "Commission",
+      amount: (price * lo) / 100,
+      note: agreed ? `${pct(lo)} total, as you told us` : `Not agreed yet: shown at ${pct(COMMISSION_BAND.low, 0)}, and up to ${pct(COMMISSION_BAND.high, 0)} below`,
+    },
+    ...fixed(payoff > 0),
+  ];
+  const total = lines.reduce((sum, l) => sum + l.amount, 0);
+  const totalHigh = agreed ? null : total + (price * (COMMISSION_BAND.high - COMMISSION_BAND.low)) / 100;
+
+  return {
+    lines,
+    total,
+    totalHigh,
+    assumptions: [
+      { label: "Sale price", value: money(price) },
+      { label: "Commission", value: agreed ? `${pct(lo)}, your figure` : `Not agreed: ${pct(COMMISSION_BAND.low, 0)} to ${pct(COMMISSION_BAND.high, 0)} shown as a range, not a standard rate` },
+      { label: "Transfer tax", value: "$1.00 per $1,000 of price (Georgia)" },
+      { label: "Settlement, prorated tax", value: `${money(SELLER_SETTLEMENT)} and ${money(SELLER_PRORATED_TAX)}, estimates` },
+      { label: "Not counted", value: "Concessions a buyer asks for, repairs, moving" },
+    ],
+    couldBeWrong:
+      "Commission is whatever you agree, and there is no standard rate. A buyer may ask you to pay part of their closing costs or credit repairs, which comes off what you keep; that depends on the offer, so it is not counted here. Prorated tax depends on your county's rate and the closing date.",
+  };
+}
+
+export interface SaleNet extends SaleCosts {
+  payoff: number;
+  /** Price minus costs and payoff. Negative is a shortfall to bring to closing, never hidden. */
+  net: number;
+  /** The low end when no commission is agreed (net at the high commission). */
+  netLow: number | null;
+}
+
+export function sellerNet(price: number, payoff: number, commissionPct: number | null): SaleNet {
+  const c = sellingCosts(price, commissionPct, payoff);
+  return {
+    ...c,
+    payoff,
+    net: price - payoff - c.total,
+    netLow: c.totalHigh === null ? null : price - payoff - c.totalHigh,
+    assumptions: [{ label: "Loan payoff", value: money(payoff) }, ...c.assumptions],
+    couldBeWrong:
+      "Your payoff changes daily with interest and is exact only on a lender's payoff statement. " + c.couldBeWrong,
   };
 }
 

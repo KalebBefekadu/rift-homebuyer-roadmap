@@ -17,7 +17,7 @@
  * unweighted, for a human to weigh.
  */
 
-import { GA_TRANSFER_TAX_RATE } from "./compute";
+import { GA_TRANSFER_TAX_RATE, SELLER_PAYOFF_ADMIN, SELLER_PRORATED_TAX, SELLER_SETTLEMENT } from "./compute";
 
 export type Financing = "cash" | "conventional" | "fha" | "va" | "usda" | "other";
 
@@ -79,10 +79,7 @@ export interface OfferNet {
 
 /* The same fixed lines netProceeds uses, so the offer table and the seller's
    own readout cannot quote different closing costs for the same house. */
-const SETTLEMENT = 850;
-const PRORATED_TAX = 1_450;
-const PAYOFF_ADMIN = 375;
-export const FIXED_SELLER_COSTS = SETTLEMENT + PRORATED_TAX + PAYOFF_ADMIN;
+export const FIXED_SELLER_COSTS = SELLER_SETTLEMENT + SELLER_PRORATED_TAX + SELLER_PAYOFF_ADMIN;
 
 export function netOf(offer: Offer, costs: SellerCosts): Omit<OfferNet, "behindBy"> {
   const commission = (offer.price * costs.commissionPct) / 100;

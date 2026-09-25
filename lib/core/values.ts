@@ -21,7 +21,7 @@ export type ValueSide = "buy" | "sell" | "abroad";
 export type InputKey =
   | "county" | "ownership" | "price" | "downPct" | "savings" | "monthlySaving"
   | "income" | "household" | "credit" | "occupation" | "loanType"
-  | "payoff" | "yearsOwned" | "homestead" | "age65"
+  | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
   | "status" | "use";
 
 export interface ValueDef {
@@ -84,8 +84,11 @@ export const VALUES: ValueDef[] = [
     question: "What would I actually keep?",
     gives: "What reaches you after the loan payoff and every cost of selling.",
     cta: "See what I'd keep",
-    asks: ["county", "price", "payoff"],
-    live: false,
+    /* No county: nothing in a seller's costs changes by county yet (transfer
+       tax is statewide, prorated tax is one estimate), and a question whose
+       answer changes nothing is a question we should not ask. */
+    asks: ["price", "payoff", "commission"],
+    live: true,
   },
   {
     id: "unclaimed", side: "sell", href: "/sell/unclaimed", name: "Money you may be losing",
@@ -100,8 +103,8 @@ export const VALUES: ValueDef[] = [
     question: "What will selling cost me?",
     gives: "Each cost of selling, line by line, with commission as your own number.",
     cta: "See my selling costs",
-    asks: ["county", "price"],
-    live: false,
+    asks: ["price", "commission"],
+    live: true,
   },
   {
     id: "prepare", side: "sell", href: "/sell/prepare", name: "Should I fix it first",

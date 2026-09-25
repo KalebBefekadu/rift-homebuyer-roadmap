@@ -637,6 +637,9 @@
 .answer { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: clamp(20px,3vw,40px); align-items: center; }
 @media (max-width: 860px) { .answer { grid-template-columns: minmax(0,1fr); } }
 .answer-fig { font-family: Zodiak, "Iowan Old Style", Georgia, serif; font-weight: 400; font-size: clamp(48px,7vw,80px); line-height: 1; letter-spacing: -0.03em; }
+/* A range ("$151,010 – $159,310") is twice as long as a figure: at full size it
+   broke onto two lines of 80px type and pushed the sentence off the screen. */
+.answer-fig.is-range { font-size: clamp(34px,4.6vw,54px); }
 .art-box { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: clamp(16px,2.4vw,28px); }
 .value-card { display: flex; flex-direction: column; gap: 10px; height: 100%; }
 .value-card .grow { flex: 1; }

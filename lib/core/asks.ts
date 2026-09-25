@@ -165,6 +165,20 @@ export const ASKS: Record<InputKey, AskDef> = {
     unitLabel: "Still owed",
     fallback: 180_000,
   },
+  commission: {
+    key: "commission", param: "cm", type: "choice",
+    title: "What total commission have you agreed, or been quoted?",
+    why: "Commission is negotiated, and there is no standard rate. Count both agents' share if you would pay both. Not agreed yet is a fine answer.",
+    options: [
+      { value: "3", label: "3%" },
+      { value: "4", label: "4%" },
+      { value: "5", label: "5%" },
+      { value: "5.5", label: "5.5%" },
+      { value: "6", label: "6%" },
+      { value: "none", label: "Not agreed yet", hint: "We'll show a range, not a guess" },
+    ],
+    fallback: "none",
+  },
   yearsOwned: {
     key: "yearsOwned", param: "yo", type: "choice",
     title: "How long have you owned it?",
@@ -265,10 +279,14 @@ export function answerLabel(key: InputKey, v: string | number | undefined): stri
   return a.options?.find((o) => o.value === String(v))?.label ?? String(v);
 }
 
+/** The commission answer as a rate, or null when none is agreed (MONEY-06). */
+export const commissionOf = (v: string | number | undefined): number | null =>
+  v === undefined || v === "none" ? null : Number(v);
+
 /** Short names for the "Based on" line of an answer. */
 export const ASK_SHORT: Record<InputKey, string> = {
   county: "County", ownership: "Owned before", price: "Price", downPct: "Down payment",
   savings: "Saved", monthlySaving: "Each month", income: "Income", household: "Household",
-  credit: "Credit", occupation: "Work", loanType: "Loan", payoff: "Still owed",
+  credit: "Credit", occupation: "Work", loanType: "Loan", payoff: "Still owed", commission: "Commission",
   yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older", status: "Status", use: "Use",
 };

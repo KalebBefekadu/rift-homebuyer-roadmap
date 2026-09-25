@@ -229,20 +229,30 @@ export function ProceedsFlow({ price, parts, net }: {
     { label: net < 0 ? "Short at closing" : "Reaches you", amount: net, kind: "net" as const }];
   const H = top + rows.length * rowH + 14;
   const x0 = 120, span = W - x0 - 14;
-  const unit = span / Math.max(price, 1);
+  /* The scale runs from the lowest point the money reaches to the price. Below
+     the payoff that lowest point is under zero, and a scale starting at zero
+     drew the payoff bar straight through its own label. */
+  const lo = Math.min(0, net);
+  const unit = span / Math.max(price - lo, 1);
+  const at = (v: number) => x0 + (v - lo) * unit;
   let run = price;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
-      aria-label={`From a ${money(price)} sale, ${money(net)} reaches you after ${parts.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`}>
+      aria-label={net < 0
+        ? `A ${money(price)} sale leaves ${money(-net)} to bring to closing after ${parts.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`
+        : `From a ${money(price)} sale, ${money(net)} reaches you after ${parts.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`}>
+      {lo < 0 ? <line x1={at(0)} y1={top - 4} x2={at(0)} y2={H - 6} stroke="var(--ink-4)" strokeWidth="1" /> : null}
       {rows.map((r, k) => {
         const y = top + k * rowH;
-        let x = x0, w = r.amount * unit, fill = "var(--sunk)";
+        let x = at(0), w = r.amount * unit, fill = "var(--sunk)";
         if (r.kind === "price") { fill = "var(--ink)"; }
-        else if (r.kind === "cost") { run -= r.amount; x = x0 + run * unit; fill = "var(--ink-5)"; }
-        else { w = Math.max(net, 0) * unit; fill = "var(--brand)"; }
+        else if (r.kind === "cost") { run -= r.amount; x = at(run); fill = "var(--ink-5)"; }
+        else if (net < 0) { x = at(net); w = -net * unit; fill = "var(--neg)"; }
+        else { fill = "var(--brand)"; }
+        const labelFill = r.kind === "net" ? (net < 0 ? "var(--neg)" : "var(--brand-2)") : "var(--ink-3)";
         return (
           <g key={r.label} className="art-rise" style={{ animationDelay: `${k * 80}ms` }}>
-            <text x={x0 - 10} y={y + 15} textAnchor="end" fontSize="11.5" fill={r.kind === "net" ? "var(--brand-2)" : "var(--ink-3)"} fontWeight={r.kind === "cost" ? 450 : 600}>{r.label}</text>
+            <text x={x0 - 10} y={y + 15} textAnchor="end" fontSize="11.5" fill={labelFill} fontWeight={r.kind === "cost" ? 450 : 600}>{r.label}</text>
             <rect x={x} y={y + 3} width={Math.max(w, 2)} height={rowH - 10} rx="2" fill={fill} />
             {r.kind === "cost" ? <line x1={x} y1={y - 5} x2={x} y2={y + 3} stroke="var(--ink-5)" strokeDasharray="2 2" /> : null}
           </g>

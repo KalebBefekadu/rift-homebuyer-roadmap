@@ -131,7 +131,20 @@ stops it.
 
 `netProceeds(s)` subtracts commission, concessions, Georgia transfer tax
 (**$1.00 per $1,000 of consideration — 0.1%**, O.C.G.A. § 48-6-1; it said 0.2% until September 2026, which understated every seller's net by 0.1% of the price), settlement, prorated tax, payoff admin,
-repairs, and moving from the price, then the mortgage payoff. `repairTriage()` ranks repairs
+repairs, and moving from the price, then the mortgage payoff. It feeds the older seller readout
+and its issued snapshots, which keep the figures they showed.
+
+The seller values (Blueprint v5 §5.3) use `sellingCosts(price, commissionPct, payoff)` and
+`sellerNet(price, payoff, commissionPct)` instead. They count only what the sale itself pays:
+commission, transfer tax, settlement and recording ($850), prorated property tax ($1,450, an
+estimate) and, only when there is a loan, payoff and wire fees ($375). Those three fixed lines
+are `SELLER_SETTLEMENT`, `SELLER_PRORATED_TAX` and `SELLER_PAYOFF_ADMIN`, shared with the offer
+table. Repairs and moving are not paid out of the sale; concessions depend on a particular
+offer. Commission is the seller's answer. "Not agreed yet" is `null`, and every figure becomes
+a range across `COMMISSION_BAND` (4% to 6%), never a single assumed rate (MONEY-06). A net
+below zero is a shortfall brought to closing.
+
+`repairTriage()` ranks repairs
 by payback, and `unclaimedValue()` finds homestead and age-65 exemptions the owner has not
 filed.
 
