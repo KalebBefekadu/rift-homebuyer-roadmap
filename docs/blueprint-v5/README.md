@@ -870,12 +870,22 @@ due time and its next action:
   everything by keyboard.
 - Same accessibility bar as the rest (§4.7).
 
-**Mock-up ready for Kaleb (25 Sep):** `/prototype/operations`, made-up data, nothing saved. Open
-it with `npm run dev`, or on a preview deployment with `RIFT_INTERNAL=1` set at build time
-(prototype pages are hidden in production otherwise). What to look at: Today at 1280px (every
-group's heading and first item on one screen), opening a person from Relationships and coming
-back, a journey's tabs, Transactions, and Cmd+K. Say what to keep or change; the real screens
-are rebuilt only after that (D15).
+**Mock-up ready for Kaleb (25 Sep), second version the same day:** `/prototype/operations`,
+made-up data, nothing saved. Open it with `npm run dev`, or on a preview deployment with
+`RIFT_INTERNAL=1` set at build time (prototype pages are hidden in production otherwise). Kaleb
+said the first version was already better than the live pages and asked for an audit; the
+second version is the result, and its "What changed" button lists each change so the review
+can accept or reject them one by one. The main ones: a one-line summary answering the seven
+questions above; one strong button per screen instead of one per item; Done, three snooze
+times, delegation and a pin on every item; Waiting on others with last heard and when to chase;
+a clock that agrees with itself (tested); sortable Relationships that turn into cards on a
+phone; the person panel in §8.5's order; a breadcrumb, stage track, deal team and "blocked or
+unconfirmed" on the journey; a workstream grid on Transactions; expiry countdowns on Offers;
+sketches of Search, Advocacy, Reports, Questions and Settings; and keyboard shortcuts (g then
+a letter, j and k, e, ?). What to look at: Today at 1280px (every group's heading and first
+item on one screen), opening a person from Relationships and coming back, a journey's tabs,
+Transactions, and Cmd+K. Say what to keep or change; the real screens are rebuilt only after
+that (D15).
 
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
@@ -1024,6 +1034,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Operations mock-up, second version from an audit against §8 (D15) |
 | 25 Sep 2026 | Accessibility and phone-width suites extended to every new page; four defects fixed (§4.7) |
 | 25 Sep 2026 | Buyer values: how much home fits (MONEY-05) and lender questions (§5.2) |
 | 25 Sep 2026 | No-match state: which must-haves limit the search (SEARCH-09) |
