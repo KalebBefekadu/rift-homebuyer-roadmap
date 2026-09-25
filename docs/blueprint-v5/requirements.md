@@ -61,7 +61,7 @@ kept so tests and commits that cite them stay traceable.
 | SEARCH-06 | Preference changes are proposed, never inferred into live filters. Updating Matrix still needs the agent. | Built |
 | SEARCH-07 | A tour request is a request, not an appointment. Requested, awaiting, confirmed, changed, cancelled and completed are distinct; changed times and representation are rechecked. | Built |
 | SEARCH-08 | After a showing, a short reaction and "Would you consider an offer?" or "What should change in the search?". No long ratings. | Built |
-| SEARCH-09 | When nothing fits, show which hard requirements limit the search; never silently widen it. Withdrawn listings leave the active shortlist and stay in history. | Not verified; check during the client portal pass (v5 §7) |
+| SEARCH-09 | When nothing fits, show which hard requirements limit the search; never silently widen it. Withdrawn listings leave the active shortlist and stay in history. | Built. When no listed home meets every must-have, the buyer's Homes lists each must-have with how many homes it rules out, most limiting first, and says the search is not widened. Unknown facts are not counted as misses; withdrawn homes stay in history |
 | Pilot targets | A reviewed search package from an existing brief in five minutes; priorities found without asking again; feedback recorded in under a minute; an update without re-entering unchanged information. Measured against the agent's current process. | Open: measured in the pilot (`/studio/pilot` counts setup time) |
 
 ## 5. Client Today and journey

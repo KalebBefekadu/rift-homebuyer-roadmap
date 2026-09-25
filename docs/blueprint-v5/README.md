@@ -1013,6 +1013,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | No-match state: which must-haves limit the search (SEARCH-09) |
 | 25 Sep 2026 | Move-in handoff steps (B19) |
 | 25 Sep 2026 | Read-only summary links for someone outside the household (ACCESS-02) |
 | 25 Sep 2026 | Client side: areas, Help on every page, Documents area with agent sharing (§7.2) |

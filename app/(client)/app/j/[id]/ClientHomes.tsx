@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRefresh } from "@/components/rift/useRefresh";
 import { HomeCard, type HomeCardData } from "@/components/rift/HomeCard";
 import { AddHome, type HomeInput } from "@/components/rift/AddHome";
-import { REACTION_LABEL, type Reaction, type SearchCriterion } from "@/lib/core/search";
+import { REACTION_LABEL, limitingRequirements, type Reaction, type SearchCriterion } from "@/lib/core/search";
 import { OFFER_LABEL, type OfferInterest } from "@/lib/core/tour";
 import { post } from "../../post";
 
@@ -105,6 +105,24 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
   return (
     <div style={{ marginTop: 10 }}>
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginBottom: 8 }}>{error}</p> : null}
+      {(() => {
+        /* SEARCH-09: say what limits the search when nothing fits, and never
+           widen it on the buyer's behalf. */
+        const limit = limitingRequirements(live, criteria);
+        if (!limit) return null;
+        return (
+          <div className="card p-3" role="status" style={{ marginBottom: 10, background: "var(--sunk)" }}>
+            <div className="t-sm w6">None of the {limit.total} home{limit.total === 1 ? "" : "s"} here meets every must-have</div>
+            <ul className="t-sm" style={{ marginTop: 6, display: "grid", gap: 3 }}>
+              {limit.limits.map((l) => <li key={l.text}>{l.text} <span className="c-4">rules out {l.rulesOut} of {limit.total}</span></li>)}
+            </ul>
+            <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.55 }}>
+              Your search is not widened for you. If one of these could be a nice-to-have instead, change it in your priorities,
+              or talk it through with {agentFirst}.
+            </p>
+          </div>
+        );
+      })()}
       {live.length === 0 ? (
         <p className="t-sm c-3">No homes here yet.</p>
       ) : (

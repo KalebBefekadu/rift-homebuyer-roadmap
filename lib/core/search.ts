@@ -617,3 +617,31 @@ export function safeListingUrl(raw: string): string | null {
     return null;
   }
 }
+
+/**
+ * SEARCH-09: when nothing on the list fits, which requirements are doing the
+ * ruling out. Each must-have is counted against the live homes it misses
+ * outright (an unknown fact is not a miss). Nothing here widens anything:
+ * the buyer is shown what limits the search and decides; relaxing a must-have
+ * is theirs to propose through their priorities.
+ *
+ * Null when at least one home meets every must-have it can be checked
+ * against, when there are no must-haves, or when there are no homes to judge.
+ */
+export function limitingRequirements(
+  homes: { facts: PropertyFacts }[],
+  criteria: SearchCriterion[],
+): { total: number; limits: { text: string; rulesOut: number }[] } | null {
+  const hard = criteria.filter((c) => c.strength === "hard");
+  if (!hard.length || !homes.length) return null;
+  const fits = homes.map((h) => fitOf(h.facts, criteria).lines);
+  if (fits.some((lines) => !lines.some((l) => l.fit === "misses"))) return null;
+  const limits = hard
+    .map((c) => ({
+      text: `${FIELDS[c.field].label}: ${describe(c)}`,
+      rulesOut: fits.filter((lines) => lines.some((l) => l.criterionId === c.id && l.fit === "misses")).length,
+    }))
+    .filter((l) => l.rulesOut > 0)
+    .sort((a, b) => b.rulesOut - a.rulesOut);
+  return { total: homes.length, limits };
+}
