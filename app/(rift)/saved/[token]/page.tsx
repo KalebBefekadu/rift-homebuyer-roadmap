@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { Ico } from "@/components/rift/icons";
 import { hrefFor } from "@/lib/core/saved-plan";
+import { ForgetMe } from "@/components/rift/Forget";
 
 export const metadata: Metadata = {
   title: "Your saved plan",
@@ -103,7 +104,22 @@ export default async function SavedPlanPage({ params }: { params: Promise<{ toke
             </div>
             <Link href={`/book?v=${plan.side === "sell" ? "sell" : "buy"}`} className="btn btn-brand">Book a call</Link>
           </div>
-          <p className="t-xs c-4 mt-3">Anyone with this link can open the plan. <Link href="/privacy" className="btn-link">Delete all of it</Link> from the privacy page at any time.</p>
+          <p className="t-xs c-4 mt-3">Anyone with this link can open the plan.</p>
+          {/* By the link, not the browser session: this page is usually
+              opened from the email, on a device that never saw the save. */}
+          <div className="mt-3">
+            <ForgetMe
+              side={plan.side === "sell" ? "sell" : "buy"}
+              planToken={token}
+              labels={{
+                blurb: "Delete this plan, your contact details and your consent record, from here and on our side. The link stops working.",
+                cta: "Delete all of it",
+                working: "Deleting\u2026",
+                done: "Deleted. The plan, your details and your consent record are gone, and this link no longer opens anything.",
+                partial: "There was nothing stored on our side to remove. It may already have been deleted.",
+              }}
+            />
+          </div>
         </section>
       </main>
       <SiteFooter />

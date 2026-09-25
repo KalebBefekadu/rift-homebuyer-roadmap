@@ -9,6 +9,7 @@ import { rememberValue, readPlan, type PlanEntry } from "@/lib/rift/plan";
 import { missingPhrase, nextValues, valueById } from "@/lib/core/values";
 import type { Answers } from "@/lib/core/asks";
 import { SavePlan } from "./SavePlan";
+import { ForgetMe } from "@/components/rift/Forget";
 
 /**
  * Everything after a value's answer (Blueprint v5 §5.1, §5.5, D14).
@@ -106,6 +107,12 @@ export function AfterAnswer({ tool, entry, answers }: {
             </button>
           </div>
         </div>
+      </section>
+
+      {/* "Delete all of it", at the bottom of every answer as /privacy says.
+          It resets this device's answers too (LEAD-06). */}
+      <section className="sec-sm" aria-label="Delete your answers">
+        <ForgetMe side={def.side === "sell" ? "sell" : def.side === "buy" ? "buy" : undefined} />
       </section>
 
       {saving ? (

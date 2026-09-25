@@ -84,10 +84,12 @@ const EN: ForgetLabels = {
     "Everything else is gone from this device and our side.",
 };
 
-export function ForgetMe({ side, labels, style }: {
+export function ForgetMe({ side, labels, style, planToken }: {
   side?: "buy" | "sell";
   labels?: ForgetLabels;
   style?: React.CSSProperties;
+  /** On a saved plan's page: delete by its link, which works on any device. */
+  planToken?: string;
 }) {
   const l = labels ?? EN;
   const [state, setState] = useState<"idle" | "working" | "done" | "held" | "partial" | "failed">("idle");
@@ -101,6 +103,10 @@ export function ForgetMe({ side, labels, style }: {
       window.localStorage.removeItem("rift.sell.draft");
       window.localStorage.removeItem("rift.attr");
       window.localStorage.removeItem("rift.events");
+      /* The values' answers and the plan taking shape (LEAD-06): progress
+         on this device is reset along with everything else. */
+      window.localStorage.removeItem("rift.answers.v1");
+      window.localStorage.removeItem("rift.plan.v1");
       window.sessionStorage.removeItem("rift.sid");
     } catch { /* storage already unavailable: nothing to clear */ }
 
@@ -108,7 +114,7 @@ export function ForgetMe({ side, labels, style }: {
       const r = await fetch("/api/forget", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: sid }),
+        body: JSON.stringify({ sessionId: sid, ...(planToken ? { planToken } : {}) }),
       }).then((x) => x.json());
       /* Three answers, not two. "Nothing was there" and "we never heard you"
          are different facts, and only one of them is finished. */

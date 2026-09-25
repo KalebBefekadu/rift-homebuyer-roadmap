@@ -175,9 +175,11 @@ export default function PrivacyPage() {
 
         <Block title="Deleting it">
           <p>
-            There is a button at the bottom of your readout that deletes your answers, your
-            readout, your contact details and your consent record. One click. No account, no
-            form, no reply from anyone, and no question about why.
+            There is a button at the bottom of every answer, and on your saved plan&apos;s page,
+            that deletes your answers, your plan, your contact details and your consent record.
+            One click. No account, no form, no reply from anyone, and no question about why. The
+            button on your saved plan works from any device, because it goes by the plan&apos;s
+            link rather than the browser you used.
           </p>
           <p>
             One thing survives it, and it is fair that you know which: if you became a client and

@@ -249,20 +249,48 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
  *     sweep. There the question is "has this expired"; here the person has
  *     asked, and "we were in the middle of something" is not an answer to that.
  */
-export async function forget(sessionId: string): Promise<DbResult<{ deleted: number; held: number }>> {
+export async function forget(
+  sessionId: string,
+  /* A saved plan's private link (Blueprint v5 §5.5). The session id lives in
+     one browser tab, so somebody reopening their plan from the email on
+     another device had no handle on their own record at all: the plan page
+     sent them to /privacy, which had no button. The token is the credential
+     that already opens the plan, so it is enough to delete it. */
+  opts: { planToken?: string } = {},
+): Promise<DbResult<{ deleted: number; held: number }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
   try {
+    let planLeadIds: string[] = [];
+    if (opts.planToken && /^[A-Za-z0-9_-]{32,64}$/.test(opts.planToken)) {
+      const byPlan = await boundedRead(
+        db.from("rift_leads").select("id,session_id").eq("agent_id", agent_id).eq("plan_token", opts.planToken).maybeSingle(),
+        "the saved plan",
+      );
+      if (!byPlan.ok) return byPlan;
+      const row = ("data" in byPlan ? byPlan.data : null) as { id: string; session_id: string | null } | null;
+      if (row) {
+        planLeadIds = [row.id];
+        /* The session the plan was saved in, so its consent and events go too. */
+        if (!sessionId && row.session_id) sessionId = row.session_id;
+      }
+    }
+    /* Every session-keyed step below is skipped without one: `.eq("session_id",
+       "")` is a question nobody should be asking of a delete. */
+    const hasSession = sessionId.length > 0;
+
     /* Bounded, because a person waiting on "delete all of it" is entitled to
        an answer. A hang here reads as the request being ignored, which is the
        worst possible impression to leave on this particular button. */
-    const read = await boundedRead(
-      db.from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
-      "the deletion lookup",
-    );
+    const read = hasSession
+      ? await boundedRead(
+          db.from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
+          "the deletion lookup",
+        )
+      : done([]);
     if (!read.ok) return read;
     const ids = (("data" in read ? read.data : []) as { id: string }[]).map((r) => r.id);
 
@@ -290,10 +318,12 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
        partial erasure this is fixing. So a missing column degrades to "no
        leads found by session", the assessment-side deletion below still runs,
        and the gap is reported rather than swallowed. */
-    const bySession = await boundedRead(
-      db.from("rift_leads").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
-      "the lead lookup",
-    );
+    const bySession = hasSession
+      ? await boundedRead(
+          db.from("rift_leads").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
+          "the lead lookup",
+        )
+      : done([] as { id: string }[]);
     if (!bySession.ok) {
       if (!/session_id/.test(bySession.error)) return bySession;
       captureOpError(new Error(bySession.error), {
@@ -304,7 +334,7 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
 
     const rows = (r: { ok: boolean } | null) =>
       r && "data" in r ? (((r as { data?: { id: string }[] }).data ?? [])).map((x) => x.id) : [];
-    const leadIds = [...new Set([...rows(byAssessment), ...rows(bySession)])];
+    const leadIds = [...new Set([...rows(byAssessment), ...rows(bySession), ...planLeadIds])];
 
     let heldCount = 0;
     let heldLeadCount = 0;
@@ -432,14 +462,16 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
         db.from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids),
         "the consent record");
     }
-    await boundedWrite(
-      db.from("rift_consents").delete().eq("agent_id", agent_id).eq("session_id", sessionId),
-      "the consent record");
+    if (hasSession) {
+      await boundedWrite(
+        db.from("rift_consents").delete().eq("agent_id", agent_id).eq("session_id", sessionId),
+        "the consent record");
 
-    await boundedWrite(
-      db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId), "the events");
-    await boundedWrite(
-      db.from("rift_attributions").delete().eq("session_id", sessionId), "the attribution");
+      await boundedWrite(
+        db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId), "the events");
+      await boundedWrite(
+        db.from("rift_attributions").delete().eq("session_id", sessionId), "the attribution");
+    }
 
     /* The retention promise names five categories. Four are cleared here; the
        client record is the one that is not ours to discard, and the privacy

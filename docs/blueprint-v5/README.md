@@ -373,8 +373,12 @@ the seller journey's gate (§9).
   $24,788 · no call booked") on each lead in Today and on the person's page, with a chip per
   saved value that reopens it with their answers. It is built only from the saved plan and
   whether they booked; a lead who did neither shows no line rather than an invented one.
-  **Not built:** continuity into the client brief (LEAD-04) and anonymous progress claims
-  (LEAD-06).
+  **Not built:** continuity into the client brief (LEAD-04).
+- **Built (25 Sep), deletion and reset:** "Delete all of it" sits at the bottom of every value's
+  answer and resets this device's answers and plan (LEAD-06). The saved plan's page deletes by
+  its link, so it works from any device: before this, a person who opened their plan from the
+  email could not delete it, and sellers had no delete button at all once their readout was
+  retired. Restoring progress on another device is Save my plan; there is no other claim path.
 
 ### 5.6 Buyer questions (`/buy/start`) (Kaleb, R2)
 
@@ -715,6 +719,9 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
 - Make the path clear without revealing who is a client: the sign-in page explains that access
   starts with an invitation from the agent and what to do if no email arrives; the agent's
   journey page makes "invite the household" an obvious first step.
+- **Checked (25 Sep): built.** The sign-in page explains that access starts with an invitation and
+  what to do when nothing arrives; a journey with nobody invited opens with "First step: invite
+  the buyer".
 
 ---
 
@@ -970,6 +977,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Delete all of it on every answer and by a saved plan's link; §7.3 confirmed built |
 | 25 Sep 2026 | Lead summary in Operations from the saved plan and booking (§5.5) |
 | 25 Sep 2026 | Abroad values: can I buy, cost to buy and own, the return (§5.4); answer chips wrap on phones |
 | 25 Sep 2026 | Seller values complete: preparation, unclaimed money rebuilt, old seller pages forward (§5.3); a monthly-saving figure no longer counts as a referral |

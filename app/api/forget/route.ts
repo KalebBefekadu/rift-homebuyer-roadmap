@@ -24,17 +24,21 @@ export async function POST(req: Request) {
   if (refused) return refused;
 
   let sessionId = "";
+  let planToken = "";
   try {
     const read = await readJson(req);
     if (!read.ok) return read.res;
-    const b = read.body as { sessionId?: unknown };
+    const b = read.body as { sessionId?: unknown; planToken?: unknown };
     sessionId = typeof b.sessionId === "string" ? b.sessionId.slice(0, 64) : "";
+    /* A saved plan's link token, from the plan page: the one handle somebody
+       on another device has on their own record (lib/db/retention.ts). */
+    planToken = typeof b.planToken === "string" ? b.planToken.slice(0, 64) : "";
   } catch {
     return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
   }
-  if (!sessionId) return NextResponse.json({ ok: false, error: "sessionId required" }, { status: 400 });
+  if (!sessionId && !planToken) return NextResponse.json({ ok: false, error: "sessionId or planToken required" }, { status: 400 });
 
-  const r = await forget(sessionId);
+  const r = await forget(sessionId, { planToken: planToken || undefined });
   if (!r.ok) {
     captureOpError(new Error(r.error), { op: "retention.forget" });
     return NextResponse.json({ ok: false, error: r.error }, { status: 200 });

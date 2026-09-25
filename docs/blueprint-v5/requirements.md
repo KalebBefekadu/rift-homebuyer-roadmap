@@ -46,7 +46,7 @@ kept so tests and commits that cite them stay traceable.
 | LEAD-03 | After value, offer "Save my plan", "Ask Kaleb to review" and "Book a conversation". Saving, hiring the agent, marketing permission and transaction readiness are separate events. | Partly. Email capture, a review request and booking exist; "Save my plan" as a plan does not (v5 §5.5) |
 | LEAD-04 | Answers, preferences, source and snapshots carry into the client journey with their dates. Clients confirm only what is stale, missing, conflicting or consequential. | Partly. The readout shows when a journey starts; answers do not yet prefill the brief (v5 §5.5) |
 | LEAD-05 | First touch never changes. Agent corrections and last touch are stored separately. Campaign parameters are bounded identifiers, never financial answers, tokens, full URLs or free text. | Built |
-| LEAD-06 | Anonymous progress on one device expires and can be reset or deleted. Restoring on another device needs an authorized claim. No fingerprinting; no merging by an unverified email. | Not built as specified (v5 §5.5) |
+| LEAD-06 | Anonymous progress on one device expires and can be reset or deleted. Restoring on another device needs an authorized claim. No fingerprinting; no merging by an unverified email. | Built. Thirty days on the device; "Delete all of it" on every answer resets it; the saved plan's private link is the only way to restore elsewhere |
 | LEAD-07 | Saved readouts keep their original figures. A recalculation is a new snapshot with versions and a comparison. | Built |
 
 ## 4. Buyer search

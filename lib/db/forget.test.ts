@@ -315,3 +315,37 @@ describe("every capture surface hands over a session", () => {
     ).toEqual([]);
   });
 });
+
+/* Blueprint v5 §5.5: a saved plan is opened from an email, usually on another
+   device, where the browser session that saved it does not exist. */
+describe("a saved plan can be deleted from any device", () => {
+  const retention = readFileSync("lib/db/retention.ts", "utf8");
+  const body = retention.slice(retention.indexOf("export async function forget"));
+
+  it("finds the lead by the plan's link token", () => {
+    expect(body).toMatch(/\.eq\("plan_token", opts\.planToken\)/);
+    expect(body).toMatch(/\.\.\.planLeadIds\]/);
+  });
+
+  it("never runs a session-keyed delete without a session", () => {
+    for (const table of ["rift_consents", "rift_events", "rift_attributions"]) {
+      const at = body.indexOf(`db.from("${table}").delete().eq("agent_id", agent_id).eq("session_id"`) >= 0
+        ? body.indexOf(`db.from("${table}").delete().eq("agent_id", agent_id).eq("session_id"`)
+        : body.indexOf(`db.from("${table}").delete().eq("session_id"`);
+      expect(at, table).toBeGreaterThan(-1);
+      expect(body.slice(Math.max(0, at - 400), at), `${table} is behind hasSession`).toContain("if (hasSession)");
+    }
+  });
+
+  it("is reachable: the route takes the token and the plan page sends it", () => {
+    expect(readFileSync("app/api/forget/route.ts", "utf8")).toContain("planToken");
+    expect(readFileSync("app/(rift)/saved/[token]/page.tsx", "utf8")).toMatch(/<ForgetMe[\s\S]*?planToken=\{token\}/);
+  });
+
+  it("is at the bottom of every answer, as /privacy promises, and resets the device", () => {
+    expect(readFileSync("components/rift/value/AfterAnswer.tsx", "utf8")).toContain("<ForgetMe");
+    const btn = readFileSync("components/rift/Forget.tsx", "utf8");
+    expect(btn).toContain('"rift.answers.v1"');
+    expect(btn).toContain('"rift.plan.v1"');
+  });
+});
