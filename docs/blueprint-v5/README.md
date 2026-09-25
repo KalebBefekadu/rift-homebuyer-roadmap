@@ -344,6 +344,14 @@ the seller journey's gate (§9).
 - Fix the clipped radio circles (§4.3).
 - The Amharic for one message (what was kept after a deletion) is owed, and the rent ratios
   behind the return figure are invented estimates (§12).
+- **Built (25 Sep):** the three values, each on its own page: `/abroad/can-i-buy` ("Yes", then
+  what the status changes: the smallest down payment, the rate on top, what a lender asks for,
+  and that cash avoids it), `/abroad/cost` (cash to send and the monthly cost of owning, at the
+  recorded rate, no rent), and `/abroad/return` (asks what is missing, then renders the existing
+  bilingual readout, rent still labelled an estimate). The English landing links all three.
+  **Not done:** the landing itself is still the one long page, because it is the Amharic page
+  and the value questions have no Amharic yet (D25). Collecting a phone number here waits on
+  the same consent question as booking (D22).
 
 ### 5.5 Saving the plan and carrying it into the client side
 
@@ -908,6 +916,7 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
 | D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
 | D22 | Is a phone number required to book a call (§5.1 says yes)? If so, is the call-and-text consent required with it, or is a manual call-back about the booking allowed without it? | Today a phone is refused without consent, and the consent says it is not a condition of anything | Kaleb, with D06 on text consent |
+| D25 | Amharic for the abroad value questions and answers, written by a speaker. Until it exists the Amharic landing stays one page and the separate values are English only | §5.4 asks for the split on every abroad page; machine translation is ruled out | Kaleb |
 | D24 | The seller funnel in Operations' question editor no longer renders anywhere, since `/sell/start` forwards to the values. Keep its custom questions for a later "ask Kaleb" step, or retire the seller funnel from the editor? Rule 5 still holds either way: custom questions never reach a figure | Otherwise Kaleb can edit questions nobody sees | Kaleb |
 | D23 | The commission range shown when a seller has not agreed one (built as 4% to 6%), and whether the front door's seller example (5.5%) and the offer page's assumption (6%) should show a range too | MONEY-06: commission is negotiated, never a standard rate | Kaleb |
 
@@ -955,6 +964,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Abroad values: can I buy, cost to buy and own, the return (§5.4); answer chips wrap on phones |
 | 25 Sep 2026 | Seller values complete: preparation, unclaimed money rebuilt, old seller pages forward (§5.3); a monthly-saving figure no longer counts as a referral |
 | 25 Sep 2026 | How it works rewritten for buyers, sellers and abroad (§5.8) |
 | 25 Sep 2026 | Submit an offer and Book a call rebuilt to §5.9; the phone-for-booking question opened |

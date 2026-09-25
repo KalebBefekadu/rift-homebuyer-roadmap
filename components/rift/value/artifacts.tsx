@@ -342,3 +342,34 @@ export function ClaimTags({ items }: { items: { title: string; urgent: boolean }
     </svg>
   );
 }
+
+/**
+ * Can I buy: the smallest down payment for each residency situation, as four
+ * columns, with the reader's own filled. The heights are the lenders' floors
+ * from lib/core/abroad.ts, so the drawing and the table cannot disagree.
+ */
+export function DownFloors({ floors, mine }: { floors: { id: string; label: string; pct: number }[]; mine: string }) {
+  const W = 360, H = 200, base = 160, maxH = 120;
+  const max = Math.max(...floors.map((f) => f.pct), 1);
+  const colW = (W - 40) / floors.length;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
+      aria-label={floors.map((f) => `${f.label}: ${f.pct}% down${f.id === mine ? " (you)" : ""}`).join(", ")}>
+      <line x1="16" y1={base} x2={W - 16} y2={base} stroke="var(--ink)" strokeWidth="1.5" />
+      {floors.map((f, k) => {
+        const h = (f.pct / max) * maxH;
+        const x = 20 + k * colW + colW * 0.2;
+        const w = colW * 0.6;
+        const on = f.id === mine;
+        return (
+          <g key={f.id} className="art-rise" style={{ animationDelay: `${k * 90}ms` }}>
+            <rect x={x} y={base - h} width={w} height={h} rx="2" fill={on ? "var(--brand)" : "var(--brand-wash)"} stroke={on ? "none" : "var(--brand-line)"} />
+            <text x={x + w / 2} y={base - h - 8} textAnchor="middle" fontSize="13" className="art-num" fill="var(--ink)">{f.pct}%</text>
+            <text x={x + w / 2} y={base + 18} textAnchor="middle" fontSize="10.5" fill={on ? "var(--brand-2)" : "var(--ink-3)"} fontWeight={on ? 600 : 400}>{f.label}</text>
+            {on ? <text x={x + w / 2} y={base + 32} textAnchor="middle" fontSize="10" fill="var(--brand-2)">You</text> : null}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}

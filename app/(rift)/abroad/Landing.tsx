@@ -10,6 +10,7 @@ import { Announce } from "@/components/rift/Live";
 import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
+import { valuesFor } from "@/lib/core/values";
 import {
   abroadReturns, breakEvenDownPct, statusById, STATUSES, ASSUMPTIONS,
   type AbroadInputs, type StatusId, type Use,
@@ -333,6 +334,27 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
             {t("disc.hero")}
           </p>
         </section>
+
+        {/* The abroad values as separate ways in (Blueprint v5 §5.4). English
+            only for now: their questions are not translated, and Amharic is
+            written by someone who speaks it, never generated (§12, D25). An
+            Amharic reader keeps the page above, which already answers all
+            three in Amharic. */}
+        {!am ? (
+          <section className="shell-w sec-sm" aria-labelledby="values-h">
+            <h2 id="values-h" className="serif d3">Or take it one question at a time</h2>
+            <div className="trio mt-4">
+              {valuesFor("abroad").map((v) => (
+                <Link key={v.id} href={v.href} className="card p-5 lift value-card">
+                  <div className="kicker c-brand">{v.name}</div>
+                  <div className="t-lg w6 serif" style={{ letterSpacing: "-0.015em" }}>{v.question}</div>
+                  <p className="t-sm c-3 grow" style={{ lineHeight: 1.55 }}>{v.gives}</p>
+                  <span className="row gap-1 t-sm w6 c-brand">{v.cta}<Ico.arrowR size={14} /></span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Why here. Four reasons, and the first one is the real one. */}
         <section className="shell-w sec">

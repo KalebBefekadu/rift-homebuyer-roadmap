@@ -51,7 +51,10 @@ export function BasedOn({ def, answers }: { def: ValueDef; answers: Answers }) {
     <div className="row wrap gap-2 mt-4" aria-label="Based on your answers">
       <span className="t-sm c-4">Based on</span>
       {def.asks.map((k: InputKey) => (
-        <Link key={k} href={`${def.href}?${q}&ask=${k}`} className="chip" style={{ height: 28, padding: "0 10px", fontSize: 12.5 }}
+        <Link key={k} href={`${def.href}?${q}&ask=${k}`} className="chip"
+          /* Wraps: a long answer ("I have an ITIN, not a Social Security
+             number") pushed a fixed-height chip past the edge of a phone. */
+          style={{ minHeight: 28, height: "auto", padding: "4px 10px", fontSize: 12.5, whiteSpace: "normal", maxWidth: "100%", lineHeight: 1.35 }}
           aria-label={`${ASK_SHORT[k]}: ${answerLabel(k, answers[k])}. Change it`}>
           <span className="c-4">{ASK_SHORT[k]}</span> {answerLabel(k, answers[k])}
           <Ico.chevD size={11} className="c-4" />

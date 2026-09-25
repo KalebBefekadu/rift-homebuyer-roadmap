@@ -119,11 +119,13 @@ export const VALUES: ValueDef[] = [
 
   /* Abroad, D20: can I buy, what it costs, the return. */
   {
-    id: "eligibility", side: "abroad", href: "/abroad", name: "Can I buy in the US",
+    id: "eligibility", side: "abroad", href: "/abroad/can-i-buy", name: "Can I buy in the US",
     question: "Can I buy a home in the United States from where I live?",
     gives: "What your residency status means for owning, financing and closing.",
     cta: "Check if I can buy",
-    asks: ["status"],
+    /* Use too: the smallest down payment a lender takes depends on whether
+       the home is lived in or rented out. */
+    asks: ["status", "use"],
     live: true,
   },
   {
@@ -132,14 +134,16 @@ export const VALUES: ValueDef[] = [
     gives: "The cash you would send, and what owning costs each year.",
     cta: "See what it would cost",
     asks: ["status", "use", "price"],
-    live: false,
+    live: true,
   },
   {
-    id: "abroad-return", side: "abroad", href: "/abroad/results", name: "The return",
+    id: "abroad-return", side: "abroad", href: "/abroad/return", name: "The return",
     question: "What would it earn if I rented it out?",
     gives: "Rent, costs and what is left, marked as an estimate.",
     cta: "See the return",
-    asks: ["status", "use", "price"],
+    /* No "use": a return only exists if it is rented. County, because the
+       rent estimate is set county by county. */
+    asks: ["status", "price", "county"],
     live: true,
   },
 ];

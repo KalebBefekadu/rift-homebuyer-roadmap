@@ -20,6 +20,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/buy`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/abroad`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/abroad/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${base}/abroad/can-i-buy`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/abroad/cost`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     /* The assessment itself. Absent until a drift guard went looking, which
        meant the two pages the entire funnel leads into: the ones a person
        searching "first time home buyer georgia help" should land on: were the
