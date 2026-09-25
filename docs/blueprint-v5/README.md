@@ -408,6 +408,11 @@ the seller journey's gate (§9).
   the value Rift gives.
 - The only money message: **you pay Rift nothing**; the only fees are the ones any transaction
   has, such as agent fees. No other talk about money.
+- **Built (25 Sep):** all three rebuilt on one layout (`components/rift/site/HowItWorks.tsx`):
+  the steps from first question to keys, the values available today (from the catalogue), the
+  one money line, one call to action, and a link to `/privacy` for what is kept. The abroad page
+  keeps its English-only notice, names tax and ownership questions with the adviser who answers
+  them, and labels the return as an estimate.
 
 ### 5.9 Submit an offer and book a call
 
@@ -940,6 +945,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | How it works rewritten for buyers, sellers and abroad (§5.8) |
 | 25 Sep 2026 | Submit an offer and Book a call rebuilt to §5.9; the phone-for-booking question opened |
 | 25 Sep 2026 | Seller values, first slice: `/sell` landing, net proceeds and selling costs (§5.3) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
