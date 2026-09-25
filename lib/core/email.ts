@@ -395,3 +395,37 @@ export function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c));
 }
+
+export interface SavedPlanEmail {
+  to: string;
+  name?: string;
+  /** The private page that reopens the plan. */
+  planUrl: string;
+  values: { label: string; figure: string }[];
+  review: boolean;
+}
+
+/**
+ * "Save my plan" (Blueprint v5 §5.5): the link that reopens the plan on any
+ * device, and the figures as they were shown. Sent once, because they asked
+ * for it; the follow-up rules that apply to every lead take it from there.
+ */
+export function buildSavedPlan(p: SavedPlanEmail): { subject: string; html: string } {
+  const rows = p.values.map((v) =>
+    `<tr><td style="padding:6px 0;color:#555">${escapeHtml(v.label)}</td><td style="padding:6px 0;text-align:right;font-weight:600">${escapeHtml(v.figure)}</td></tr>`).join("");
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">${p.name ? `${escapeHtml(p.name)},` : "Hello,"}</p>
+  <p style="font-size:15px">${p.review
+    ? "Kaleb has your numbers and will reply with what he would do next, usually the same business day. Here is your plan, saved."
+    : "Here is your plan, saved. The link opens it on any device."}</p>
+  ${rows ? `<table style="width:100%;border-collapse:collapse;font-size:15px;margin:8px 0 16px">${rows}</table>` : ""}
+  <p style="font-size:15px"><a href="${p.planUrl}" style="color:#c2351e">Open my plan</a></p>
+  <p style="font-size:12px;color:#888">
+    The figures are as they were on the day you saved them; opening one works it out again with
+    today's rates. Anyone with the link can open the plan, so keep it to yourself.
+    <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a>: one click, and it stops everything.
+  </p>
+</div>`.trim();
+  return { subject: p.review ? "Kaleb has your numbers" : "Your Rift plan", html };
+}

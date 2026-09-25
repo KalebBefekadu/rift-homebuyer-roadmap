@@ -49,7 +49,7 @@ const SECURITY_HEADERS = [
  *  and a buyer's signed-in pages name their journey in the path. */
 const PRIVATE_PAGES = [
   "/r/:token*", "/buy/results", "/sell/results", "/abroad/results", "/book",
-  "/plan/:token*", "/app/:path*", "/app",
+  "/plan/:token*", "/app/:path*", "/app", "/saved/:token*",
 ];
 
 const nextConfig: NextConfig = {

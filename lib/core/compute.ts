@@ -362,7 +362,7 @@ export function netProceeds(s: SellerInputs) {
       { label: "Mortgage payoff", value: money(s.payoff) },
       { label: "Commission", value: pct(s.commissionPct) },
       { label: "Concessions", value: pct(s.concessionsPct) },
-      { label: "Transfer tax", value: "$1.00 per $500 of price (Georgia)" },
+      { label: "Transfer tax", value: "$1.00 per $1,000 of price (Georgia)" },
       { label: "Repairs and moving", value: `${money(s.repairs)} and ${money(s.moving)}` },
     ],
     couldBeWrong:

@@ -22,6 +22,8 @@ export const EVENT_NAMES = [
   "question_answer", "assessment_abandon", "assessment_resume", "readout_view",
   "email_capture", "share_sent", "booking_start", "booking_complete",
   "review_requested", "data_deleted",
+  /* Blueprint v5 §5.1: one value (small tool) opened, and its answer shown. */
+  "value_view", "value_answer",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
@@ -70,6 +72,8 @@ export const ALLOWED_META = [
   /* Counts and flags about what the product did, not what the person said. */
   "answered", "matched", "source", "band", "prefilled", "live",
   "hasTopic", "delivered", "consent", "slot",
+  /* Which value (small tool), by id. Never an answer to it. */
+  "tool",
 ] as const;
 
 const ALLOWED = new Set<string>(ALLOWED_META);

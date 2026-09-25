@@ -60,8 +60,8 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildResume, buildNewLead, buildOfferChosen,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail,
+  buildReadout, buildTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan,
+  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
@@ -90,6 +90,16 @@ export async function sendReadout(r: ReadoutEmail): Promise<SendResult> {
     htmlContent: built.html,
     tags: ["readout"],
   }, "email.readout");
+}
+
+export async function sendSavedPlan(p: SavedPlanEmail): Promise<SendResult> {
+  const built = buildSavedPlan(p);
+  return send({
+    to: [{ email: p.to, ...(p.name ? { name: p.name } : {}) }],
+    subject: built.subject,
+    htmlContent: built.html,
+    tags: ["plan"],
+  }, "email.plan");
 }
 
 export async function sendTouch(t: TouchEmail): Promise<SendResult> {

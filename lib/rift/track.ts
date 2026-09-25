@@ -24,7 +24,8 @@ export type EventName =
   | "landing_view" | "hero_answer" | "assessment_start" | "question_view"
   | "question_answer" | "assessment_abandon" | "assessment_resume" | "readout_view"
   | "email_capture" | "share_sent" | "booking_start" | "booking_complete"
-  | "review_requested" | "data_deleted";
+  | "review_requested" | "data_deleted"
+  | "value_view" | "value_answer";
 
 export interface TrackInput {
   name: EventName;

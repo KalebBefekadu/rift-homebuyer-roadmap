@@ -1,186 +1,136 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
 import { AgentSchema } from "@/components/rift/Agent";
-import {
-  money, cashToClose, netProceeds, BUYER_DEFAULTS, SELLER_DEFAULTS,
-} from "@/lib/core/compute";
+import { SiteHeader } from "@/components/rift/site/SiteHeader";
+import { SiteFooter } from "@/components/rift/site/SiteFooter";
+import { CashStack, ProceedsFlow } from "@/components/rift/value/artifacts";
+import { money, cashToClose, netProceeds, BUYER_DEFAULTS, SELLER_DEFAULTS } from "@/lib/core/compute";
+import { valuesFor } from "@/lib/core/values";
 
 export const metadata: Metadata = {
   title: "Know the real number before you talk to anyone",
   description:
-    "Buying or selling a home in Georgia. A complete, computed readout of what it actually takes. Free, no account, and yours to keep whether or not you ever speak to us.",
+    "Buying or selling a home in Georgia: what it actually takes, worked out from your own numbers. Free, and yours to keep.",
 };
 
 /* Both figures are arithmetic on published Georgia rates, so a day is safe. */
 export const revalidate = 86400;
 
 /**
- * The front door.
+ * The front door (Blueprint v5 §5.7, Kaleb R1).
  *
- * Until now `/` served the development index: a page that opened with "this is
- * the development root, not the product" and linked to the specification. Every
- * person who typed the bare domain landed on it.
- *
- * It asks one question, because there is exactly one thing the product needs to
- * know before it can be useful, and answering it is the whole navigation. The
- * third door is for somebody who is doing neither: the exemptions and appeal
- * deadlines are worth money to a homeowner who never moves, and putting that
- * where it asks for nothing is the most credible thing on the page.
- *
- * Both figures are computed from the same engine the readouts use, rather than
- * written into the copy, so the number here cannot drift from the number two
- * clicks later.
+ * Buying and selling side by side, each with its own drawing built from the
+ * same engine the values use, so the number here cannot drift from the number
+ * one click later. The three "trust points" are gone ("just useless"); what
+ * replaces them is the list of questions each side can answer, which says
+ * what this is by showing it. "No account" is said once, quietly (principle 2).
  */
 export default function HomePage() {
   const buy = cashToClose({ ...BUYER_DEFAULTS, assistance: 0 });
   const sell = netProceeds(SELLER_DEFAULTS);
+  const sellParts = [
+    { label: "Loan payoff", amount: SELLER_DEFAULTS.payoff },
+    { label: "Selling costs", amount: sell.totalCosts - SELLER_DEFAULTS.payoff },
+  ];
 
   return (
     <div className="buy">
       <AgentSchema />
-      <header style={{
-        position: "sticky", top: 0, zIndex: 40, background: "rgba(251,250,248,.86)",
-        backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-2)",
-      }}>
-        <div className="shell-w between" style={{ height: 58 }}>
-          <Link href="/" className="row gap-2">
-            <Mark size={20} />
-            <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
-          </Link>
-          <div className="row gap-3">
-            <Link href="/buy/how" className="t-sm c-2 hide-sm">How it works</Link>
-            <Link href="/buy/programs" className="t-sm c-2 hide-sm">Georgia programs</Link>
-          </div>
-        </div>
-      </header>
+      <SiteHeader side="home" />
 
-      <section className="shell-w" style={{ paddingTop: "clamp(44px,7vw,96px)" }}>
-        <div style={{ maxWidth: 780 }}>
-          <h1 className="serif" style={{ fontSize: "clamp(34px,5.4vw,64px)", lineHeight: 1.03, letterSpacing: "-0.028em" }}>
+      <main className="shell-w">
+        <section className="sec ctr">
+          <h1 className="serif d1" style={{ maxWidth: 860, margin: "0 auto" }}>
             Know the real number before you talk to anyone.
           </h1>
-          <p className="t-lg c-2" style={{ marginTop: 20, lineHeight: 1.6, maxWidth: 660 }}>
-            Most people find out what a move actually costs in the last three weeks, from a
-            settlement statement. This works it out first: free, with no account, and yours to
-            keep whether or not you ever speak to us.
+          <p className="lede mt-4 measure">
+            Most people find out what a move really costs three weeks before closing. Here you can
+            work it out first, from your own numbers, in a couple of minutes.
           </p>
-        </div>
+        </section>
 
-        <div className="grid-2 gap-4" style={{ marginTop: 38, alignItems: "stretch" }}>
+        <section className="sec-sm pair" aria-label="Buying or selling">
           <Door
-            href="/buy/start"
+            tone="buy"
             kicker="I'm buying"
             title="The down payment is not the number."
             figure={money(buy.total)}
-            caption={`is what has to be in an account on a ${money(BUYER_DEFAULTS.price)} home, not the ${money(buy.down)} down payment.`}
-            cta="See what buying takes"
-            secondary={{ href: "/buy", label: "How this works for buyers" }}
+            caption={`is the cash a ${money(BUYER_DEFAULTS.price)} home in Georgia takes, not the ${money(buy.down)} down payment.`}
+            art={<CashStack lines={buy.lines} total={buy.total} down={buy.down} />}
+            href="/buy"
+            cta="Start with buying"
+            questions={valuesFor("buy").map((v) => ({ href: v.href, label: v.question }))}
           />
           <Door
-            href="/sell/start"
-            kicker="I'm selling"
-            title="The list price is not the number either."
-            figure={money(sell.net)}
-            caption={`is what reaches you on a ${money(SELLER_DEFAULTS.price)} sale, after the payoff and the cost of selling.`}
-            cta="See what selling leaves you"
-            secondary={{ href: "/sell", label: "How this works for sellers" }}
             tone="sell"
+            kicker="I'm selling"
+            title="The sale price is not the number either."
+            figure={money(sell.net)}
+            caption={`is what reaches you from a ${money(SELLER_DEFAULTS.price)} sale, after the loan payoff and the cost of selling.`}
+            art={<ProceedsFlow price={SELLER_DEFAULTS.price} parts={sellParts} net={sell.net} />}
+            href="/sell"
+            cta="Start with selling"
+            questions={valuesFor("sell").map((v) => ({ href: v.href, label: v.question }))}
           />
-        </div>
-      </section>
+        </section>
 
-      <section className="shell-w sec">
-        <div className="card p-5 between wrap gap-3">
-          <div style={{ maxWidth: 560 }}>
-            <div className="t-lg w6 serif">Doing neither, and just want to stop overpaying?</div>
-            <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              Homestead and senior exemptions, assessment appeals, and the capital gains
-              exclusion. Georgia homeowners miss these every year whether or not they ever move.
-              This asks for nothing at all.
+        <section className="sec pair" aria-label="Also here">
+          <Link href="/sell/unclaimed" className="card p-5 lift value-card sell">
+            <div className="kicker c-brand">Own a home in Georgia?</div>
+            <div className="t-xl serif">You may be paying more tax than you need to.</div>
+            <p className="t-sm c-3 grow" style={{ lineHeight: 1.6 }}>
+              Homestead and senior exemptions, and assessment appeals, whether or not you ever move.
             </p>
-          </div>
-          <Link href="/sell/unclaimed" className="btn btn-p">Check unclaimed value</Link>
-        </div>
-      </section>
-
-      {/* A fourth door, for people who are not in Georgia at all. They arrive
-          believing they need a visa to own here, so the door says otherwise
-          rather than describing a product. */}
-      <section className="shell-w sec">
-        <div className="card p-5 between wrap gap-3">
-          <div style={{ maxWidth: 560 }}>
-            <div className="t-lg w6 serif">Living outside the United States?</div>
-            <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              You don&apos;t need citizenship, a green card, or a visa to own property in
-              Georgia, and you don&apos;t need to come here to close. See what you would
-              actually have to send, and what it would rent for.
+            <span className="row gap-1 t-sm w6 c-brand">Check what I may be missing<Ico.arrowR size={14} /></span>
+          </Link>
+          <Link href="/abroad" className="card p-5 lift value-card abroad">
+            <div className="kicker c-brand">Living outside the United States?</div>
+            <div className="t-xl serif">You can own a home in the United States.</div>
+            <p className="t-sm c-3 grow" style={{ lineHeight: 1.6 }}>
+              You don&apos;t need citizenship, a green card, or a visa to own property in the United
+              States, and you don&apos;t need to be here to close.
             </p>
-          </div>
-          <Link href="/abroad" className="btn btn-p">Buying from abroad</Link>
-        </div>
-      </section>
+            <span className="row gap-1 t-sm w6 c-brand">Check if I can buy<Ico.arrowR size={14} /></span>
+          </Link>
+        </section>
 
-      <section className="shell-w sec">
-        <div className="grid-3 gap-3">
-          {[
-            { i: <Ico.chart size={18} />, t: "Calculated, not written", d: "Every figure comes from your answers and published Georgia terms. Nothing here was typed by a person or produced by a language model." },
-            { i: <Ico.shield size={18} />, t: "Nothing is held back", d: "There is no gated second half. You get the whole readout before anyone asks for an email address, and it keeps working if you never give one." },
-            { i: <Ico.users size={18} />, t: "No call unless you ask", d: "No phone number is required, and nothing here commits you to working with us. Kaleb is paid a commission at closing, or not at all." },
-          ].map((x) => (
-            <div key={x.t} className="card p-5">
-              <div className="c-brand">{x.i}</div>
-              <div className="t-md w6" style={{ marginTop: 10 }}>{x.t}</div>
-              <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>{x.d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+        <p className="t-sm c-4 ctr sec-sm">Free to use, with nothing to sign up for. Kaleb is paid a commission only if you buy or sell with him.</p>
+      </main>
 
-      <footer className="shell-w" style={{ paddingTop: 34, paddingBottom: 60, borderTop: "1px solid var(--line-2)", marginTop: 32 }}>
-        <div className="row gap-3 wrap">
-          <Link href="/buy" className="t-sm c-3">For buyers</Link>
-          <Link href="/sell" className="t-sm c-3">For sellers</Link>
-          <Link href="/buy/programs" className="t-sm c-3">Georgia programs</Link>
-          <Link href="/buy/how" className="t-sm c-3">How this works</Link>
-          <Link href="/privacy" className="t-sm c-3">What we keep</Link>
-        </div>
-        <p className="t-xs c-4" style={{ marginTop: 14, lineHeight: 1.6, maxWidth: 660 }}>
-          Prepared by Rift, guided by Kaleb Befekadu, Peachtree Cardinal, Georgia. Every figure is
-          a planning estimate, not a lending commitment, approval, or valuation. Not tax or legal
-          advice.
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
 
-function Door({ href, kicker, title, figure, caption, cta, secondary, tone = "buy" }: {
-  href: string;
+function Door({ tone, kicker, title, figure, caption, art, href, cta, questions }: {
+  tone: "buy" | "sell";
   kicker: string;
   title: string;
   figure: string;
   caption: string;
+  art: React.ReactNode;
+  href: string;
   cta: string;
-  secondary: { href: string; label: string };
-  tone?: "buy" | "sell";
+  questions: { href: string; label: string }[];
 }) {
   return (
-    <div className={`card p-5 ${tone}`} style={{ display: "flex", flexDirection: "column" }}>
+    <article className={`card p-6 ${tone}`} style={{ display: "flex", flexDirection: "column" }}>
       <div className="kicker c-brand">{kicker}</div>
-      <div className="t-lg w6 serif" style={{ marginTop: 10, letterSpacing: "-0.018em", lineHeight: 1.2 }}>
-        {title}
-      </div>
-      <div className="num" style={{ fontSize: "clamp(30px,4vw,42px)", marginTop: 18, color: "var(--brand-2)" }}>
-        {figure}
-      </div>
-      <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, flexGrow: 1 }}>{caption}</p>
-      <Link href={href} className="btn btn-brand btn-lg" style={{ width: "100%", marginTop: 18 }}>
-        {cta}
-      </Link>
-      <Link href={secondary.href} className="t-sm c-3" style={{ marginTop: 12, textAlign: "center" }}>
-        {secondary.label}
-      </Link>
-    </div>
+      <h2 className="serif t-xl mt-2" style={{ fontSize: 26, lineHeight: 1.15 }}>{title}</h2>
+      <figure className="mt-4" style={{ aspectRatio: "360 / 300", display: "grid", alignItems: "center" }}>{art}</figure>
+      <div className="num mt-3" style={{ fontSize: "clamp(30px,4vw,40px)", color: "var(--brand-2)" }}>{figure}</div>
+      <p className="t-sm c-3 mt-1" style={{ lineHeight: 1.6 }}>{caption}</p>
+      <ul className="col mt-4" style={{ flexGrow: 1 }}>
+        {questions.map((q) => (
+          <li key={q.href} style={{ borderTop: "1px solid var(--line-3)" }}>
+            <Link href={q.href} className="between t-sm" style={{ padding: "10px 0" }}>
+              <span className="c-2">{q.label}</span><Ico.chevR size={13} className="c-4" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link href={href} className="btn btn-brand btn-lg mt-4" style={{ width: "100%" }}>{cta}</Link>
+    </article>
   );
 }

@@ -24,6 +24,7 @@ export default function robots(): MetadataRoute.Robots {
            accident rather than by anybody deciding it. */
         allow: [
           "/", "/abroad", "/abroad/how", "/buy", "/buy/start", "/buy/programs", "/buy/how",
+          "/buy/assistance", "/buy/cash-to-close", "/buy/monthly-cost", "/buy/timeline",
           "/sell", "/sell/start", "/sell/how", "/sell/unclaimed", "/offer", "/privacy",
         ],
         /* /dev is the development index. It is not secret, but it describes what
@@ -35,7 +36,7 @@ export default function robots(): MetadataRoute.Robots {
            outside the country was the one without the protection. */
         disallow: [
           "/r/", "/buy/results", "/sell/results", "/abroad/results",
-          "/book", "/operations", "/studio", "/api/", "/prototype/", "/dev", "/plan/", "/app",
+          "/book", "/operations", "/studio", "/api/", "/prototype/", "/dev", "/plan/", "/app", "/saved/",
         ],
       },
     ],

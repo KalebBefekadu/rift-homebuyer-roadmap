@@ -21,8 +21,10 @@ import { SELLER_DEFAULTS, netProceeds } from "./compute";
  * not.
  */
 
+/* The buyer landing no longer answers in place: since Blueprint v5 it offers
+   the values as separate pages, and each value page is a server render with
+   nothing that changes under the reader. */
 const LANDINGS = [
-  "app/(rift)/buy/Landing.tsx",
   "app/(rift)/sell/Landing.tsx",
   "app/(rift)/abroad/Landing.tsx",
 ] as const;
