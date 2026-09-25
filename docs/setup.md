@@ -269,11 +269,14 @@ Supabase migrations apply with `scripts/apply-sql-migration.sh`. `scripts/bootst
 provisions a project from scratch — useful for a staging environment, and worth having one
 before there is real client data in production.
 
-**Without a connection string**, `output/pending-migrations.sql` is every migration the
-production database is still owed, concatenated in order, ready to paste into the Supabase
-SQL editor. It is idempotent — running it twice is safe — and it has been applied twice in a
-row against a copy of the production schema. Regenerate it by concatenating whichever files
-under `supabase/migrations/` have not been applied; delete it once they have.
+**Without a connection string**, `output/pending-migrations.sql` is every Rift migration in
+order, as one file to paste into the Supabase SQL editor (SQL Editor, New query, paste, Run).
+It is safe whatever the database already has, and safe to run twice: most migrations re-run
+cleanly, and the ones that cannot run only when the first table they create is missing. Nobody
+has to know which migrations production is owed, which is the point, because there is no
+migrations table to ask. Regenerate it with `npm run rift:pending-migrations` after adding a
+migration; `lib/db/pending-migrations.test.ts` fails if it is stale, and applies it from every
+starting point to prove it lands on the same schema as running the migrations in order.
 
 ## 13. Repository map
 

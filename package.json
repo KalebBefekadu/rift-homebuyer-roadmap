@@ -14,6 +14,7 @@
     "brevo:ensure-attributes": "node --env-file=.env.local scripts/ensure-brevo-attributes.mjs",
     "rift:bootstrap": "node --env-file=.env.local scripts/bootstrap-rift.mjs",
     "rift:seed-programs": "node scripts/generate-program-seed.mjs",
+    "rift:pending-migrations": "node scripts/pending-migrations.mjs",
     "rift:rate": "node --env-file=.env.local scripts/record-rate.mjs",
     "verify:queries": "node scripts/verify-queries.mjs",
     "verify": "tsc --noEmit && next lint && vitest run && next build",
