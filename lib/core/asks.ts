@@ -179,6 +179,15 @@ export const ASKS: Record<InputKey, AskDef> = {
     ],
     fallback: "none",
   },
+  debts: {
+    key: "debts", param: "dt", type: "money",
+    title: "What do your monthly debt payments add up to?",
+    why: "Car, student loans, credit card minimums, child support. Not rent, and not living costs. Only you see this.",
+    slider: { min: 0, max: 5_000, step: 25 },
+    limits: { min: 0, max: 100_000 },
+    unitLabel: "Each month",
+    fallback: 0,
+  },
   interior: {
     key: "interior", param: "in", type: "choice",
     title: "How does the inside of the home look?",
@@ -320,5 +329,5 @@ export const ASK_SHORT: Record<InputKey, string> = {
   savings: "Saved", monthlySaving: "Each month", income: "Income", household: "Household",
   credit: "Credit", occupation: "Work", loanType: "Loan", payoff: "Still owed", commission: "Commission",
   yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older", status: "Status", use: "Use",
-  interior: "Inside", kitchen: "Kitchen and baths", systems: "Roof and systems",
+  debts: "Debts", interior: "Inside", kitchen: "Kitchen and baths", systems: "Roof and systems",
 };

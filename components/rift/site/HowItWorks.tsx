@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
-import { valuesFor, type ValueSide } from "@/lib/core/values";
+import { waysIn, type ValueSide } from "@/lib/core/values";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
 
@@ -41,7 +41,7 @@ export function HowItWorks({ side, kicker, title, lede, steps, notice, cta, tran
   /** "purchase" or "sale", for the money line. */
   transaction: "purchase" | "sale";
 }) {
-  const values = valuesFor(side);
+  const values = waysIn(side);
   return (
     <div className={side}>
       <SiteHeader side={side} current={`/${side}/how`} action={{ href: `/book?v=${side}`, label: "Book a call" }} />

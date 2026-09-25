@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { matchForVisitor } from "@/lib/db/match";
 import { money, cashToClose, BUYER_DEFAULTS } from "@/lib/core/compute";
-import { valuesFor } from "@/lib/core/values";
+import { waysIn } from "@/lib/core/values";
 import { Ico } from "@/components/rift/icons";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
@@ -33,7 +33,7 @@ const ICON = { assistance: Ico.spark, cash: Ico.wallet, monthly: Ico.cal, timeli
 export default async function BuyLanding() {
   const { match } = await matchForVisitor("DeKalb", true);
   const cash = cashToClose({ ...BUYER_DEFAULTS, assistance: 0 });
-  const values = valuesFor("buy");
+  const values = waysIn("buy");
 
   return (
     <div className="buy">

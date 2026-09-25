@@ -295,6 +295,12 @@ assistance engine powers it); 2. Cash to close (the site's core idea: the down p
 number); 3. Monthly cost; 4. Timeline. Affordability follows once its model is tested; the rest
 come later.
 
+**Built (25 Sep):** "How much home fits my budget?" (`/buy/afford`, MONEY-05: comfortable and
+stretch planning scenarios from a tested model) and "What should I ask a lender?"
+(`/buy/lender-questions`: questions for their down payment, credit and first-time status, no
+answers supplied). Both are offered after an answer and in the footer; the landing keeps D20's four
+as its ways in, so the grid stays whole.
+
 ### 5.3 Seller values (Kaleb, R2: same lens as the buyer side)
 
 | Value | Question | Inputs | Answer |
@@ -1013,6 +1019,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Buyer values: how much home fits (MONEY-05) and lender questions (§5.2) |
 | 25 Sep 2026 | No-match state: which must-haves limit the search (SEARCH-09) |
 | 25 Sep 2026 | Move-in handoff steps (B19) |
 | 25 Sep 2026 | Read-only summary links for someone outside the household (ACCESS-02) |

@@ -22,7 +22,7 @@ export type InputKey =
   | "county" | "ownership" | "price" | "downPct" | "savings" | "monthlySaving"
   | "income" | "household" | "credit" | "occupation" | "loanType"
   | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
-  | "interior" | "kitchen" | "systems"
+  | "interior" | "kitchen" | "systems" | "debts"
   | "status" | "use";
 
 export interface ValueDef {
@@ -42,6 +42,8 @@ export interface ValueDef {
   asks: InputKey[];
   /** False until the page exists. A value that is not built is never linked. */
   live: boolean;
+  /** False for a value offered only after another answer, not as a way in. */
+  landing?: boolean;
 }
 
 export const VALUES: ValueDef[] = [
@@ -77,6 +79,30 @@ export const VALUES: ValueDef[] = [
     cta: "See when I could buy",
     asks: ["price", "downPct", "savings", "monthlySaving"],
     live: true,
+  },
+
+  /* MONEY-05: its own tested model (lib/core/afford.ts), a planning
+     scenario with its disclosures. Not a way in on the landing (see below). */
+  {
+    id: "afford", side: "buy", href: "/buy/afford", name: "How much home fits",
+    question: "How much home fits my budget?",
+    gives: "A comfortable price and a stretch price, from your income and debts, as a planning range.",
+    cta: "See what fits me",
+    asks: ["income", "debts", "downPct"],
+    live: true,
+    landing: false,
+  },
+  /* Not one of D20's first four, so not a way in on the landing, where four
+     cards keep the grid whole (§4.1). Offered after an answer, where it
+     usually needs no more questions, and listed in the footer. */
+  {
+    id: "lender", side: "buy", href: "/buy/lender-questions", name: "Lender questions",
+    question: "What should I ask a lender?",
+    gives: "The questions to ask, written for your down payment, credit and first-time status.",
+    cta: "See my lender questions",
+    asks: ["downPct", "credit", "ownership"],
+    live: true,
+    landing: false,
   },
 
   /* Seller, D20: net proceeds, unclaimed money, selling costs, preparation. */
@@ -149,6 +175,9 @@ export const VALUES: ValueDef[] = [
 ];
 
 export const valuesFor = (side: ValueSide) => VALUES.filter((v) => v.side === side && v.live);
+
+/** The values offered as ways in on a landing (§5.1). */
+export const waysIn = (side: ValueSide) => valuesFor(side).filter((v) => v.landing !== false);
 
 export const valueById = (id: string) => VALUES.find((v) => v.id === id);
 

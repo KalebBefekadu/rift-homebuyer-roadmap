@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { money, range, sellerNet, SELLER_DEFAULTS } from "@/lib/core/compute";
-import { valuesFor } from "@/lib/core/values";
+import { waysIn } from "@/lib/core/values";
 import { Ico } from "@/components/rift/icons";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
@@ -32,7 +32,7 @@ const ICON = { proceeds: Ico.wallet, unclaimed: Ico.gift, costs: Ico.scale, prep
  * landing that picked one rate would be quoting a standard rate (MONEY-06).
  */
 export default function SellLanding() {
-  const values = valuesFor("sell");
+  const values = waysIn("sell");
   const r = sellerNet(SELLER_DEFAULTS.price, SELLER_DEFAULTS.payoff, null);
   /* The example is fixed and positive today, but it reads the defaults, and
      a default changed to a sale below the payoff must not print a debt under

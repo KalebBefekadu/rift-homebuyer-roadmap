@@ -34,6 +34,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/buy/cash-to-close`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/buy/monthly-cost`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/buy/timeline`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/buy/afford`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/buy/lender-questions`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/sell/proceeds`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/sell/costs`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/sell/prepare`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },

@@ -373,3 +373,52 @@ export function DownFloors({ floors, mine }: { floors: { id: string; label: stri
     </svg>
   );
 }
+
+/** Lender questions: a clipboard, one line per question, sized by the count. */
+export function QuestionSheet({ count }: { count: number }) {
+  const W = 360, H = 220, x = 110, w = 140, top = 30;
+  const rows = Math.min(count, 10);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img" aria-label={`${count} questions to ask a lender.`}>
+      <rect x={x} y={top} width={w} height={H - top - 12} rx="6" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1.5" />
+      <rect x={x + w / 2 - 22} y={top - 8} width="44" height="16" rx="4" fill="var(--ink)" />
+      {Array.from({ length: rows }, (_, k) => {
+        const y = top + 26 + k * 16;
+        return (
+          <g key={k} className="art-rise" style={{ animationDelay: `${k * 60}ms` }}>
+            <circle cx={x + 16} cy={y} r="3" fill={k < 3 ? "var(--brand)" : "var(--brand-line)"} />
+            <rect x={x + 26} y={y - 3} width={w - 44 - (k % 3) * 14} height="6" rx="3" fill="var(--sunk)" />
+          </g>
+        );
+      })}
+      <text x={x + w + 16} y={top + 30} fontSize="28" className="art-num" fill="var(--ink)">{count}</text>
+      <text x={x + w + 16} y={top + 48} fontSize="11.5" fill="var(--ink-3)">to ask</text>
+    </svg>
+  );
+}
+
+/** How much home fits: one line of prices, the comfortable and stretch marks on it. */
+export function AffordBand({ comfortable, stretch }: { comfortable: number | null; stretch: number | null }) {
+  const W = 360, H = 170, x0 = 24, x1 = W - 24, y = 96;
+  const top = Math.max(stretch ?? 0, comfortable ?? 0, 1) * 1.15;
+  const at = (p: number) => x0 + (p / top) * (x1 - x0);
+  const house = (px: number, fill: string, label: string, value: number, k: number) => (
+    <g className="art-rise" style={{ animationDelay: `${k * 120}ms` }}>
+      <path d={`M${px - 16} ${y - 22} L${px} ${y - 38} L${px + 16} ${y - 22} Z`} fill={fill} />
+      <rect x={px - 12} y={y - 22} width="24" height="22" fill={fill} />
+      <line x1={px} y1={y} x2={px} y2={y + 10} stroke="var(--ink)" />
+      <text x={px} y={y + 26} textAnchor="middle" fontSize="12.5" className="art-num" fill="var(--ink)">{short(value)}</text>
+      <text x={px} y={y + 42} textAnchor="middle" fontSize="11" fill="var(--ink-3)">{label}</text>
+    </g>
+  );
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
+      aria-label={comfortable === null && stretch === null ? "No price fits these ratios."
+        : `Comfortable ${comfortable === null ? "none" : money(comfortable)}, stretch ${stretch === null ? "none" : money(stretch)}.`}>
+      <line x1={x0} y1={y} x2={x1} y2={y} stroke="var(--line)" strokeWidth="2" />
+      {comfortable !== null && stretch !== null ? <rect x={at(comfortable)} y={y - 3} width={Math.max(at(stretch) - at(comfortable), 2)} height="6" rx="3" fill="var(--brand-wash)" stroke="var(--brand-line)" /> : null}
+      {comfortable !== null ? house(at(comfortable), "var(--brand)", "Comfortable", comfortable, 0) : null}
+      {stretch !== null ? house(at(stretch), "var(--brand-line)", "Stretch", stretch, 1) : null}
+    </svg>
+  );
+}

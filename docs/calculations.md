@@ -127,6 +127,17 @@ home being told *"you already have the cash to close."* It is the single most da
 this product could say to a person, and the arithmetic does it by default unless something
 stops it.
 
+## How much home fits (MONEY-05)
+
+`affordability()` in `lib/core/afford.ts` gives two planning scenarios from gross income, monthly
+debts, down payment and the recorded rate. **Comfortable:** housing at most 28% of gross monthly
+income and all debts at most 36%. **Stretch:** all debts at most 43%. These are common guideline
+ratios, not a lender's rule, and the page says so. `priceForMonthly()` solves the highest price
+whose `monthlyCost()` stays at or under the scenario's monthly figure (bisection, rounded down to
+$1,000, capped at $5,000,000), so this value and the monthly-cost value agree about what any price
+costs. When debts already use up a scenario's share, the answer is no price, said. HOA dues and
+the cash to close are not counted.
+
 ## Seller
 
 `netProceeds(s)` subtracts commission, concessions, Georgia transfer tax
