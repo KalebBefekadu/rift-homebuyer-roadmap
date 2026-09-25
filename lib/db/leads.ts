@@ -9,6 +9,7 @@ import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
 import { currentVersionId } from "./funnel";
 import { firstRefFor, resolveReferrer } from "./attribution";
+import { leadSummary, type SavedPlan } from "@/lib/core/saved-plan";
 
 /**
  * Capture, consent, and lead scoring.
@@ -266,6 +267,8 @@ export interface RankedLead {
   hoursSince: number;
   /** Why the cadence stopped, or null while it is still running. */
   stopped: string | null;
+  /** What they did, in one line (§5.5): a saved plan, a booking. Null if neither. */
+  summary: string | null;
   /**
    * The figures they were actually shown.
    *
@@ -342,7 +345,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
+      .select("id,name,email,side,score,band,signals,lead_input,plan,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
       /* Inbound only. "Who to call" answers one question: who volunteered
          their details and has not been answered yet, and a person the agent
@@ -397,6 +400,12 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       humanRepliedAt: r.human_replied_at as string | null,
       stopped: (r as unknown as { rift_enrolments?: { stop_reason: string | null }[] })
         .rift_enrolments?.[0]?.stop_reason ?? null,
+      /* A booking is either how they arrived or why their emails stopped. */
+      summary: leadSummary(
+        (r.plan as SavedPlan | null) ?? null,
+        (r.lead_input as { source?: string } | null)?.source === "booking" ||
+          (r as unknown as { rift_enrolments?: { stop_reason: string | null }[] }).rift_enrolments?.[0]?.stop_reason === "booked",
+      ),
       figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
       shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
       completion: (r.lead_input as LeadInput | null)?.completion ?? 0,

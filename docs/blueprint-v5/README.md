@@ -369,6 +369,12 @@ the seller journey's gate (§9).
 - **Lead summary in Operations:** each lead shows what they did, for example "Built a $425k plan,
   checked programs, saved cash-to-close, no consultation booked" (v3 §46.7), built from recorded
   actions, never from browsing surveillance.
+- **Built (25 Sep):** the one-line summary ("Saved a plan on a $425k plan: cash to close
+  $24,788 · no call booked") on each lead in Today and on the person's page, with a chip per
+  saved value that reopens it with their answers. It is built only from the saved plan and
+  whether they booked; a lead who did neither shows no line rather than an invented one.
+  **Not built:** continuity into the client brief (LEAD-04) and anonymous progress claims
+  (LEAD-06).
 
 ### 5.6 Buyer questions (`/buy/start`) (Kaleb, R2)
 
@@ -964,6 +970,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Lead summary in Operations from the saved plan and booking (§5.5) |
 | 25 Sep 2026 | Abroad values: can I buy, cost to buy and own, the return (§5.4); answer chips wrap on phones |
 | 25 Sep 2026 | Seller values complete: preparation, unclaimed money rebuilt, old seller pages forward (§5.3); a monthly-saving figure no longer counts as a referral |
 | 25 Sep 2026 | How it works rewritten for buyers, sellers and abroad (§5.8) |

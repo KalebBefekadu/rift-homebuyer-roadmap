@@ -25,6 +25,8 @@ import { searchStatuses } from "@/lib/db/search";
 import { STATUS_LABEL } from "@/lib/core/search";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { Journeys, type JourneySummary } from "./Journeys";
+import { planOnLead } from "@/lib/db/saved-plan";
+import { leadSummary } from "@/lib/core/saved-plan";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -77,7 +79,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
   const searchOn = buyerSearchOn(process.env);
-  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, saved] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
@@ -86,7 +88,12 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     decisionsFor(id),
     read.data.lead.side === "sell" ? roomFor(id) : Promise.resolve(null),
     searchOn ? journeysFor(id) : Promise.resolve(null),
+    planOnLead(id, agent.agentId),
   ]);
+  /* What they did on the public site (§5.5): the plan they saved and whether
+     they booked. A failed read shows nothing rather than "did nothing". */
+  const savedPlan = saved.ok && "data" in saved ? saved.data : null;
+  const didLine = savedPlan ? leadSummary(savedPlan.plan, savedPlan.booked) : null;
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
   const offerList = offers.ok && "data" in offers ? offers.data.offers : [];
@@ -125,6 +132,21 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     <>
       <ClientRecord lead={read.data.lead} notes={read.data.notes} />
       <div className="shell-w" style={{ paddingBottom: 40 }}>
+        {didLine ? (
+          <section className="card p-4" style={{ marginTop: 16 }} aria-labelledby="did-h">
+            <div id="did-h" className="t-xs c-4 w6" style={{ letterSpacing: ".06em", textTransform: "uppercase" }}>On the site</div>
+            <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.55 }}>{didLine}</p>
+            {savedPlan?.plan?.values.length ? (
+              <div className="row wrap gap-2" style={{ marginTop: 10 }}>
+                {/* Each opens the value with their answers, recomputed today:
+                    the figure in the line above is the one they were shown. */}
+                {savedPlan.plan.values.map((v) => (
+                  <a key={v.tool} href={v.href} className="chip" target="_blank" rel="noreferrer">{v.label}: {v.figure}</a>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
         <Journeys
           leadId={id}
           side={read.data.lead.side}

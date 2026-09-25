@@ -77,3 +77,16 @@ export function planSummary(p: SavedPlan): string {
   const price = typeof p.answers.price === "number" ? ` on a $${Math.round(p.answers.price / 1000)}k plan` : "";
   return `${p.mode === "review" ? "Asked for a review" : "Saved a plan"}${price}: ${parts.join(", ")}`;
 }
+
+/**
+ * The lead summary in Operations (§5.5): what this person did, in one line,
+ * for example "Saved a plan on a $425k plan: cash to close $24,788 · no call
+ * booked". Built only from what they chose to hand over (a saved plan, a
+ * booking), never from pages they looked at. Null when they did neither, so
+ * the row says nothing rather than something invented.
+ */
+export function leadSummary(plan: SavedPlan | null, booked: boolean): string | null {
+  const did = plan ? planSummary(plan) : null;
+  if (!did) return booked ? "Booked a call" : null;
+  return `${did} · ${booked ? "call booked" : "no call booked"}`;
+}

@@ -48,3 +48,29 @@ export async function readSavedPlan(token: string): Promise<DbResult<OpenedPlan 
   if (!row || !row.plan) return done(null);
   return done({ name: row.name, plan: row.plan, savedAt: row.plan_saved_at ?? "" });
 }
+
+/**
+ * The saved plan on one lead, for Operations (§5.5). Agent-scoped, and the
+ * link token is not selected: it is the visitor's credential, never shown to
+ * anyone else (see the migration).
+ */
+export async function planOnLead(leadId: string, agentId: string): Promise<DbResult<{ plan: SavedPlan | null; savedAt: string | null; booked: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await boundedRead(
+    db.from("rift_leads").select("plan, plan_saved_at, lead_input, rift_enrolments(stop_reason)")
+      .eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
+    "the saved plan",
+  );
+  if (!r.ok) return r;
+  const row = ("data" in r ? r.data : null) as {
+    plan: SavedPlan | null; plan_saved_at: string | null;
+    lead_input: { source?: string } | null; rift_enrolments?: { stop_reason: string | null }[];
+  } | null;
+  if (!row) return done({ plan: null, savedAt: null, booked: false });
+  return done({
+    plan: row.plan ?? null,
+    savedAt: row.plan_saved_at,
+    booked: row.lead_input?.source === "booking" || row.rift_enrolments?.[0]?.stop_reason === "booked",
+  });
+}

@@ -25,6 +25,7 @@ export function LeadRow({ lead, last }: {
     score: number; band: string;
     signals: { label: string; points: number; note: string }[];
     stopped?: string | null;
+    summary?: string | null;
     figures?: Record<string, string | number> | null;
     shareToken?: string | null;
     capturedScore?: number;
@@ -88,6 +89,11 @@ export function LeadRow({ lead, last }: {
           <span className="num t-sm">{lead.score}</span>
         </span>
       </div>
+
+      {/* What they did, before why they scored (Blueprint v5 §5.5). */}
+      {lead.summary ? (
+        <p className="t-xs c-2" style={{ marginTop: 6, lineHeight: 1.5 }}>{lead.summary}</p>
+      ) : null}
 
       {/* The arithmetic, on the row rather than in a tooltip. */}
       <div className="row wrap gap-2" style={{ marginTop: 7 }}>
