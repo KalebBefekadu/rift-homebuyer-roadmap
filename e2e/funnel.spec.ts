@@ -38,7 +38,9 @@ test.describe("a stranger gets their numbers", () => {
     /* The thesis, asserted. The front door must not ask for an account, and
        the funnel's entrance must be reachable from it. */
     await expect(page.locator("body")).not.toContainText(/create an account|sign up to see/i);
-    await expect(page.locator('a[href^="/buy/start"]').first()).toBeVisible();
+    /* Since Blueprint v5 the landing's ways in are the separate values, not
+       one questionnaire. The first, D20's assistance, must be reachable. */
+    await expect(page.locator('a[href^="/buy/assistance"]').first()).toBeVisible();
   });
 
   test("seven questions produce a readout with real money on it", async ({ page }) => {

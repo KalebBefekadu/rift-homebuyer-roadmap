@@ -63,6 +63,19 @@ const PAGES: Array<[name: string, path: string]> = [
   ["abroad readout", "/abroad/results?c=Fulton&p=300000&d=60000"],
   ["closed plan link", "/plan/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
   ["closed readout link", "/r/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+  /* The values and pages added with Blueprint v5, answered and asking. */
+  ["cash to close", "/buy/cash-to-close?p=325000&d=3.5&c=DeKalb"],
+  ["monthly cost", "/buy/monthly-cost?p=325000&d=3.5&c=DeKalb"],
+  ["timeline", "/buy/timeline?p=325000&d=3.5&s=9000&r=650"],
+  ["how much fits", "/buy/afford?i=90000&dt=400&d=3.5"],
+  ["lender questions", "/buy/lender-questions?d=3.5&k=600&o=none"],
+  ["selling costs", "/sell/costs?p=500000&cm=none"],
+  ["should I fix it first", "/sell/prepare?p=450000&in=tired&kb=original&sy=unsure"],
+  ["money you may be losing", "/sell/unclaimed?p=350000&yo=8&hs=unsure&a6=yes"],
+  ["can I buy in the US", "/abroad/can-i-buy?st=itin&u=rent"],
+  ["cost to buy and own", "/abroad/cost?st=foreign&u=rent&p=300000"],
+  ["a value asking its first question", "/buy/afford"],
+  ["closed summary link", "/s/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"],
 ];
 
 test.describe("WCAG 2.2 AA", () => {

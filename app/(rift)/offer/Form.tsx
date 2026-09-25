@@ -163,7 +163,7 @@ export function Form() {
             We read it and fill in the boxes below. You check each one against your PDF before
             sending. No PDF? Fill them in yourself.
           </p>
-          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
+          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer", position: "relative" }}>
             <Ico.doc size={14} />{pdf === "reading" ? "Reading your PDF…" : pdf === "filled" ? "Upload a different PDF" : "Choose a PDF"}
             <input type="file" accept="application/pdf,.pdf" className="sr-only"
               disabled={pdf === "reading"}

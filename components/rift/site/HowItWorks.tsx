@@ -103,8 +103,11 @@ export function HowItWorks({ side, kicker, title, lede, steps, notice, cta, tran
           <div className="cta-row" style={{ justifyContent: "center" }}>
             <Link href={cta.href} className="btn btn-brand btn-lg">{cta.label}<Ico.arrowR size={15} /></Link>
           </div>
-          <p className="t-sm c-4 mt-4">
-            <Link href="/privacy" className="u">What we keep, and how to delete it</Link>
+          <p className="t-sm c-4 mt-3">
+            {/* A real touch target (WCAG 2.2, 2.5.8): 44px tall, not a line of text. */}
+            <Link href="/privacy" className="u" style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 8px" }}>
+              What we keep, and how to delete it
+            </Link>
           </p>
         </section>
       </main>

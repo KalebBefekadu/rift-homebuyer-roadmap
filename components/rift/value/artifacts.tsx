@@ -319,7 +319,7 @@ export function ClaimTags({ items }: { items: { title: string; urgent: boolean }
   const W = 360, rowH = 34, top = 64;
   const H = top + Math.max(items.length, 1) * rowH + 16;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ ...frame, overflow: "hidden" }} role="img"
       aria-label={items.length ? `${items.length} worth a call: ${items.map((i) => i.title).join("; ")}.` : "Nothing obvious to chase."}>
       <path d="M40 52 L80 18 L120 52 Z" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" />
       <rect x="52" y="52" width="56" height="34" fill="var(--brand-wash)" stroke="var(--ink)" strokeWidth="1.5" />
@@ -328,7 +328,10 @@ export function ClaimTags({ items }: { items: { title: string; urgent: boolean }
       <text x="164" y="32" fontSize="12" fill="var(--ink-3)">worth a call</text>
       {items.length ? items.map((it, k) => {
         const y = top + k * rowH;
-        const label = it.title.length > 40 ? it.title.slice(0, 38) + "…" : it.title;
+        /* Short enough to stay inside its tag at 11px: the full title is in
+           the list beside the drawing, and in the aria-label. */
+        const room = it.urgent ? 20 : 30;
+        const label = it.title.length > room ? it.title.slice(0, room - 1) + "…" : it.title;
         return (
           <g key={it.title} className="art-rise" style={{ animationDelay: `${k * 90}ms` }}>
             <line x1="130" y1="40" x2="150" y2={y + 13} stroke="var(--line)" />

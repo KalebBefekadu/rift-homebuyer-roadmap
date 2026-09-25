@@ -17,6 +17,13 @@ const PAGES = [
   "/", "/buy", "/sell", "/abroad", "/privacy", "/book",
   "/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600",
   "/sell/proceeds?p=400000&po=200000&cm=5",
+  "/buy/afford?i=90000&dt=400&d=3.5",
+  "/buy/lender-questions?d=3.5&k=600&o=none",
+  "/sell/prepare?p=450000&in=tired&kb=original&sy=unsure",
+  "/sell/unclaimed?p=350000&yo=8&hs=unsure&a6=yes",
+  "/abroad/can-i-buy?st=itin&u=rent",
+  "/abroad/cost?st=itin&u=live&p=300000",
+  "/buy/how", "/offer",
 ];
 
 test.describe("nothing spills off the side of a phone", () => {

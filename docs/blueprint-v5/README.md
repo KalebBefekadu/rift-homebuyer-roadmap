@@ -234,6 +234,11 @@ Every redesigned page passes again: WCAG 2.2 AA, keyboard, focus, 200% and 400% 
 motion, 375px and 390px with no sideways scroll, 44px touch targets on public and client pages,
 and the performance targets in QUALITY-03.
 
+**Checked (25 Sep):** the end-to-end suites (`npm run test:e2e`: WCAG 2.2 AA with axe, no sideways
+scroll at 412px and 320px, styling, funnel, smoke) now cover every value page, the how-it-works
+pages, the offer upload and a closed summary link, on desktop and phone: 256 passing. Keyboard and
+400% zoom are not automated and still need a manual pass.
+
 ---
 
 ## 5. Lead side
@@ -1019,6 +1024,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Accessibility and phone-width suites extended to every new page; four defects fixed (§4.7) |
 | 25 Sep 2026 | Buyer values: how much home fits (MONEY-05) and lender questions (§5.2) |
 | 25 Sep 2026 | No-match state: which must-haves limit the search (SEARCH-09) |
 | 25 Sep 2026 | Move-in handoff steps (B19) |

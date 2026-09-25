@@ -74,11 +74,13 @@ export default async function Unclaimed({ searchParams }: { searchParams: Promis
             <div key={u.title} className="card p-4">
               <div className="between wrap gap-2">
                 <span className="t-md w6 grow" style={{ minWidth: 200 }}>{u.title}</span>
-                <span className="num t-md c-brand" style={{ flex: "none" }}>{u.estimate}</span>
+                {/* Allowed to wrap: "Up to $250,000 single / $500,000 married"
+                    is wider than a 320px phone. */}
+                <span className="num t-md c-brand" style={{ flex: "0 1 auto", minWidth: 0, overflowWrap: "anywhere" }}>{u.estimate}</span>
               </div>
               <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>{u.detail}</p>
               <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-                <span className="chip"><Ico.users size={12} />Decided by {u.decidedBy}</span>
+                <span className="chip" style={{ whiteSpace: "normal", height: "auto", padding: "5px 10px", lineHeight: 1.45 }}><Ico.users size={12} style={{ flex: "none" }} />Decided by {u.decidedBy}</span>
                 {/* A sentence, not a label: it has to wrap on a phone. */}
                 {u.urgency ? <span className="chip chip-warn" style={{ whiteSpace: "normal", height: "auto", padding: "5px 10px", lineHeight: 1.45 }}><Ico.clock size={12} style={{ flex: "none" }} />{u.urgency}</span> : null}
               </div>
