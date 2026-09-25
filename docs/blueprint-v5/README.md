@@ -464,8 +464,15 @@ financing must say what it is; due diligence days added (0 to 60, empty means no
 sending is the point of the page, so "Optional" is gone; the sender says "I'm a real estate
 agent" or "I'm the buyer", with nothing preselected; phone required, and still passed on with
 the offer only, never stored for marketing. Migration `20260927000000_rift_offer_terms.sql` adds
-the two columns; Operations → Offers shows them. **Not built:** the PDF upload, which needs
-document extraction with an AI cost limit (DOC-02, AUTO-06) and belongs with that work.
+the two columns; Operations → Offers shows them.
+
+**Built (25 Sep), the upload:** "Upload your offer in PDF" at the top of `/offer`. Claude reads
+it into the boxes, each filled box shows the page and exact words it came from, and sending
+needs a tick that the sender checked them (DOC-02). Anything that fails, or no key, or the
+month's budget spent, leaves the manual form with a sentence saying why. The $50 monthly AI
+limit is enforced in code with a ledger (`rift_ai_usage`, AUTO-06). Needs `ANTHROPIC_API_KEY`
+and the migration `20260927010000_rift_ai_usage.sql`; the model is Claude Opus 5 until
+extraction accuracy tests on real offers show a smaller one passes (D16).
 
 **Book a call `/book`** (Kaleb, R2)
 - The form is not centred.
@@ -979,6 +986,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Offer PDF upload with Claude, and the $50 AI limit in code (§5.9, §10.2) |
 | 25 Sep 2026 | A saved plan starts the buyer's search brief (LEAD-04) |
 | 25 Sep 2026 | Delete all of it on every answer and by a saved plan's link; §7.3 confirmed built |
 | 25 Sep 2026 | Lead summary in Operations from the saved plan and booking (§5.5) |

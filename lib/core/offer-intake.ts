@@ -48,6 +48,9 @@ export const MAX_COMMISSION_PCT = 10;
  *  valid answer, and more than sixty is not a period anybody writes. */
 export const MAX_DUE_DILIGENCE_DAYS = 60;
 
+/** The contingencies the form offers, and the only ones extraction may tick. */
+export const OFFER_CONTINGENCIES = ["Inspection", "Appraisal", "Financing", "Sale of buyer's home", "Survey"] as const;
+
 export const MIN_PRICE = 10_000;
 export const MAX_PRICE = 100_000_000;
 

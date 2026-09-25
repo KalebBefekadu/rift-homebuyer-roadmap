@@ -7,9 +7,10 @@ import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import {
   readSubmission, read, ASSUMED_COMMISSION_PCT,
-  MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_DUE_DILIGENCE_DAYS,
+  MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_DUE_DILIGENCE_DAYS, OFFER_CONTINGENCIES,
 } from "@/lib/core/offer-intake";
 import { sessionId } from "@/lib/rift/session";
+import type { Extracted, Source } from "@/lib/core/offer-extract";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
@@ -18,7 +19,7 @@ const FINANCING = [
   ["va", "VA"], ["usda", "USDA"], ["other", "Other"],
 ] as const;
 
-const CONTINGENCIES = ["Inspection", "Appraisal", "Financing", "Sale of buyer's home", "Survey"];
+const CONTINGENCIES: readonly string[] = OFFER_CONTINGENCIES;
 
 /**
  * The value comes first, and it comes from arithmetic in this browser.
@@ -49,6 +50,45 @@ export function Form() {
   const [note, setNote] = useState("");
   /* Nothing preselected: which one they are is theirs to say (§5.9). */
   const [representing, setRepresenting] = useState<"self" | "buyer" | null>(null);
+
+  /* Upload first (Blueprint v5 §5.9). What it fills carries where it came
+     from, and sending needs the sender to say they checked it (DOC-02). */
+  const [pdf, setPdf] = useState<"idle" | "reading" | "filled" | "manual">("idle");
+  const [readNote, setReadNote] = useState<string | null>(null);
+  const [sources, setSources] = useState<Extracted["sources"]>({});
+  const [checked, setChecked] = useState(false);
+  const filledFromPdf = Object.keys(sources).length > 0;
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setPdf("reading");
+    setReadNote(null);
+    try {
+      const body = new FormData();
+      body.set("file", file);
+      const j = await fetch("/api/offer/extract", { method: "POST", body }).then((r) => r.json());
+      if (!j?.ok) { setPdf("manual"); setReadNote(j?.say ?? j?.error ?? "We could not read that PDF. Fill in the boxes from it."); return; }
+      const x = j.extracted as Extracted;
+      if (x.address) setAddress(x.address);
+      if (x.price !== undefined) setPrice(String(x.price));
+      if (x.earnest !== undefined) setEarnest(String(x.earnest));
+      if (x.concessions !== undefined) setConcessions(String(x.concessions));
+      if (x.financing) setFinancing(x.financing);
+      if (x.financingDetail) setFinancingDetail(x.financingDetail);
+      if (x.dueDiligenceDays !== undefined) setDueDiligence(String(x.dueDiligenceDays));
+      if (x.closeOn) setCloseOn(x.closeOn);
+      if (x.contingencies) setContingencies(x.contingencies);
+      setSources(x.sources);
+      setChecked(false);
+      setPdf("filled");
+      setReadNote(x.dropped > 0
+        ? "Some terms could not be read with confidence and were left for you to fill in."
+        : null);
+    } catch {
+      setPdf("manual");
+      setReadNote("That upload did not get through. Fill in the boxes from your PDF.");
+    }
+  };
 
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -84,7 +124,8 @@ export function Form() {
 
   const send = async () => {
     const real = readSubmission({ ...draft, address, from, email, phone, financingDetail, representing });
-    if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
+    const unchecked = filledFromPdf && !checked ? ["Check the boxes filled from your PDF against it, then tick that you have."] : [];
+    if (!real.ok || unchecked.length) { setErrors([...(real.ok ? [] : real.errors), ...unchecked]); setFailedToSend(false); return; }
     setErrors([]);
     setFailedToSend(false);
     setSending(true);
@@ -116,13 +157,41 @@ export function Form() {
           Submit an offer
         </h1>
 
-        <section className="card p-5" style={{ marginTop: 24 }}>
+        <section className="card p-5" style={{ marginTop: 24, background: "var(--brand-wash)", borderColor: "var(--brand-line)" }} aria-labelledby="upload-h">
+          <div id="upload-h" className="t-md w6">Upload your offer in PDF</div>
+          <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+            We read it and fill in the boxes below. You check each one against your PDF before
+            sending. No PDF? Fill them in yourself.
+          </p>
+          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
+            <Ico.doc size={14} />{pdf === "reading" ? "Reading your PDF…" : pdf === "filled" ? "Upload a different PDF" : "Choose a PDF"}
+            <input type="file" accept="application/pdf,.pdf" className="sr-only"
+              disabled={pdf === "reading"}
+              onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+          <div role="status" aria-live="polite">
+            {pdf === "filled" ? (
+              <p className="t-sm c-2 row gap-2" style={{ marginTop: 10, alignItems: "flex-start" }}>
+                <Ico.checkCircle size={15} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
+                Filled in from your PDF. Each box says where it was found: check them against your document.
+              </p>
+            ) : null}
+            {readNote ? <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.55 }}>{readNote}</p> : null}
+          </div>
+          <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.55 }}>
+            The PDF is read by Anthropic&apos;s Claude to fill in the boxes, and Rift does not keep it.{" "}
+            <Link href="/privacy" className="u">Who sees what</Link>.
+          </p>
+        </section>
+
+        <section className="card p-5" style={{ marginTop: 16 }}>
           <div className="t-sm w6">The offer</div>
 
           <label className="field" style={{ marginTop: 14 }}>
             <span className="label">Property address</span>
             <input className="input" value={address} onChange={(e) => setAddress(e.target.value)}
               placeholder="119 Peachtree Way, Atlanta, GA 30309" />
+            <FromPdf source={sources.address} />
           </label>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
@@ -130,11 +199,13 @@ export function Form() {
               <span className="label">Offer price</span>
               <input className="input" inputMode="numeric" value={price}
                 onChange={(e) => setPrice(e.target.value)} placeholder="410,000" />
+              <FromPdf source={sources.price} />
             </label>
             <label className="field">
               <span className="label">Earnest money</span>
               <input className="input" inputMode="numeric" value={earnest}
                 onChange={(e) => setEarnest(e.target.value)} placeholder="5,000" />
+              <FromPdf source={sources.earnest} />
             </label>
           </div>
 
@@ -143,6 +214,7 @@ export function Form() {
               <span className="label">Seller concessions asked</span>
               <input className="input" inputMode="numeric" value={concessions}
                 onChange={(e) => setConcessions(e.target.value)} placeholder="0" />
+              <FromPdf source={sources.concessions} />
             </label>
             <label className="field">
               <span className="label">Due diligence days</span>
@@ -150,6 +222,7 @@ export function Form() {
                 onChange={(e) => setDueDiligence(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
                 placeholder="10" aria-describedby="dd-hint" />
               <span id="dd-hint" className="t-2xs c-4">0 to {MAX_DUE_DILIGENCE_DAYS}. Leave it empty if there is none.</span>
+              <FromPdf source={sources.dueDiligenceDays} />
             </label>
           </div>
 
@@ -159,10 +232,12 @@ export function Form() {
               <select className="input" value={financing} onChange={(e) => setFinancing(e.target.value)}>
                 {FINANCING.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
+              <FromPdf source={sources.financing} />
             </label>
             <label className="field">
               <span className="label">Target closing date</span>
               <input className="input" type="date" value={closeOn} onChange={(e) => setCloseOn(e.target.value)} />
+              <FromPdf source={sources.closeOn} />
             </label>
           </div>
 
@@ -171,11 +246,13 @@ export function Form() {
               <span className="label">What is the other financing?</span>
               <input className="input" value={financingDetail} maxLength={120}
                 onChange={(e) => setFinancingDetail(e.target.value)} placeholder="Seller financing, a 1031 exchange, a portfolio loan…" />
+              <FromPdf source={sources.financingDetail} />
             </label>
           ) : null}
 
           <div style={{ marginTop: 14 }}>
             <span className="label">Contingencies</span>
+            <FromPdf source={sources.contingencies} />
             <div className="row gap-2 wrap" style={{ marginTop: 6 }}>
               {CONTINGENCIES.map((c) => (
                 <button key={c} type="button" className={`chip ${contingencies.includes(c) ? "chip-brand" : ""}`}
@@ -311,6 +388,15 @@ export function Form() {
             <Link href="/privacy" className="u">What we keep</Link>.
           </p>
 
+          {filledFromPdf ? (
+            <label className="opt" data-on={checked} style={{ marginTop: 12, alignItems: "flex-start" }}>
+              <input type="checkbox" checked={checked} onChange={() => setChecked(!checked)} style={{ marginTop: 3 }} />
+              <span className="t-sm c-2" style={{ lineHeight: 1.5 }}>
+                I have checked every box filled from my PDF against it, and corrected anything that was wrong.
+              </span>
+            </label>
+          ) : null}
+
           {errors.length ? (
             <div style={{ marginTop: 10 }}>
               <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
@@ -353,5 +439,15 @@ export function Form() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+/** Where a box's value was read from, so the sender can find it in their PDF. */
+function FromPdf({ source }: { source?: Source }) {
+  if (!source) return null;
+  return (
+    <span className="t-2xs c-3" style={{ display: "block", marginTop: 4, lineHeight: 1.45 }}>
+      From your PDF, page {source.page}: &ldquo;{source.quote}&rdquo;
+    </span>
   );
 }

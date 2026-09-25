@@ -113,7 +113,7 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 | ID | Requirement | Status |
 | --- | --- | --- |
 | DOC-01 | Keep the original and its checksum; classify by transaction, family, form and edition, parties and version; quarantine and validate before use. | Built (structural check, not a virus scan, and the screen says so) |
-| DOC-02 | Extraction returns candidate fields with exact source references; consequential amounts, dates, parties and terms need a person's confirmation; a failure leaves the original and a manual path. | Not built. **Needed by v5 §5.8** (offer upload that fills the form) |
+| DOC-02 | Extraction returns candidate fields with exact source references; consequential amounts, dates, parties and terms need a person's confirmation; a failure leaves the original and a manual path. | Built for the offer upload: candidates with page and quote, a tick that the sender checked them, the manual form on any failure |
 | DEC-01 | A decision has options, comparable figures, tradeoffs, sources, a response deadline, decision makers and agent context. A counter supersedes older versions and their approvals. | Built (buyer offers) |
 | DEC-02 | Responses need a signed-in, permitted person and the current version. Household disagreement is its own state; everyone required must agree. | Built |
 | DEC-03 | Client responses are instructions, never signatures, acceptance or notices. Remine governs signed documents. | Built |
@@ -138,7 +138,7 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 | AUTO-03 | Consent, representation, version and revocation are rechecked just before execution. A human reply stops nurture before the next send; a fallback channel never overrides an opt-out. | Built |
 | AUTO-04 | Existing consented nurture keeps its policy until explicitly changed. | Built |
 | AUTO-05 | AI drafts intake, document candidates, short sourced summaries and campaign recipes. It never publishes, sends, changes searches, decides representation, moves money, sets legal deadlines or changes numbers on its own. Uploaded content is untrusted and cannot grant permissions. | Policy stands. Rift calls no AI today |
-| AUTO-06 | Per-workflow and monthly AI cost limits before AI is switched on; running out means manual entry, never a lost deadline. Model and prompt versions are auditable; private data is not used for training. | Not built. **Required before v5 §5.8 and §6 AI features** (pilot cap $50 a month, D07) |
+| AUTO-06 | Per-workflow and monthly AI cost limits before AI is switched on; running out means manual entry, never a lost deadline. Model and prompt versions are auditable; private data is not used for training. | Built: $50 a month and $20 for offer reading in code, reserved before each call and settled after, model and prompt version on every row (`rift_ai_usage`). Program monitoring (§6) needs its own workflow share when it arrives |
 
 ## 9. Access and privacy
 

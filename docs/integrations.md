@@ -223,6 +223,30 @@ be rearranged.
 
 ---
 
+## 6b. Claude (Anthropic) — built, pending a key
+
+Reads an uploaded offer PDF into the offer form (Blueprint v5 §5.9, decision D16). Set
+`ANTHROPIC_API_KEY`. Code: `lib/ai/offer-extract.ts`, `lib/core/offer-extract.ts`,
+`app/api/offer/extract/route.ts`.
+
+**The limit is in code, not in a dashboard** (AUTO-06): `lib/core/ai-budget.ts` holds $50 a
+month across all AI, $20 of it for offer reading, and $1 at most for any one call. Every call
+counts its input exactly first (counting is free), writes a reservation at its worst case to
+`rift_ai_usage`, then settles at what it actually cost; an outcome it cannot know settles at
+the worst case. Model and prompt version are recorded on every row. No document, extracted
+value or personal detail is stored there.
+
+| State | What the sender sees |
+| --- | --- |
+| Read | The boxes filled, each with the page and words it came from, and a box to tick that they checked them |
+| No key, no database, or the month's limit reached | "Fill in the boxes from your PDF", with the form in front of them |
+| Unreadable, too long, refused | The same, with the reason |
+
+With no database there is no ledger, so no limit, so no call: the reader fails closed. The PDF
+is sent once and not kept. Anthropic is listed on `/privacy` as a processor.
+
+---
+
 ## 7. Not yet chosen
 
 ### SMS

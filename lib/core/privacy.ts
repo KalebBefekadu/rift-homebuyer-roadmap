@@ -168,6 +168,11 @@ export const SUBPROCESSORS: Subprocessor[] = [
     sees: "Technical detail about a failure: the page, the browser, the error. Session recording is switched off, so it never receives what you typed.",
   },
   {
+    name: "Anthropic",
+    does: "Reads an offer PDF to fill in the offer form",
+    sees: "Only an offer PDF you choose to upload on the offer page, sent once to read its terms. Rift does not keep the file, and Anthropic does not use it to train its models.",
+  },
+  {
     name: "Cal.com",
     does: "Holds a booked time",
     sees: "Your name, email, and the time you chose, only if you book a call.",

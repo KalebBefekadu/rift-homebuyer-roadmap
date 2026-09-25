@@ -93,6 +93,9 @@ export const LIMITS = {
      every one of them is something a person is expected to read: the cost of
      abuse here is Kaleb's attention, which does not rate-limit itself. */
   offer: { max: 4, windowMs: 60_000 },
+  /* Reading a PDF spends real money (AUTO-06). Three a minute is a sender
+     retrying; the monthly workflow limit bounds what anybody can spend. */
+  "offer-extract": { max: 3, windowMs: 60_000 },
   /* Per plan link, not per address. A seller chooses once; the headroom is
      for a double tap and a retry on a bad signal, and nothing else. */
   choose: { max: 6, windowMs: 60_000 },
