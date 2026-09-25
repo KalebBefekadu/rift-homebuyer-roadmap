@@ -199,7 +199,8 @@ export interface MockJourney {
   price?: string;
   closing?: { label: string; iso: string };
   team?: MockParty[];
-  activity: { at: string; what: string }[];
+  /** The journey so far, stage by stage: what the stage track opens. */
+  story: { stage: Stage; at: string; what: string }[];
 }
 
 export const JOURNEYS: MockJourney[] = [
@@ -241,10 +242,20 @@ export const JOURNEYS: MockJourney[] = [
       { name: "Inspection report", added: "18 Sep", shared: "Both buyers" },
       { name: "Amendment to address concerns", added: "24 Sep", shared: "Both buyers" },
     ],
-    activity: [
-      { at: "Thu 24 Sep", what: "Inspection response signed by both sides" },
-      { at: "Wed 23 Sep", what: "Due diligence ended; the contract is firm" },
-      { at: "Fri 18 Sep", what: "Lender: conditional approval" },
+    story: [
+      { stage: "prepare", at: "2 Aug", what: "Saved a $425k plan on the cost-to-buy page" },
+      { stage: "prepare", at: "9 Aug", what: "Buyer agreement signed by both" },
+      { stage: "prepare", at: "10 Aug", what: "Pre-approved with Summit Home Loans" },
+      { stage: "search", at: "12 Aug", what: "Search brief agreed: DeKalb, 3 bedrooms, at most $430,000" },
+      { stage: "search", at: "12 Aug", what: "Matrix search started; 31 matches in the first week" },
+      { stage: "tour", at: "16 Aug", what: "First showings: 4 homes" },
+      { stage: "tour", at: "6 Sep", what: "9 homes seen in all; both said yes to Candler Park Ct" },
+      { stage: "offer", at: "8 Sep", what: "Offered $418,000, FHA, asking $4,000 toward costs" },
+      { stage: "offer", at: "9 Sep", what: "Offer accepted" },
+      { stage: "under-contract", at: "14 Sep", what: "Earnest money received by the attorney" },
+      { stage: "under-contract", at: "18 Sep", what: "Lender: conditional approval" },
+      { stage: "under-contract", at: "Wed 23 Sep", what: "Due diligence ended; the contract is firm" },
+      { stage: "under-contract", at: "Thu 24 Sep", what: "Inspection response signed by both sides" },
     ],
   },
   {
@@ -268,10 +279,15 @@ export const JOURNEYS: MockJourney[] = [
       { address: "1407 Line St, Decatur (townhouse)", price: "$275,000", reactions: [{ who: "Selam", says: "Maybe" }, { who: "Yonas", says: "No" }], showing: "Video tour Sat 11:40" },
       { address: "310 Glenwood Ave, DeKalb", price: "$299,000", reactions: [{ who: "Selam", says: "No: the road" }, { who: "Yonas", says: "No" }] },
     ],
-    activity: [
-      { at: "Wed 23 Sep", what: "Selam asked for Decatur and townhomes" },
-      { at: "Tue 22 Sep", what: "Yonas reacted \"no\" to both townhomes" },
-      { at: "Mon 21 Sep", what: "Three homes added to the shortlist" },
+    story: [
+      { stage: "prepare", at: "14 Sep", what: "Checked she can buy from abroad; saved the plan" },
+      { stage: "prepare", at: "18 Sep", what: "Buyer agreement signed" },
+      { stage: "prepare", at: "18 Sep", what: "Yonas invited: sees homes, not money" },
+      { stage: "search", at: "19 Sep", what: "Search brief agreed: DeKalb, 3 bedrooms, at most $300,000" },
+      { stage: "search", at: "19 Sep", what: "Matrix search started" },
+      { stage: "tour", at: "Mon 21 Sep", what: "Three homes added to the shortlist" },
+      { stage: "tour", at: "Tue 22 Sep", what: "Yonas said no to both townhomes" },
+      { stage: "tour", at: "Wed 23 Sep", what: "Selam asked for Decatur and townhomes" },
     ],
   },
   {
@@ -291,10 +307,15 @@ export const JOURNEYS: MockJourney[] = [
       { name: "Offer B contract (PDF)", added: "Today 2:14 am", shared: "Not shared" },
       { name: "Seller's property disclosure", added: "30 Aug", shared: "Grace" },
     ],
-    activity: [
-      { at: "Today 8:10", what: "Grace texted: call at 4?" },
-      { at: "Today 2:14 am", what: "Offer B came in through the offer page, with its PDF read" },
-      { at: "Thu 24 Sep", what: "Offer A presented to Grace" },
+    story: [
+      { stage: "prepare", at: "20 Aug", what: "Saved a selling plan: what she'd keep" },
+      { stage: "prepare", at: "28 Aug", what: "Listing agreement signed" },
+      { stage: "prepare", at: "30 Aug", what: "Property disclosure completed" },
+      { stage: "search", at: "4 Sep", what: "Listed at $435,000" },
+      { stage: "tour", at: "4 to 20 Sep", what: "14 showings, 2 second visits" },
+      { stage: "offer", at: "Thu 24 Sep", what: "Offer A presented to Grace" },
+      { stage: "offer", at: "Today 2:14 am", what: "Offer B came in through the offer page, with its PDF read" },
+      { stage: "offer", at: "Today 8:10", what: "Grace texted: call at 4?" },
     ],
   },
   {
@@ -330,10 +351,19 @@ export const JOURNEYS: MockJourney[] = [
       { name: "Purchase and sale agreement", added: "8 Aug", shared: "Hannah" },
       { name: "HO-6 policy", added: "Thu 24 Sep", shared: "From Hannah" },
     ],
-    activity: [
-      { at: "Today 7:55", what: "Lender: clear to close" },
-      { at: "Thu 24 Sep", what: "Hannah uploaded her HO-6 policy" },
-      { at: "Thu 24 Sep", what: "Hannah asked about moving boxes in early" },
+    story: [
+      { stage: "prepare", at: "2 Jul", what: "Buyer agreement signed; pre-approved with Peach State CU" },
+      { stage: "search", at: "3 Jul", what: "Search brief agreed: Midtown condo, at most $330,000" },
+      { stage: "tour", at: "July", what: "6 condos seen" },
+      { stage: "offer", at: "7 Aug", what: "Offered $312,000, conventional" },
+      { stage: "offer", at: "8 Aug", what: "Offer accepted" },
+      { stage: "under-contract", at: "10 Aug", what: "Earnest money received" },
+      { stage: "under-contract", at: "20 Aug", what: "Inspection done" },
+      { stage: "under-contract", at: "2 Sep", what: "Appraisal at value" },
+      { stage: "under-contract", at: "21 Sep", what: "Title clear" },
+      { stage: "close", at: "Thu 24 Sep", what: "Hannah uploaded her HO-6 policy" },
+      { stage: "close", at: "Thu 24 Sep", what: "Hannah asked about moving boxes in early" },
+      { stage: "close", at: "Today 7:55", what: "Lender: clear to close" },
     ],
   },
   {
@@ -366,12 +396,37 @@ export const JOURNEYS: MockJourney[] = [
     homes: [{ address: "17 Ridge Walk, Smyrna", price: "$352,000", reactions: [{ who: "Marcus", says: "Under contract" }] }],
     offers: [{ from: "Marcus Bell (your offer)", price: "$352,000", terms: "Conventional, 10 days due diligence, close 22 Oct", status: "Accepted 3 Sep" }],
     documents: [{ name: "Title commitment", added: "Tue 22 Sep", shared: "Marcus" }],
-    activity: [
-      { at: "Tue 22 Sep", what: "Attorney found a recorded lien; title blocked" },
-      { at: "Tue 22 Sep", what: "Appraisal came in at value" },
+    story: [
+      { stage: "prepare", at: "30 Jul", what: "Saved a $360k plan" },
+      { stage: "prepare", at: "3 Aug", what: "Buyer agreement signed" },
+      { stage: "search", at: "5 Aug", what: "Search brief agreed: Smyrna townhomes, at most $365,000" },
+      { stage: "tour", at: "August", what: "7 homes seen" },
+      { stage: "offer", at: "2 Sep", what: "Offered $352,000, conventional" },
+      { stage: "offer", at: "3 Sep", what: "Offer accepted" },
+      { stage: "under-contract", at: "8 Sep", what: "Earnest money received" },
+      { stage: "under-contract", at: "17 Sep", what: "Inspection done; nothing asked for" },
+      { stage: "under-contract", at: "Tue 22 Sep", what: "Appraisal at value" },
+      { stage: "under-contract", at: "Tue 22 Sep", what: "Attorney found a recorded lien; title blocked" },
     ],
   },
 ];
+
+/** What each stage is for, in plain words, for a stage the client has not reached. */
+export const STAGE_ABOUT: Record<Stage, { buy: string; sell: string }> = {
+  prepare: { buy: "The plan, the buyer agreement, pre-approval, and who in the household sees what.", sell: "The plan, the listing agreement, disclosures, and getting the home ready." },
+  search: { buy: "Agree the brief, then the Matrix search runs every morning.", sell: "Price agreed, photos, and the listing goes live." },
+  tour: { buy: "Shortlist, showings and everyone's reactions.", sell: "Showings and feedback, with honest numbers." },
+  offer: { buy: "Write the offer, negotiate, and agree.", sell: "Compare offers on what reaches the seller, counter, accept." },
+  "under-contract": { buy: "Ten workstreams, from earnest money to title, each with who it waits on.", sell: "The buyer's inspection, appraisal and financing, and the repairs asked for." },
+  close: { buy: "Final walkthrough, the settlement statement, and the keys.", sell: "Settlement statement, final proceeds, and handing over the keys." },
+  own: { buy: "The first weeks, homestead, and one year on.", sell: "Final proceeds reconciled, and staying in touch." },
+};
+
+/** A seller's journey uses the same stages under words that fit selling (a proposal: the seller journey itself waits, D08). */
+export const SELL_STAGE_LABEL: Record<Stage, string> = {
+  prepare: "Prepare", search: "List", tour: "Showings", offer: "Offers",
+  "under-contract": "Under contract", close: "Close", own: "After the sale",
+};
 
 export type TodayGroup = "attention" | "approval" | "today" | "waiting" | "upcoming";
 

@@ -879,12 +879,14 @@ can accept or reject them one by one. The main ones: a one-line summary answerin
 questions above; one strong button per screen instead of one per item; Done, three snooze
 times, delegation and a pin on every item; Waiting on others with last heard and when to chase;
 a clock that agrees with itself (tested); sortable Relationships that turn into cards on a
-phone; the person panel in §8.5's order; a breadcrumb, stage track, deal team and "blocked or
-unconfirmed" on the journey; a workstream grid on Transactions; expiry countdowns on Offers;
+phone; the person panel in §8.5's order; on the journey, the stages are the navigation (Kaleb asked
+for simpler: a stage track plus six tabs became one clickable track, each stage opening
+what happened, what is happening, or what comes next, and "Whole story" showing it all);
+a breadcrumb and who else is on the deal; a workstream grid on Transactions; expiry countdowns on Offers;
 sketches of Search, Advocacy, Reports, Questions and Settings; and keyboard shortcuts (g then
 a letter, j and k, e, ?). What to look at: Today at 1280px (every group's heading and first
 item on one screen), opening a person from Relationships and coming back, a journey's tabs,
-Transactions, and Cmd+K. Say what to keep or change; the real screens are rebuilt only after
+Transactions, clicking through a journey's stages, and Cmd+K. Say what to keep or change; the real screens are rebuilt only after
 that (D15).
 
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a

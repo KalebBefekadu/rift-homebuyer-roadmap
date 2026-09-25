@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVITY, CALENDAR, JOURNEYS, NOW, PEOPLE, TODAY, daysFromNow, inDays } from "@/lib/prototype/ops-mock";
-import { WORKSTREAMS } from "./progress";
+import { STAGES, WORKSTREAMS } from "./progress";
 
 /* The Operations mock-up (Blueprint v5 §8, D15) must itself meet §8's acceptance. */
 describe("the Operations mock-up", () => {
@@ -85,5 +85,25 @@ describe("the mock-up keeps the product's rules", () => {
   it("shows the new lead once, in the new-lead bar, not again under Needs attention", () => {
     const lead = PEOPLE.find((p) => p.stage === "New lead")!;
     expect(TODAY.some((t) => t.personId === lead.id && t.group === "attention")).toBe(false);
+  });
+});
+
+/* The stage track is how the journey page is navigated: every stage a client
+   has been through has to open onto something, and nothing can be recorded in
+   a stage they have not reached. */
+describe("the journey story behind the stage track", () => {
+  it("has at least one event in every stage up to where the client is now, and none beyond", () => {
+    for (const j of JOURNEYS) {
+      const now = STAGES.indexOf(j.stage);
+      for (const s of STAGES.slice(0, now + 1)) expect(j.story.some((x) => x.stage === s), `${j.id} ${s}`).toBe(true);
+      for (const x of j.story) expect(STAGES.indexOf(x.stage), `${j.id} ${x.what}`).toBeLessThanOrEqual(now);
+    }
+  });
+
+  it("tells each story in stage order", () => {
+    for (const j of JOURNEYS) {
+      const order = j.story.map((x) => STAGES.indexOf(x.stage));
+      expect(order, j.id).toEqual([...order].sort((a, b) => a - b));
+    }
   });
 });

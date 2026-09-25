@@ -853,12 +853,31 @@ th[aria-sort] .ops-sort { color: var(--ink); }
 .ops-jtitle { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .ops-jfacts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .ops-jnext { display: inline-flex; gap: 5px; align-items: center; font-size: 12.5px; padding: 3px 9px; border-radius: 6px; background: var(--paper); border: 1px solid var(--line); }
-.ops-track { list-style: none; margin: 0; padding: 0; display: flex; gap: 2px; overflow-x: auto; }
-.ops-track li { flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 11.5px; padding: 3px 8px; background: var(--sunk); color: var(--ink-4); white-space: nowrap; }
-.ops-track li:first-child { border-radius: 5px 0 0 5px; }
-.ops-track li:last-child { border-radius: 0 5px 5px 0; }
-.ops-track li.is-past { color: var(--ink-2); background: #ebe8e3; }
-.ops-track li.is-now { background: var(--ink); color: #fff; font-weight: 600; }
+/* The stage track: the journey page's navigation. Done, now and not yet
+   differ by an icon and a word as well as by shade (rule 10). */
+.ops-trackbar { display: flex; gap: 8px; align-items: stretch; margin-bottom: 14px; }
+.ops-track { display: flex; gap: 3px; flex: 1; min-width: 0; overflow-x: auto; padding-bottom: 2px; }
+.ops-track button { flex: 1 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-height: 44px; padding: 5px 10px; font: inherit; text-align: left; border: 1px solid var(--line-2); border-radius: 7px; background: var(--paper); cursor: pointer; color: var(--ink-2); position: relative; }
+.ops-track button:hover { border-color: var(--ink-3); }
+.ops-track button.is-done { background: #efece7; }
+.ops-track button.is-next { color: var(--ink-4); border-style: dashed; }
+.ops-track button.is-now { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ops-track button[aria-selected="true"] { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--ink); }
+.ops-track-name { display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.ops-track-sub { font-size: 11px; opacity: .8; white-space: nowrap; }
+.ops-btn-on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.ops-btn-on:hover { background: var(--ink-2); }
+.ops-stage-panel { display: flex; flex-direction: column; gap: 12px; }
+.ops-stage-head { display: flex; gap: 6px 8px; align-items: baseline; flex-wrap: wrap; font-size: 13px; }
+.ops-stage-head svg { flex: none; transform: translateY(2px); }
+.ops-stage-head.is-done { color: var(--pos); }
+.ops-stage-head.is-done .ops-muted, .ops-stage-head.is-now .ops-muted { color: var(--ink-3); }
+.ops-stage-head strong { color: var(--ink); }
+.ops-card-next { border-style: dashed; }
+.ops-story { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.ops-story li { display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
+.ops-story li.ops-story-stage { display: block; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin-top: 6px; }
+.ops-story li.ops-story-stage:first-child { margin-top: 0; }
 .ops-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line-2); margin-bottom: 12px; overflow-x: auto; }
 .ops-tabs button { font: inherit; font-size: 12.5px; padding: 8px 11px; border: 0; background: none; cursor: pointer; color: var(--ink-3); border-bottom: 2px solid transparent; white-space: nowrap; display: inline-flex; align-items: center; }
 .ops-tabs button:hover { color: var(--ink); }
@@ -976,6 +995,8 @@ th[aria-sort] .ops-sort { color: var(--ink); }
   .ops-item-actions .ops-btn { min-height: 36px; }
   .ops-glance-rift { flex-basis: 100%; }
   .ops-person-wide { grid-template-columns: minmax(0, 1fr); }
+  .ops-trackbar { flex-direction: column; }
+  .ops-track button { flex: 0 0 auto; }
   .ops-table-cards thead { display: none; }
   .ops-table-cards, .ops-table-cards tbody, .ops-table-cards tr, .ops-table-cards td { display: block; width: 100%; }
   .ops-table-cards tr { padding: 10px 12px; border-bottom: 1px solid var(--line-2); }
