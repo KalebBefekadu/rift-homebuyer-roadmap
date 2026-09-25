@@ -16,7 +16,7 @@ test.use({ ...devices["Pixel 7"] });
 const PAGES = [
   "/", "/buy", "/sell", "/abroad", "/privacy", "/book",
   "/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600",
-  "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months",
+  "/sell/proceeds?p=400000&po=200000&cm=5",
 ];
 
 test.describe("nothing spills off the side of a phone", () => {
@@ -72,7 +72,7 @@ test.describe("a sentence stays a sentence", () => {
   /* The property, not the two lines that were wrong. A row of flex children
      whose text is all short fragments is a shattered paragraph, whatever
      produced it. */
-  for (const path of ["/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600", "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months", "/abroad"]) {
+  for (const path of ["/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600", "/sell/proceeds?p=400000&po=200000&cm=5", "/abroad"]) {
     test(`${path} has no prose broken into columns`, async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState("networkidle");

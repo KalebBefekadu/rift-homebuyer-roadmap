@@ -80,7 +80,9 @@ describe("the production import graph", () => {
   const closure = productionClosure();
 
   it("reaches the shared components, or it is not testing anything", () => {
-    expect(closure.has("components/rift/Readout.tsx")).toBe(true);
+    /* The value components, since the old seller readout (the last production
+       page to import components/rift/Readout.tsx) went with the values. */
+    expect(closure.has("components/rift/value/ValueFlow.tsx")).toBe(true);
     expect(closure.has("lib/core/compute.ts")).toBe(true);
   });
 

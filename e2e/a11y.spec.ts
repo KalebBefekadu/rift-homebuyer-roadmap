@@ -45,7 +45,7 @@ const PAGES: Array<[name: string, path: string]> = [
   ["book", "/book"],
   ["privacy", "/privacy"],
   ["buy assessment", "/buy/start"],
-  ["sell assessment", "/sell/start"],
+  ["sell costs question", "/sell/costs"],
   ["programs", "/buy/programs"],
   ["unclaimed value", "/sell/unclaimed"],
   ["buy how", "/buy/how"],
@@ -58,7 +58,7 @@ const PAGES: Array<[name: string, path: string]> = [
   ],
   [
     "seller readout",
-    "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months",
+    "/sell/proceeds?p=400000&po=200000&cm=5",
   ],
   ["abroad readout", "/abroad/results?c=Fulton&p=300000&d=60000"],
   ["closed plan link", "/plan/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],

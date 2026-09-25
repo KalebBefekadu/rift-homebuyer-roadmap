@@ -144,6 +144,10 @@ offer. Commission is the seller's answer. "Not agreed yet" is `null`, and every 
 a range across `COMMISSION_BAND` (4% to 6%), never a single assumed rate (MONEY-06). A net
 below zero is a shortfall brought to closing.
 
+The preparation value uses `prepTriage()` in `lib/core/prepare.ts`: worth doing now, maybe and
+not yet, with reasons and no cost or return figure, because nobody has quoted the work
+(MONEY-06). `repairTriage()`, with its invented costs, now feeds only the prototype.
+
 `repairTriage()` ranks repairs
 by payback, and `unclaimedValue()` finds homestead and age-65 exemptions the owner has not
 filed.

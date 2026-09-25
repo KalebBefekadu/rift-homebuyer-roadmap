@@ -66,9 +66,8 @@ describe("the commission question", () => {
 });
 
 describe("the seller values", () => {
-  it("are live in D20 order, except preparation, which has no page yet", () => {
-    expect(valuesFor("sell").map((v) => v.id)).toEqual(["proceeds", "unclaimed", "costs"]);
-    expect(VALUES.find((v) => v.id === "prepare")!.live).toBe(false);
+  it("are all live, in D20 order", () => {
+    expect(valuesFor("sell").map((v) => v.id)).toEqual(["proceeds", "unclaimed", "costs", "prepare"]);
   });
 
   it("ask only what their figure uses: no county, since nothing here varies by county", () => {
@@ -80,5 +79,19 @@ describe("the seller values", () => {
   it("have a distinct address parameter for every answer", () => {
     const params = Object.values(ASKS).map((a) => a.param);
     expect(new Set(params).size).toBe(params.length);
+  });
+});
+
+describe("money you may be losing", () => {
+  it("suggests no assessment appeal when nobody has told us the assessment", async () => {
+    const { unclaimedValue, SELLER_DEFAULTS } = await import("./compute");
+    const items = unclaimedValue({ ...SELLER_DEFAULTS, price: 350_000, assessedValue: 0 });
+    expect(items.some((i) => /assessment/i.test(i.title))).toBe(false);
+  });
+
+  it("the page passes zero, not the price, as the assessment", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("app/(rift)/sell/unclaimed/page.tsx", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(src).toMatch(/assessedValue:\s*0,/);
   });
 });

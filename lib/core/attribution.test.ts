@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
-  MAX_TAG, describeTouch, externalReferrer, safeLanding, stripToHost, touchFromRequest,
+  MAX_TAG, describeTouch, externalReferrer, refFrom, safeLanding, stripToHost, touchFromRequest,
 } from "./attribution";
 
 /**
@@ -126,5 +126,17 @@ describe("the route takes each value from the side that can know it", () => {
     expect(client).toContain("document.referrer");
     expect(src).toMatch(/body\.referrer/);
     expect(src).toContain("touchFromRequest(url, cameFrom, self.host)");
+  });
+});
+
+describe("a money answer in the address is not a referral", () => {
+  it("ignores an all-digit r, which is the monthly-saving answer on the buyer pages", () => {
+    const t = touchFromRequest(new URL("https://rift.test/buy/timeline?p=325000&d=3.5&s=9000&r=650"), null);
+    expect(t.ref).toBeUndefined();
+    expect(describeTouch(t)).toBe("direct");
+  });
+
+  it("still reads a real referral handle", () => {
+    expect(refFrom("3f9a0c1b2d4e5f6a7b8c9d0e")).toBe("3f9a0c1b2d4e5f6a7b8c9d0e");
   });
 });

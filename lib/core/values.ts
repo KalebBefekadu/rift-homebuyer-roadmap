@@ -22,6 +22,7 @@ export type InputKey =
   | "county" | "ownership" | "price" | "downPct" | "savings" | "monthlySaving"
   | "income" | "household" | "credit" | "occupation" | "loanType"
   | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
+  | "interior" | "kitchen" | "systems"
   | "status" | "use";
 
 export interface ValueDef {
@@ -95,7 +96,8 @@ export const VALUES: ValueDef[] = [
     question: "Am I losing money on my home already?",
     gives: "Exemptions you may not have filed, and the appeal deadlines that apply.",
     cta: "Check what I may be missing",
-    asks: [],
+    /* No county: nothing in unclaimedValue varies by county. */
+    asks: ["price", "yearsOwned", "homestead", "age65"],
     live: true,
   },
   {
@@ -111,8 +113,8 @@ export const VALUES: ValueDef[] = [
     question: "Should I fix things before I list?",
     gives: "What is worth addressing, what maybe, and what not yet.",
     cta: "See what to fix first",
-    asks: ["price"],
-    live: false,
+    asks: ["price", "interior", "kitchen", "systems"],
+    live: true,
   },
 
   /* Abroad, D20: can I buy, what it costs, the return. */

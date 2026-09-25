@@ -92,6 +92,11 @@ export const MAX_REF = 64;
 export function refFrom(raw: string | null | undefined): string | undefined {
   const v = (raw ?? "").trim();
   if (!v || v.length > MAX_REF) return undefined;
+  /* `r` is also the monthly-saving answer on /buy/results and /buy/timeline,
+     so a shared answer link landed as "?r=650" and the visit was reported as
+     a referral. A referral handle is 24 hex characters or a share token, and
+     neither is ever all digits; a figure always is. */
+  if (/^\d+$/.test(v)) return undefined;
   return /^[A-Za-z0-9_-]+$/.test(v) ? v : undefined;
 }
 

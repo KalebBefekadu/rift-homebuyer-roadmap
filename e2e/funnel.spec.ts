@@ -126,7 +126,7 @@ test.describe("the seller funnel", () => {
     /* The underwater seller is this codebase's most-repeated bug: the prose was
        fixed in the verdict and the chip, and four more surfaces went on saying
        "You keep" over a negative number. */
-    await page.goto("/sell/results?c=Fulton&p=300000&o=380000&y=3&t=3+to+9+months");
+    await page.goto("/sell/proceeds?p=300000&po=380000&cm=5");
     const text = await page.locator("body").innerText();
 
     expect(text.length).toBeGreaterThan(200);

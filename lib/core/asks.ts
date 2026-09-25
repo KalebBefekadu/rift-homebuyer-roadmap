@@ -179,6 +179,37 @@ export const ASKS: Record<InputKey, AskDef> = {
     ],
     fallback: "none",
   },
+  interior: {
+    key: "interior", param: "in", type: "choice",
+    title: "How does the inside of the home look?",
+    options: [
+      { value: "fresh", label: "In good shape", hint: "Clean walls and floors" },
+      { value: "worn", label: "Some wear", hint: "Scuffs, marks, a few tired rooms" },
+      { value: "tired", label: "Tired", hint: "Worn walls, carpet or floors throughout" },
+    ],
+    fallback: "worn",
+  },
+  kitchen: {
+    key: "kitchen", param: "kb", type: "choice",
+    title: "How old are the kitchen and bathrooms?",
+    options: [
+      { value: "updated", label: "Updated in the last ten years" },
+      { value: "dated", label: "Older, but in working order" },
+      { value: "original", label: "Original to the house" },
+    ],
+    fallback: "dated",
+  },
+  systems: {
+    key: "systems", param: "sy", type: "choice",
+    title: "Any known problems with the roof, heating and cooling, plumbing or electrical?",
+    why: "A buyer's inspection looks at all four.",
+    options: [
+      { value: "fine", label: "No, none that I know of" },
+      { value: "issues", label: "Yes, there is something" },
+      { value: "unsure", label: "I'm not sure" },
+    ],
+    fallback: "unsure",
+  },
   yearsOwned: {
     key: "yearsOwned", param: "yo", type: "choice",
     title: "How long have you owned it?",
@@ -289,4 +320,5 @@ export const ASK_SHORT: Record<InputKey, string> = {
   savings: "Saved", monthlySaving: "Each month", income: "Income", household: "Household",
   credit: "Credit", occupation: "Work", loanType: "Loan", payoff: "Still owed", commission: "Commission",
   yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older", status: "Status", use: "Use",
+  interior: "Inside", kitchen: "Kitchen and baths", systems: "Roof and systems",
 };

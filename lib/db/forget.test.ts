@@ -285,21 +285,26 @@ describe("every capture surface hands over a session", () => {
     return out;
   }
 
+  /* Both endpoints that turn a visitor into a lead. Save my plan was added
+     with the values and makes a lead too, so it is held to the same rule. */
+  const ENDPOINTS = ['"/api/capture"', '"/api/plan/save"'];
+  const endpointIn = (src: string) => ENDPOINTS.find((e) => src.includes(e));
   const callers = ["app/(rift)", "components/rift"]
     .flatMap(tsxFiles)
-    .filter((f) => readFileSync(f, "utf8").includes('"/api/capture"'));
+    .filter((f) => endpointIn(readFileSync(f, "utf8")));
 
   it("finds the capture forms", () => {
-    /* Four today: the buyer readout, the seller readout, /book, and the
-       abroad readout. If this drops, a form was removed or renamed and the
-       assertion below has stopped covering it. */
+    /* Four today: the buyer readout, /book, the abroad readout, and Save my
+       plan. The seller readout went with the seller values. If this drops, a
+       form was removed or renamed and the assertion below has stopped
+       covering it. */
     expect(callers.length).toBeGreaterThanOrEqual(4);
   });
 
   it("sends sessionId from each of them", () => {
     const silent = callers.filter((f) => {
       const src = readFileSync(f, "utf8");
-      const at = src.indexOf('"/api/capture"');
+      const at = src.indexOf(endpointIn(src)!);
       /* The body follows the URL closely; a generous window rather than a
          parse, because the shape of these calls varies. */
       return !/sessionId:\s*sessionId\(\)/.test(src.slice(at, at + 1600));

@@ -310,3 +310,35 @@ export function PrepRooms({ counts }: { counts: { now: number; maybe: number; sk
     </svg>
   );
 }
+
+/**
+ * Unclaimed money: one tag per thing worth a call, hung from the house.
+ * The count is the headline; each tag carries its own word (rule 10).
+ */
+export function ClaimTags({ items }: { items: { title: string; urgent: boolean }[] }) {
+  const W = 360, rowH = 34, top = 64;
+  const H = top + Math.max(items.length, 1) * rowH + 16;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
+      aria-label={items.length ? `${items.length} worth a call: ${items.map((i) => i.title).join("; ")}.` : "Nothing obvious to chase."}>
+      <path d="M40 52 L80 18 L120 52 Z" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" />
+      <rect x="52" y="52" width="56" height="34" fill="var(--brand-wash)" stroke="var(--ink)" strokeWidth="1.5" />
+      <line x1="120" y1="40" x2={W - 20} y2="40" stroke="var(--line)" />
+      <text x="136" y="32" fontSize="26" className="art-num" fill="var(--ink)">{items.length}</text>
+      <text x="164" y="32" fontSize="12" fill="var(--ink-3)">worth a call</text>
+      {items.length ? items.map((it, k) => {
+        const y = top + k * rowH;
+        const label = it.title.length > 40 ? it.title.slice(0, 38) + "…" : it.title;
+        return (
+          <g key={it.title} className="art-rise" style={{ animationDelay: `${k * 90}ms` }}>
+            <line x1="130" y1="40" x2="150" y2={y + 13} stroke="var(--line)" />
+            <rect x="150" y={y} width={W - 170} height={rowH - 8} rx="4" fill={k === 0 ? "var(--brand)" : "var(--paper)"} stroke={k === 0 ? "none" : "var(--brand-line)"} />
+            <text x="160" y={y + 17} fontSize="11" fill={k === 0 ? "#fff" : "var(--ink-2)"}>{it.urgent ? "Deadline · " : ""}{label}</text>
+          </g>
+        );
+      }) : (
+        <text x="150" y={top + 17} fontSize="12" fill="var(--ink-3)">Nothing obvious to chase</text>
+      )}
+    </svg>
+  );
+}

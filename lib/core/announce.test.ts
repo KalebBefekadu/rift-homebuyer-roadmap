@@ -90,7 +90,6 @@ describe("no seller surface describes a shortfall as a gain", () => {
   const SURFACES = [
     "app/(rift)/sell/page.tsx",
     "app/(rift)/sell/proceeds/page.tsx",
-    "app/(rift)/sell/results/Readout.tsx",
   ] as const;
 
   /* Phrases that are only true when the number is positive. */

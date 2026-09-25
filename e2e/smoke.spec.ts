@@ -12,7 +12,7 @@ import { test, expect } from "@playwright/test";
    one that no longer exists. */
 const PUBLIC = [
   "/", "/buy", "/buy/how", "/buy/start", "/buy/programs",
-  "/sell", "/sell/how", "/sell/start", "/sell/unclaimed",
+  "/sell", "/sell/how", "/sell/proceeds", "/sell/costs", "/sell/prepare", "/sell/unclaimed",
   "/abroad", "/book", "/privacy",
 ];
 

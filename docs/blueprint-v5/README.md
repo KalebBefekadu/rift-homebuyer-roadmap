@@ -309,7 +309,16 @@ come later.
 at `/sell/proceeds` and selling costs at `/sell/costs`, each with its own questions and drawing.
 Commission is asked, and "Not agreed yet" shows a 4% to 6% range rather than a rate. Neither
 asks the county, because nothing in a seller's costs changes by county yet; the county returns
-when a county tax rate does. Preparation, `/sell/start` and `/sell/results` are not rebuilt yet.
+when a county tax rate does.
+
+**Built (25 Sep, second slice):** all four seller values are live. Preparation (`/sell/prepare`)
+sorts work into worth doing now, maybe and not yet from three condition questions, with reasons
+and no dollar return (MONEY-06). Money you may be losing (`/sell/unclaimed`) now asks its
+questions one at a time like the others, and no longer suggests an assessment appeal: it used to
+compare every visitor's price with a sample house's assessed value, and the old seller readout
+suggested an appeal to every seller. `/sell/start` and `/sell/results` answer a 307 to `/sell`,
+or to `/sell/proceeds` with the price and payoff the link carried, keeping campaign and
+referral tags. The seller questions in Operations' funnel editor no longer have a page (D24).
 
 **First order (D20, decided 24 Sep):** 1. Net proceeds; 2. Unclaimed money (useful even to someone not
 selling, and already built); 3. Selling costs; 4. Preparation.
@@ -899,6 +908,7 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
 | D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
 | D22 | Is a phone number required to book a call (§5.1 says yes)? If so, is the call-and-text consent required with it, or is a manual call-back about the booking allowed without it? | Today a phone is refused without consent, and the consent says it is not a condition of anything | Kaleb, with D06 on text consent |
+| D24 | The seller funnel in Operations' question editor no longer renders anywhere, since `/sell/start` forwards to the values. Keep its custom questions for a later "ask Kaleb" step, or retire the seller funnel from the editor? Rule 5 still holds either way: custom questions never reach a figure | Otherwise Kaleb can edit questions nobody sees | Kaleb |
 | D23 | The commission range shown when a seller has not agreed one (built as 4% to 6%), and whether the front door's seller example (5.5%) and the offer page's assumption (6%) should show a range too | MONEY-06: commission is negotiated, never a standard rate | Kaleb |
 
 ---
@@ -945,6 +955,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 25 Sep 2026 | Seller values complete: preparation, unclaimed money rebuilt, old seller pages forward (§5.3); a monthly-saving figure no longer counts as a referral |
 | 25 Sep 2026 | How it works rewritten for buyers, sellers and abroad (§5.8) |
 | 25 Sep 2026 | Submit an offer and Book a call rebuilt to §5.9; the phone-for-booking question opened |
 | 25 Sep 2026 | Seller values, first slice: `/sell` landing, net proceeds and selling costs (§5.3) |

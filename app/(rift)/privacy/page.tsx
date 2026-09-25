@@ -186,8 +186,8 @@ export default function PrivacyPage() {
             discard, goes.
           </p>
           <div className="row gap-2 wrap" style={{ marginTop: 14 }}>
-            <Link href="/buy/start" className="btn btn-g btn-sm">Buyer readout<Ico.arrowR size={13} /></Link>
-            <Link href="/sell/start" className="btn btn-g btn-sm">Seller readout<Ico.arrowR size={13} /></Link>
+            <Link href="/buy" className="btn btn-g btn-sm">Buyer answers<Ico.arrowR size={13} /></Link>
+            <Link href="/sell" className="btn btn-g btn-sm">Seller answers<Ico.arrowR size={13} /></Link>
           </div>
         </Block>
 
