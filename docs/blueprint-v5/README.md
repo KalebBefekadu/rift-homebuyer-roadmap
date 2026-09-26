@@ -257,7 +257,17 @@ pages, the offer upload and a closed summary link, on desktop and phone: 256 pas
   breakdowns whose picture already shows the same lines (cash to close, selling costs, what you
   keep, the monthly payment's parts, where the months come from). Tables that answer the page's
   own question stay open ("The two scenarios", "Across three prices", "What your situation
-  means"). **Next:** the saved plan page, the client journey pages, the abroad results.
+  means"). **Done (29 Sep):** the saved plan (late, this week and next on the page; this month,
+  later and done in layers that say how many are theirs); the client journey (contract parts that
+  need them or are blocked on the page, the rest in one layer with how many are confirmed; the
+  full search priorities list in a layer, what changed and what is still to decide on the page);
+  the abroad readout (a rental's three running costs in a layer inside the monthly card, with
+  their total; what is left over stays; both languages); Operations Offers (each offer's terms),
+  Transactions (at most three flags per deal, the rest on the journey) and Settings (a layer per
+  stage in "Who does each step"). The year-one breakdown on the abroad readout stays open: its
+  three parts are the argument of that section. **Left:** a page-by-page pass of the remaining
+  public pages as they are next touched, not the other session's (programs, `/buy/start`,
+  `/buy/results`).
 
 ---
 
@@ -853,13 +863,21 @@ due time and its next action:
 - Snooze with an owner and a resume time (never moving a contract date), delegate with
   acceptance, pin with a reason and expiry (OPS-02).
 
-### 8.5 Relationships (proposal)
+### 8.5 Relationships (built 29 Sep)
 - A table: name, side, stage, next action and due date, last contact, source. Search, filters
   that persist, sort.
 - Opening a person opens a **detail panel** beside the list, so the agent keeps his place; a
   full page is one click further.
 - The person view leads with the lead summary (§5.5), then journeys, plan, decisions, agreement,
   history.
+- **Built:** `/operations/clients` is a table (name, stage, next and when, where they came from,
+  when they arrived) with search, the four filters, buying or selling, and a sort (newest, owed
+  soonest, name), all kept in the address so back returns to the same list. Choosing a name opens
+  the panel beside it (a full screen on a phone): how to reach them, what is owed, their journeys
+  with each one's stage, and the last five things that happened. Its button opens their journey
+  when they have one and their full page when not. The forecast is a layer above the table.
+  Difference from the proposal: no "last contact" column yet, because nothing records contact
+  apart from the notes; it arrives with the calendar and email work (§10.3).
 
 ### 8.6 The journey workspace (proposal)
 - Replace the long page with a **workspace**: a fixed header (name, stage, status, next action,
@@ -880,13 +898,45 @@ due time and its next action:
   report (UX-02). Sending an agreement, presenting an offer and a price opinion are the agent's
   in every mode. Who does each step is set once in Settings, Checklists, for every client; a
   journey can add a step of its own. The ten workstreams are steps too, so Transactions and the
-  checklist read the same. Source: `lib/prototype/ops-playbook.ts`, tested in
-  `lib/core/ops-playbook.test.ts`.
+  checklist read the same. Source: `lib/core/checklist.ts` (the mock-up re-exports it), tested in
+  `lib/core/checklist.test.ts`.
+- **Who does each step (built 29 Sep).** Settings, "Who does each step", lists both checklists
+  with a layer per stage. A step can go to the agent, the coordinator or, only where Rift was
+  designed to do it, Rift. Protected steps stay the agent's, and the client's and the outside
+  professionals' are theirs whoever records them; both say so instead of offering a choice.
+  Choosing the default removes the change, so "changed" is always a fact, with who changed it and
+  when. A step handed to Rift that Rift cannot do yet still shows as the agent's, "until Rift
+  can". Table `rift_step_assignments` (migration 20260929000000). **Not yet:** a journey adding a
+  step of its own.
 
-### 8.7 Transactions (new, proposal)
+### 8.7 Transactions and the team (built 29 Sep)
 - Every contract in one table: property, client, stage, next deadline, workstreams at a glance
   (a small status for each of the ten), and anything blocked or unconfirmed.
 - Opens straight to the journey's Contract tab.
+- **Built:** `/operations/transactions`, in the sidebar between Search and Offers. Every open
+  contract, trouble first (a passed date or a blocked workstream), then by closing, soonest first;
+  a deal with no closing date recorded goes last, so "we do not know when" never reads as "not
+  soon". Per deal: the home and client, the closing, the next date, the ten workstreams as a strip
+  of icons with the count confirmed, and at most three things that need a look (passed dates,
+  blocked, dates not checked against the contract, reported but not confirmed, no word for seven
+  days). A clean row says "Nothing flagged", explained under the table as nobody having reported
+  a problem, not there being none (UX-04). Rules in `lib/core/transactions.ts`, read across the
+  book in one round per table by `lib/db/transactions.ts`. Buying journeys only: selling
+  journeys have no contract record yet (§9).
+- **Coordinator accounts (built 29 Sep).** Settings, Team, lists the agent and each coordinator
+  with whether they have signed in. Adding one takes a name and the email they will sign in
+  with, and gives the agent a link to send himself: Rift sends nothing (AUTO-01). The
+  coordinator signs in at `/operations/tasks` with that address; the first sign-in binds their
+  account, and a removed membership (removing asks why) stops working on the next request. Their
+  page lists the coordinator's steps in each active journey's current stage, by client name and
+  stage only, and each has the same one button as the agent's checklist. The server resolves the
+  membership from the session on every request and refuses a step that is not the
+  coordinator's; the mark records that the coordinator made it, and the checklist shows who.
+  **What a coordinator cannot see or do** is listed on the Team section: no finances, readout,
+  notes or documents; not the agent's steps or anything protected; nothing sent to a client or an
+  outside party; no reopening. Workstream steps stay the agent's to update under Where it stands.
+  Tables `rift_team_members` and new columns on `rift_step_marks` (migration 20260929000000).
+  Open question D26 below: whether a coordinator should see more of a deal than its checklist.
 
 ### 8.8 The other pages
 - **Search:** keep, restyle as a table; add "update pending" filters.
@@ -896,6 +946,11 @@ due time and its next action:
 - **Settings:** sections down the side with real controls and a save bar: profile and hours,
   team (what the coordinator can do), automation (the three modes, each workflow, what is always
   the agent's), checklists (who does each step), leads and emails, connections, privacy.
+  **Built (29 Sep):** three sections as tabs: Your decisions (the six rules, unchanged, each
+  saved on its own rather than with a save bar, for the reason on `settings/Rules.tsx`), Who does
+  each step (§8.6) and Team (§8.7). Profile and hours, automation, leads and emails, connections
+  and privacy are added as sections when there is something real behind each; a section with
+  switches that change nothing would be the house bug the Settings page was written to end.
 - **Lead-form questions:** keep; say on the page what they are and that they never reach a figure.
 
 ### 8.9 Look and feel
@@ -953,6 +1008,17 @@ assumed done; coordinator steps say Coordinator but anyone signed in records the
 coordinator accounts do not exist yet; and who does each step is not yet editable in Settings.
 Next: Relationships as a table with a side panel, Transactions, Offers as cards, Settings as
 sections (with Checklists and Team), coordinator accounts.
+
+**Built 29 Sep:** Relationships as a table with a side panel (§8.5), Transactions (§8.7),
+Settings as sections with who does each step and the team (§8.6 to §8.8), coordinator accounts
+(§8.7), and the layers pass on the client pages (§4.8). Also fixed on the way: a seller's
+checklist named its stages as a buyer's ("Search", "Tour"); it now says List, Showings, Offers
+and After the sale. **Next for Operations:** the Cmd+K switcher and keyboard shortcuts, snooze,
+delegation and pinning on Today (OPS-02), the Offers present-or-hold decision, and a journey
+adding a step of its own. **Kaleb, to use what was built:** paste `output/pending-migrations.sql`
+into the Supabase SQL Editor once (it now includes 20260928000000 and 20260929000000 and skips
+whatever is already applied); until then the checklist can be read but not ticked, and Team and
+Who does each step say they need the update.
 
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
@@ -1053,6 +1119,7 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D06 | The broker's written rules: when a buyer agreement is required, offer presentation, forms, record holds (F16), advertising and text consent, funds instructions | Today's rules stay until answered. Deferred by Kaleb until after testing | Broker |
 | D09 | Confirm the first release's scope with the broker (Georgia resale, financed and cash, several buyers, restarts; new construction, estates, trusts and short sales as manual exceptions) | Deferred with D06 | Kaleb and broker |
 | D22 | Is a phone number required to book a call (§5.1 says yes)? If so, is the call-and-text consent required with it, or is a manual call-back about the booking allowed without it? | Today a phone is refused without consent, and the consent says it is not a condition of anything | Kaleb, with D06 on text consent |
+| D26 | How much of a deal a coordinator sees. Today: client name, journey label, stage and the coordinator's own steps, nothing else. A coordinator who books inspections and checks settlement statements may need contract dates and the property address; that is more of a client's information in a second person's hands | Built to the narrowest version until decided; widening it is a small change, narrowing it after the fact is not | Kaleb, with D06 |
 | D25 | Amharic for the abroad value questions and answers, written by a speaker. Until it exists the Amharic landing stays one page and the separate values are English only | §5.4 asks for the split on every abroad page; machine translation is ruled out | Kaleb |
 | D24 | The seller funnel in Operations' question editor no longer renders anywhere, since `/sell/start` forwards to the values. Keep its custom questions for a later "ask Kaleb" step, or retire the seller funnel from the editor? Rule 5 still holds either way: custom questions never reach a figure | Otherwise Kaleb can edit questions nobody sees | Kaleb |
 | D23 | The commission range shown when a seller has not agreed one (built as 4% to 6%), and whether the front door's seller example (5.5%) and the offer page's assumption (6%) should show a range too | MONEY-06: commission is negotiated, never a standard rate | Kaleb |
@@ -1101,6 +1168,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 29 Sep 2026 | Built: Relationships as a table with a side panel, Transactions, Settings in sections with who does each step and the team, coordinator accounts (§8.5 to §8.8; migration 20260929000000); layers on the saved plan, client journey and abroad readout (§4.8); D26 opened |
 | 28 Sep 2026 | The journey checklist, built: steps, who does each, marks with who and the day (§8.6; migration 20260928000000) |
 | 26 Sep 2026 | Principle 6 and §4.8: simple first, more one press away (layers), site-wide. Operations: sidebar on every page; Today rebuilt as one list with layers (§8) |
 | 26 Sep 2026 | Operations mock-up, third version: the journey as an executed checklist with who does each step, a simpler Today and Offers, real Settings (§8) |
