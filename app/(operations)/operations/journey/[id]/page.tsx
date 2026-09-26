@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../../Unavailable";
-import { StudioHeader } from "../../StudioHeader";
+import { OpsNav } from "../../OpsNav";
 import { journeyFor, membersOf } from "@/lib/db/journeys";
 import { searchState, readoutStart } from "@/lib/db/search";
 import { homesOf } from "@/lib/db/shortlist";
@@ -129,7 +129,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <StudioHeader agentName={agent.name} current="search" />
+      <OpsNav agentName={agent.name} />
       <main className="shell-w" style={{ paddingTop: 22, paddingBottom: 60 }}>
         <Link href={`/operations/lead/${journey.leadId}`} className="t-sm c-3">← {journey.person}</Link>
         <div className="row gap-2 wrap" style={{ marginTop: 10 }}>

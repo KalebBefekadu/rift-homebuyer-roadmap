@@ -6,7 +6,7 @@ import { datedCommitments } from "@/lib/db/plan";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { buildAgenda, summariseAgenda, agendaHeadline } from "@/lib/core/agenda";
 import { Ico } from "@/components/rift/icons";
-import { StudioHeader } from "../StudioHeader";
+import { OpsNav } from "../OpsNav";
 import { Unavailable } from "../Unavailable";
 
 export const metadata: Metadata = { title: "What's coming" };
@@ -46,7 +46,7 @@ export default async function CalendarPage() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} undecided={rules.undecided.length} current="calendar" />
+      <OpsNav agentName={agent.name} undecided={rules.undecided.length} />
 
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 780 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>

@@ -13,7 +13,9 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
         rel="stylesheet"
         href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@400,500,600,700&f%5B%5D=zodiak@300,400,500&display=swap"
       />
-      {children}
+      {/* .opsx turns into the sidebar layout when a page renders the
+          sidebar (OpsNav); sign-in and the signed-out notice stay plain. */}
+      <div className="opsx">{children}</div>
     </div>
   );
 }

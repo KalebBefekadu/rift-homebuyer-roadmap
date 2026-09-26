@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
+import { OpsNav } from "../../OpsNav";
 import { Unavailable } from "../../Unavailable";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
@@ -130,6 +131,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
+      <OpsNav agentName={agent.name} />
       <ClientRecord lead={read.data.lead} notes={read.data.notes} />
       <div className="shell-w" style={{ paddingBottom: 40 }}>
         {didLine ? (

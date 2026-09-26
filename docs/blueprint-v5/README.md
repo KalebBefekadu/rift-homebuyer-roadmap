@@ -158,7 +158,10 @@ it says otherwise.
    system (§4). (Kaleb, R1)
 5. **One primary action at a time.** Each screen has one obvious next step: "Get my numbers",
    "Save my plan", "Review these homes", "Record a check". Secondary things sit below it.
-6. **Progressive disclosure.** Clarity first, detail on request.
+6. **Simple first; more is one press away (Kaleb, R3).** Every screen shows the simple answer and
+   its one next step. Complexity that cannot be avoided is not removed and not crammed in: it
+   goes in a layer on the same screen, behind a press, whose label says what is inside and how
+   much. This applies to the whole site: public, client and Operations. §4.8 sets the rule.
 7. **Journey first, dashboard second.** Organize around where the person is and what happens
    next, not a grid of widgets.
 8. **Education at the moment of need,** never an encyclopedia.
@@ -238,6 +241,19 @@ and the performance targets in QUALITY-03.
 scroll at 412px and 320px, styling, funnel, smoke) now cover every value page, the how-it-works
 pages, the offer upload and a closed summary link, on desktop and phone: 256 passing. Keyboard and
 400% zoom are not automated and still need a manual pass.
+
+### 4.8 Layers: simple first, more on request (Kaleb, R3)
+- **The screen answers its one question and offers its one next step.** Everything else that
+  belongs on the page sits in a layer: `components/rift/Layer.tsx`, closed by default.
+- **The label says what is inside and how much**, and carries the one fact worth seeing while it
+  is closed: "Who to call · 12 leads, best first", "How this was worked out · 6 figures".
+- **Never behind a layer:** a failure, a deadline, a blocker, a figure's headline, or anything a
+  rule requires on screen. A layer opens by itself when something inside it needs the person.
+- **Opening a layer never changes a figure, never navigates, and closing it loses nothing.** It
+  works without script, from the keyboard and on a phone (a 44px row).
+- **Where it applies:** first to Operations as each page is rebuilt (Today is the first); then
+  each public and client page is reviewed for what can move into a layer, in the same pass that
+  checks it at 1280px and 390px.
 
 ---
 
@@ -916,6 +932,16 @@ per offer leading with what reaches the seller, its expiry and one action; Setti
 the two pages renamed and explained. The page's "What changed" button lists each change.
 Answered by the review: the transaction coordinator is real, so delegation to them stays.
 
+**Being built (26 Sep, Kaleb: "you can start implementing").** The review of the third version
+approved the direction. Built so far: the sidebar on every Operations page (phone: a Menu
+button), the names that say what each page is, sans-serif Operations headings, and Today as one
+"Needs you" list (failed jobs, contract dates, people past the reply target, actions due,
+sellers' choices, agreements running out, a stale rate or program, figures to check, follow-ups
+that need him) with everything else in layers: follow-up, who to call, the week, everyone being
+worked, started-not-finished, where people stop. Next: the journey page as the checklist
+(which needs the step records), Relationships as a table with a side panel, Transactions,
+Offers as cards, Settings as sections.
+
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
 a detail keeps the list position and filters; every item on Today names its owner and next
@@ -1063,6 +1089,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 26 Sep 2026 | Principle 6 and §4.8: simple first, more one press away (layers), site-wide. Operations: sidebar on every page; Today rebuilt as one list with layers (§8) |
 | 26 Sep 2026 | Operations mock-up, third version: the journey as an executed checklist with who does each step, a simpler Today and Offers, real Settings (§8) |
 | 25 Sep 2026 | Operations mock-up, second version from an audit against §8 (D15) |
 | 25 Sep 2026 | Accessibility and phone-width suites extended to every new page; four defects fixed (§4.7) |

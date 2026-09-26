@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { STAGE_NAMES, type Stage } from "@/lib/core/pipeline";
 import { createLead } from "../actions";
@@ -56,9 +55,7 @@ export function AddLead() {
 
   return (
     <main className="shell-w" style={{ paddingTop: 26, paddingBottom: 80, maxWidth: 620 }}>
-      <Link href="/operations" className="t-sm c-3">← Operations</Link>
-
-      <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em", marginTop: 14 }}>
+      <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>
         Add someone
       </h1>
       <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>

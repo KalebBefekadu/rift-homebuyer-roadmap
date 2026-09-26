@@ -10,7 +10,7 @@ import { STALL_CHIP } from "@/lib/core/pipeline";
 import { Forward } from "./Forward";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { Ico } from "@/components/rift/icons";
-import { StudioHeader } from "../StudioHeader";
+import { OpsNav } from "../OpsNav";
 import { Search } from "./Search";
 
 export const metadata: Metadata = { title: "People" };
@@ -93,7 +93,7 @@ export default async function ClientsPage({
 
   return (
     <>
-      <StudioHeader agentName={agent.name} undecided={rules.undecided.length} current="clients" />
+      <OpsNav agentName={agent.name} undecided={rules.undecided.length} />
 
       <main className="shell-w sec" style={{ paddingTop: 28 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>People</h1>

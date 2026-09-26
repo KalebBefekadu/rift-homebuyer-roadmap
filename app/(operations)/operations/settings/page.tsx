@@ -5,8 +5,9 @@ import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { readAgentRules } from "@/lib/db/settings";
 import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, type BusinessRules } from "@/lib/core/settings";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
 import { Rules } from "./Rules";
+import { OpsNav } from "../OpsNav";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export default async function SettingsPage() {
 
   if (!read.ok) {
     return (
-      <Frame>
+      <Frame agentName={agent.name} undecided={undecidedOf(read)}>
         <h1 className="serif" style={{ fontSize: 26 }}>Settings could not be loaded.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
           The database did not answer, so this page cannot tell a value you chose from a default;
@@ -58,7 +59,7 @@ export default async function SettingsPage() {
 
   if ("skipped" in read) {
     return (
-      <Frame>
+      <Frame agentName={agent.name} undecided={undecidedOf(read)}>
         <h1 className="serif" style={{ fontSize: 26 }}>Settings need a database.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
           {read.reason}. Until then every figure in the product runs on the defaults below, which
@@ -73,7 +74,7 @@ export default async function SettingsPage() {
   const { rules, undecided, decided } = read.data;
 
   return (
-    <Frame>
+    <Frame agentName={agent.name} undecided={undecidedOf(read)}>
       <div className="between wrap gap-3" style={{ alignItems: "flex-start" }}>
         <div>
           <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,32px)", letterSpacing: "-0.02em" }}>
@@ -142,23 +143,17 @@ export default async function SettingsPage() {
   );
 }
 
-function Frame({ children }: { children: React.ReactNode }) {
+function Frame({ children, agentName, undecided }: { children: React.ReactNode; agentName: string; undecided: number }) {
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/operations" className="row gap-2">
-            <Mark size={19} />
-            <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-            <span className="chip chip-out t-2xs">Operations</span>
-          </Link>
-          <Link href="/operations" className="t-sm c-3">← Today</Link>
-        </div>
-      </header>
+    <>
+      <OpsNav agentName={agentName} undecided={undecided} />
       <main className="shell-w sec" style={{ maxWidth: 760 }}>{children}</main>
-    </div>
+    </>
   );
 }
+
+const undecidedOf = (read: Awaited<ReturnType<typeof readAgentRules>>) =>
+  read.ok && "data" in read ? read.data.undecided.length : 0;
 
 /** Read-only, for the degraded case. Never editable without somewhere to save. */
 function Defaults() {

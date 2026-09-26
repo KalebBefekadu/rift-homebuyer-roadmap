@@ -5,7 +5,8 @@ import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { readWording } from "@/lib/db/funnel";
 import { BUY_FUNNEL, SELL_FUNNEL, type Wording } from "@/lib/core/funnel";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
+import { OpsNav } from "../OpsNav";
 import { Editor } from "./Editor";
 
 export const metadata: Metadata = { title: "Your questions", robots: { index: false } };
@@ -41,7 +42,7 @@ export default async function QuestionsPage({
      about what just happened: see lib/db/session.ts. */
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  /* The session is the gate; nothing on this page needs the agent's name. */
+  const agent = session.agent;
 
   const sp = await searchParams;
   const raw = Array.isArray(sp.side) ? sp.side[0] : sp.side;
@@ -53,17 +54,8 @@ export default async function QuestionsPage({
   const unsaved = !read.ok || "skipped" in read;
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/operations" className="row gap-2">
-            <Mark size={19} />
-            <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-            <span className="chip chip-out t-2xs">Operations</span>
-          </Link>
-          <Link href="/operations" className="t-sm c-3">← Today</Link>
-        </div>
-      </header>
+    <>
+      <OpsNav agentName={agent.name} />
 
       <main className="shell-w sec" style={{ maxWidth: 760 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,32px)", letterSpacing: "-0.02em" }}>
@@ -110,6 +102,6 @@ export default async function QuestionsPage({
           </div>
         </div>
       </main>
-    </div>
+    </>
   );
 }

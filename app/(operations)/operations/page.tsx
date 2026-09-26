@@ -17,7 +17,8 @@ import { REVIEW_SLA_HOURS } from "@/lib/core/review";
 import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { ReviewRow } from "./ReviewRow";
 import { LeadRow } from "./LeadRow";
-import { StudioHeader } from "./StudioHeader";
+import { OpsNav } from "./OpsNav";
+import { Layer } from "@/components/rift/Layer";
 
 import { sla, type Band } from "@/lib/core/lead";
 import { diagnose } from "./diagnose";
@@ -31,7 +32,10 @@ export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
 
 /**
- * Studio, the minimum agent surface for the MVP.
+ * Today in Operations: what needs the agent now, as one list, and the rest
+ * one press away (Blueprint v5 §8.4, rebuilt from the reviewed mock-up).
+ *
+ * Originally the minimum agent surface for the MVP.
  *
  * Two things only: the leads the readout produced, ranked by what their answers
  * say rather than by when they arrived, and the funnel's own drop-off. Not the
@@ -153,13 +157,71 @@ export default async function StudioToday() {
 
   const breached = leads.filter((l) => slaOf(l).breached).length;
 
+  /* Everything that needs him, as one list (Blueprint v5 §8.4; Kaleb, R3:
+     simple first, more one press away). The old page stacked eleven sections
+     of equal weight and he had to read all of them to find the two that
+     mattered. Now each thing that needs his judgement is one line here, most
+     urgent first, and everything that is only worth knowing sits in a layer
+     below, closed, with its count on the outside. A layer opens by itself
+     when something inside it needs him. */
+  const today = new Date().toISOString().slice(0, 10);
+  const owedNow = owed.filter((p) => p.nextDue && p.nextDue <= today);
+  const owedLater = owed.filter((p) => !(p.nextDue && p.nextDue <= today));
+  const touchesForYou = touches.filter((t) => !t.auto);
+  const breachedLeads = leads.filter((l) => slaOf(l).breached);
+  const needs: Need[] = [
+    ...jobProblems.map((j): Need => ({ key: `job-${j.job}`, tone: "neg", icon: "alert", title: "A scheduled job needs you", sub: j.problem ?? "", chip: "Failed" })),
+    ...(dates ?? []).map((d, i): Need => ({
+      key: `date-${d.journeyId}-${i}`, href: `/operations/journey/${d.journeyId}`, icon: "cal",
+      tone: d.why === "missed" ? "neg" : "warn",
+      title: `${d.person}: ${d.label}`,
+      sub: d.why === "missed" ? `${d.when}. Passed and not recorded as met: record what actually happened.` : d.why === "unchecked" ? `${d.when}. Not checked against the document yet, so the buyer does not see it.` : `${d.when}. Due ${inDays(d.days!)}.`,
+      chip: d.why === "missed" ? "Passed" : d.why === "unchecked" ? "Check it" : "Soon",
+    })),
+    ...breachedLeads.map((l): Need => ({
+      key: `lead-${l.id}`, href: `/operations/lead/${l.id}`, icon: "clock", tone: "neg",
+      title: `Call ${l.name ?? l.email ?? "a new lead"}`, sub: `${slaOf(l).humanLabel}. Past your reply target.`, chip: "Reply now",
+    })),
+    ...owedNow.map((p): Need => ({
+      key: `owed-${p.id}`, href: `/operations/lead/${p.id}`, icon: "arrowR", tone: p.nextDue! < today ? "neg" : "warn",
+      title: `${p.name ?? p.email ?? "Unnamed"}: ${p.nextAction}`, sub: `${p.stage} · ${p.side === "buy" ? "buyer" : "seller"}`,
+      chip: p.nextDue! < today ? "Overdue" : "Today",
+    })),
+    ...choices.map((c): Need => ({
+      key: `choice-${c.leadId}`, href: `/operations/lead/${c.leadId}`, icon: "scale", tone: "warn",
+      title: `${c.name} chose ${c.seen.from}`, sub: `A choice is not an acceptance: the paperwork comes next, before the buyer's deadline.${c.note ? ` “${c.note}”` : ""}`, chip: "Paperwork",
+    })),
+    ...lapsing.map((l): Need => ({
+      key: `lapse-${l.id}`, href: `/operations/lead/${l.id}`, icon: "doc", tone: l.standing.covered ? "warn" : "neg",
+      title: `${l.name}: agreement ${l.standing.covered ? "running out" : "expired"}`, sub: l.standing.note, chip: l.standing.covered ? "Running out" : "Expired",
+    })),
+    ...(rate.freshness !== "fresh" ? [{
+      key: "rate", icon: "chart", tone: rate.freshness === "stale" ? "neg" : "warn",
+      title: `The rate everyone is shown is ${rate.pct.toFixed(2)}%, ${rate.asOf ? `${rate.ageDays} days old` : "never recorded"}`,
+      sub: `${rate.note} Record this week's with npm run rift:rate -- 6.72.`, chip: rate.asOf ? "Old" : "Missing",
+    } satisfies Need] : []),
+    ...(stale.length ? [{
+      key: "programs", href: "/operations/settings", icon: "shield", tone: "warn",
+      title: `${stale.length} program${stale.length === 1 ? "" : "s"} withheld from customers until re-checked`,
+      sub: `${stale.map((s) => s.name).join(", ")}. ${rules.registryOwner.value} re-checks these within ${recheckDays} days of the last check.`,
+      chip: "Re-check",
+    } satisfies Need] : []),
+  ];
+  const needCount = needs.length + pending.length + touchesForYou.length;
+
   return (
     <>
-      <StudioHeader agentName={agent.name} undecided={undecidedCount} current="today" />
+      <OpsNav agentName={agent.name} undecided={undecidedCount} />
 
       <main className="shell-w sec">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Today</h1>
+        <p className="t-sm c-3" style={{ marginTop: 6 }}>
+          {failures.length || notRecording ? "Some of this page could not be read; see below." : needCount
+            ? <><strong>{needCount} thing{needCount === 1 ? "" : "s"} need{needCount === 1 ? "s" : ""} you</strong>{breached ? `, ${breached} of them people waiting for a reply` : ""}. Everything else is below, one press away.</>
+            : "Nothing needs you right now. Everything else is below, one press away."}
+        </p>
 
+        {/* Never behind a layer: an empty list here has to mean empty. */}
         {failures.length ? (
           <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
             <div className="row gap-2">
@@ -187,440 +249,174 @@ export default async function StudioToday() {
             </p>
           </div>
         ) : null}
-
-        {/* The rate is the assumption the most figures depend on and the only
-            one that moves weekly. Recording it is a manual habit, so the one
-            thing that must not happen is nobody noticing it has lapsed:
-            every monthly figure in the product quietly drifts with it. */}
-        {rate.freshness !== "fresh" ? (
-          <div className="card p-4" style={{ marginTop: 16 }}>
-            <div className="between wrap gap-2">
-              <div className="row gap-2">
-                <Ico.chart size={15} className="c-3" />
-                <span className="t-sm w6">
-                  The rate everyone is being shown is {rate.pct.toFixed(2)}%
-                </span>
-              </div>
-              <span className={`chip ${rate.freshness === "stale" ? "chip-neg" : "chip-warn"}`}>
-                {rate.asOf ? `${rate.ageDays} days old` : "Never recorded"}
-              </span>
-            </div>
-            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-              {rate.note} Record this week&apos;s with{" "}
-              <span className="mono t-xs">npm run rift:rate -- 6.72</span>.
-            </p>
-          </div>
-        ) : null}
-
-        {stale.length ? (
-          <div className="card p-4" style={{ marginTop: 16 }}>
-            <div className="between wrap gap-2">
-              <div className="row gap-2">
-                <Ico.shield size={15} className="c-3" />
-                <span className="t-sm w6">
-                  {stale.length} program{stale.length === 1 ? "" : "s"} withheld from customers
-                </span>
-              </div>
-              <span className="chip chip-warn">Needs re-verifying</span>
-            </div>
-            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-              {stale.map((s) => s.name).join(", ")}. Nobody is being shown {stale.length === 1 ? "it" : "them"}
-              {" "}until {stale.length === 1 ? "it is" : "they are"} checked again. Suppression is
-              silent to the customer and loud here, which is the right way round.
-            </p>
-            {/* The task has a name on it. An unowned cadence is not a cadence:
-                programmes rot, stop being shown, and the list quietly shortens
-                with nobody having decided that. `registryOwner` is a setting
-                precisely so this sentence is somebody's decision rather than a
-                literal in a file. */}
-            <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.55 }}>
-              {rules.registryOwner.value} re-checks these, within {recheckDays} days of the last
-              verification. <Link href="/operations/settings" className="c-brand">Change either</Link>.
-            </p>
-          </div>
-        ) : null}
-
-        {/* Contract dates and scheduled jobs (W09). A missed date or a job
-            that did not run is urgent and has an owner; neither says what it
-            means legally or clears itself. */}
         {datesFailed ? (
           <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
             <span className="t-sm w6">The contract dates did not load.</span>
             <p className="t-sm c-3" style={{ marginTop: 6 }}>That is not the same as none being due. Reload in a moment.</p>
           </div>
-        ) : dates && dates.length ? (
-          <section style={{ marginTop: 28 }}>
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>Contract dates</h2>
-            <div className="card" style={{ marginTop: 12, overflow: "hidden" }}>
-              {dates.map((d, i) => (
-                <Link key={`${d.journeyId}-${d.label}-${i}`} href={`/operations/journey/${d.journeyId}`} className="between gap-3"
-                  style={{ display: "flex", padding: "12px 16px", alignItems: "center", borderBottom: i === dates.length - 1 ? 0 : "1px solid var(--line-3)" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="t-sm w6 trunc">{d.person}: {d.label}</div>
-                    <div className="t-xs c-4" style={{ marginTop: 2 }}>
-                      {d.when}. {d.why === "missed" ? "Passed and not recorded as met. Record what actually happened." : d.why === "unchecked" ? "Not checked against the document yet, so the buyer does not see it." : `Due ${inDays(d.days!)}.`}
-                    </div>
+        ) : null}
+
+        <section className="card opsx-needs" style={{ marginTop: 16 }} aria-labelledby="needs-h">
+          <h2 id="needs-h" className="opsx-needs-h">
+            <Ico.alert size={14} aria-hidden /> Needs you <span className="c-4 w5">{needCount}</span>
+            {overdue.length ? <span className="chip chip-neg t-2xs"><Ico.clock size={10} />{overdue.length} figure check{overdue.length === 1 ? "" : "s"} past {REVIEW_SLA_HOURS}h</span> : null}
+          </h2>
+          {needs.map((n) => <NeedRow key={n.key} n={n} />)}
+          {pending.map((r, i) => (
+            <ReviewRow key={r.id} item={r} last={i === pending.length - 1 && !touchesForYou.length} />
+          ))}
+          {touchesForYou.length ? (
+            <a href="#followups" className="opsx-need">
+              <span className="opsx-need-icon c-warn"><Ico.mail size={14} aria-hidden /></span>
+              <span className="opsx-need-body">
+                <span className="t-sm w6">{touchesForYou.length} follow-up{touchesForYou.length === 1 ? "" : "s"} to send yourself today</span>
+                <span className="t-xs c-4">They cannot go out on their own. The list is open below.</span>
+              </span>
+              <span className="chip chip-warn t-2xs">Needs you</span>
+            </a>
+          ) : null}
+          {!needCount ? (
+            <p className="t-sm c-3" style={{ padding: "14px 16px" }}>
+              {failures.length || notRecording ? "Unknown: some reads failed, so an empty list here proves nothing." : "Nothing needs you right now."}
+            </p>
+          ) : null}
+        </section>
+
+        <div className="opsx-layers">
+          {touches.length ? (
+            <Layer id="followups" title="Follow-up going out today" open={touchesForYou.length > 0}
+              meta={`${touches.filter((t) => t.auto).length} of ${touches.length} go out on their own`}>
+              {touches.map((t) => (
+                <div key={t.enrolmentId + t.stepId} className="opsx-row">
+                  <div className="row wrap gap-2">
+                    <span className="t-sm w6">{t.name}</span>
+                    <span className="chip">{CHANNEL_LABEL[t.channel]}</span>
+                    {t.auto ? <span className="chip chip-pos"><Ico.bolt size={10} />Automatic</span> : <span className="chip chip-warn">Needs you</span>}
+                    {t.daysLate > 0 ? <span className="chip chip-neg">{t.daysLate}d late</span> : null}
                   </div>
-                  <span className={`chip t-2xs ${d.why === "missed" ? "chip-neg" : "chip-warn"}`} style={{ flex: "none" }}>
-                    {d.why === "missed" ? "Passed" : d.why === "unchecked" ? "Check it" : "Soon"}
-                  </span>
-                </Link>
+                  <p className="t-sm" style={{ marginTop: 4 }}>{t.says}</p>
+                  <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}><span className="w6">Gives them: </span>{t.gives}</p>
+                  {t.downgraded ? (
+                    <p className="t-xs c-4 row gap-2" style={{ marginTop: 5 }}><Ico.lock size={11} style={{ flex: "none", marginTop: 2 }} />{t.downgraded}</p>
+                  ) : null}
+                </div>
               ))}
-            </div>
-          </section>
-        ) : null}
-        {jobProblems.length ? (
-          <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg, #b3261e)" }}>
-            <div className="row gap-2">
-              <Ico.alert size={15} className="c-neg" />
-              <span className="t-sm w6">{jobProblems.length === 1 ? "A scheduled job needs you" : `${jobProblems.length} scheduled jobs need you`}</span>
-            </div>
-            <ul className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6, display: "grid", gap: 4 }}>
-              {jobProblems.map((j) => <li key={j.job}>{j.problem}</li>)}
-            </ul>
-            <p className="t-xs c-4" style={{ marginTop: 8 }}>Yours to look into: the Vercel project&apos;s cron logs show the run, and Sentry has any error. Nothing is retried on its own.</p>
-          </div>
-        ) : null}
+            </Layer>
+          ) : null}
 
-        {/* Waiting on a person */}
-        {pending.length || touches.length ? (
-          <section style={{ marginTop: 28 }}>
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-              Waiting on you
-            </h2>
-
-            {pending.length ? (
-              <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-                <div className="between wrap gap-2" style={{ padding: "11px 15px", borderBottom: "1px solid var(--line-2)" }}>
-                  <span className="t-sm w6">Asked you to check a figure</span>
-                  {overdue.length
-                    ? <span className="chip chip-neg"><Ico.clock size={11} />{overdue.length} past {REVIEW_SLA_HOURS}h</span>
-                    : <span className="chip chip-pos">All inside {REVIEW_SLA_HOURS}h</span>}
-                </div>
-                {pending.map((r, i) => (
-                  <ReviewRow key={r.id} item={r} last={i === pending.length - 1} />
-                ))}
-              </div>
-            ) : null}
-
-            {touches.length ? (
-              <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-                <div className="between wrap gap-2" style={{ padding: "11px 15px", borderBottom: "1px solid var(--line-2)" }}>
-                  <span className="t-sm w6">Follow-up due today</span>
-                  <span className="chip">{touches.filter((t) => t.auto).length} of {touches.length} go out on their own</span>
-                </div>
-                {touches.map((t, i) => (
-                  <div key={t.enrolmentId + t.stepId} style={{ padding: "12px 15px", borderBottom: i === touches.length - 1 ? undefined : "1px solid var(--line-3)" }}>
-                    <div className="row wrap gap-2">
-                      <span className="t-sm w6">{t.name}</span>
-                      <span className="chip">{CHANNEL_LABEL[t.channel]}</span>
-                      {t.auto ? <span className="chip chip-pos"><Ico.bolt size={10} />Automatic</span> : <span className="chip chip-warn">Needs you</span>}
-                      {t.daysLate > 0 ? <span className="chip chip-neg">{t.daysLate}d late</span> : null}
-                    </div>
-                    <p className="t-sm" style={{ marginTop: 4 }}>{t.says}</p>
-                    <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.55 }}>
-                      <span className="w6">Gives them: </span>{t.gives}
-                    </p>
-                    {t.downgraded ? (
-                      <p className="t-xs c-4 row gap-2" style={{ marginTop: 5 }}>
-                        <Ico.lock size={11} style={{ flex: "none", marginTop: 2 }} />{t.downgraded}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {/* Leads */}
-        <section style={{ marginTop: 28 }}>
-          <div className="between wrap gap-2">
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-              Who to call
-            </h2>
-            {breached ? <span className="chip chip-neg"><Ico.clock size={11} />{breached} past the reply target</span> : null}
-          </div>
-          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-            Ranked by what the answers say, not by when they arrived. An inbox makes everyone
-            look equally urgent, which is the same as making nobody urgent.
-          </p>
-
-          {leads.length === 0 ? (
-            <div className="card p-5 center col gap-2" style={{ marginTop: 14 }}>
-              <Ico.users size={20} className="c-4" />
-              <span className="t-sm w55">No leads yet.</span>
-              <span className="t-xs c-4" style={{ maxWidth: 380, textAlign: "center", lineHeight: 1.55 }}>
+          <Layer title="Who to call" meta={leads.length ? `${leads.length} lead${leads.length === 1 ? "" : "s"}, best first` : "none yet"}>
+            <p className="t-sm c-3" style={{ lineHeight: 1.6, marginBottom: 10 }}>
+              Ranked by what the answers say, not by when they arrived. Open anyone to see why they rank where they do.
+            </p>
+            {leads.length === 0 ? (
+              <p className="t-sm c-4">
                 {failures.length
                   ? "Or a query failed and this is unknown rather than empty. See the notice above."
                   : notRecording
                     ? "And none would be recorded if there were. See the notice above."
-                    : "The readout is live and instrumented. The first 200 completed assessments are what turns every assumption in this product into a measurement."}
-              </span>
-            </div>
-          ) : (
-            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-              {leads.map((l, i) => (
-                <LeadRow
-                  key={l.id}
-                  lead={{
+                    : "No leads yet. The readout is live and instrumented."}
+              </p>
+            ) : (
+              <div className="card" style={{ overflow: "hidden" }}>
+                {leads.map((l, i) => (
+                  <LeadRow key={l.id} last={i === leads.length - 1} lead={{
                     ...l,
                     signals: l.signals as { label: string; points: number; note: string }[],
                     slaLabel: slaOf(l).humanLabel,
                     breached: slaOf(l).breached,
-                  }}
-                  last={i === leads.length - 1}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+                  }} />
+                ))}
+              </div>
+            )}
+          </Layer>
 
-        {/* Sellers who chose an offer.
+          <Layer title="Coming up this week" meta={owedLater.length ? `${owedLater.length} action${owedLater.length === 1 ? "" : "s"}` : "nothing scheduled"}>
+            {owedLater.length ? owedLater.map((p) => (
+              <Link key={p.id} href={`/operations/lead/${p.id}`} className="opsx-row opsx-link">
+                <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
+                <span className="t-sm c-2">{p.nextAction}</span>
+                <span className="t-xs c-4">
+                  {new Date(p.nextDue + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {p.stage}
+                </span>
+              </Link>
+            )) : <p className="t-sm c-3">Nothing scheduled after today. Open anyone and set the one thing you owe them next.</p>}
+          </Layer>
 
-            Above the agreements, because an offer carries a response deadline
-            measured in hours. The alert email may not have arrived: email is
-            the one integration this product has never been able to prove:
-            so the choice is here whether or not it did. */}
-        {choices.length ? (
-          <section style={{ marginTop: 32 }}>
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-              Sellers who chose an offer
-            </h2>
-            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-              From their plan page, in the last week. A choice is not an acceptance; the next
-              step is the paperwork, before the buyer&rsquo;s deadline.
-            </p>
-            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-              {choices.map((c, i) => (
-                <Link
-                  key={c.leadId}
-                  href={`/operations/lead/${c.leadId}`}
-                  className="between gap-3"
-                  style={{
-                    display: "flex", padding: "12px 16px", alignItems: "center",
-                    borderBottom: i === choices.length - 1 ? 0 : "1px solid var(--line-3)",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div className="t-sm w6 trunc">{c.name} chose {c.seen.from}</div>
-                    <div className="t-xs c-4 trunc" style={{ marginTop: 2 }}>
-                      {c.note ? `\u201c${c.note}\u201d` : `$${Math.round(c.seen.price).toLocaleString()} offered`}
-                    </div>
-                  </div>
-                  <span className="chip chip-pos t-2xs" style={{ flex: "none" }}>
-                    {new Date(c.chosenAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          <Layer title="Everyone you are working" meta={working.length ? `${working.length}, quietest first` : "nobody yet"}>
+            {working.length === 0 ? (
+              <p className="t-sm c-3">
+                Nobody on the board yet. <Link href="/operations/add" className="c-brand">Add someone you already work with</Link>.
+              </p>
+            ) : working.map((p) => (
+              <Link key={p.id} href={`/operations/lead/${p.id}`} className="opsx-row opsx-link between gap-2">
+                <span>
+                  <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
+                  <span className="t-xs c-4" style={{ display: "block", marginTop: 2 }}>
+                    {p.stage} · {p.side === "buy" ? "buyer" : "seller"}{p.stall ? ` · ${p.stall.days} day${p.stall.days === 1 ? "" : "s"} here` : ""}
                   </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
+                  {p.stall && p.stall.level !== "moving" ? <span className="t-xs c-3" style={{ display: "block", marginTop: 4, maxWidth: 460 }}>{p.stall.unstick}</span> : null}
+                </span>
+                {p.stall ? <span className={`chip ${STALL_CHIP[p.stall.level].c}`}>{STALL_CHIP[p.stall.level].l}</span> : null}
+              </Link>
+            ))}
+          </Layer>
 
-        {/* Agreements running out.
-        
-            docs/product.md: "Expiration is a monitored deadline that raises
-            attention before it lapses, not after." High on the page because an
-            agreement that lapses uncovers everything it covered from the day
-            it ran out, not from the day somebody noticed, and the notice is
-            the only thing standing between those two dates. */}
-        {lapsing.length ? (
-          <section style={{ marginTop: 32 }}>
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-              Agreements running out
-            </h2>
-            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-              Representation lapses on a date, and everything it covered is uncovered from that
-              day rather than from the day it is noticed. Renewing one is a conversation; finding
-              out afterwards is not.
-            </p>
-            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-              {lapsing.map((l, i) => (
-                <Link
-                  key={l.id}
-                  href={`/operations/lead/${l.id}`}
-                  className="between gap-3"
-                  style={{
-                    display: "flex", padding: "12px 16px", alignItems: "center",
-                    borderBottom: i === lapsing.length - 1 ? 0 : "1px solid var(--line-3)",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div className="t-sm w6 trunc">{l.name}</div>
-                    <div className="t-xs c-4" style={{ marginTop: 2 }}>{l.standing.note}</div>
-                  </div>
-                  <span
-                    className={`chip t-2xs ${l.standing.covered ? "chip-warn" : "chip-neg"}`}
-                    style={{ flex: "none" }}
-                  >
-                    {l.standing.covered ? "Running out" : "Expired"}
+          {partial.length ? (
+            <Layer title="Started, not finished" meta={`${partial.length}, ${partial.filter((a) => a.email).length} with an address`}>
+              <p className="t-sm c-3" style={{ lineHeight: 1.6, marginBottom: 8 }}>
+                A normal state, not a failure. A resume link only goes to someone who gave an address for it.
+              </p>
+              {partial.slice(0, 12).map((a) => (
+                <div key={a.assessmentId} className="opsx-row between wrap gap-2">
+                  <span>
+                    <span className="t-sm w55">{a.email ?? "No contact details"}</span>
+                    <span className="t-xs c-4" style={{ display: "block", marginTop: 2 }}>
+                      {a.side === "buy" ? "Buyer" : "Seller"}{a.county ? ` · ${a.county}` : ""} · {a.answered} question{a.answered === 1 ? "" : "s"} answered · quiet for {a.hoursSince}h
+                    </span>
                   </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {/* Abandoned */}
-        {partial.length ? (
-          <section style={{ marginTop: 32 }}>
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-              Started, not finished
-            </h2>
-            <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-              The largest source of lost leads in this product, and a normal state rather than a
-              failure. Most of these people have given no way to reach them, which is the correct
-              outcome: a resumable link goes only to somebody who gave an address for that
-              purpose.
-            </p>
-            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-              {partial.slice(0, 12).map((a, i) => (
-                <div key={a.assessmentId} className="between wrap gap-2" style={{
-                  padding: "11px 15px", borderBottom: i === Math.min(partial.length, 12) - 1 ? undefined : "1px solid var(--line-3)",
-                }}>
-                  <div>
-                    <div className="row wrap gap-2">
-                      <span className="t-sm w55">{a.email ?? "No contact details"}</span>
-                      <span className="chip">{a.side === "buy" ? "Buyer" : "Seller"}</span>
-                      {a.county ? <span className="chip">{a.county}</span> : null}
-                    </div>
-                    <div className="t-xs c-4" style={{ marginTop: 3 }}>
-                      {a.answered} question{a.answered === 1 ? "" : "s"} answered · quiet for {a.hoursSince}h
-                    </div>
-                  </div>
-                  {a.email
-                    ? <span className="chip chip-acc">Can be sent a resume link</span>
-                    : <span className="chip">Nothing to send</span>}
+                  {a.email ? <span className="chip chip-acc">Can be sent a resume link</span> : <span className="chip">Nothing to send</span>}
                 </div>
               ))}
-            </div>
-          </section>
-        ) : null}
+            </Layer>
+          ) : null}
 
-        {/* What is owed, before anything else on the page */}
-        <section style={{ marginTop: 28 }}>
-          <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-            What you owe this week
-          </h2>
-          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-            Overdue first, then the next seven days. An action that came due on Tuesday does not
-            stop being owed on Wednesday, so nothing drops off this list by getting old.
-          </p>
-
-          {owed.length === 0 ? (
-            <div className="card p-4" style={{ marginTop: 14, background: "var(--sunk)" }}>
-              <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
-                Nothing scheduled. Open anyone below and set the one thing you owe them next.
-              </p>
-            </div>
-          ) : (
-            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-              {owed.map((p, i) => {
-                const today = new Date().toISOString().slice(0, 10);
-                const late = Boolean(p.nextDue && p.nextDue < today);
-                const label = p.nextDue === today
-                  ? "today"
-                  : late
-                    ? "overdue"
-                    : new Date(p.nextDue + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-                return (
-                  <Link
-                    key={p.id}
-                    href={`/operations/lead/${p.id}`}
-                    className="between wrap gap-2"
-                    style={{
-                      padding: "13px 16px", textDecoration: "none",
-                      borderBottom: i === owed.length - 1 ? undefined : "1px solid var(--line-3)",
-                    }}
-                  >
-                    <div>
-                      <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
-                      <div className="t-sm c-2" style={{ marginTop: 3 }}>{p.nextAction}</div>
-                      <div className="t-xs c-4" style={{ marginTop: 2 }}>
-                        {p.stage} · {p.side === "buy" ? "buyer" : "seller"}
-                      </div>
-                    </div>
-                    <span className={`chip ${late ? "chip-neg" : p.nextDue === today ? "chip-warn" : ""}`}>{label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* The people being worked */}
-        <section style={{ marginTop: 32 }}>
-          <div className="between wrap gap-2">
-            <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-              Who you are working
-            </h2>
-            <Link href="/operations/add" className="btn btn-p btn-sm">Add someone</Link>
-          </div>
-          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-            Ordered by how long they have sat where they are, not by when they arrived. A
-            relationship rarely dies of a decision; it dies of forty quiet days, and this list
-            is sorted to put those at the top.
-          </p>
-
-          {working.length === 0 ? (
-            <div className="card p-4" style={{ marginTop: 14, background: "var(--sunk)" }}>
-              <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
-                Nobody on the board yet. People who come through the funnel arrive below; anyone
-                you are already working with has to be added by hand once.
-              </p>
-              <Link href="/operations/add" className="btn btn-p btn-sm" style={{ marginTop: 12 }}>
-                Add your first
-              </Link>
-            </div>
-          ) : (
-            <div className="card" style={{ marginTop: 14, overflow: "hidden" }}>
-              {working.map((p, i) => (
-                <Link
-                  key={p.id}
-                  href={`/operations/lead/${p.id}`}
-                  className="between wrap gap-2"
-                  style={{
-                    padding: "13px 16px", textDecoration: "none",
-                    borderBottom: i === working.length - 1 ? undefined : "1px solid var(--line-3)",
-                  }}
-                >
-                  <div>
-                    <span className="t-sm w6">{p.name ?? p.email ?? "Unnamed"}</span>
-                    <div className="t-xs c-4" style={{ marginTop: 2 }}>
-                      {p.stage} · {p.side === "buy" ? "buyer" : "seller"}
-                      {p.stall ? ` · ${p.stall.days} day${p.stall.days === 1 ? "" : "s"} here` : ""}
-                    </div>
-                    {p.stall && p.stall.level !== "moving" ? (
-                      <p className="t-xs c-3" style={{ marginTop: 4, maxWidth: 460, lineHeight: 1.5 }}>{p.stall.unstick}</p>
-                    ) : null}
-                  </div>
-                  {p.stall ? (
-                    <span className={`chip ${STALL_CHIP[p.stall.level].c}`}>{STALL_CHIP[p.stall.level].l}</span>
-                  ) : null}
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Funnel */}
-        <section style={{ marginTop: 32 }}>
-          <h2 className="serif" style={{ fontSize: "clamp(19px,2.4vw,26px)", letterSpacing: "-0.02em" }}>
-            Where people stop
-          </h2>
-          <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 660, lineHeight: 1.6 }}>
-            The last {report?.days ?? 90} days, counted in distinct sessions rather than page
-            views: a person who backs up and re-reads a question is one person. Bounded in time
-            on purpose: the point of measuring drop-off is to change a question and see whether it
-            helped, and averaged against a year of the old wording it never would.
-          </p>
-
-          <Funnel label="Buyers" report={report} />
-          <Funnel label="Sellers" report={sellReport} />
-        </section>
+          <Layer title="Where people stop" meta={`the last ${report?.days ?? 90} days`}>
+            <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+              Counted in people, not page views. Change a question and watch whether its drop-off moves.
+            </p>
+            <Funnel label="Buyers" report={report} />
+            <Funnel label="Sellers" report={sellReport} />
+          </Layer>
+        </div>
       </main>
     </>
   );
+}
+
+interface Need {
+  key: string;
+  href?: string;
+  icon: keyof typeof Ico;
+  tone: "neg" | "warn";
+  title: string;
+  sub: string;
+  chip: string;
+}
+
+/** One thing that needs him: what, why in one line, and a word for how urgent (rule 10: never colour alone). */
+function NeedRow({ n }: { n: Need }) {
+  const Icon = Ico[n.icon];
+  const body = (
+    <>
+      <span className={`opsx-need-icon c-${n.tone}`}><Icon size={14} aria-hidden /></span>
+      <span className="opsx-need-body">
+        <span className="t-sm w6">{n.title}</span>
+        <span className="t-xs c-4">{n.sub}</span>
+      </span>
+      <span className={`chip chip-${n.tone} t-2xs`}>{n.chip}</span>
+    </>
+  );
+  return n.href ? <Link href={n.href} className="opsx-need">{body}</Link> : <div className="opsx-need">{body}</div>;
 }
 
 /**

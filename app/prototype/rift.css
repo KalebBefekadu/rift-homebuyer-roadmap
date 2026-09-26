@@ -1126,6 +1126,92 @@ th[aria-sort] .ops-sort { color: var(--ink); }
   .ops-check-head .ops-seg { width: 100%; }
 }
 
+
+/* ------------------------------------------------------------------ *
+ * Layers (Blueprint v5 §4.8; Kaleb, R3): the simple answer on the screen,
+ * the rest one press away. components/rift/Layer.tsx. Site-wide.
+ * ------------------------------------------------------------------ */
+.layer { border: 1px solid var(--line-2); border-radius: 12px; background: var(--paper); }
+.layer + .layer { margin-top: 10px; }
+.layer-sum { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 16px; cursor: pointer; list-style: none; font-weight: 600; font-size: 14px; border-radius: 12px; }
+.layer-sum::-webkit-details-marker { display: none; }
+.layer-sum:hover { background: var(--sunk); }
+.layer-sum:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.layer-chev { flex: none; color: var(--ink-3); transition: transform .15s; }
+.layer[open] > .layer-sum .layer-chev { transform: rotate(90deg); }
+.layer[open] > .layer-sum { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.layer-title { flex: 1; min-width: 0; }
+.layer-meta { font-weight: 400; font-size: 13px; color: var(--ink-3); text-align: right; }
+.layer-body { padding: 4px 16px 16px; }
+.layer-plain { border: 0; background: none; border-radius: 0; }
+.layer-plain > .layer-sum { padding: 6px 0; font-size: 13.5px; color: var(--ink-2); }
+.layer-plain > .layer-sum:hover { background: none; text-decoration: underline; }
+.layer-plain > .layer-body { padding: 4px 0 8px; }
+@media (prefers-reduced-motion: reduce) { .layer-chev { transition: none; } }
+@media (max-width: 560px) {
+  .layer-sum { flex-wrap: wrap; row-gap: 2px; }
+  .layer-meta { flex-basis: 100%; text-align: left; padding-left: 23px; }
+}
+
+/* ------------------------------------------------------------------ *
+ * Operations, built (Blueprint v5 §8, from the mock-up Kaleb reviewed).
+ * Utilitarian (§4.6): sans headings, a fixed sidebar, one list per page.
+ * ------------------------------------------------------------------ */
+.opsx { min-height: 100vh; }
+.opsx:has(> .opsx-side) { padding-left: 220px; }
+/* The serif is the public site's voice; Operations is a tool (§8.9). */
+.opsx .serif { font-family: inherit; font-weight: 650; letter-spacing: -0.015em; }
+.opsx-side { position: fixed; top: 0; bottom: 0; left: 0; width: 220px; z-index: 30; display: flex; flex-direction: column; gap: 2px; padding: 14px 10px; background: var(--paper); border-right: 1px solid var(--line-2); overflow-y: auto; font-size: 13.5px; }
+.opsx-brand { display: flex; align-items: center; gap: 8px; padding: 2px 8px 10px; font-weight: 650; font-size: 14.5px; color: var(--ink); }
+.opsx-add { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; border-radius: 8px; background: var(--ink); color: #fff; font-weight: 600; margin-bottom: 8px; }
+.opsx-add:hover { background: var(--ink-2); }
+.opsx-navgroup { display: flex; flex-direction: column; gap: 2px; }
+.opsx-nav { display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 0 10px; border-radius: 7px; color: var(--ink-2); }
+.opsx-nav:hover { background: var(--sunk); }
+.opsx-nav[aria-current="page"] { background: var(--sunk); color: var(--ink); font-weight: 600; box-shadow: inset 3px 0 0 var(--ink); }
+.opsx-more { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.opsx-more .opsx-nav { min-height: 30px; font-size: 12.5px; }
+.opsx-count { margin-left: auto; font-size: 11px; font-weight: 600; border-radius: 10px; padding: 0 7px; background: var(--warn-wash); color: var(--warn); }
+.opsx-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 8px 0; border-top: 1px solid var(--line-2); }
+.opsx-signout { font: inherit; font-size: 12px; color: var(--ink-3); background: none; border: 0; padding: 4px 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.opsx-top, .opsx-scrim { display: none; }
+
+.opsx-needs { overflow: hidden; }
+.opsx-needs-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; font-size: 15px; font-weight: 650; border-bottom: 1px solid var(--line-2); }
+.opsx-need { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--line-3); color: inherit; }
+.opsx-need:last-child { border-bottom: 0; }
+a.opsx-need:hover { background: var(--sunk); }
+.opsx-need-icon { display: inline-grid; place-items: center; }
+.opsx-need-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.45; }
+.opsx-layers { margin-top: 18px; }
+.opsx-row { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line-3); color: inherit; }
+.opsx-row:first-child { border-top: 0; }
+.opsx-row.between { flex-direction: row; }
+a.opsx-link:hover .w6 { text-decoration: underline; }
+.rift .opsx-needs-h { margin: 0; }
+.rift a.opsx-add { color: #fff; }
+/* The pages built before the redesign set their heading sizes inline, at the
+   public site's editorial scale. Operations is denser (§4.6); these win until
+   each page is rebuilt with its own. */
+.opsx .sec { padding-top: 28px; }
+.opsx h1.serif { font-size: 26px !important; }
+.opsx h2.serif { font-size: 18px !important; }
+
+@media (max-width: 860px) {
+  .opsx:has(> .opsx-side) { padding-left: 0; }
+  .opsx-top { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line-2); background: var(--paper); position: sticky; top: 0; z-index: 25; }
+  .opsx-side { display: none; width: min(280px, 85vw); box-shadow: 0 10px 40px rgba(0,0,0,.25); padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  .opsx-side.is-open { display: flex; z-index: 45; }
+  .opsx-scrim { display: block; position: fixed; inset: 0; background: rgba(20,20,20,.35); z-index: 44; }
+  .opsx-nav, .opsx-more .opsx-nav { min-height: 44px; }
+  .opsx-need { grid-template-columns: 22px minmax(0, 1fr); }
+  .opsx-need > .chip { grid-column: 2; justify-self: start; }
+}
+@media print {
+  .opsx-side, .opsx-top { display: none !important; }
+  .opsx:has(> .opsx-side) { padding-left: 0; }
+}
+
 /* The buyer's pages (Blueprint v5 §7.2): areas across the top, Help anywhere.
    Calm and phone-first: the areas scroll sideways rather than wrap, and each
    is a 44px target. */

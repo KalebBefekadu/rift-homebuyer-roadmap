@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { AddLead } from "./AddLead";
+import { OpsNav } from "../OpsNav";
 
 export const metadata: Metadata = { title: "Add someone", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,5 @@ export default async function AddPage() {
      about what just happened: see lib/db/session.ts. */
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  /* The session is the gate; nothing on this page needs the agent's name. */
-  return <AddLead />;
+  return <><OpsNav agentName={session.agent.name} /><AddLead /></>;
 }

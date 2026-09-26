@@ -10,7 +10,7 @@ import {
   durationText, promiseLine, replyStats, setupStats, timing, type CheckState,
 } from "@/lib/core/pilot";
 import { PrintButton } from "@/components/rift/PrintButton";
-import { StudioHeader } from "../StudioHeader";
+import { OpsNav } from "../OpsNav";
 import { Unavailable } from "../Unavailable";
 import { Check } from "./Check";
 
@@ -74,7 +74,7 @@ export default async function PilotPage() {
 
   return (
     <>
-      <div className="no-print"><StudioHeader agentName={agent.name} current="pilot" /></div>
+      <OpsNav agentName={agent.name} />
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
         <div className="between gap-2 wrap">
           <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Pilot</h1>
