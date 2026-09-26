@@ -7,8 +7,9 @@ import { OpsNav } from "../OpsNav";
 import { inboundOffers } from "@/lib/db/offer-intake";
 import { read, type Submission } from "@/lib/core/offer-intake";
 import { Ico } from "@/components/rift/icons";
+import { Layer } from "@/components/rift/Layer";
 
-export const metadata: Metadata = { title: "Offers in" };
+export const metadata: Metadata = { title: "Offers" };
 export const dynamic = "force-dynamic";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -44,12 +45,11 @@ export default async function OffersInPage() {
 
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 820 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>
-          Offers in
+          Offers
         </h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 600, lineHeight: 1.6 }}>
-          Submitted at <Link href="/offer" className="u">/offer</Link> by people with no account.
-          Each one is also a relationship: somebody writing offers in Georgia is somebody worth
-          knowing whether or not this one lands.
+          Sent through <Link href="/offer" className="u">your offer page</Link>. Every one reaches you first, and
+          each sender is a relationship worth having whether or not this offer lands.
         </p>
 
         {failed ? (
@@ -124,23 +124,29 @@ export default async function OffersInPage() {
                     </div>
                   ) : null}
 
-                  <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-                    <span className="chip">{o.financing === "other" && o.financingDetail ? `Other: ${o.financingDetail}` : o.financing}</span>
-                    {o.dueDiligenceDays !== null ? <span className="chip">{o.dueDiligenceDays} days due diligence</span> : null}
-                    {o.closeOn ? <span className="chip">Close {o.closeOn}</span> : null}
-                    {o.earnest > 0 ? <span className="chip">{money(o.earnest)} earnest</span> : null}
-                    {o.contingencies.map((c) => <span key={c} className="chip">{c}</span>)}
-                  </div>
-
                   {r.gaps.length ? (
                     <ul className="t-xs c-warn" style={{ marginTop: 10, paddingLeft: 16, lineHeight: 1.6 }}>
                       {r.gaps.map((g) => <li key={g}>{g}</li>)}
                     </ul>
                   ) : null}
 
-                  {o.note ? (
-                    <p className="t-xs c-2" style={{ marginTop: 10, lineHeight: 1.6 }}>&ldquo;{o.note}&rdquo;</p>
-                  ) : null}
+                  {/* The headline stays on the card; the terms are one press away (§4.8). */}
+                  <Layer plain className="mt-2" title="The terms" meta={[
+                    o.financing === "other" && o.financingDetail ? o.financingDetail : o.financing,
+                    o.closeOn ? `close ${o.closeOn}` : null,
+                    o.note ? "and a note" : null,
+                  ].filter(Boolean).join(", ")}>
+                    <div className="row gap-2 wrap">
+                      <span className="chip">{o.financing === "other" && o.financingDetail ? `Other: ${o.financingDetail}` : o.financing}</span>
+                      {o.dueDiligenceDays !== null ? <span className="chip">{o.dueDiligenceDays} days due diligence</span> : null}
+                      {o.closeOn ? <span className="chip">Close {o.closeOn}</span> : null}
+                      {o.earnest > 0 ? <span className="chip">{money(o.earnest)} earnest</span> : null}
+                      {o.contingencies.map((c) => <span key={c} className="chip">{c}</span>)}
+                    </div>
+                    {o.note ? (
+                      <p className="t-xs c-2" style={{ marginTop: 10, lineHeight: 1.6 }}>&ldquo;{o.note}&rdquo;</p>
+                    ) : null}
+                  </Layer>
 
                   <div className="row gap-3 wrap" style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--line-3)" }}>
                     {o.email ? <a href={`mailto:${o.email}`} className="t-xs u">{o.email}</a> : null}
