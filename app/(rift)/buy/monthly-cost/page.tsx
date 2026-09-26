@@ -63,6 +63,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
 
       <Lines
         title="What the monthly payment is made of"
+        layer
         rows={parts.map((p) => ({ label: p.label, note: p.note, amount: money(Math.round(p.amount)), muted: p.amount === 0 }))}
         total={{ label: "Each month", amount: money(Math.round(m.value)) }}
       />

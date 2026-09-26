@@ -251,9 +251,13 @@ pages, the offer upload and a closed summary link, on desktop and phone: 256 pas
   rule requires on screen. A layer opens by itself when something inside it needs the person.
 - **Opening a layer never changes a figure, never navigates, and closing it loses nothing.** It
   works without script, from the keyboard and on a phone (a 44px row).
-- **Where it applies:** first to Operations as each page is rebuilt (Today is the first); then
-  each public and client page is reviewed for what can move into a layer, in the same pass that
-  checks it at 1280px and 390px.
+- **Where it applies:** the whole site, page by page, in the same pass that checks each page at
+  1280px and 390px. **Done (26 Sep):** Operations Today, journey, person record and
+  Relationships' forecast; on the value pages, "How this was worked out" and the line-by-line
+  breakdowns whose picture already shows the same lines (cash to close, selling costs, what you
+  keep, the monthly payment's parts, where the months come from). Tables that answer the page's
+  own question stay open ("The two scenarios", "Across three prices", "What your situation
+  means"). **Next:** the saved plan page, the client journey pages, the abroad results.
 
 ---
 

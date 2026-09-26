@@ -65,6 +65,7 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
 
       <Lines
         title="From the price to what you keep"
+        layer
         rows={[
           { label: "Sale price", amount: money(price) },
           { label: "Loan payoff", note: "What you still owe, exact only on a lender's payoff statement", amount: `−${money(payoff)}` },

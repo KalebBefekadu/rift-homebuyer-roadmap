@@ -70,6 +70,7 @@ export default async function Timeline({ searchParams }: { searchParams: Promise
       ) : null}
       <Lines
         title="Where the months come from"
+        layer
         rows={[
           { label: "Cash needed to buy", note: "The cash-to-close figure for this price and down payment", amount: money(g.cashNeeded) },
           { label: "Saved so far", amount: money(inputs.savings) },

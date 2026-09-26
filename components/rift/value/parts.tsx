@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Layer } from "@/components/rift/Layer";
 import { Ico } from "@/components/rift/icons";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
@@ -64,16 +65,22 @@ export function BasedOn({ def, answers }: { def: ValueDef; answers: Answers }) {
   );
 }
 
-/** A plain table of the lines behind the figure. */
-export function Lines({ title, rows, total }: {
+/**
+ * A plain table of the lines behind the figure.
+ *
+ * `layer`: one press away instead of on the page (Blueprint v5 §4.8), for a
+ * breakdown the answer's picture already shows. The headline figure never
+ * moves into a layer; only the lines behind it do, and the label carries how
+ * many there are and what they add up to.
+ */
+export function Lines({ title, rows, total, layer }: {
   title: string;
   rows: { label: string; note?: string; amount: string; muted?: boolean }[];
   total?: { label: string; amount: string };
+  layer?: boolean;
 }) {
-  return (
-    <section className="sec-sm" aria-labelledby="lines-h">
-      <h2 id="lines-h" className="t-xl serif">{title}</h2>
-      <div className="card mt-3" style={{ overflow: "hidden" }}>
+  const table = (
+      <div className={`card ${layer ? "" : "mt-3"}`} style={{ overflow: "hidden" }}>
         {rows.map((r) => (
           <div key={r.label} className="between" style={{ padding: "13px 18px", borderBottom: "1px solid var(--line-3)", alignItems: "flex-start" }}>
             <div className="grow">
@@ -90,20 +97,31 @@ export function Lines({ title, rows, total }: {
           </div>
         ) : null}
       </div>
+  );
+  if (layer) {
+    return (
+      <Layer className="mt-4" title={title} meta={`${rows.length} lines${total ? `, ${total.amount}` : ""}`}>
+        {table}
+      </Layer>
+    );
+  }
+  return (
+    <section className="sec-sm" aria-labelledby="lines-h">
+      <h2 id="lines-h" className="t-xl serif">{title}</h2>
+      {table}
     </section>
   );
 }
 
-/** How the figure was worked out, closed by default (progressive disclosure). */
+/** How the figure was worked out: a layer, closed by default (§4.8). */
 export function WorkedOut({ assumptions, couldBeWrong, extra }: {
   assumptions: Assumption[];
   couldBeWrong: string;
   extra?: React.ReactNode;
 }) {
   return (
-    <details className="card p-4 mt-4">
-      <summary className="t-md w55" style={{ cursor: "pointer" }}>How this was worked out</summary>
-      <dl className="g2 gap-2 mt-3">
+    <Layer className="mt-4" title="How this was worked out" meta={`${assumptions.length} assumptions, and where it could be wrong`}>
+      <dl className="g2 gap-2">
         {assumptions.map((a) => (
           <div key={a.label} className="between" style={{ borderBottom: "1px solid var(--line-3)", paddingBottom: 6 }}>
             <dt className="t-sm c-3">{a.label}</dt>
@@ -113,6 +131,6 @@ export function WorkedOut({ assumptions, couldBeWrong, extra }: {
       </dl>
       <p className="t-sm c-3 mt-3" style={{ lineHeight: 1.6 }}><strong className="c-2">Where it could be wrong.</strong> {couldBeWrong}</p>
       {extra}
-    </details>
+    </Layer>
   );
 }

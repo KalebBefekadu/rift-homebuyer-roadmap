@@ -52,6 +52,7 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
 
       <Lines
         title="Line by line"
+        layer
         rows={cash.lines.map((l) => ({
           label: l.credited ? `${l.label}, back at closing` : l.label,
           note: l.note,

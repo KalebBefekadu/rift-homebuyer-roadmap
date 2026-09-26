@@ -56,6 +56,7 @@ export default async function SellingCosts({ searchParams }: { searchParams: Pro
 
       <Lines
         title="Line by line"
+        layer
         rows={[
           ...c.lines.map((l) => ({ label: l.label, note: l.note, amount: money(l.amount) })),
           ...(c.totalHigh === null ? [] : [{ label: "Commission at the high end", note: "The extra if you agree the top of the range", amount: money(c.totalHigh - c.total), muted: true }]),
