@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Layer } from "@/components/rift/Layer";
 import { GA_COUNTIES } from "@/lib/core/registry";
 import { currentRate } from "@/lib/db/rates";
 import {
@@ -184,6 +185,12 @@ export default async function AbroadResults({
                     <span className="t-sm w5" style={script}>{t("out.rent")}</span>
                     <span className="num t-sm">{money(r.rent)}</span>
                   </div>
+                  {/* One press away (Blueprint v5 §4.8): the three running costs,
+                      each with its assumption. What is left at the end of the
+                      month stays on the card. */}
+                  <Layer plain className="abroad-running"
+                    title={<span style={script}>{t("res.month.running")}</span>}
+                    meta={t("res.month.running.meta", { n: 3, amount: money(r.operating.management + r.operating.vacancy + r.operating.maintenance) })}>
                   {[
                     [t("res.month.mgmt"), r.operating.management, t("res.month.mgmt.note", { pct: ASSUMPTIONS.managementPct })],
                     [t("res.month.vac"), r.operating.vacancy, t("res.month.vac.note", { pct: ASSUMPTIONS.vacancyPct })],
@@ -197,6 +204,7 @@ export default async function AbroadResults({
                       <span className="num t-sm c-neg">−{money(v as number)}</span>
                     </div>
                   ))}
+                  </Layer>
                   <div className="between" style={{ padding: "15px 18px", background: r.cashFlow >= 0 ? "var(--brand-wash)" : "var(--sunk)" }}>
                     <span className="t-md w6" style={script}>
                       {r.cashFlow >= 0 ? t("res.month.left") : t("res.month.short")}

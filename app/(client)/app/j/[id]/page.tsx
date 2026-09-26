@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Layer } from "@/components/rift/Layer";
 import { notFound, redirect } from "next/navigation";
 import { clientBids, clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/client";
 import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
@@ -215,7 +216,11 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
                 </div>
               ) : null}
 
-              <ul style={{ marginTop: 12, display: "grid", gap: 6 }}>
+              {/* One press away (§4.8): the full list. What changed, and what
+                  is still to decide, stay on the page. */}
+              <Layer className="mt-3" title="Everything on your list"
+                meta={`${b.revision.brief.criteria.length} items, ${b.revision.brief.criteria.filter((c) => c.strength === "hard").length} must-haves`}>
+              <ul style={{ display: "grid", gap: 6 }}>
                 {b.revision.brief.criteria.map((c) => (
                   <li key={c.id} className="between gap-2 wrap t-sm">
                     <span><span className="w6">{FIELDS[c.field].label}:</span> {describe(c)}</span>
@@ -225,6 +230,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
                   </li>
                 ))}
               </ul>
+              </Layer>
               {b.hidden ? (
                 <p className="t-2xs c-4" style={{ marginTop: 6 }}>
                   {b.hidden} item{b.hidden === 1 ? " about price is" : "s about price are"} not shared with you.

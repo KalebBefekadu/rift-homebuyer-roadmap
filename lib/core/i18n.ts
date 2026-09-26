@@ -219,6 +219,8 @@ const en: Dict = {
   "res.year.appreciation": "Appreciation at {pct}%",
   "res.year.appreciation.note": "On the whole {price}, not on what you put in.",
   "res.year.total": "Year one, all in",
+  "res.month.running": "Running it as a rental",
+  "res.month.running.meta": "{n} costs, −{amount} a month",
   "res.year.total.note":
     "On the {cash} you sent. Appreciation is an estimate and can be negative; the other two are contractual.",
   "res.year.of": "{pct}% of what you sent",
@@ -442,6 +444,8 @@ const am: Dict = {
   "res.year.appreciation": "የዋጋ ጭማሪ በ{pct}%",
   "res.year.appreciation.note": "በሙሉ {price} ላይ እንጂ ባስገቡት ገንዘብ ላይ አይደለም።",
   "res.year.total": "የመጀመሪያው ዓመት በጠቅላላ",
+  "res.month.running": "እንደ ኪራይ ቤት ማስኬድ",
+  "res.month.running.meta": "{n} ወጪዎች፣ በወር −{amount}",
   "res.year.total.note":
     "በላኩት {cash} ላይ። የዋጋ ጭማሪ ግምት ነው፤ አሉታዊም ሊሆን ይችላል። ሌሎቹ ሁለቱ በውል የተያዙ ናቸው።",
   "res.year.of": "{pct}% ከላኩት ገንዘብ",

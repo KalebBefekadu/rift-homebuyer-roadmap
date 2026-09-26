@@ -1285,3 +1285,6 @@ a.opsx-link:hover .w6 { text-decoration: underline; }
 .rift a.opsx-tab:hover { color: var(--ink); }
 .rift a.opsx-tab[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
 .opsx-tab .opsx-count { margin-left: 0; }
+/* A layer that is a row of a figures card (abroad results): it keeps the card's gutter. */
+.abroad-running > .layer-sum { padding: 11px 18px; border-bottom: 1px solid var(--line-3); }
+.abroad-running > .layer-body { padding: 0; }

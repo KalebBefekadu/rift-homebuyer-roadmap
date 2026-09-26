@@ -1,5 +1,6 @@
 "use client";
 
+import { Layer } from "@/components/rift/Layer";
 import { useState } from "react";
 import { useRefresh } from "@/components/rift/useRefresh";
 import type { TodayItem, TodayKind } from "@/lib/core/today";
@@ -76,6 +77,45 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
     refresh();
   };
 
+  const needsLook = (w: BuyerWork) => (w.canReport && canRespond) || w.state === "blocked" || sent === w.workstream || reporting === w.workstream;
+  const upFront = contract?.work.filter(needsLook) ?? [];
+  const behind = contract?.work.filter((w) => !needsLook(w)) ?? [];
+  const row = (w: BuyerWork) => (
+      <li key={w.workstream} className="card p-3">
+                <div className="between gap-2 wrap">
+                  <span className="t-sm w6">{w.label}</span>
+                  <span className={`chip t-2xs ${CHIP[w.state] ?? ""}`}>{w.stateLabel}</span>
+                </div>
+                <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.5 }}>{w.line}</p>
+                {sent === w.workstream && w.state === "reported" ? (
+                  <p role="status" className="t-2xs c-pos" style={{ marginTop: 4 }}>Sent to {agentFirst}.</p>
+                ) : null}
+                {w.canReport && canRespond ? (
+                  reporting === w.workstream ? (
+                    <div style={{ marginTop: 8 }}>
+                      <input className="input" value={note} maxLength={500} placeholder="Anything to add? (optional)"
+                        aria-label={`About ${w.label.toLowerCase()}`} onChange={(e) => setNote(e.target.value)} />
+                      <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
+                        <button className="btn btn-p btn-sm" style={{ minHeight: 44 }} disabled={busy} onClick={() => report(w)}>
+                          {busy ? "Sending…" : `Tell ${agentFirst} it is done`}
+                        </button>
+                        <button className="btn btn-g btn-sm" style={{ minHeight: 44 }} onClick={() => setReporting(null)}>Back</button>
+                      </div>
+                      <p className="t-2xs c-4" style={{ marginTop: 6, lineHeight: 1.5 }}>
+                        {w.workstream === "earnest-money"
+                          ? "This says you sent it. It counts as received once the holder confirms it. Only use payment instructions you have confirmed by phone with the holder."
+                          : `This tells ${agentFirst} you did your part. It shows as confirmed once whoever it depends on confirms it.`}
+                      </p>
+                    </div>
+                  ) : (
+                    <button className="btn btn-s btn-sm" style={{ marginTop: 8, minHeight: 44 }} onClick={() => { setReporting(w.workstream); setNote(""); }}>
+                      {w.workstream === "earnest-money" ? "I sent it" : "I have done this"}
+                    </button>
+                  )
+                ) : null}
+              </li>
+  );
+
   return (
     <div>
       <ol className="row gap-1 wrap" aria-label="Where your move is" style={{ listStyle: "none", padding: 0, marginTop: 8 }}>
@@ -113,43 +153,16 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
         <div id="under-contract" style={{ marginTop: 16 }}>
           <div className="t-sm w6">{contract.title}</div>
           <p className="t-xs c-3" style={{ marginTop: 2 }}>{contract.summary}</p>
-          <ul style={{ marginTop: 8, display: "grid", gap: 6 }}>
-            {contract.work.map((w) => (
-              <li key={w.workstream} className="card p-3">
-                <div className="between gap-2 wrap">
-                  <span className="t-sm w6">{w.label}</span>
-                  <span className={`chip t-2xs ${CHIP[w.state] ?? ""}`}>{w.stateLabel}</span>
-                </div>
-                <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.5 }}>{w.line}</p>
-                {sent === w.workstream && w.state === "reported" ? (
-                  <p role="status" className="t-2xs c-pos" style={{ marginTop: 4 }}>Sent to {agentFirst}.</p>
-                ) : null}
-                {w.canReport && canRespond ? (
-                  reporting === w.workstream ? (
-                    <div style={{ marginTop: 8 }}>
-                      <input className="input" value={note} maxLength={500} placeholder="Anything to add? (optional)"
-                        aria-label={`About ${w.label.toLowerCase()}`} onChange={(e) => setNote(e.target.value)} />
-                      <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
-                        <button className="btn btn-p btn-sm" style={{ minHeight: 44 }} disabled={busy} onClick={() => report(w)}>
-                          {busy ? "Sending…" : `Tell ${agentFirst} it is done`}
-                        </button>
-                        <button className="btn btn-g btn-sm" style={{ minHeight: 44 }} onClick={() => setReporting(null)}>Back</button>
-                      </div>
-                      <p className="t-2xs c-4" style={{ marginTop: 6, lineHeight: 1.5 }}>
-                        {w.workstream === "earnest-money"
-                          ? "This says you sent it. It counts as received once the holder confirms it. Only use payment instructions you have confirmed by phone with the holder."
-                          : `This tells ${agentFirst} you did your part. It shows as confirmed once whoever it depends on confirms it.`}
-                      </p>
-                    </div>
-                  ) : (
-                    <button className="btn btn-s btn-sm" style={{ marginTop: 8, minHeight: 44 }} onClick={() => { setReporting(w.workstream); setNote(""); }}>
-                      {w.workstream === "earnest-money" ? "I sent it" : "I have done this"}
-                    </button>
-                  )
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          {/* Simple first (Blueprint v5 §4.8): what needs them or is stuck
+              is on the page; every other part of the contract is one press
+              away, with how many are confirmed. */}
+          {upFront.length ? <ul style={{ marginTop: 8, display: "grid", gap: 6 }}>{upFront.map(row)}</ul> : null}
+          {behind.length ? (
+            <Layer className="mt-2" title={upFront.length ? "The rest of the contract" : "Every part of the contract"}
+              meta={`${contract.work.filter((w) => w.state === "confirmed").length} of ${contract.work.filter((w) => w.state !== "not-applicable").length} confirmed`}>
+              <ul style={{ display: "grid", gap: 6 }}>{behind.map(row)}</ul>
+            </Layer>
+          ) : null}
         </div>
       ) : null}
     </div>

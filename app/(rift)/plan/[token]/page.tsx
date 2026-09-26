@@ -5,11 +5,12 @@ import { currentAgentPublic, currentAgentId } from "@/lib/db/service";
 import { releasedFor } from "@/lib/db/decisions";
 import { DecisionRoom } from "@/components/rift/DecisionRoom";
 import {
-  groupPlan, summarise, headline, ownerLabel, daysUntil,
+  groupPlan, type Bucket, summarise, headline, ownerLabel, daysUntil,
   nextForClient, notOnYou, whenPhrase, RECENT_DAYS,
 } from "@/lib/core/plan";
 import { rankOffers, headlineTrap, gapsIn, FINANCING_LABEL } from "@/lib/core/offers";
 import { money } from "@/lib/core/compute";
+import { Layer } from "@/components/rift/Layer";
 import { Ico, Mark } from "@/components/rift/icons";
 import { NOT_ACCEPTANCE } from "@/lib/core/offer-room";
 import { Choose } from "./Choose";
@@ -46,6 +47,9 @@ const WHEN = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("e
  * selects a fixed, narrow column list, so the score, the band, the contact
  * basis and the signals never reach the renderer at all.
  */
+/** The buckets behind a layer: not yet, or already done. */
+const LATER: Bucket[] = ["later", "someday", "done"];
+
 export default async function ClientPlan({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const read = await readPlanByToken(token);
@@ -274,13 +278,8 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
         <div className="col gap-4" style={{ marginTop: 26 }}>
           {sections.map((sec) => (
             <section key={sec.bucket}>
-              <div className="row gap-2" style={{ marginBottom: 10 }}>
-                <span className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
-                  {sec.label}
-                </span>
-                {sec.bucket === "overdue" ? <span className="chip chip-neg t-2xs">{sec.items.length}</span> : null}
-              </div>
-
+              {(() => {
+                const card = (
               <div className="card" style={{ overflow: "hidden" }}>
                 {sec.items.map((item, i) => {
                   const who = ownerLabel(item, { agent: agentFirst, client: plan.firstName }, "client");
@@ -329,6 +328,30 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
                   );
                 })}
               </div>
+                );
+                /* Simple first (Blueprint v5 §4.8): what is late, this week and
+                   next is the page. Later, undated and done are one press
+                   away, each saying how much is inside and how much is theirs. */
+                if (LATER.includes(sec.bucket)) {
+                  const theirs = sec.items.filter((it) => it.owner === "client" && !it.doneAt).length;
+                  return (
+                    <Layer title={sec.label} meta={`${sec.items.length} ${sec.items.length === 1 ? "step" : "steps"}${theirs ? `, ${theirs} yours` : ""}`}>
+                      {card}
+                    </Layer>
+                  );
+                }
+                return (
+                  <>
+                    <div className="row gap-2" style={{ marginBottom: 10 }}>
+                      <span className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
+                        {sec.label}
+                      </span>
+                      {sec.bucket === "overdue" ? <span className="chip chip-neg t-2xs">{sec.items.length}</span> : null}
+                    </div>
+                    {card}
+                  </>
+                );
+              })()}
             </section>
           ))}
         </div>
