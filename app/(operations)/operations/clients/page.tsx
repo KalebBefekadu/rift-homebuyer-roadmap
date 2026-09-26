@@ -11,6 +11,7 @@ import { Forward } from "./Forward";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { Ico } from "@/components/rift/icons";
 import { OpsNav } from "../OpsNav";
+import { Layer } from "@/components/rift/Layer";
 import { Search } from "./Search";
 
 export const metadata: Metadata = { title: "People" };
@@ -96,7 +97,7 @@ export default async function ClientsPage({
       <OpsNav agentName={agent.name} undecided={rules.undecided.length} />
 
       <main className="shell-w sec" style={{ paddingTop: 28 }}>
-        <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>People</h1>
+        <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Relationships</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
           Everyone, in the order they arrived. Today ranks them by what needs doing;
           this is for when you already know whose name you are looking for.
@@ -107,6 +108,9 @@ export default async function ClientsPage({
             it would look like a forecast OF the search. */}
         {liveOk && !searching && (one("filter") ?? "all") === "all" && (one("side") ?? "all") === "all" ? (
           <div style={{ marginTop: 20 }}>
+            {/* One press away (§4.8): the forecast is worth knowing, not what
+                this page is for, which is finding somebody. */}
+            <Layer title="Forecast" meta="what the people you are working could close">
             <Forward
               live={forwardRows}
               finished={historyRows}
@@ -117,6 +121,7 @@ export default async function ClientsPage({
                  most quotable number on the screen. */
               commissionDecided={!rules.undecided.includes("commissionPct")}
             />
+            </Layer>
           </div>
         ) : null}
 

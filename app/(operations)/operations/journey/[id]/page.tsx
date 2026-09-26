@@ -10,7 +10,8 @@ import { homesOf } from "@/lib/db/shortlist";
 import { toursOf } from "@/lib/db/tours";
 import { readLead } from "@/lib/db/clients";
 import { buyerSearchOn, SIDE_LABEL } from "@/lib/core/journey";
-import { describe, diffBriefs, FIELDS, STRENGTH_LABEL } from "@/lib/core/search";
+import { describe, diffBriefs, FIELDS, STATUS_LABEL, STRENGTH_LABEL } from "@/lib/core/search";
+import { Layer } from "@/components/rift/Layer";
 import { AgentBrief } from "./AgentBrief";
 import { SearchSetup } from "./SearchSetup";
 import { Household } from "./Household";
@@ -127,14 +128,35 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
 
   const firstName = agent.name.trim().split(/\s+/)[0] ?? agent.name;
 
+  /* Simple first, the rest one press away (Blueprint v5 §4.8, §8.6). The
+     page used to stack nine sections of equal weight; now "Where it stands"
+     is the page, and each other section is a layer whose label says what is
+     in it. The layer for the stage they are in opens by itself, and so does
+     any layer that failed to load or holds something waiting for the agent:
+     a failure is never folded away. */
+  const stage = prog?.progress.stage;
+  const nobodyIn = Boolean(memberList && !memberList.some((m) => m.state === "active" || m.state === "invited"));
+  const searchStatus = s?.status ?? "unknown";
+  const searchNeedsYou = ["awaiting-approval", "manual-action-needed", "update-pending", "unknown"].includes(searchStatus);
+  const openBids = bidData?.bids.filter((b) => !b.view.final) ?? [];
+  const tourCount = tourData?.stops.length ?? 0;
+  const liveHomes = (homeList ?? []).filter((h) => !h.withdrawnAt);
+  const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  const failedMeta = <span className="c-neg">did not load</span>;
+
   return (
     <>
       <OpsNav agentName={agent.name} />
       <main className="shell-w" style={{ paddingTop: 22, paddingBottom: 60 }}>
-        <Link href={`/operations/lead/${journey.leadId}`} className="t-sm c-3">← {journey.person}</Link>
+        <nav className="t-sm c-3 row gap-2 wrap" aria-label="Breadcrumb">
+          <Link href="/operations/clients">Relationships</Link><span aria-hidden>›</span>
+          <Link href={`/operations/lead/${journey.leadId}`}>{journey.person}</Link><span aria-hidden>›</span>
+          <span aria-current="page" className="c-2 w6">{journey.label}</span>
+        </nav>
         <div className="row gap-2 wrap" style={{ marginTop: 10 }}>
-          <span className="chip t-2xs">{SIDE_LABEL[journey.side]}</span>
           <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em" }}>{journey.label}</h1>
+          <span className="chip t-2xs">{SIDE_LABEL[journey.side]}</span>
+          {stage ? <span className="chip chip-ink t-2xs">{STAGE_LABEL[stage]}</span> : null}
         </div>
         <p className="t-xs c-4" style={{ marginTop: 4 }}>
           {journey.person} · started {DAY(journey.createdAt)}
@@ -143,7 +165,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
         {/* Blueprint v5 §7.3: the buyer cannot sign in until someone is
             invited, and the sign-in page cannot say so without revealing who
             is a client. So the first step is said here, where it can be. */}
-        {memberList && !memberList.some((m) => m.state === "active" || m.state === "invited") ? (
+        {nobodyIn ? (
           <div className="card p-4 between wrap gap-3" style={{ marginTop: 18, borderColor: "var(--warn-line)", background: "var(--warn-wash)" }} role="note">
             <div style={{ maxWidth: 560 }}>
               <div className="t-md w6">First step: invite the buyer</div>
@@ -152,7 +174,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
                 yourself; the buyer opens it once, and after that signs in with their email.
               </p>
             </div>
-            <a href="#household-h" className="btn btn-p">Invite the household</a>
+            <a href="#household" className="btn btn-p">Invite the household</a>
           </div>
         ) : null}
 
@@ -187,83 +209,88 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
               ) : <p className="t-xs c-neg" style={{ marginTop: 12 }}>The contract dates did not load. That is not the same as there being none.</p>
             ) : null}
           </section>
-        ) : null}
+        ) : (
+          <section className="card p-4" style={{ marginTop: 18 }}>
+            <h2 className="t-md w6">Selling</h2>
+            <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              The seller workflow (pricing, launch, offers, net) comes after the buyer release. Offers and the offer
+              room for this person are on <Link className="u" href={`/operations/lead/${journey.leadId}`}>their record</Link>.
+            </p>
+          </section>
+        )}
 
-        {buying ? (
-          <>
-            <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="brief-h">
-              <div className="between gap-2 wrap">
-                <div>
-                  <h2 id="brief-h" className="t-md w6">Search brief</h2>
-                  <div className="t-xs c-4" style={{ marginTop: 2 }}>
-                    {latest
-                      ? `Revision ${latest.revision}, by ${latest.authorLabel}${latest.authorKind === "client" ? " (buyer)" : ""}, ${DAY(latest.createdAt)}.`
-                      : "What they need in a home, and what they would only like, each with who said it and when."}
-                  </div>
-                </div>
+        <div className="opsx-layers">
+          {buying ? (
+            <Layer id="brief" title="Search brief"
+              open={(search && !search.ok) || (s?.disagreement.length ?? 0) > 0 || stage === "prepare" || stage === "search" || !latest}
+              meta={search && !search.ok ? failedMeta : latest ? `revision ${latest.revision}, ${DAY(latest.createdAt)}` : "none yet"}>
+              <div className="t-xs c-4" style={{ marginBottom: 10 }}>
+                {latest
+                  ? `Revision ${latest.revision}, by ${latest.authorLabel}${latest.authorKind === "client" ? " (buyer)" : ""}, ${DAY(latest.createdAt)}.`
+                  : "What they need in a home, and what they would only like, each with who said it and when."}
               </div>
               {search && !search.ok ? (
-                <p className="t-xs c-neg" style={{ marginTop: 10 }}>The brief did not load ({search.error}). That is not the same as having none.</p>
+                <p className="t-xs c-neg">The brief did not load ({search.error}). That is not the same as having none.</p>
               ) : (
-                <div style={{ marginTop: 12 }}>
-                  <AgentBrief
-                    journeyId={id}
-                    latest={latest ? { revision: latest.revision, ...latest.brief } : null}
-                    start={startPoint}
-                    person={journey.person}
-                    disagreement={s?.disagreement ?? []}
-                  />
-                </div>
+                <AgentBrief
+                  journeyId={id}
+                  latest={latest ? { revision: latest.revision, ...latest.brief } : null}
+                  start={startPoint}
+                  person={journey.person}
+                  disagreement={s?.disagreement ?? []}
+                />
               )}
-            </section>
+            </Layer>
+          ) : null}
 
-            {latest && (previous || s?.responses.length) ? (
-              <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="changed-h">
-                <h2 id="changed-h" className="t-md w6">What changed, and who agrees</h2>
-                {previous && diff ? (
-                  <div style={{ marginTop: 8 }}>
-                    <div className="t-xs c-4">Revision {previous.revision} to {latest.revision}{latest.note ? `: "${latest.note}"` : ""}</div>
-                    {diff.changes.length || diff.questionsAdded.length || diff.questionsResolved.length ? (
-                      <ul className="t-sm" style={{ marginTop: 6, display: "grid", gap: 4 }}>
-                        {diff.changes.map((c) => (
-                          <li key={(c.after ?? c.before)!.id}>
-                            {c.kind === "added" ? "Added" : c.kind === "removed" ? "Removed" : "Changed"}{" "}
-                            <span className="w6">{FIELDS[(c.after ?? c.before)!.field].label}</span>:{" "}
-                            {c.kind === "changed"
-                              ? <>{describe(c.before!)} ({STRENGTH_LABEL[c.before!.strength].toLowerCase()}) to {describe(c.after!)} ({STRENGTH_LABEL[c.after!.strength].toLowerCase()})</>
-                              : describe((c.after ?? c.before)!)}
-                            {c.after && c.kind !== "removed" ? <span className="t-2xs c-4"> · {c.after.statedBy}, {c.after.sourceRef}</span> : null}
-                          </li>
-                        ))}
-                        {diff.questionsAdded.map((q) => <li key={`qa${q}`}>New question: {q}</li>)}
-                        {diff.questionsResolved.map((q) => <li key={`qr${q}`}>Settled: {q}</li>)}
-                      </ul>
-                    ) : <p className="t-xs c-3" style={{ marginTop: 6 }}>Saved again with no changes to the criteria.</p>}
-                  </div>
-                ) : null}
-                {s?.responses.length ? (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="t-xs w6">Answers to revision {latest.revision}</div>
-                    <ul className="t-sm" style={{ marginTop: 4, display: "grid", gap: 3 }}>
-                      {s.responses.map((r) => (
-                        <li key={r.id}>
-                          <span className="w6">{r.name}</span>{" "}
-                          {r.response === "confirmed" ? "confirmed it" : "asked for changes"}
-                          {r.note ? <span className="c-3">: &ldquo;{r.note}&rdquo;</span> : null}
-                          <span className="t-2xs c-4"> · {DAY(r.createdAt)}</span>
+          {buying && latest && (previous || s?.responses.length) ? (
+            <Layer id="changed" title="What changed, and who agrees"
+              meta={s?.responses.length ? count(s.responses.length, "answer") : "no answers yet"}>
+              {previous && diff ? (
+                <div>
+                  <div className="t-xs c-4">Revision {previous.revision} to {latest.revision}{latest.note ? `: "${latest.note}"` : ""}</div>
+                  {diff.changes.length || diff.questionsAdded.length || diff.questionsResolved.length ? (
+                    <ul className="t-sm" style={{ marginTop: 6, display: "grid", gap: 4 }}>
+                      {diff.changes.map((c) => (
+                        <li key={(c.after ?? c.before)!.id}>
+                          {c.kind === "added" ? "Added" : c.kind === "removed" ? "Removed" : "Changed"}{" "}
+                          <span className="w6">{FIELDS[(c.after ?? c.before)!.field].label}</span>:{" "}
+                          {c.kind === "changed"
+                            ? <>{describe(c.before!)} ({STRENGTH_LABEL[c.before!.strength].toLowerCase()}) to {describe(c.after!)} ({STRENGTH_LABEL[c.after!.strength].toLowerCase()})</>
+                            : describe((c.after ?? c.before)!)}
+                          {c.after && c.kind !== "removed" ? <span className="t-2xs c-4"> · {c.after.statedBy}, {c.after.sourceRef}</span> : null}
                         </li>
                       ))}
+                      {diff.questionsAdded.map((q) => <li key={`qa${q}`}>New question: {q}</li>)}
+                      {diff.questionsResolved.map((q) => <li key={`qr${q}`}>Settled: {q}</li>)}
                     </ul>
-                  </div>
-                ) : latest && memberList?.some((m) => m.state === "active") ? (
-                  <p className="t-xs c-4" style={{ marginTop: 10 }}>Nobody in the household has answered revision {latest.revision} yet.</p>
-                ) : null}
-              </section>
-            ) : null}
+                  ) : <p className="t-xs c-3" style={{ marginTop: 6 }}>Saved again with no changes to the criteria.</p>}
+                </div>
+              ) : null}
+              {s?.responses.length ? (
+                <div style={{ marginTop: 12 }}>
+                  <div className="t-xs w6">Answers to revision {latest.revision}</div>
+                  <ul className="t-sm" style={{ marginTop: 4, display: "grid", gap: 3 }}>
+                    {s.responses.map((r) => (
+                      <li key={r.id}>
+                        <span className="w6">{r.name}</span>{" "}
+                        {r.response === "confirmed" ? "confirmed it" : "asked for changes"}
+                        {r.note ? <span className="c-3">: &ldquo;{r.note}&rdquo;</span> : null}
+                        <span className="t-2xs c-4"> · {DAY(r.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : memberList?.some((m) => m.state === "active") ? (
+                <p className="t-xs c-4" style={{ marginTop: 10 }}>Nobody in the household has answered revision {latest.revision} yet.</p>
+              ) : null}
+            </Layer>
+          ) : null}
 
-            <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="matrix-h">
-              <h2 id="matrix-h" className="t-md w6">Matrix search</h2>
-              <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+          {buying ? (
+            <Layer id="matrix" title="Matrix search" open={searchNeedsYou && Boolean(latest)}
+              meta={s ? <span className={searchNeedsYou ? "c-warn" : undefined}>{STATUS_LABEL[searchStatus]}</span> : failedMeta}>
+              <div className="t-xs c-4" style={{ marginBottom: 10 }}>
                 Approve a revision, set it up in Matrix, record where it lives.
               </div>
               {s ? (
@@ -280,99 +307,91 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
               ) : (
                 <p className="t-xs c-neg">The Matrix search status did not load. It is unknown, not inactive.</p>
               )}
-            </section>
-          </>
-        ) : (
-          <section className="card p-4" style={{ marginTop: 18 }}>
-            <h2 className="t-md w6">Selling</h2>
-            <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-              The seller workflow (pricing, launch, offers, net) comes after the buyer release. Offers and the offer
-              room for this person are on <Link className="u" href={`/operations/lead/${journey.leadId}`}>their record</Link>.
-            </p>
-          </section>
-        )}
+            </Layer>
+          ) : null}
 
-        <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="household-h">
-          <h2 id="household-h" className="t-md w6">Household</h2>
-          <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
-            Who can sign in to this journey, and what each person sees.
-          </div>
-          {memberList ? (
-            <Household
-              journeyId={id}
-              members={memberList}
-              defaultEmail={leadRow?.email ?? ""}
-              defaultName={leadRow?.name ?? ""}
-            />
-          ) : (
-            <p className="t-xs c-neg">The household did not load. That is not the same as nobody being invited.</p>
-          )}
-        </section>
+          {buying ? (
+            <Layer id="homes" title="Homes" open={!homeList || stage === "tour"}
+              meta={homeList ? count(liveHomes.length, "home") : failedMeta}>
+              <div className="t-xs c-4" style={{ marginBottom: 8 }}>
+                Homes you or the buyer added, with everyone&apos;s reactions. No listing feed: a link and the facts you typed.
+              </div>
+              {homeList ? (
+                <Homes
+                  journeyId={id}
+                  homes={homeList.map((h) => ({ ...h, historyCount: h.history.length }))}
+                  criteria={fitRevision?.brief.criteria ?? []}
+                  against={against}
+                />
+              ) : (
+                <p className="t-xs c-neg">The shortlist did not load. That is not the same as an empty list.</p>
+              )}
+            </Layer>
+          ) : null}
 
-        {buying ? (
-          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="homes-h">
-            <h2 id="homes-h" className="t-md w6">Homes</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
-              Homes you or the buyer added, with everyone&apos;s reactions. No listing feed: a link and the facts you typed.
+          {buying ? (
+            <Layer id="showings" title="Showings" open={!tourData || stage === "tour"}
+              meta={tourData ? count(tourCount, "showing") : failedMeta}>
+              <div className="t-xs c-4" style={{ marginBottom: 8 }}>
+                What you arranged in ShowingTime, step by step. A request is not an appointment until you record the confirmed time.
+              </div>
+              {tourData ? (
+                <Showings
+                  journeyId={id}
+                  stops={tourData.stops}
+                  homes={liveHomes.map((h) => ({ id: h.id, address: h.address }))}
+                  coverage={tourData.coverage}
+                  leadId={journey.leadId}
+                  person={journey.person.split(/\s+/)[0] ?? journey.person}
+                  unavailable={tourData.unavailable}
+                />
+              ) : (
+                <p className="t-xs c-neg">The showings did not load. That is not the same as there being none.</p>
+              )}
+            </Layer>
+          ) : null}
+
+          {buying ? (
+            <Layer id="offers" title="Offers" open={!(bidData && docData) || stage === "offer" || openBids.length > 0}
+              meta={bidData && docData ? (openBids.length ? `${count(openBids.length, "offer")} open` : count(bidData.bids.length, "offer")) : failedMeta}>
+              <div className="t-xs c-4" style={{ marginBottom: 8 }}>
+                The terms, each version, and what the household told you. The forms are prepared, signed and delivered in Remine; this records that they were.
+              </div>
+              {bidData && docData ? (
+                <Offers
+                  journeyId={id}
+                  bids={bidData.bids}
+                  docs={docData.documents}
+                  homes={liveHomes.map((h) => ({ id: h.id, address: h.address }))}
+                  deciders={bidData.deciders}
+                  coverage={bidData.coverage}
+                  leadId={journey.leadId}
+                  person={journey.person.split(/\s+/)[0] ?? journey.person}
+                  unavailable={bidData.unavailable ?? docData.unavailable}
+                />
+              ) : (
+                <p className="t-xs c-neg">The offers did not load. That is not the same as there being none.</p>
+              )}
+            </Layer>
+          ) : null}
+
+          <Layer id="household" title="Household" open={!memberList || nobodyIn}
+            meta={memberList ? count(memberList.length, "person", "people") : failedMeta}>
+            <div className="t-xs c-4" style={{ marginBottom: 10 }}>
+              Who can sign in to this journey, and what each person sees.
             </div>
-            {homeList ? (
-              <Homes
+            {memberList ? (
+              <Household
                 journeyId={id}
-                homes={homeList.map((h) => ({ ...h, historyCount: h.history.length }))}
-                criteria={fitRevision?.brief.criteria ?? []}
-                against={against}
+                members={memberList}
+                defaultEmail={leadRow?.email ?? ""}
+                defaultName={leadRow?.name ?? ""}
               />
             ) : (
-              <p className="t-xs c-neg">The shortlist did not load. That is not the same as an empty list.</p>
+              <p className="t-xs c-neg">The household did not load. That is not the same as nobody being invited.</p>
             )}
-          </section>
-        ) : null}
-
-        {buying ? (
-          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="showings-h">
-            <h2 id="showings-h" className="t-md w6">Showings</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
-              What you arranged in ShowingTime, step by step. A request is not an appointment until you record the confirmed time.
-            </div>
-            {tourData ? (
-              <Showings
-                journeyId={id}
-                stops={tourData.stops}
-                homes={(homeList ?? []).filter((h) => !h.withdrawnAt).map((h) => ({ id: h.id, address: h.address }))}
-                coverage={tourData.coverage}
-                leadId={journey.leadId}
-                person={journey.person.split(/\s+/)[0] ?? journey.person}
-                unavailable={tourData.unavailable}
-              />
-            ) : (
-              <p className="t-xs c-neg">The showings did not load. That is not the same as there being none.</p>
-            )}
-          </section>
-        ) : null}
-
-        {buying ? (
-          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="offers-h">
-            <h2 id="offers-h" className="t-md w6">Offers</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
-              The terms, each version, and what the household told you. The forms are prepared, signed and delivered in Remine; this records that they were.
-            </div>
-            {bidData && docData ? (
-              <Offers
-                journeyId={id}
-                bids={bidData.bids}
-                docs={docData.documents}
-                homes={(homeList ?? []).filter((h) => !h.withdrawnAt).map((h) => ({ id: h.id, address: h.address }))}
-                deciders={bidData.deciders}
-                coverage={bidData.coverage}
-                leadId={journey.leadId}
-                person={journey.person.split(/\s+/)[0] ?? journey.person}
-                unavailable={bidData.unavailable ?? docData.unavailable}
-              />
-            ) : (
-              <p className="t-xs c-neg">The offers did not load. That is not the same as there being none.</p>
-            )}
-          </section>
-        ) : null}
+          </Layer>
+        </div>
 
         <p className="t-2xs c-4" style={{ marginTop: 24, lineHeight: 1.6, maxWidth: 640 }}>
           Nothing on this page sends anything to anybody. Invitation links are for you to send, and the Matrix search is

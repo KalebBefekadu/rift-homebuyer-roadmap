@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { OpsNav } from "../../OpsNav";
+import { Layer } from "@/components/rift/Layer";
 import { Unavailable } from "../../Unavailable";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
@@ -155,16 +156,10 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           journeys={journeySummaries}
           unavailable={journeysUnavailable}
         />
-        <Plan
-          leadId={id}
-          items={items}
-          token={token}
-          origin={siteUrl()}
-          agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
-          clientFirst={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
-        />
-        {/* Sellers only. A buyer has no offers ON them, and a panel that
-            renders empty on every buyer record is a panel he learns to skip. */}
+        {/* Simple first (Blueprint v5 §4.8): what they did, their journeys and,
+            for a seller, the offers stay on the page; the rest is one press
+            away, with what is inside on the label. A layer opens by itself
+            when the agreement no longer covers them. */}
         {read.data.lead.side === "sell" ? (
           <Offers
             leadId={id}
@@ -176,28 +171,48 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         {read.data.lead.side === "sell" ? (
           <Take leadId={id} offers={offerList} costs={sellerCosts} room={room} />
         ) : null}
-        <Decisions
-          leadId={id}
-          decisions={decisions}
-          agentFirst={agent.name.trim().split(/\s+/)[0] ?? "your agent"}
-        />
-        {agreement ? (
-          <Agreement
-            leadId={id}
-            side={read.data.lead.side}
-            status={agreement.status}
-            signedOn={agreement.signedOn}
-            expiresOn={agreement.expiresOn}
-            standing={standingOf(agreement)}
-          />
-        ) : null}
-        <Referral
-          token={referralToken}
-          origin={siteUrl()}
-          firstName={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
-          sent={links.sent}
-          referrer={links.referrer}
-        />
+        <div className="opsx-layers">
+          <Layer title="Their plan" meta={items.length ? `${items.length} item${items.length === 1 ? "" : "s"}${token ? ", shared" : ""}` : "nothing agreed yet"}>
+            <Plan
+              leadId={id}
+              items={items}
+              token={token}
+              origin={siteUrl()}
+              agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
+              clientFirst={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
+            />
+          </Layer>
+          <Layer title="Agreement" open={!rep.ok || Boolean(agreement && !standingOf(agreement).covered && agreement.status !== "none")}
+            meta={!rep.ok ? <span className="c-neg">did not load</span> : agreement ? standingOf(agreement).covered ? "covered" : <span className="c-warn">not covered</span> : "none recorded"}>
+            {agreement ? (
+              <Agreement
+                leadId={id}
+                side={read.data.lead.side}
+                status={agreement.status}
+                signedOn={agreement.signedOn}
+                expiresOn={agreement.expiresOn}
+                standing={standingOf(agreement)}
+              />
+            ) : "skipped" in rep ? <p className="t-sm c-3">{rep.reason}.</p>
+              : <p className="t-sm c-neg">The agreement did not load. That is not the same as there being none.</p>}
+          </Layer>
+          <Layer title="Decision rooms" meta={decisions.length ? `${decisions.length}` : "none yet"}>
+            <Decisions
+              leadId={id}
+              decisions={decisions}
+              agentFirst={agent.name.trim().split(/\s+/)[0] ?? "your agent"}
+            />
+          </Layer>
+          <Layer title="Referrals" meta={links.referrer ? `sent by ${links.referrer.name ?? "a past client"}` : links.sent.length ? `sent you ${links.sent.length}` : "their link, and who they sent"}>
+            <Referral
+              token={referralToken}
+              origin={siteUrl()}
+              firstName={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
+              sent={links.sent}
+              referrer={links.referrer}
+            />
+          </Layer>
+        </div>
       </div>
     </>
   );
