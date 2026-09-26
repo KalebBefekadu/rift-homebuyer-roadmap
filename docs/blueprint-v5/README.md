@@ -807,8 +807,9 @@ costs days, where building the wrong layout would cost weeks.
   - **Transactions** (new)
   - **Offers**
   - **Calendar**
-  - then, smaller: **Advocacy**, **Reports** (the pilot report and funnel figures), **Campaigns**
-    (later), **Questions**, **Settings**.
+  - then, smaller: **Reviews and referrals** (was "Advocacy"), **Reports** (the pilot report and
+    funnel figures), **Campaigns** (later), **Lead-form questions** (was "Questions"), **Settings**.
+    Renamed in the third mock-up: Kaleb could not tell what the old names were for.
 - "Add someone" as a single primary button in the sidebar.
 - A **quick switcher** (Cmd+K) to jump to any person, journey or page, and keyboard shortcuts for
   the common actions. The prototype at `/prototype/studio` already has a palette to start from.
@@ -850,6 +851,17 @@ due time and its next action:
   - **Contract:** where it stands, workstreams, dates.
   - **History.**
 - Every write keeps today's rules (history-only records, request IDs, server checks).
+- **The process is a checklist that gets executed (Kaleb, review of the second mock-up).** Each
+  stage opens its steps, taken from the journey contracts (B01 to B20, S01 to S18), and every step
+  says who does it: Rift on its own (internal work only), Rift preparing it for the agent's
+  approval (anything a client or outside party sees, AUTO-01), the agent, the transaction
+  coordinator, the client, or an outside professional. Ticking a step records who and when; a
+  step another party must confirm asks who confirmed it (rule 9), and a client's "done" is a
+  report (UX-02). Sending an agreement, presenting an offer and a price opinion are the agent's
+  in every mode. Who does each step is set once in Settings, Checklists, for every client; a
+  journey can add a step of its own. The ten workstreams are steps too, so Transactions and the
+  checklist read the same. Source: `lib/prototype/ops-playbook.ts`, tested in
+  `lib/core/ops-playbook.test.ts`.
 
 ### 8.7 Transactions (new, proposal)
 - Every contract in one table: property, client, stage, next deadline, workstreams at a glance
@@ -861,7 +873,10 @@ due time and its next action:
 - **Offers:** inbound offers from `/offer`, now with the uploaded PDF and extracted terms (§5.9).
 - **Calendar:** real Cal.com bookings alongside dates and showings.
 - **Reports:** the pilot report plus funnel and value-ladder figures.
-- **Settings and Questions:** keep; group the settings by what they affect.
+- **Settings:** sections down the side with real controls and a save bar: profile and hours,
+  team (what the coordinator can do), automation (the three modes, each workflow, what is always
+  the agent's), checklists (who does each step), leads and emails, connections, privacy.
+- **Lead-form questions:** keep; say on the page what they are and that they never reach a figure.
 
 ### 8.9 Look and feel
 - Utilitarian: sans-serif interface type, smaller scale, dense tables, clear hierarchy, few
@@ -888,6 +903,18 @@ a letter, j and k, e, ?). What to look at: Today at 1280px (every group's headin
 item on one screen), opening a person from Relationships and coming back, a journey's tabs,
 Transactions, clicking through a journey's stages, and Cmd+K. Say what to keep or change; the real screens are rebuilt only after
 that (D15).
+
+**Third version (26 Sep), from Kaleb's review of the second:** Today and Offers were
+overwhelming, Full page on a person should open their journey, the journey was overwhelming and
+should run as a checklist (above, §8.6), Settings did not look like settings, and Questions and
+Advocacy did not say what they were. So: Today is one "Needs you" list with the day's schedule
+and the coordinator's list beside it, and waiting, coming up and what changed are closed until
+opened; the journey is the stage track and that stage's checklist, with the brief, homes,
+offers, dates and history in closed sections and contact, team and notes in the header; Full
+page opens the journey (a person with no journey keeps a page of their own); Offers is one card
+per offer leading with what reaches the seller, its expiry and one action; Settings as above;
+the two pages renamed and explained. The page's "What changed" button lists each change.
+Answered by the review: the transaction coordinator is real, so delegation to them stays.
 
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
@@ -1036,6 +1063,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 26 Sep 2026 | Operations mock-up, third version: the journey as an executed checklist with who does each step, a simpler Today and Offers, real Settings (§8) |
 | 25 Sep 2026 | Operations mock-up, second version from an audit against §8 (D15) |
 | 25 Sep 2026 | Accessibility and phone-width suites extended to every new page; four defects fixed (§4.7) |
 | 25 Sep 2026 | Buyer values: how much home fits (MONEY-05) and lender questions (§5.2) |

@@ -1,29 +1,36 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Ico, Mark } from "@/components/rift/icons";
 import { STAGES, STAGE_LABEL, WORKSTREAMS, WORKSTREAM_LABEL, type Stage, type WorkState } from "@/lib/core/progress";
 import {
-  ACTIVITY, AUTOMATION, CALENDAR, GROUP_LABEL, JOURNEYS, MOMENTS, NOW, PEOPLE, REPORT, SELL_STAGE_LABEL, STAGE_ABOUT,
+  ACTIVITY, AUTOMATION, CALENDAR, JOURNEYS, MOMENTS, NOW, PEOPLE, REPORT, SELL_STAGE_LABEL, STAGE_ABOUT,
   STATE_WORD, TODAY, WORKSTREAM_SHORT, daysFromNow, inDays,
-  type MockJourney, type MockPerson, type MockWork, type TodayGroup, type TodayItem,
+  type MockJourney, type MockPerson, type TodayItem,
 } from "@/lib/prototype/ops-mock";
+import {
+  BUY_PLAYBOOK, COORDINATOR, SELL_PLAYBOOK, STEP_WORD, isOpen, stepsFor,
+  type Step, type StepMark, type StepState,
+} from "@/lib/prototype/ops-playbook";
 
 /**
- * The Operations mock-up (Blueprint v5 §8, decision D15), second version.
+ * The Operations mock-up (Blueprint v5 §8, decision D15), third version.
  *
  * Kaleb clicks through this before any real Operations screen is rebuilt, and
- * says what to keep or change. Made-up data, nothing saved: snoozing,
- * approving and marking done change this page only.
+ * says what to keep or change. Made-up data, nothing saved: ticking a step,
+ * approving and changing a setting change this page only.
  *
  * Where you are lives in the address (?v=, ?p=, ?j=, ?tab=, ?f=, ?s=), so the
  * back button and a returned-to list keep their place, filter and sort: one
  * of §8's acceptance checks, and the thing the live pages do not do.
  *
- * What the second version changed, and why, is in CHANGES below and behind
- * the "What changed" button on the page, so the review can check each one.
+ * The third version answers Kaleb's review of the second: Today and Offers
+ * were overwhelming, the journey read like notes where it should be a process
+ * that gets executed, Settings did not look like settings, and Questions and
+ * Advocacy did not say what they were for. CHANGES below lists each change
+ * behind the "What changed" button, so the review can take them one by one.
  */
 
 type View = "today" | "people" | "person" | "journey" | "transactions" | "search" | "offers" | "calendar"
@@ -31,6 +38,12 @@ type View = "today" | "people" | "person" | "journey" | "transactions" | "search
 type Tab = "overview" | "search" | "homes" | "offers" | "contract" | "history";
 type Marks = Record<string, string>;
 type SetMarks = React.Dispatch<React.SetStateAction<Marks>>;
+/** Steps ticked, confirmed or approved in this session, by `${journey}:${step}`. */
+type StepMarks = Record<string, StepMark>;
+type SetStepMarks = React.Dispatch<React.SetStateAction<StepMarks>>;
+/** Who a step is given to in Settings: Rift on its own, Rift preparing it for you, you, or the coordinator. */
+type Assign = "auto" | "approve" | "you" | "tc";
+type Assigns = Record<string, Assign>;
 
 const NAV: { v: View; label: string; icon: keyof typeof Ico; key: string }[] = [
   { v: "today", label: "Today", icon: "home", key: "t" },
@@ -40,10 +53,12 @@ const NAV: { v: View; label: string; icon: keyof typeof Ico; key: string }[] = [
   { v: "offers", label: "Offers", icon: "scale", key: "o" },
   { v: "calendar", label: "Calendar", icon: "cal", key: "c" },
 ];
+/* Kaleb could not tell what "Questions" and "Advocacy" were. The names now
+   say what is on the page; §8.3's list is updated to match. */
 const NAV_SMALL: { v: View; label: string }[] = [
-  { v: "advocacy", label: "Advocacy" },
+  { v: "advocacy", label: "Reviews and referrals" },
   { v: "reports", label: "Reports" },
-  { v: "questions", label: "Questions" },
+  { v: "questions", label: "Lead-form questions" },
   { v: "settings", label: "Settings" },
 ];
 
@@ -55,6 +70,12 @@ const STATE_ICON: Record<WorkState, keyof typeof Ico> = {
 const STATE_TONE: Record<WorkState, string> = {
   "not-started": "c-4", "in-progress": "c-2", waiting: "c-warn", blocked: "c-neg",
   reported: "c-warn", confirmed: "c-pos", "not-applicable": "c-4",
+};
+const STEP_ICON: Record<StepState, keyof typeof Ico> = {
+  todo: "minus", doing: "clock", ready: "bell", waiting: "pause", reported: "info", blocked: "alert", done: "checkCircle", skip: "x",
+};
+const STEP_TONE: Record<StepState, string> = {
+  todo: "c-4", doing: "c-2", ready: "c-warn", waiting: "c-warn", reported: "c-warn", blocked: "c-neg", done: "c-pos", skip: "c-4",
 };
 const KIND: Record<TodayItem["kind"], { icon: keyof typeof Ico; word: string }> = {
   date: { icon: "cal", word: "Contract date" },
@@ -68,20 +89,20 @@ const KIND: Record<TodayItem["kind"], { icon: keyof typeof Ico; word: string }> 
   showing: { icon: "home", word: "Showing" },
   offer: { icon: "scale", word: "Offer" },
   closing: { icon: "key", word: "Closing" },
-  moment: { icon: "gift", word: "Advocacy" },
+  moment: { icon: "gift", word: "Review or referral" },
 };
 const CAL_KIND: Record<(typeof CALENDAR)[number]["kind"], { icon: keyof typeof Ico; word: string }> = {
   call: { icon: "clock", word: "Call" },
   showing: { icon: "home", word: "Showing" },
   date: { icon: "cal", word: "Date" },
   closing: { icon: "key", word: "Closing" },
-  moment: { icon: "gift", word: "Advocacy" },
+  moment: { icon: "gift", word: "Moment" },
 };
 
-/** The one assistant in the made-up business, so delegation has somebody to wait for. */
-const DELEGATE = "Meron (transaction coordinator)";
+/** The coordinator in the made-up business, so delegation has somebody to wait for. */
+const DELEGATE = `${COORDINATOR} (transaction coordinator)`;
 
-const without = (o: Marks, key: string) => {
+const without = <T,>(o: Record<string, T>, key: string) => {
   const next = { ...o };
   delete next[key];
   return next;
@@ -96,26 +117,37 @@ const dayLabel = (iso: string) => {
 };
 const isTyping = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+const firstNames = (j: MockJourney) => j.household.map((h) => h.name.split(" ")[0]).join(" and ");
 
-/** What the second version changed, shown on the page so Kaleb can check each one. */
+/** A step as Settings has assigned it. Protected steps, and the client's and outside professionals', cannot be reassigned. */
+function assigned(s: Step, a?: Assign): Step {
+  if (!a || s.protected || s.doer === "client" || s.doer === "pro") return s;
+  if (a === "auto" && s.external) return s;
+  if (a === "auto" || a === "approve") return { ...s, doer: "rift", mode: a };
+  return { ...s, doer: a, mode: undefined };
+}
+const assignOf = (s: Step): Assign | null =>
+  s.doer === "rift" ? (s.mode ?? "approve") : s.doer === "you" ? "you" : s.doer === "tc" ? "tc" : null;
+
+/** A journey's checklist with this session's ticks and Settings' assignments applied. */
+function checklist(j: MockJourney, stepMarks: StepMarks, assigns: Assigns) {
+  return stepsFor(j).map(({ step, mark }) => {
+    const key = `${j.id}:${step.id}`;
+    return { step: assigned(step, assigns[step.id]), mark: stepMarks[key] ?? mark, key, session: Boolean(stepMarks[key]) };
+  });
+}
+
+/** What the third version changed, shown on the page so Kaleb can check each one. */
 const CHANGES: string[] = [
-  "Today opens with a strip answering the seven questions in §8.2, each a jump to its group.",
-  "Maya is shown once, in the new-lead bar with the time left, not again inside Needs attention.",
-  "The clock agrees with itself: it is 9:31, so the 8:00 retry has already happened (and failed), and Saturday's tours are under Next two weeks, not Today.",
-  "Items have a Done button, and More offers three snooze times, delegation that waits for acceptance, and a pin with a reason.",
-  "One black button per screen at most; item actions are quiet until they matter.",
-  "Waiting on others says when you last heard and when to chase, instead of a chip.",
-  "Next two weeks is a day-by-day agenda, and What changed says who did each thing, including what Rift did on its own.",
-  "Relationships sorts by any column, shows counts on filters, keeps sort and filter in the address, and turns into cards on a phone.",
-  "The person panel follows §8.5: summary, next action, journeys, plan, agreement, history, and a full page one click away.",
-  "Simpler journey page: the stages are the navigation, instead of a stage track plus six tabs. Click a stage to see what happened in it, what is happening now, or what comes next; Whole story shows it all in order.",
-  "A seller's stages use selling words: Prepare, List, Showings, Offers, Under contract, Close, After the sale.",
-  "The journey has a way back (breadcrumb), a closing countdown, and who else is on the deal. The workstreams say who each waits on and whose word confirmed it (rule 9), and flag a week with no word.",
-  "Transactions is a grid: one column per workstream, the closing countdown, sorted by closing, with a blocked deal to show the state.",
-  "Offers shows expiry countdowns, earnest money, where each came from, and which leaves the seller the most.",
-  "Calendar is a day-by-day agenda with filters; Search, Advocacy, Reports, Questions and Settings are sketched, not placeholders.",
-  "Settings shows a missing connection as missing (Brevo domain, Cal.com, offer reading), the same failure Today reports.",
-  "Keyboard: ⌘K or / to jump, ? for the list, g then a letter to change page, j and k to move, e for done.",
+  "The journey is a checklist that gets executed. Each stage lists its steps from the journey contracts, and each step says who does it: Rift on its own, Rift preparing it for you to approve, you, Meron (the coordinator), the client, or an outside professional.",
+  "Ticking a step records who and when. A step that someone else has to confirm (the lender, the closing attorney, the listing agent) asks who confirmed it before it counts as done (rule 9). Something Rift prepared waits for your Approve.",
+  "Some steps are always yours whatever the settings: sending an agreement, presenting an offer, a price opinion. They carry a lock.",
+  "The journey page is shorter: the checklist, then closed sections for the brief, homes, offers, dates and what happened. Contact details, the team and notes sit in the header.",
+  "Relationships: Full page now opens the person's journey. Someone with no journey yet still gets a person page.",
+  "Today is one list instead of three columns: Needs you (attention and approvals), with the day's schedule and Meron's list beside it. Waiting on others, the next two weeks and what changed are closed until you open them. The line at the top still answers the seven questions.",
+  "Offers: one card per offer, leading with what reaches the seller, when it expires, and one action (present it). Your buyers' accepted offers are folded away.",
+  "Settings looks like settings: sections down the side, switches and menus, and a save bar. New sections: Team (what Meron can do), Automation (the three modes and each workflow), and Checklists (who does each step, which changes the journeys).",
+  "Questions is now Lead-form questions and Advocacy is Reviews and referrals, each with a line saying what it is for.",
 ];
 
 export function OpsMock() {
@@ -143,9 +175,12 @@ export function OpsMock() {
   const [menu, setMenu] = useState(false);
   const [dialog, setDialog] = useState<null | "switcher" | "add" | "keys" | "changes" | { draft: string }>(null);
   const [toast, setToast] = useState<string | null>(null);
-  /* What Kaleb did to items in this session: done, snoozed, delegated, pinned,
-     approved. The mock-up shows the consequence; nothing is stored. */
+  /* What Kaleb did in this session: items done, snoozed, delegated, pinned or
+     approved; steps ticked; settings changed. The mock-up shows the
+     consequence; nothing is stored. */
   const [marks, setMarks] = useState<Marks>({});
+  const [stepMarks, setStepMarks] = useState<StepMarks>({});
+  const [assigns, setAssigns] = useState<Assigns>({});
 
   useEffect(() => {
     if (!toast) return;
@@ -193,17 +228,24 @@ export function OpsMock() {
   const counts: Partial<Record<View, { n: number; tone?: "neg" }>> = {
     today: { n: attention, tone: "neg" },
     search: { n: marks["brief-j2"] ? 0 : 1 },
-    offers: { n: 1 },
+    offers: { n: marks["offer-j3-1"] ? 0 : 1 },
     transactions: { n: 1, tone: "neg" },
   };
   const current = view === "journey" || view === "person" ? "people" : view;
+  /* Full page is the person's journey: that is where everything about them
+     is. Someone with no journey yet gets a page of their own. */
+  const openFull = (id: string) => {
+    const p = person(id);
+    if (p?.journeyIds[0]) open("journey", { j: p.journeyIds[0] });
+    else open("person", { p: id });
+  };
 
   return (
     <div className={`ops ${collapsed ? "ops-collapsed" : ""}`}>
       <div className="ops-mockbar" role="note">
         <Ico.info size={13} aria-hidden />
         <span className="ops-grow">Mock-up with made-up data, for Kaleb to click through before Operations is rebuilt (D15). Nothing here is saved.</span>
-        <button className="ops-mockbar-btn" onClick={() => setDialog("changes")}>What changed in version 2</button>
+        <button className="ops-mockbar-btn" onClick={() => setDialog("changes")}>What changed in version 3</button>
       </div>
 
       <div className="ops-frame">
@@ -260,17 +302,17 @@ export function OpsMock() {
           </div>
 
           {view === "today" ? (
-            <TodayView marks={marks} setMarks={setMarks} setToast={setToast}
+            <TodayView marks={marks} setMarks={setMarks} setToast={setToast} stepMarks={stepMarks} assigns={assigns}
               openPerson={(id) => open("people", { p: id })}
               openJourney={(id, t) => open("journey", { j: id, tab: t })}
               openDraft={(id) => setDialog({ draft: id })}
-              openView={(v) => open(v)} />
+              openView={(v, extra) => open(v, extra)} />
           ) : null}
           {view === "people" ? (
             <PeopleView filter={filter} sort={sort} panel={panel}
               setFilter={(f) => go({ f }, true)} setSort={(s) => go({ s }, true)}
               openPanel={(id) => go({ p: id }, true)}
-              openFull={(id) => open("person", { p: id })}
+              openFull={openFull}
               openJourney={(id) => open("journey", { j: id })} setToast={setToast} />
           ) : null}
           {view === "person" && person(panel) ? (
@@ -285,17 +327,20 @@ export function OpsMock() {
             </>
           ) : null}
           {view === "journey" && journey(jid) ? (
-            <JourneyView j={journey(jid)!} tab={tab} setTab={(t) => go({ tab: t })} marks={marks} setMarks={setMarks} setToast={setToast}
+            <JourneyView j={journey(jid)!} tab={tab} setTab={(t) => go({ tab: t }, true)} marks={marks} setMarks={setMarks} setToast={setToast}
+              stepMarks={stepMarks} setStepMarks={setStepMarks} assigns={assigns}
               back={() => open("people")} openPerson={(id) => open("people", { p: id })} />
           ) : null}
           {view === "transactions" ? <TransactionsView openJourney={(id) => open("journey", { j: id, tab: journey(id)!.stage })} /> : null}
-          {view === "offers" ? <OffersView openJourney={(id) => open("journey", { j: id, tab: "offers" })} /> : null}
+          {view === "offers" ? <OffersView marks={marks} setMarks={setMarks} openJourney={(id) => open("journey", { j: id, tab: "offer" })} /> : null}
           {view === "calendar" ? <CalendarView openPerson={(id) => open("people", { p: id })} /> : null}
           {view === "search" ? <SearchView marks={marks} openJourney={(id) => open("journey", { j: id, tab: "search" })} /> : null}
           {view === "advocacy" ? <AdvocacyView setToast={setToast} /> : null}
           {view === "reports" ? <ReportsView /> : null}
-          {view === "questions" ? <QuestionsView /> : null}
-          {view === "settings" ? <SettingsView /> : null}
+          {view === "questions" ? <QuestionsView setToast={setToast} /> : null}
+          {view === "settings" ? (
+            <SettingsView section={tab || "profile"} setSection={(t) => go({ tab: t }, true)} assigns={assigns} setAssigns={setAssigns} setToast={setToast} />
+          ) : null}
         </main>
       </div>
 
@@ -316,8 +361,8 @@ export function OpsMock() {
         </Dialog>
       ) : null}
       {dialog === "changes" ? (
-        <Dialog title="What changed in version 2" close={() => setDialog(null)} wide>
-          <p className="ops-muted">From an audit of the first version against §8. Say which of these to keep.</p>
+        <Dialog title="What changed in version 3" close={() => setDialog(null)} wide>
+          <p className="ops-muted">From Kaleb&apos;s review of version 2. Say which of these to keep.</p>
           <ol className="ops-changes">{CHANGES.map((c) => <li key={c}>{c}</li>)}</ol>
         </Dialog>
       ) : null}
@@ -339,6 +384,24 @@ export function OpsMock() {
 
       <div className="ops-toast-wrap" role="status" aria-live="polite">{toast ? <div className="ops-toast">{toast}</div> : null}</div>
     </div>
+  );
+}
+
+/** A section that opens and closes, for detail that should not crowd the page. */
+function Fold({ id, title, count, open, setOpen, children, note }: {
+  id: string; title: ReactNode; count?: number; open: boolean; setOpen: (o: boolean) => void; children: ReactNode; note?: ReactNode;
+}) {
+  return (
+    <section className={`ops-fold ${open ? "is-open" : ""}`} aria-labelledby={`${id}-h`}>
+      <h2 className="ops-fold-h" id={`${id}-h`}>
+        <button className="ops-fold-btn" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => setOpen(!open)}>
+          <Ico.chevR size={12} aria-hidden className="ops-fold-chev" />
+          <span className="ops-grow">{title}{count !== undefined ? <span className="ops-muted"> {count}</span> : null}</span>
+          {note ? <span className="ops-fold-note">{note}</span> : null}
+        </button>
+      </h2>
+      {open ? <div className="ops-fold-body" id={`${id}-body`}>{children}</div> : null}
+    </section>
   );
 }
 
@@ -409,40 +472,53 @@ function AddDialog({ close, setToast }: { close: () => void; setToast: (t: strin
 
 /* ------------------------------------------------------------------ Today */
 
-const GROUP_ICON: Record<TodayGroup, keyof typeof Ico> = {
-  attention: "alert", approval: "check", today: "clock", waiting: "pause", upcoming: "cal",
-};
-
-function TodayView({ marks, setMarks, setToast, openPerson, openJourney, openDraft, openView }: {
+/* Version 2 put five groups in three columns and Kaleb found it
+   overwhelming. Now there is one list of what needs him, the day's schedule
+   and the coordinator's list beside it, and everything that is only worth
+   knowing (waiting, coming up, what changed) closed until he opens it. The
+   first line still answers §8.2's seven questions, and each number opens its
+   section. */
+function TodayView({ marks, setMarks, setToast, stepMarks, assigns, openPerson, openJourney, openDraft, openView }: {
   marks: Marks; setMarks: SetMarks; setToast: (t: string) => void;
+  stepMarks: StepMarks; assigns: Assigns;
   openPerson: (id: string) => void;
-  openJourney: (id: string, tab?: Tab) => void;
+  openJourney: (id: string, tab?: Tab | string) => void;
   openDraft: (id: string) => void;
-  openView: (v: View) => void;
+  openView: (v: View, extra?: Record<string, string | undefined>) => void;
 }) {
+  const [folds, setFolds] = useState<Record<string, boolean>>({});
   const lead = PEOPLE.find((p) => p.stage === "New lead")!;
-  const live = (g: TodayGroup) => TODAY.filter((t) => t.group === g && !marks[t.id]).length;
-  const jump = (g: string) => {
-    const h = document.getElementById(`g-${g}`);
-    h?.scrollIntoView({ block: "start", behavior: "smooth" });
-    h?.focus({ preventScroll: true });
-  };
+  const live = (g: TodayItem["group"]) => TODAY.filter((t) => t.group === g && !marks[t.id]);
+  const needs = TODAY.filter((t) => t.group === "attention" || t.group === "approval");
+  const nNeeds = needs.filter((t) => !marks[t.id]).length + (marks.lead ? 0 : 1);
+  const nApprove = live("approval").length;
   const openItem = (t: TodayItem) => (t.journeyId ? openJourney(t.journeyId, t.tab) : t.personId ? openPerson(t.personId) : undefined);
   const act = (t: TodayItem) => {
+    if (t.kind === "search") return setMarks((x) => ({ ...x, [t.id]: "Approved: the Matrix search updates tonight", "brief-j2": "approved" }));
     if (t.kind === "draft") return openDraft(t.id);
-    if (t.kind === "failed") return openView("settings");
+    if (t.kind === "failed") return openView("settings", { tab: "connections" });
     if (t.kind === "program") return setToast("In the real screen this opens the official page beside the change, with Approve and Reject.");
     if (t.kind === "moment") return openView("advocacy");
     return openItem(t);
   };
-  const summary: { g: string; label: string; n: number; icon: keyof typeof Ico; tone?: string }[] = [
-    { g: "attention", label: "need you", n: live("attention") + (marks.lead ? 0 : 1), icon: "alert", tone: "neg" },
-    { g: "approval", label: "to approve", n: live("approval"), icon: "check" },
-    { g: "today", label: "today", n: live("today"), icon: "clock" },
-    { g: "waiting", label: "waiting", n: live("waiting"), icon: "pause" },
-    { g: "upcoming", label: "coming up", n: live("upcoming"), icon: "cal" },
-    { g: "recent", label: "changes", n: ACTIVITY.length, icon: "refresh" },
-  ];
+  const jump = (id: string) => {
+    setFolds((f) => ({ ...f, [id]: true }));
+    requestAnimationFrame(() => {
+      const h = document.getElementById(`${id}-h`);
+      h?.scrollIntoView({ block: "start", behavior: "smooth" });
+      h?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+    });
+  };
+
+  /* The coordinator's open steps across every journey, where the client has
+     reached that stage: what Meron is doing, so the agent does not. */
+  const coordinator = JOURNEYS.flatMap((j) => checklist(j, stepMarks, assigns)
+    .filter((r) => r.step.doer === "tc" && isOpen(r.mark.state) && STAGES.indexOf(r.step.stage) <= STAGES.indexOf(j.stage))
+    .map((r) => ({ ...r, j })));
+  const agenda = TODAY.filter((t) => t.group === "today");
+  const waiting = live("waiting");
+  const upcoming = live("upcoming");
+
   return (
     <>
       <header className="ops-head">
@@ -450,20 +526,18 @@ function TodayView({ marks, setMarks, setToast, openPerson, openJourney, openDra
         <span className="ops-muted">Friday 25 September, {NOW.time}</span>
       </header>
 
-      {/* §8.2's seven questions, answered in one line before anything else. */}
-      <nav className="ops-glance" aria-label="Today at a glance">
-        {summary.map((s) => {
-          const Icon = Ico[s.icon];
-          return (
-            <button key={s.g} className={`ops-glance-item ${s.tone === "neg" && s.n ? "is-neg" : ""}`} onClick={() => jump(s.g)}>
-              <Icon size={13} aria-hidden /><strong>{s.n}</strong> {s.label}
-            </button>
-          );
-        })}
-        <button className={`ops-glance-item ${AUTOMATION.failed ? "is-neg" : ""}`} onClick={() => jump("recent")}>
-          <Ico.bolt size={13} aria-hidden />Rift: {AUTOMATION.failed ? <><strong>{AUTOMATION.failed}</strong> failing</> : "nothing failing"}
+      {/* §8.2's seven questions, answered in one sentence. */}
+      <p className="ops-brief">
+        <button className="ops-brief-n is-neg" onClick={() => jump("f-needs")}><strong>{nNeeds - nApprove}</strong> need attention</button>,{" "}
+        <button className="ops-brief-n" onClick={() => jump("f-needs")}><strong>{nApprove}</strong> to approve</button>,{" "}
+        <button className="ops-brief-n" onClick={() => jump("f-day")}><strong>{agenda.length}</strong> on your calendar</button>,{" "}
+        <button className="ops-brief-n" onClick={() => jump("f-waiting")}><strong>{waiting.length}</strong> waiting on others</button>,{" "}
+        <button className="ops-brief-n" onClick={() => jump("f-upcoming")}><strong>{upcoming.length}</strong> in the next two weeks</button>.{" "}
+        <button className={`ops-brief-n ${AUTOMATION.failed ? "is-neg" : ""}`} onClick={() => jump("f-changed")}>
+          Rift overnight: {AUTOMATION.failed ? <><strong>{AUTOMATION.failed}</strong> job failing</> : "nothing failing"}
         </button>
-      </nav>
+        , <button className="ops-brief-n" onClick={() => jump("f-changed")}><strong>{ACTIVITY.length}</strong> changes</button>.
+      </p>
 
       {marks.lead ? (
         <div className="ops-lead ops-lead-done" role="region" aria-label="New lead">
@@ -477,121 +551,75 @@ function TodayView({ marks, setMarks, setToast, openPerson, openJourney, openDra
           <span className="ops-lead-sum" title={lead.summary}>{lead.summary}</span>
           <span className="ops-row ops-lead-actions">
             <a className="ops-btn ops-btn-p" href={`tel:${lead.phone}`}>Call {lead.phone}</a>
-            <button className="ops-btn" onClick={() => openPerson(lead.id)}>Open</button>
             <button className="ops-btn" onClick={() => setMarks((m) => ({ ...m, lead: "called, logged at 9:33" }))}>Log the call</button>
+            <button className="ops-btn ops-btn-quiet" onClick={() => openPerson(lead.id)}>Open</button>
           </span>
         </div>
       )}
 
-      <div className="ops-today">
-        <div className="ops-col">
-          {(["attention"] as TodayGroup[]).map((g) => (
-            <section key={g} className="ops-group" aria-labelledby={`g-${g}`}>
-              <GroupHead g={g} n={live(g)} />
-              {TODAY.filter((t) => t.group === g).map((t) => (
-                <Item key={t.id} t={t} mark={marks[t.id]} urgent={g === "attention"}
+      <div className="ops-today2">
+        <div className="ops-stack">
+          <section className="ops-card ops-card-list" aria-labelledby="f-needs-h">
+            <h2 className="ops-h2" id="f-needs-h" tabIndex={-1}><Ico.alert size={12} aria-hidden /> Needs you <span className="ops-muted">{nNeeds - (marks.lead ? 0 : 1)}</span></h2>
+            <ul className="ops-todos">
+              {needs.map((t) => (
+                <Todo key={t.id} t={t} mark={marks[t.id]} urgent={t.group === "attention"}
                   onMark={(m) => setMarks((x) => ({ ...x, [t.id]: m }))}
                   onUndo={() => setMarks((x) => without(x, t.id))}
-                  onOpen={() => openItem(t)}
-                  onAct={() => (t.kind === "search" ? setMarks((x) => ({ ...x, [t.id]: "Approved: the Matrix search updates tonight", "brief-j2": "approved" })) : act(t))}
-                  actLabel={t.kind === "search" ? "Approve" : t.next}
-                  second={t.kind === "search" ? { label: "Review first", run: () => openItem(t) } : undefined} />
+                  onOpen={() => openItem(t)} onAct={() => act(t)}
+                  actLabel={t.kind === "search" ? "Approve" : t.next} />
               ))}
-              {!live(g) ? <p className="ops-empty"><Ico.checkCircle size={13} aria-hidden /> Nothing left here.</p> : null}
-            </section>
-          ))}
-          <section className="ops-group" aria-labelledby="g-waiting">
-            <GroupHead g="waiting" n={live("waiting")} />
-            {TODAY.filter((t) => t.group === "waiting").map((t) => (
-              marks[t.id] ? <DoneRow key={t.id} t={t} mark={marks[t.id]} undo={() => setMarks((x) => without(x, t.id))} /> : (
-                <div key={t.id} className="ops-item" data-item={t.id}>
-                  <div className="ops-item-top">
-                    <button className="ops-item-title" data-row onClick={() => openItem(t)}>{t.title}</button>
-                    <span className="ops-due">{t.due}</span>
-                  </div>
-                  <div className="ops-item-why" title={t.why}>{t.why}</div>
-                  <dl className="ops-wait">
-                    <div><dt>With</dt><dd>{t.owner}</dd></div>
-                    <div><dt>Last heard</dt><dd>{t.lastHeard}</dd></div>
-                    <div><dt>Chase</dt><dd>{t.checkIn}</dd></div>
-                  </dl>
-                  <div className="ops-item-actions">
-                    <button className="ops-btn ops-btn-sm" onClick={() => setMarks((x) => ({ ...x, [t.id]: `Chased at ${NOW.time}; the next check-in moves to Tuesday` }))}>Chase now</button>
-                    <button className="ops-btn ops-btn-sm" onClick={() => setMarks((x) => ({ ...x, [t.id]: "Done" }))}><Ico.check size={11} aria-hidden />Arrived</button>
-                  </div>
-                </div>
-              )
-            ))}
-          </section>
-        </div>
-
-        <div className="ops-col">
-          {(["approval"] as TodayGroup[]).map((g) => (
-            <section key={g} className="ops-group" aria-labelledby={`g-${g}`}>
-              <GroupHead g={g} n={live(g)} />
-              {TODAY.filter((t) => t.group === g).map((t) => (
-                <Item key={t.id} t={t} mark={marks[t.id]} urgent={g === "attention"}
-                  onMark={(m) => setMarks((x) => ({ ...x, [t.id]: m }))}
-                  onUndo={() => setMarks((x) => without(x, t.id))}
-                  onOpen={() => openItem(t)}
-                  onAct={() => (t.kind === "search" ? setMarks((x) => ({ ...x, [t.id]: "Approved: the Matrix search updates tonight", "brief-j2": "approved" })) : act(t))}
-                  actLabel={t.kind === "search" ? "Approve" : t.next}
-                  second={t.kind === "search" ? { label: "Review first", run: () => openItem(t) } : undefined} />
-              ))}
-              {!live(g) ? <p className="ops-empty"><Ico.checkCircle size={13} aria-hidden /> Nothing left here.</p> : null}
-            </section>
-          ))}
-          <section className="ops-group" aria-labelledby="g-today">
-            <GroupHead g="today" n={live("today")} />
-            <ul className="ops-agenda">
-              {TODAY.filter((t) => t.group === "today").map((t) => {
-                const K = Ico[KIND[t.kind].icon];
-                if (marks[t.id]) return <DoneRow key={t.id} t={t} mark={marks[t.id]} undo={() => setMarks((x) => without(x, t.id))} />;
-                return (
-                  <li key={t.id} className="ops-agenda-row" data-item={t.id}>
-                    <span className="ops-agenda-time">{t.due}</span>
-                    <span className="ops-agenda-body">
-                      <button className="ops-item-title" data-row onClick={() => openItem(t)}>
-                        <K size={12} aria-hidden /> {t.title}
-                      </button>
-                      <span className="ops-item-why">{t.why}</span>
-                      <span className="ops-item-meta">
-                        <Owner o={t.owner} />
-                        <button className="ops-link" onClick={() => act(t)}>{t.next}</button>
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
             </ul>
+            {!needs.some((t) => !marks[t.id]) ? <p className="ops-empty"><Ico.checkCircle size={13} aria-hidden /> Nothing left that needs you.</p> : null}
           </section>
-        </div>
 
-        <div className="ops-col">
-          <section className="ops-group" aria-labelledby="g-upcoming">
-            <GroupHead g="upcoming" n={live("upcoming")} />
-            <div className="ops-card ops-card-tight">
-              {[...new Set(TODAY.filter((t) => t.group === "upcoming").map((t) => t.on))].map((d) => (
-                <div key={d} className="ops-day">
-                  <h3 className="ops-day-head">{dayLabel(d)} <span className="ops-muted">· {inDays(d)}</span></h3>
-                  <ul className="ops-day-list">
-                    {TODAY.filter((t) => t.group === "upcoming" && t.on === d).map((t) => {
-                      const K = Ico[KIND[t.kind].icon];
-                      return (
-                        <li key={t.id}>
-                          <span className="ops-kind" title={KIND[t.kind].word}><K size={11} aria-hidden /><span className="sr-only">{KIND[t.kind].word}: </span></span>
-                          <button className="ops-item-title" data-row onClick={() => (t.kind === "moment" ? openView("advocacy") : openItem(t))}>{t.title}</button>
-                          <Owner o={t.owner} quiet />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+          <Fold id="f-waiting" title={<><Ico.pause size={12} aria-hidden /> Waiting on others</>} count={waiting.length}
+            note={waiting.length ? `next chase ${waiting[0].checkIn}` : undefined}
+            open={Boolean(folds["f-waiting"])} setOpen={(o) => setFolds((f) => ({ ...f, "f-waiting": o }))}>
+            <ul className="ops-todos">
+              {TODAY.filter((t) => t.group === "waiting").map((t) => marks[t.id] ? (
+                <DoneRow key={t.id} t={t} mark={marks[t.id]} undo={() => setMarks((x) => without(x, t.id))} />
+              ) : (
+                <li key={t.id} className="ops-todo" data-item={t.id}>
+                  <span className="ops-todo-icon" aria-hidden><Ico.pause size={12} /></span>
+                  <div className="ops-todo-body">
+                    <button className="ops-item-title" data-row onClick={() => openItem(t)}>{t.title}</button>
+                    <span className="ops-todo-why">With <strong>{t.owner}</strong> · last heard {t.lastHeard} · chase {t.checkIn}</span>
+                  </div>
+                  <span className="ops-todo-actions">
+                    <button className="ops-btn ops-btn-sm" onClick={() => setMarks((x) => ({ ...x, [t.id]: `Chased at ${NOW.time}; the next check-in moves to Tuesday` }))}>Chase now</button>
+                    <button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => setMarks((x) => ({ ...x, [t.id]: "Arrived" }))}><Ico.check size={11} aria-hidden />Arrived</button>
+                  </span>
+                </li>
               ))}
-            </div>
-          </section>
-          <section className="ops-group" aria-labelledby="g-recent">
-            <h2 id="g-recent" className="ops-h2" tabIndex={-1}><Ico.refresh size={12} aria-hidden /> What changed since yesterday</h2>
+            </ul>
+          </Fold>
+
+          <Fold id="f-upcoming" title={<><Ico.cal size={12} aria-hidden /> Next two weeks</>} count={upcoming.length}
+            note={upcoming.length ? `${upcoming[0].title}, ${upcoming[0].due}` : undefined}
+            open={Boolean(folds["f-upcoming"])} setOpen={(o) => setFolds((f) => ({ ...f, "f-upcoming": o }))}>
+            {[...new Set(upcoming.map((t) => t.on))].map((d) => (
+              <div key={d} className="ops-day">
+                <h3 className="ops-day-head">{dayLabel(d)} <span className="ops-muted">· {inDays(d)}</span></h3>
+                <ul className="ops-day-list">
+                  {upcoming.filter((t) => t.on === d).map((t) => {
+                    const K = Ico[KIND[t.kind].icon];
+                    return (
+                      <li key={t.id}>
+                        <span className="ops-kind" title={KIND[t.kind].word}><K size={11} aria-hidden /><span className="sr-only">{KIND[t.kind].word}: </span></span>
+                        <button className="ops-item-title" data-row onClick={() => (t.kind === "moment" ? openView("advocacy") : openItem(t))}>{t.title}</button>
+                        <Owner o={t.owner} quiet />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </Fold>
+
+          <Fold id="f-changed" title={<><Ico.refresh size={12} aria-hidden /> What changed since yesterday</>} count={ACTIVITY.length}
+            note={AUTOMATION.failed ? <span className="c-neg"><Ico.alert size={11} aria-hidden /> {AUTOMATION.failed} job failing</span> : undefined}
+            open={Boolean(folds["f-changed"])} setOpen={(o) => setFolds((f) => ({ ...f, "f-changed": o }))}>
             <p className="ops-rift-line">
               <Ico.bolt size={12} aria-hidden /> Rift on its own: {AUTOMATION.sent} emails sent, {AUTOMATION.stopped} stopped by a reply, {AUTOMATION.checked} program pages checked,{" "}
               {AUTOMATION.failed ? <strong className="c-neg">{AUTOMATION.failed} job failing</strong> : "nothing failing"}.
@@ -601,19 +629,42 @@ function TodayView({ marks, setMarks, setToast, openPerson, openJourney, openDra
                 <li key={a.at + a.what}><span className="ops-time">{a.at}</span><span className={`ops-by ops-by-${a.by.toLowerCase()}`}>{a.by}</span><span>{a.what}</span></li>
               ))}
             </ul>
-          </section>
+          </Fold>
         </div>
+
+        <aside className="ops-stack" aria-label="Your day">
+          <section className="ops-card ops-card-list" aria-labelledby="f-day-h">
+            <h2 className="ops-h2" id="f-day-h" tabIndex={-1}><Ico.clock size={12} aria-hidden /> Your day</h2>
+            <ul className="ops-agenda2">
+              {agenda.map((t) => {
+                const K = Ico[KIND[t.kind].icon];
+                return (
+                  <li key={t.id} className={marks[t.id] ? "is-done" : ""}>
+                    <span className="ops-agenda-time">{t.due}</span>
+                    <button className="ops-item-title" data-row onClick={() => openItem(t)}><K size={12} aria-hidden /> {t.title}</button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+          <section className="ops-card ops-card-list" aria-labelledby="f-tc-h">
+            <h2 className="ops-h2" id="f-tc-h"><Ico.layers size={12} aria-hidden /> {COORDINATOR}&apos;s list <span className="ops-muted">{coordinator.length}</span></h2>
+            <p className="ops-muted ops-small">Steps your coordinator does and ticks off. You only hear about them if they stall.</p>
+            <ul className="ops-agenda2">
+              {coordinator.map((r) => (
+                <li key={r.key}>
+                  <span className={`ops-agenda-time ${STEP_TONE[r.mark.state]}`}>{STEP_WORD[r.mark.state]}</span>
+                  <button className="ops-item-title" data-row onClick={() => openJourney(r.j.id, r.step.stage)}>
+                    {r.step.title}<span className="ops-sub">{person(r.j.personId)!.name}{r.mark.due ? ` · ${r.mark.due}` : ""}</span>
+                  </button>
+                </li>
+              ))}
+              {!coordinator.length ? <li className="ops-muted">Nothing open.</li> : null}
+            </ul>
+          </section>
+        </aside>
       </div>
     </>
-  );
-}
-
-function GroupHead({ g, n }: { g: TodayGroup; n: number }) {
-  const Icon = Ico[GROUP_ICON[g]];
-  return (
-    <h2 id={`g-${g}`} className={`ops-h2 ${g === "attention" && n ? "c-neg" : ""}`} tabIndex={-1}>
-      <Icon size={12} aria-hidden /> {GROUP_LABEL[g]} <span className="ops-muted">{n}</span>
-    </h2>
   );
 }
 
@@ -626,41 +677,41 @@ function Owner({ o, quiet }: { o: string; quiet?: boolean }) {
 
 function DoneRow({ t, mark, undo }: { t: TodayItem; mark: string; undo: () => void }) {
   return (
-    <div className="ops-item ops-item-done" data-item={t.id}>
-      <span><Ico.check size={11} aria-hidden /> <span className="ops-muted">{t.title}:</span> {mark}</span>
+    <li className="ops-todo ops-todo-done" data-item={t.id}>
+      <span className="ops-todo-icon c-pos" aria-hidden><Ico.checkCircle size={13} /></span>
+      <span className="ops-todo-body"><span className="ops-muted">{t.title}:</span> {mark}</span>
       <button className="ops-link" data-row onClick={undo}>Undo</button>
-    </div>
+    </li>
   );
 }
 
-function Item({ t, mark, urgent, onMark, onUndo, onOpen, onAct, actLabel, second }: {
+/** One line of Today: tick it off, open it, or do the one thing it asks. */
+function Todo({ t, mark, urgent, onMark, onUndo, onOpen, onAct, actLabel }: {
   t: TodayItem; mark?: string; urgent?: boolean;
-  onMark: (m: string) => void; onUndo: () => void; onOpen: () => void; onAct: () => void;
-  actLabel: string; second?: { label: string; run: () => void };
+  onMark: (m: string) => void; onUndo: () => void; onOpen: () => void; onAct: () => void; actLabel: string;
 }) {
   const [more, setMore] = useState(false);
   const p = person(t.personId);
   const K = Ico[KIND[t.kind].icon];
   if (mark) return <DoneRow t={t} mark={mark} undo={onUndo} />;
   return (
-    <div className={`ops-item ${urgent ? "ops-item-urgent" : ""}`} data-item={t.id}>
-      <div className="ops-item-top">
-        <span className="ops-kind" title={KIND[t.kind].word}><K size={12} aria-hidden /></span>
-        <button className="ops-item-title" data-row onClick={onOpen}><span className="sr-only">{KIND[t.kind].word}: </span>{t.title}</button>
-        <span className={`ops-due ${urgent ? "ops-due-now" : ""}`}>{t.due}</span>
+    <li className={`ops-todo ${urgent ? "ops-todo-urgent" : ""}`} data-item={t.id}>
+      <button className="ops-tick" aria-label={`Mark done: ${t.title}`} title="Mark done" onClick={() => onMark("Done")}><Ico.check size={11} aria-hidden /></button>
+      <div className="ops-todo-body">
+        <span className="ops-todo-line">
+          <span className="ops-kind" title={KIND[t.kind].word}><K size={12} aria-hidden /></span>
+          <button className="ops-item-title" data-row onClick={onOpen}><span className="sr-only">{KIND[t.kind].word}: </span>{t.title}</button>
+        </span>
+        <span className="ops-todo-why" title={t.why}>
+          {t.group === "approval" ? <span className="ops-tag">To approve</span> : null}
+          {p ? <>{p.name} · </> : null}{t.why}
+        </span>
       </div>
-      <div className="ops-item-why" title={t.why}>{t.why}</div>
-      <div className="ops-item-meta">
-        <Owner o={t.owner} />
-        {p ? <button className="ops-link" onClick={onOpen}>{p.name}</button> : null}
-        {t.evidence ? <span className="ops-evidence"><Ico.doc size={10} aria-hidden />{t.evidence}</span> : null}
-      </div>
-      <div className="ops-item-actions">
+      <span className={`ops-due ${urgent ? "ops-due-now" : ""}`}>{t.due}</span>
+      <span className="ops-todo-actions">
         <button className={`ops-btn ops-btn-sm ${urgent ? "ops-btn-strong" : ""}`} onClick={onAct}>{actLabel}</button>
-        {second ? <button className="ops-btn ops-btn-sm" onClick={second.run}>{second.label}</button> : null}
-        <button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => onMark("Done")} aria-label={`Mark done: ${t.title}`}><Ico.check size={11} aria-hidden />Done</button>
         <button className="ops-icon-btn ops-icon-quiet" aria-expanded={more} aria-label={`More: snooze, delegate or pin ${t.title}`} title="Snooze, delegate or pin" onClick={() => setMore((m) => !m)}><Ico.more size={15} /></button>
-      </div>
+      </span>
       {more ? (
         /* OPS-02: snooze has an owner and a resume time and never moves a
            contract date; delegation waits for acceptance; a pin says why and
@@ -672,11 +723,11 @@ function Item({ t, mark, urgent, onMark, onUndo, onOpen, onAct, actLabel, second
           <button className="ops-link" onClick={() => onMark("Snoozed until Mon 9:00, still yours")}>Monday 9:00</button>
           {t.kind === "date" ? <span className="ops-more-note">Snoozing never moves the contract date.</span> : null}
           <span className="ops-more-label">Or:</span>
-          <button className="ops-link" onClick={() => onMark(`Offered to ${DELEGATE}; yours until they accept`)}>Delegate to Meron</button>
+          <button className="ops-link" onClick={() => onMark(`Offered to ${DELEGATE}; yours until they accept`)}>Give to {COORDINATOR}</button>
           <button className="ops-link" onClick={() => onMark("Pinned to the top until Fri 2 Oct: “watch this one”")}>Pin with a reason</button>
         </div>
       ) : null}
-    </div>
+    </li>
   );
 }
 
@@ -770,7 +821,9 @@ function PeopleView({ filter, sort, panel, setFilter, setSort, openPanel, openFu
             <div className="ops-panel-head">
               <h2 className="ops-h2 ops-panel-title">{open.name}</h2>
               <span className="ops-row">
-                <button className="ops-btn ops-btn-sm" onClick={() => openFull(open.id)}>Full page<Ico.arrowUpR size={11} aria-hidden /></button>
+                <button className="ops-btn ops-btn-sm ops-btn-p" onClick={() => openFull(open.id)}>
+                  {open.journeyIds.length ? "Open the journey" : "Full page"}<Ico.arrowUpR size={11} aria-hidden />
+                </button>
                 <button className="ops-icon-btn" aria-label="Close the panel" onClick={() => { openPanel(undefined); }}><Ico.x size={14} /></button>
               </span>
             </div>
@@ -785,23 +838,13 @@ function PeopleView({ filter, sort, panel, setFilter, setSort, openPanel, openFu
 /** §8.5: the person view leads with what they did (§5.5), then journeys, plan, agreement, history. */
 function PersonDetail({ p, wide, openJourney, setToast }: { p: MockPerson; wide?: boolean; openJourney: (id: string) => void; setToast: (t: string) => void }) {
   const js = p.journeyIds.map((id) => journey(id)!).filter(Boolean);
-  const agreementIcon = p.agreement.state === "signed" ? "checkCircle" : "alert";
-  const AgreementIcon = Ico[agreementIcon];
   return (
     <div className={wide ? "ops-person ops-person-wide" : "ops-person"}>
       <div>
         <p className="ops-summary"><span className="ops-summary-label">What they did</span>{p.summary}</p>
-        <dl className="ops-dl">
-          <dt>Next</dt><dd><strong>{p.next}</strong> · <span className={p.overdue ? "c-neg" : ""}>{p.overdue ? "overdue, " : ""}{p.due}</span></dd>
-          <dt>Phone</dt><dd>{p.phone ? <span className="ops-copy">{p.phone}</span> : <span className="ops-muted">None given</span>}</dd>
-          <dt>Email</dt><dd><span className="ops-copy">{p.email}</span></dd>
-          <dt>Source</dt><dd>{p.source}</dd>
-          <dt>Plan</dt><dd>{p.plan ?? <span className="ops-muted">No saved plan</span>}</dd>
-          <dt>Agreement</dt><dd className={p.agreement.state === "signed" ? "c-pos" : "c-warn"}><AgreementIcon size={11} aria-hidden /> {p.agreement.text}</dd>
-        </dl>
+        <ContactList p={p} />
         <div className="ops-row">
-          {js[0] ? <button className="ops-btn ops-btn-p" onClick={() => openJourney(js[0].id)}>Open the journey</button>
-            : <button className="ops-btn ops-btn-p" onClick={() => setToast("In the real screen this starts a journey and invites the household.")}>Start a journey</button>}
+          {!js.length ? <button className="ops-btn ops-btn-p" onClick={() => setToast("In the real screen this starts a journey from their saved plan and invites the household.")}>Start a journey</button> : null}
           <button className="ops-btn" onClick={() => setToast("In the real screen: who, what was said, and when. It is added to the history.")}>Log a call</button>
         </div>
       </div>
@@ -813,7 +856,7 @@ function PersonDetail({ p, wide, openJourney, setToast }: { p: MockPerson; wide?
               {js.map((j) => (
                 <li key={j.id}>
                   <button className="ops-link ops-strong" onClick={() => openJourney(j.id)}>{j.label}</button>
-                  <span className="ops-stage">{STAGE_LABEL[j.stage]}</span>
+                  <span className="ops-stage">{stageLabel(j, j.stage)}</span>
                   {j.closing ? <span className="ops-muted">closing {j.closing.label}</span> : null}
                 </li>
               ))}
@@ -821,41 +864,62 @@ function PersonDetail({ p, wide, openJourney, setToast }: { p: MockPerson; wide?
           </>
         ) : null}
         <h3 className="ops-h3">History</h3>
-        {p.notes.length ? (
-          <ul className="ops-activity">
-            {p.notes.map((n) => <li key={n.at + n.body}><span className="ops-time ops-time-wide">{n.at}</span><span className="ops-by">{n.kind}</span><span>{n.body}</span></li>)}
-          </ul>
-        ) : <p className="ops-muted">Nothing yet.</p>}
+        <Notes p={p} />
       </div>
     </div>
   );
 }
 
+function ContactList({ p }: { p: MockPerson }) {
+  const AgreementIcon = Ico[p.agreement.state === "signed" ? "checkCircle" : "alert"];
+  return (
+    <dl className="ops-dl">
+      <dt>Next</dt><dd><strong>{p.next}</strong> · <span className={p.overdue ? "c-neg" : ""}>{p.overdue ? "overdue, " : ""}{p.due}</span></dd>
+      <dt>Phone</dt><dd>{p.phone ? <span className="ops-copy">{p.phone}</span> : <span className="ops-muted">None given</span>}</dd>
+      <dt>Email</dt><dd><span className="ops-copy">{p.email}</span></dd>
+      <dt>Source</dt><dd>{p.source}</dd>
+      <dt>Plan</dt><dd>{p.plan ?? <span className="ops-muted">No saved plan</span>}</dd>
+      <dt>Agreement</dt><dd className={p.agreement.state === "signed" ? "c-pos" : "c-warn"}><AgreementIcon size={11} aria-hidden /> {p.agreement.text}</dd>
+    </dl>
+  );
+}
+
+function Notes({ p }: { p: MockPerson }) {
+  if (!p.notes.length) return <p className="ops-muted">Nothing yet.</p>;
+  return (
+    <ul className="ops-activity">
+      {p.notes.map((n) => <li key={n.at + n.body}><span className="ops-time ops-time-wide">{n.at}</span><span className="ops-by">{n.kind}</span><span>{n.body}</span></li>)}
+    </ul>
+  );
+}
+
 /* ------------------------------------------------------------ The journey */
 
-/* The stage track is the journey page's only navigation. The first version
-   had a stage track AND six tabs, two ways to move around one client, and
-   the track did nothing when clicked. Now each stage opens what happened in
-   it, what is happening, or what comes next, so the whole journey reads left
-   to right. Old ?tab= values (from Today, Offers, Transactions) still land on
-   the stage that holds that thing. */
+/* The stage track is the journey page's navigation, and each stage opens its
+   checklist: the steps from the journey contracts, who does each, and where
+   it stands (ops-playbook.ts). Version 2 opened each stage onto cards of
+   notes, and Kaleb's answer was that the process is not a note, it is a
+   system that gets executed. Old ?tab= values (from Today, Offers,
+   Transactions) still land on the stage that holds that thing. */
 const TAB_STAGE: Partial<Record<Tab, Stage>> = { search: "search", homes: "tour", offers: "offer" };
 
 function stageLabel(j: MockJourney, s: Stage) {
   return j.side === "sell" ? SELL_STAGE_LABEL[s] : STAGE_LABEL[s];
 }
 
-function JourneyView({ j, tab, setTab, marks, setMarks, setToast, back, openPerson }: {
+type Row = ReturnType<typeof checklist>[number];
+
+function JourneyView({ j, tab, setTab, marks, setMarks, setToast, stepMarks, setStepMarks, assigns, back, openPerson }: {
   j: MockJourney; tab: string; setTab: (t: string) => void;
   marks: Marks; setMarks: SetMarks; setToast: (t: string) => void;
+  stepMarks: StepMarks; setStepMarks: SetStepMarks; assigns: Assigns;
   back: () => void; openPerson: (id: string) => void;
 }) {
   const p = person(j.personId)!;
   const now = STAGES.indexOf(j.stage);
-  const picked: Stage | "all" = tab === "all" ? "all"
-    : (STAGES as string[]).includes(tab) ? (tab as Stage)
-    : TAB_STAGE[tab as Tab] ?? j.stage;
-  const flags = (j.work ?? []).filter((w) => ["blocked", "waiting", "reported"].includes(w.state) || w.stale);
+  const picked: Stage = (STAGES as string[]).includes(tab) ? (tab as Stage) : TAB_STAGE[tab as Tab] ?? j.stage;
+  const rows = checklist(j, stepMarks, assigns);
+  const [contact, setContact] = useState(false);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const onKey = (e: React.KeyboardEvent, i: number) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
@@ -863,7 +927,6 @@ function JourneyView({ j, tab, setTab, marks, setMarks, setToast, back, openPers
     setTab(STAGES[n]);
     refs.current[n]?.focus();
   };
-  const firstOn = (s: Stage) => j.story.find((x) => x.stage === s)?.at;
   return (
     <>
       <nav className="ops-crumbs" aria-label="Breadcrumb">
@@ -877,145 +940,241 @@ function JourneyView({ j, tab, setTab, marks, setMarks, setToast, back, openPers
           <h1 className="ops-h1">{j.label}</h1>
           <span className="ops-muted">
             {j.side === "buy" ? "Buying" : "Selling"}{j.property ? ` · ${j.property}` : ""}{j.price ? ` · ${j.price}` : ""}
-            {" · "}{j.household.map((h) => h.name.split(" ")[0]).join(" and ")}
           </span>
-        </div>
-        <div className="ops-jfacts">
-          <span className="ops-jnext"><Ico.arrowR size={11} aria-hidden /><strong>Next:</strong> {j.next}</span>
           {j.closing ? <span className="ops-chip"><Ico.key size={10} aria-hidden />Closing {j.closing.label}, {inDays(j.closing.iso)}</span> : null}
         </div>
+        <div className="ops-jfacts">
+          <span className="ops-muted">{j.household.map((h) => h.name).join(" and ")}</span>
+          {p.phone ? <span className="ops-copy">{p.phone}</span> : null}
+          <span className={p.agreement.state === "signed" ? "c-pos" : "c-warn"}>
+            {p.agreement.state === "signed" ? <Ico.checkCircle size={11} aria-hidden /> : <Ico.alert size={11} aria-hidden />} {p.agreement.text}
+          </span>
+          <button className="ops-link" aria-expanded={contact} aria-controls="j-contact" onClick={() => setContact((c) => !c)}>
+            {contact ? "Hide" : "Contact, team and notes"}
+          </button>
+        </div>
+        {contact ? (
+          <div id="j-contact" className="ops-card ops-contact">
+            <div><h3 className="ops-h3 ops-h3-first">Contact</h3><ContactList p={p} /></div>
+            <div>
+              <h3 className="ops-h3 ops-h3-first">Who else is on it</h3>
+              {j.team ? (
+                <dl className="ops-dl ops-dl-wide">{j.team.map((t) => <div key={t.role} className="ops-dl-row"><dt>{t.role}</dt><dd>{t.name} · <span className="ops-copy">{t.reach}</span></dd></div>)}</dl>
+              ) : <p className="ops-muted">Nobody outside the household yet.</p>}
+              <div className="ops-dl-row"><dt className="ops-muted">Household</dt><dd>{j.household.map((h) => `${h.name} (${h.role.toLowerCase()})`).join(", ")}</dd></div>
+            </div>
+            <div><h3 className="ops-h3 ops-h3-first">Notes</h3><Notes p={p} /></div>
+          </div>
+        ) : null}
       </header>
 
       <div className="ops-trackbar">
         <div className="ops-track" role="tablist" aria-label="The journey, stage by stage">
           {STAGES.map((s, i) => {
             const state = i < now ? "done" : i === now ? "now" : "next";
+            const inStage = rows.filter((r) => r.step.stage === s);
+            const open = inStage.filter((r) => isOpen(r.mark.state)).length;
+            const sub = state === "next" ? `${inStage.length} steps` : state === "now" ? `Now · ${open} open` : open ? `${open} open` : "Done";
             return (
               <button key={s} ref={(el) => { refs.current[i] = el; }} role="tab" id={`stage-${s}`} aria-controls="stagepanel"
-                aria-selected={picked === s} tabIndex={picked === s || (picked === "all" && i === now) ? 0 : -1}
+                aria-selected={picked === s} tabIndex={picked === s ? 0 : -1}
                 className={`is-${state}`} onClick={() => setTab(s)} onKeyDown={(e) => onKey(e, i)}>
                 <span className="ops-track-name">{state === "done" ? <Ico.check size={10} aria-hidden /> : null}{stageLabel(j, s)}</span>
-                <span className="ops-track-sub">{state === "done" ? `from ${firstOn(s) ?? ""}` : state === "now" ? "Now" : "Not yet"}</span>
+                <span className="ops-track-sub">{sub}</span>
               </button>
             );
           })}
         </div>
-        <button className={`ops-btn ops-btn-sm ${picked === "all" ? "ops-btn-on" : ""}`} aria-pressed={picked === "all"} onClick={() => setTab("all")}>
-          <Ico.layers size={12} aria-hidden />Whole story
-        </button>
       </div>
 
-      <div role="tabpanel" id="stagepanel" aria-labelledby={picked === "all" ? undefined : `stage-${picked}`} aria-label={picked === "all" ? "Whole story" : undefined}>
-        {picked === "all" ? (
-          <section className="ops-card">
-            <h2 className="ops-h2">{j.label}, from the start</h2>
-            <Story j={j} items={j.story} grouped />
-          </section>
-        ) : (
-          <StagePanel j={j} s={picked} now={now} flags={flags} marks={marks} setMarks={setMarks} setToast={setToast} />
-        )}
+      <div role="tabpanel" id="stagepanel" aria-labelledby={`stage-${picked}`}>
+        <StageChecklist key={picked} j={j} s={picked} now={now} rows={rows} marks={marks} setMarks={setMarks}
+          setStepMarks={setStepMarks} setToast={setToast} />
       </div>
     </>
   );
 }
 
-function Story({ j, items, grouped }: { j: MockJourney; items: MockJourney["story"]; grouped?: boolean }) {
-  if (!items.length) return <p className="ops-muted">Nothing recorded in this stage.</p>;
-  return (
-    <ol className="ops-story">
-      {items.map((x, i) => (
-        <Fragment key={x.at + x.what}>
-          {grouped && (i === 0 || items[i - 1].stage !== x.stage) ? <li className="ops-story-stage">{stageLabel(j, x.stage)}</li> : null}
-          <li><span className="ops-time ops-time-wide">{x.at}</span><span>{x.what}</span></li>
-        </Fragment>
-      ))}
-    </ol>
-  );
-}
+type Who = "all" | "you" | "tc" | "rift" | "others";
+const WHO: { w: Who; label: string }[] = [
+  { w: "all", label: "Everything" }, { w: "you", label: "You" }, { w: "tc", label: COORDINATOR },
+  { w: "rift", label: "Rift" }, { w: "others", label: "Client and pros" },
+];
+const whoOf = (s: Step): Who => (s.doer === "you" ? "you" : s.doer === "tc" ? "tc" : s.doer === "rift" ? "rift" : "others");
 
-function StagePanel({ j, s, now, flags, marks, setMarks, setToast }: {
-  j: MockJourney; s: Stage; now: number; flags: MockWork[];
-  marks: Marks; setMarks: SetMarks; setToast: (t: string) => void;
+function StageChecklist({ j, s, now, rows, marks, setMarks, setStepMarks, setToast }: {
+  j: MockJourney; s: Stage; now: number; rows: Row[];
+  marks: Marks; setMarks: SetMarks; setStepMarks: SetStepMarks; setToast: (t: string) => void;
 }) {
   const at = STAGES.indexOf(s);
   const state = at < now ? "done" : at === now ? "now" : "next";
+  const list = rows.filter((r) => r.step.stage === s);
+  const [who, setWho] = useState<Who>("all");
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const pendingBrief = s === "search" && Boolean(j.briefNote) && !marks[`brief-${j.id}`];
+  const [folds, setFolds] = useState<Record<string, boolean>>({
+    detail: pendingBrief || (s === "offer" && j.side === "sell" && state === "now"),
+  });
+  const fold = (k: string) => ({ open: Boolean(folds[k]), setOpen: (o: boolean) => setFolds((f) => ({ ...f, [k]: o })) });
+  const shown = list.filter((r) => who === "all" || whoOf(r.step) === who);
+  const done = list.filter((r) => !isOpen(r.mark.state)).length;
+  const blocked = list.filter((r) => r.mark.state === "blocked").length;
   const items = j.story.filter((x) => x.stage === s);
-  const actions = TODAY.filter((t) => t.journeyId === j.id && t.group !== "upcoming");
-  const about = STAGE_ABOUT[s][j.side];
-  /* What each stage holds beyond its story, if this journey has it. */
+  const record = (key: string, mark: StepMark) => { setStepMarks((m) => ({ ...m, [key]: mark })); setConfirming(null); };
+  const undo = (key: string) => setStepMarks((m) => without(m, key));
+
+  /* What each stage holds beyond its checklist, if this journey has it. */
   const detail =
-    s === "search" && j.brief ? <SearchDetail j={j} marks={marks} setMarks={setMarks} setToast={setToast} />
-    : s === "tour" && j.homes?.length && j.side === "buy" && at <= now ? <HomesDetail j={j} />
-    : s === "offer" && j.offers?.length ? <OffersDetail j={j} />
-    : (s === "under-contract" || s === "close") && j.work && at <= now ? <ContractDetail j={j} flags={flags} setToast={setToast} only={s === "close" ? ["walkthrough", "closing", "possession", "insurance", "repairs"] : undefined} />
+    s === "search" && j.brief ? { title: "Search brief and Matrix", n: j.brief.length, body: <SearchDetail j={j} marks={marks} setMarks={setMarks} setToast={setToast} /> }
+    : s === "tour" && j.homes?.length && j.side === "buy" && at <= now ? { title: "Homes and reactions", n: j.homes.length, body: <HomesDetail j={j} /> }
+    : s === "offer" && j.offers?.length ? { title: j.side === "sell" ? "The offers, side by side" : "Offers", n: j.offers.length, body: <OffersDetail j={j} marks={marks} setMarks={setMarks} /> }
+    : (s === "under-contract" || s === "close") && at <= now && j.keyDates.length ? { title: "Contract dates", n: j.keyDates.length, body: <DatesDetail j={j} /> }
     : null;
+
   return (
     <div className="ops-stage-panel">
-      <p className={`ops-stage-head is-${state}`}>
-        {state === "done" ? <Ico.checkCircle size={13} aria-hidden /> : state === "now" ? <Ico.arrowR size={13} aria-hidden /> : <Ico.clock size={13} aria-hidden />}
-        <strong>{stageLabel(j, s)}</strong>
-        <span>{state === "done" ? "Done." : state === "now" ? "Where they are now." : "Not reached yet."}</span>
-        <span className="ops-muted">{about}</span>
-      </p>
-
-      {state === "now" ? (
-        <div className="ops-grid2">
-          <section className="ops-card"><h2 className="ops-h2">Next actions</h2>
-            <ul className="ops-list">
-              {actions.map((t) => (
-                <li key={t.id} className="ops-list-row">
-                  <span className="ops-grow"><strong>{t.title}</strong><span className="ops-muted"> · {t.due} · {t.owner}</span></span>
-                  {marks[t.id] ? <span className="ops-chip ops-chip-pos"><Ico.check size={10} aria-hidden />{marks[t.id]}</span>
-                    : <button className="ops-btn ops-btn-sm" onClick={() => setMarks((m) => ({ ...m, [t.id]: "Done" }))}>Done</button>}
-                </li>
-              ))}
-              {!actions.length ? <li className="ops-muted">Nothing due. {j.next}.</li> : null}
-            </ul>
-          </section>
-          <section className="ops-card"><h2 className="ops-h2">Coming dates</h2>
-            <ul className="ops-list">{j.keyDates.filter((d) => d.state !== "done").map((d) => (
-              <li key={d.label}><DateMark s={d.state} /><strong>{d.label}</strong><span className="ops-muted"> · {d.on}, {inDays(d.iso)}</span></li>
-            ))}</ul>
-            {j.team ? (
-              <>
-                <h3 className="ops-h3">Who else is on it</h3>
-                <dl className="ops-dl ops-dl-wide">{j.team.map((t) => <div key={t.role} className="ops-dl-row"><dt>{t.role}</dt><dd>{t.name} · <span className="ops-copy">{t.reach}</span></dd></div>)}</dl>
-              </>
-            ) : null}
-          </section>
+      <section className="ops-card ops-card-list" aria-labelledby="checklist-h">
+        <div className="ops-check-head">
+          <h2 className="ops-h2" id="checklist-h">
+            {stageLabel(j, s)}
+            <span className={`ops-check-count ${state === "done" && !blocked ? "c-pos" : ""}`}>
+              {done} of {list.length} done{blocked ? <span className="c-neg"> · <Ico.alert size={11} aria-hidden /> {blocked} blocked</span> : null}
+            </span>
+          </h2>
+          <div className="ops-seg ops-seg-sm" role="group" aria-label="Show steps done by">
+            {WHO.map((x) => {
+              const n = x.w === "all" ? list.length : list.filter((r) => whoOf(r.step) === x.w).length;
+              return <button key={x.w} aria-pressed={who === x.w} onClick={() => setWho(x.w)} disabled={!n}>{x.label} <span className="ops-seg-n">{n}</span></button>;
+            })}
+          </div>
         </div>
-      ) : null}
+        <p className="ops-muted ops-small ops-check-about">
+          {state === "next" ? <>Not reached yet. {STAGE_ABOUT[s][j.side]} These steps start when {firstNames(j)} get{j.household.length > 1 ? "" : "s"} here.</>
+            : state === "done" ? <>Done. {STAGE_ABOUT[s][j.side]}</>
+            : STAGE_ABOUT[s][j.side]}
+        </p>
+        <ol className="ops-checklist">
+          {shown.map((r) => (
+            <StepRow key={r.key} j={j} r={r} reached={at <= now} record={record} undo={undo} setToast={setToast}
+              confirming={confirming === r.key} setConfirming={(o) => setConfirming(o ? r.key : null)} />
+          ))}
+        </ol>
+        <button className="ops-link ops-add-step" onClick={() => setToast("In the real screen: a step of your own, who does it and when, for this client only or for everyone's checklist (Settings, Checklists).")}>
+          <Ico.plus size={11} aria-hidden /> Add a step
+        </button>
+      </section>
 
-      {detail}
-
-      {state !== "next" || items.length ? (
-        <section className="ops-card">
-          <h2 className="ops-h2">{state === "done" ? "What happened" : "So far in this stage"}</h2>
-          <Story j={j} items={items} />
-        </section>
-      ) : null}
-
-      {state === "next" ? (
-        <section className="ops-card ops-card-next">
-          <h2 className="ops-h2">Already planned</h2>
-          {!(j.work && s === "close") ? <p className="ops-muted">Nothing is scheduled for this stage yet.</p> : null}
-          {j.work && s === "close" ? (
-            <ul className="ops-list">
-              {j.work.filter((w) => ["walkthrough", "closing", "possession"].includes(w.stream)).map((w) => (
-                <li key={w.stream}><Ico.cal size={11} aria-hidden /><strong>{WORKSTREAM_LABEL[w.stream]}</strong><span className="ops-muted">· {w.due ?? "date not set"} · {w.who}</span></li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
+      {detail ? <Fold id="j-detail" title={detail.title} count={detail.n} {...fold("detail")}>{detail.body}</Fold> : null}
+      {items.length ? (
+        <Fold id="j-story" title="What happened in this stage" count={items.length} {...fold("story")}>
+          <Story items={items} />
+        </Fold>
       ) : null}
     </div>
   );
 }
 
+/** Who does a step, as an icon and a word. */
+function DoerBadge({ step, j }: { step: Step; j: MockJourney }) {
+  const map: Record<Step["doer"], { icon: keyof typeof Ico; text: string }> = {
+    rift: { icon: "bolt", text: step.mode === "auto" ? "Rift, on its own" : "Rift prepares, you approve" },
+    you: { icon: "pin", text: "You" },
+    tc: { icon: "layers", text: `${COORDINATOR}, coordinator` },
+    client: { icon: "home", text: firstNames(j) },
+    pro: { icon: "shield", text: step.pro ?? "Outside pro" },
+  };
+  const m = map[step.doer];
+  const Icon = Ico[m.icon];
+  return <span className={`ops-doer ops-doer-${step.doer}`}><Icon size={11} aria-hidden />{m.text}</span>;
+}
+
+/** The named party who confirms a step, from the deal's team when there is one (rule 9). */
+function confirmer(j: MockJourney, role: string) {
+  const t = j.team?.find((x) => x.role === role);
+  return t ? `${role} (${t.name.split(",")[0]})` : role;
+}
+
+function StepRow({ j, r, reached, record, undo, setToast, confirming, setConfirming }: {
+  j: MockJourney; r: Row; reached: boolean;
+  record: (key: string, mark: StepMark) => void; undo: (key: string) => void; setToast: (t: string) => void;
+  confirming: boolean; setConfirming: (o: boolean) => void;
+}) {
+  const { step, mark, key } = r;
+  const open = isOpen(mark.state);
+  const today = `Today ${NOW.time}`;
+  const human = step.doer === "you" || step.doer === "tc";
+  /* Ticking records who did it. A step someone else has to confirm asks who
+     confirmed it first, and a client saying so is a report (UX-02). */
+  const canTick = reached && open && human && !step.confirms;
+  const needsWord = reached && open && Boolean(step.confirms) && step.doer !== "rift";
+  const canApprove = reached && mark.state === "ready";
+  const StateIcon = Ico[STEP_ICON[mark.state]];
+  return (
+    <li className={`ops-step is-${mark.state} ${reached ? "" : "is-later"}`}>
+      <span className="ops-step-mark">
+        {canTick || needsWord ? (
+          <button className="ops-tick" aria-label={`${needsWord ? "Record who confirmed" : "Mark done"}: ${step.title}`}
+            onClick={() => (needsWord ? setConfirming(!confirming) : record(key, { state: "done", by: step.doer === "tc" ? `You, for ${COORDINATOR}` : "You", on: today }))}>
+            <Ico.check size={11} aria-hidden />
+          </button>
+        ) : <span className={STEP_TONE[mark.state]} title={STEP_WORD[mark.state]}><StateIcon size={15} aria-hidden /></span>}
+      </span>
+      <div className="ops-step-body">
+        <span className="ops-step-title">
+          {step.title}
+          {step.protected ? <span className="ops-lock" title="Always yours, whatever the automation settings"><Ico.lock size={10} aria-hidden /><span className="sr-only"> (always yours)</span></span> : null}
+        </span>
+        <span className="ops-step-sub">
+          {mark.state === "done" ? <span className="c-pos">Done{mark.by ? ` · ${mark.by}` : ""}{mark.on ? `, ${mark.on}` : ""}</span>
+            : mark.state !== "todo" ? <span className={STEP_TONE[mark.state]}>{STEP_WORD[mark.state]}</span>
+            : reached ? <span className="ops-muted">To do</span> : null}
+          {mark.due && open ? <span> · due {mark.due}</span> : null}
+          {mark.note ? <span className="ops-muted"> · {mark.note}</span> : null}
+          {r.session ? <> · <button className="ops-link" onClick={() => undo(key)}>Undo</button></> : null}
+        </span>
+        {confirming ? (
+          <div className="ops-confirm" role="group" aria-label="Who confirmed it?">
+            <span className="ops-more-label">Who confirmed it? Done needs a named party.</span>
+            <button className="ops-btn ops-btn-sm" onClick={() => record(key, { state: "done", by: confirmer(j, step.confirms!), on: today })}>{confirmer(j, step.confirms!)}</button>
+            {step.doer === "client" ? (
+              <button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => record(key, { state: "reported", note: `${firstNames(j)} say${j.household.length > 1 ? "" : "s"} it is done; not confirmed by the ${step.confirms!.toLowerCase()} yet` })}>
+                Only {firstNames(j)} say{j.household.length > 1 ? "" : "s"} so
+              </button>
+            ) : null}
+            <button className="ops-link" onClick={() => setConfirming(false)}>Cancel</button>
+          </div>
+        ) : null}
+      </div>
+      <DoerBadge step={step} j={j} />
+      <span className="ops-step-act">
+        {canApprove ? (
+          <>
+            <button className="ops-btn ops-btn-sm ops-btn-p" onClick={() => record(key, { state: "done", by: "You", on: today, note: "Approved; Rift sent it" })}>Approve</button>
+            <button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => setToast("In the real screen: the exact message, who it goes to and on which channel. Changing it voids the approval (AUTO-01).")}>Read it</button>
+          </>
+        ) : needsWord ? (
+          <button className="ops-btn ops-btn-sm" onClick={() => setConfirming(!confirming)}>{step.doer === "client" || step.doer === "pro" ? "Record their word" : "Mark done"}</button>
+        ) : reached && open && step.doer === "client" ? (
+          <button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => setToast(`Rift drafts a short reminder to ${firstNames(j)} for you to approve. Nothing sends by itself.`)}>Remind</button>
+        ) : null}
+      </span>
+    </li>
+  );
+}
+
+function Story({ items }: { items: MockJourney["story"] }) {
+  return (
+    <ol className="ops-story">
+      {items.map((x) => (
+        <li key={x.at + x.what}><span className="ops-time ops-time-wide">{x.at}</span><span>{x.what}</span></li>
+      ))}
+    </ol>
+  );
+}
+
 function SearchDetail({ j, marks, setMarks, setToast }: { j: MockJourney; marks: Marks; setMarks: SetMarks; setToast: (t: string) => void }) {
   return (
-    <section className="ops-card">
-      <h2 className="ops-h2">The search brief</h2>
+    <>
       {j.briefNote ? (
         <div className="ops-callout">
           <Ico.bell size={13} aria-hidden /><span className="ops-grow">{j.briefNote}</span>
@@ -1042,45 +1201,41 @@ function SearchDetail({ j, marks, setMarks, setToast }: { j: MockJourney; marks:
         </table>
       </div>
       {j.matrix ? <p className="ops-muted ops-note"><Ico.layers size={11} aria-hidden /> Matrix: {j.matrix}</p> : null}
-    </section>
+    </>
   );
 }
 
 function HomesDetail({ j }: { j: MockJourney }) {
   return (
-    <section className="ops-card">
-      <h2 className="ops-h2">Homes and showings</h2>
-      <div className="ops-table-wrap ops-flat">
-        <table className="ops-table ops-table-cards">
-          <thead><tr><th>Home</th><th>Price</th><th>Reactions</th><th>Showing</th></tr></thead>
-          <tbody>{(j.homes ?? []).map((h) => {
-            const says = new Set(h.reactions.map((r) => r.says.split(":")[0]));
-            const split = h.reactions.length > 1 && says.size > 1;
-            return (
-              <tr key={h.address} className="ops-static">
-                <td className="ops-strong">{h.address}</td><td data-label="Price">{h.price}</td>
-                <td data-label="Reactions">
-                  {h.reactions.map((r) => <span key={r.who} className="ops-react">{r.who}: {r.says}</span>)}
-                  {split ? <span className="ops-chip ops-chip-warn"><Ico.alert size={10} aria-hidden />They disagree</span> : null}
-                </td>
-                <td data-label="Showing" className="ops-muted">{h.showing ?? "Not booked"}</td>
-              </tr>
-            );
-          })}</tbody>
-        </table>
-      </div>
-    </section>
+    <div className="ops-table-wrap ops-flat">
+      <table className="ops-table ops-table-cards">
+        <thead><tr><th>Home</th><th>Price</th><th>Reactions</th><th>Showing</th></tr></thead>
+        <tbody>{(j.homes ?? []).map((h) => {
+          const says = new Set(h.reactions.map((r) => r.says.split(":")[0]));
+          const split = h.reactions.length > 1 && says.size > 1;
+          return (
+            <tr key={h.address} className="ops-static">
+              <td className="ops-strong">{h.address}</td><td data-label="Price">{h.price}</td>
+              <td data-label="Reactions">
+                {h.reactions.map((r) => <span key={r.who} className="ops-react">{r.who}: {r.says}</span>)}
+                {split ? <span className="ops-chip ops-chip-warn"><Ico.alert size={10} aria-hidden />They disagree</span> : null}
+              </td>
+              <td data-label="Showing" className="ops-muted">{h.showing ?? "Not booked"}</td>
+            </tr>
+          );
+        })}</tbody>
+      </table>
+    </div>
   );
 }
 
 /** "Not shared", "From Hannah" (she uploaded it), or who it is shared with. */
 const sharedWord = (s: string) => (s === "Not shared" ? "not shared with anyone yet" : s.startsWith("From ") ? `uploaded by ${s.slice(5)}` : `shared with ${s}`);
 
-function OffersDetail({ j }: { j: MockJourney }) {
+function OffersDetail({ j, marks, setMarks }: { j: MockJourney; marks: Marks; setMarks: SetMarks }) {
   return (
-    <section className="ops-card">
-      <h2 className="ops-h2">Offers</h2>
-      <OfferTable j={j} />
+    <>
+      {j.side === "sell" ? <OfferCards j={j} marks={marks} setMarks={setMarks} /> : <OfferTable j={j} />}
       {j.documents?.length ? (
         <>
           <h3 className="ops-h3">Documents</h3>
@@ -1089,68 +1244,87 @@ function OffersDetail({ j }: { j: MockJourney }) {
           ))}</ul>
         </>
       ) : null}
-    </section>
+    </>
   );
 }
 
-function ContractDetail({ j, flags, setToast, only }: { j: MockJourney; flags: MockWork[]; setToast: (t: string) => void; only?: string[] }) {
-  const rows = j.work!.filter((w) => !only || only.includes(w.stream));
+function DatesDetail({ j }: { j: MockJourney }) {
   return (
-    <section className="ops-card">
-      <h2 className="ops-h2">{only ? "Closing steps" : "The ten workstreams"}</h2>
-      <p className="ops-contract-sum">
-        <strong>{j.work!.filter((w) => w.state === "confirmed").length} of {j.work!.filter((w) => w.state !== "not-applicable").length} confirmed</strong>
-        {flags.length ? <span className="c-warn"> · <Ico.alert size={11} aria-hidden /> {flags.length} blocked or unconfirmed</span> : null}
-      </p>
-      <div className="ops-table-wrap ops-flat">
-        <table className="ops-table ops-table-cards">
-          <thead><tr><th>Workstream</th><th>State</th><th>Waiting on</th><th>Last word</th><th>Note</th><th>Due</th><th><span className="sr-only">Update</span></th></tr></thead>
-          <tbody>{rows.map((w) => {
-            const Icon = Ico[STATE_ICON[w.state]];
-            return (
-              <tr key={w.stream} className="ops-static">
-                <td className="ops-strong">{WORKSTREAM_LABEL[w.stream]}</td>
-                <td data-label="State" className={`${STATE_TONE[w.state]} ops-nowrap`}><Icon size={11} aria-hidden /> {STATE_WORD[w.state]}</td>
-                <td data-label="Waiting on">{w.who}</td>
-                <td data-label="Last word" className={w.stale ? "c-warn" : "ops-muted"}>{w.stale ? <><Ico.clock size={10} aria-hidden /> </> : null}{w.word ?? "None yet"}{w.stale ? " · 7 days" : ""}</td>
-                <td data-label="Note">{w.note ?? ""}</td>
-                <td data-label="Due" className="ops-nowrap">{w.due ?? ""}</td>
-                <td><button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => setToast("In the real screen: the new state, who said so and on what day. Confirmed needs a named party.")}>Update</button></td>
-              </tr>
-            );
-          })}</tbody>
-        </table>
-      </div>
-    </section>
+    <ul className="ops-list">{j.keyDates.map((d) => (
+      <li key={d.label}><DateMark s={d.state} /><strong>{d.label}</strong><span className="ops-muted"> · {d.on}{d.state !== "done" ? `, ${inDays(d.iso)}` : ""}</span></li>
+    ))}</ul>
   );
 }
 
 function OfferTable({ j }: { j: MockJourney }) {
   const offers = j.offers ?? [];
-  const selling = j.side === "sell";
-  const best = selling ? [...offers].sort((a, b) => Number(b.reaches?.replace(/\D/g, "")) - Number(a.reaches?.replace(/\D/g, "")))[0] : undefined;
   if (!offers.length) return <p className="ops-muted">No offers yet.</p>;
   return (
     <div className="ops-table-wrap ops-flat">
       <table className="ops-table ops-table-cards">
-        <thead><tr><th>Offer</th><th>Price</th>{selling ? <th>Reaches the seller</th> : null}<th>Terms</th>{selling ? <><th>Earnest</th><th>Expires</th></> : null}<th>Status</th></tr></thead>
+        <thead><tr><th>Offer</th><th>Price</th><th>Terms</th><th>Status</th></tr></thead>
         <tbody>{offers.map((o) => (
           <tr key={o.from} className="ops-static">
-            <td className="ops-strong">{o.from}{o.source ? <span className="ops-sub">{o.received} · {o.source}</span> : null}</td>
+            <td className="ops-strong">{o.from}</td>
             <td data-label="Price">{o.price}</td>
-            {selling ? (
-              <td data-label="Reaches the seller" className="ops-strong">
-                {o.reaches}{o === best ? <span className="ops-chip ops-chip-pos"><Ico.check size={10} aria-hidden />Leaves the most</span> : null}
-              </td>
-            ) : null}
             <td data-label="Terms">{o.terms}</td>
-            {selling ? <><td data-label="Earnest">{o.earnest}</td><td data-label="Expires" className={o.expires?.startsWith("Today") ? "c-neg ops-strong" : ""}>{o.expires?.startsWith("Today") ? <><Ico.clock size={10} aria-hidden /> </> : null}{o.expires}</td></> : null}
             <td data-label="Status">{o.status}</td>
           </tr>
         ))}</tbody>
       </table>
-      {selling ? <p className="ops-muted ops-note">Ranked by what reaches the seller after costs, not the headline price: the lower offer leaves her more.</p> : null}
     </div>
+  );
+}
+
+/** A seller's offers, ranked by what reaches the seller after costs: the headline price is not the answer. */
+const reachOf = (o: { reaches?: string }) => Number((o.reaches ?? "").replace(/\D/g, ""));
+function rankOffers(j: MockJourney) {
+  return [...(j.offers ?? [])].sort((a, b) => reachOf(b) - reachOf(a));
+}
+
+function OfferCards({ j, marks, setMarks }: { j: MockJourney; marks?: Marks; setMarks?: SetMarks }) {
+  const ranked = rankOffers(j);
+  const first = firstNames(j);
+  return (
+    <>
+      <div className="ops-offers">
+        {ranked.map((o, i) => {
+          const key = `offer-${j.id}-${j.offers!.indexOf(o)}`;
+          const presented = o.status.startsWith("Presented") || Boolean(marks?.[key]);
+          const today = o.expires?.startsWith("Today");
+          return (
+            <article key={o.from} className={`ops-offer ${i === 0 ? "is-best" : ""}`} aria-label={o.from}>
+              <div className="ops-offer-top">
+                <strong>{o.from.split(" · ")[0]}</strong>
+                <span className="ops-muted">{o.from.split(" · ")[1]}</span>
+                {o.expires ? <span className={`ops-chip ${today ? "ops-chip-neg" : ""}`}><Ico.clock size={10} aria-hidden />Expires {o.expires}</span> : null}
+              </div>
+              <p className="ops-offer-reach">
+                <span className="ops-offer-big">{o.reaches}</span>
+                <span className="ops-muted">reaches {first} after costs</span>
+                {i === 0 ? <span className="ops-chip ops-chip-pos"><Ico.check size={10} aria-hidden />Leaves the most</span> : null}
+              </p>
+              <p className="ops-offer-terms"><strong>{o.price}</strong> · {o.terms}{o.earnest ? ` · ${o.earnest} earnest` : ""}</p>
+              <div className="ops-offer-foot">
+                <span className={presented ? "c-pos" : "c-warn"}>
+                  {presented ? <Ico.checkCircle size={11} aria-hidden /> : <Ico.bell size={11} aria-hidden />} {marks?.[key] ?? (presented ? o.status : `${o.status} · not yet presented`)}
+                </span>
+                {!presented && setMarks ? (
+                  <span className="ops-row">
+                    <button className="ops-btn ops-btn-sm ops-btn-p" onClick={() => setMarks((m) => ({ ...m, [key]: `Presented to ${first} at ${NOW.time}` }))}>
+                      <Ico.lock size={10} aria-hidden /> Present to {first}
+                    </button>
+                    <button className="ops-btn ops-btn-sm ops-btn-quiet" onClick={() => setMarks((m) => ({ ...m, [key]: "Held, with your reason recorded. It is not discarded" }))}>Hold</button>
+                  </span>
+                ) : null}
+              </div>
+              <p className="ops-sub">{o.received} · {o.source}</p>
+            </article>
+          );
+        })}
+      </div>
+      <p className="ops-muted ops-note">Ranked by what reaches {first} after costs, not by the headline price. Presenting an offer is always yours.</p>
+    </>
   );
 }
 
@@ -1171,7 +1345,7 @@ function TransactionsView({ openJourney }: { openJourney: (id: string) => void }
     <>
       <header className="ops-head">
         <h1 className="ops-h1">Transactions</h1>
-        <span className="ops-muted">Every contract, sorted by closing. Opens the journey&apos;s Contract tab.</span>
+        <span className="ops-muted">Every contract, sorted by closing. A row opens that deal&apos;s checklist.</span>
       </header>
       <p className="ops-glance ops-glance-plain">
         <span className="ops-glance-item"><strong>{deals.length}</strong> under contract</span>
@@ -1237,36 +1411,43 @@ function TransactionsView({ openJourney }: { openJourney: (id: string) => void }
 
 /* ------------------------------------------------------- The other pages */
 
-function OffersView({ openJourney }: { openJourney: (id: string) => void }) {
+/* Version 2 showed every offer as a seven-column table, and Kaleb found it
+   overwhelming. An offer comes down to a few things: what reaches the
+   seller, when it expires, and whether the agent has presented it (the
+   agent's, in every mode). Everything else is one click away. */
+function OffersView({ marks, setMarks, openJourney }: { marks: Marks; setMarks: SetMarks; openJourney: (id: string) => void }) {
+  const [made, setMade] = useState(false);
   const listing = JOURNEYS.filter((j) => j.side === "sell" && j.offers?.length);
-  const made = JOURNEYS.filter((j) => j.side === "buy" && j.offers?.length);
+  const buyers = JOURNEYS.filter((j) => j.side === "buy" && j.offers?.length);
   return (
     <>
-      <header className="ops-head"><h1 className="ops-h1">Offers</h1><span className="ops-muted">Offers on your listings, and the ones your buyers made.</span></header>
-      {listing.map((j) => (
-        <section key={j.id} className="ops-card ops-section">
-          <div className="ops-section-head">
-            <h2 className="ops-h2">{j.property} <span className="ops-muted">· {person(j.personId)!.name} · {j.price}</span></h2>
-            <button className="ops-btn ops-btn-sm" onClick={() => openJourney(j.id)}>Open with Grace&apos;s numbers<Ico.arrowR size={11} aria-hidden /></button>
-          </div>
-          <OfferTable j={j} />
-        </section>
-      ))}
-      <section className="ops-card ops-section">
-        <h2 className="ops-h2">Your buyers&apos; offers</h2>
-        <div className="ops-table-wrap ops-flat">
-          <table className="ops-table ops-table-cards">
-            <thead><tr><th>Buyer</th><th>Home</th><th>Price</th><th>Terms</th><th>Status</th></tr></thead>
-            <tbody>{made.map((j) => j.offers!.map((o) => (
-              <tr key={j.id + o.from} onClick={() => openJourney(j.id)}>
-                <td className="ops-strong"><button className="ops-rowlink" data-row onClick={(e) => { e.stopPropagation(); openJourney(j.id); }}>{person(j.personId)!.name}</button></td>
-                <td data-label="Home">{j.property}</td><td data-label="Price">{o.price}</td><td data-label="Terms">{o.terms}</td>
-                <td data-label="Status" className="c-pos ops-nowrap"><Ico.check size={10} aria-hidden /> {o.status}</td>
-              </tr>
-            )))}</tbody>
-          </table>
-        </div>
-      </section>
+      <header className="ops-head">
+        <h1 className="ops-h1">Offers</h1>
+        <span className="ops-muted">Every offer on your listings reaches you first. You decide when to present it; none is ever discarded.</span>
+      </header>
+      {listing.map((j) => {
+        const call = TODAY.find((t) => t.journeyId === j.id && t.group === "today" && t.kind === "offer");
+        return (
+          <section key={j.id} className="ops-card ops-section">
+            <div className="ops-section-head">
+              <h2 className="ops-h2">{j.property} <span className="ops-muted">· {person(j.personId)!.name} · {j.price}{call ? ` · talking at ${call.due}` : ""}</span></h2>
+              <button className="ops-btn ops-btn-sm" onClick={() => openJourney(j.id)}>The offer checklist<Ico.arrowR size={11} aria-hidden /></button>
+            </div>
+            <OfferCards j={j} marks={marks} setMarks={setMarks} />
+          </section>
+        );
+      })}
+      <Fold id="o-made" title="Your buyers' offers" count={buyers.length} note="all accepted" open={made} setOpen={setMade}>
+        <ul className="ops-list">
+          {buyers.map((j) => j.offers!.map((o) => (
+            <li key={j.id + o.from}>
+              <button className="ops-link ops-strong" data-row onClick={() => openJourney(j.id)}>{person(j.personId)!.name}</button>
+              <span>{j.property}</span><span className="ops-muted">· {o.price}</span>
+              <span className="c-pos"><Ico.check size={10} aria-hidden /> {o.status}</span>
+            </li>
+          )))}
+        </ul>
+      </Fold>
     </>
   );
 }
@@ -1359,29 +1540,52 @@ function SearchView({ marks, openJourney }: { marks: Marks; openJourney: (id: st
   );
 }
 
+/* Was "Advocacy", which Kaleb did not recognise. It is the referral and
+   review engine (product.md): the four moments to ask, the one follow-up,
+   and thanking whoever sends a client. */
 function AdvocacyView({ setToast }: { setToast: (t: string) => void }) {
   const tone = { due: ["c-warn", "clock", "Due"], later: ["c-2", "cal", "Later"], quiet: ["c-4", "pause", "Stay quiet"] } as const;
   return (
     <>
-      <header className="ops-head"><h1 className="ops-h1">Advocacy</h1><span className="ops-muted">The moments after a deal that earn the next one. Nothing here sends by itself; the words are yours.</span></header>
-      <div className="ops-table-wrap">
-        <table className="ops-table ops-table-cards">
-          <thead><tr><th>Who</th><th>Moment</th><th>When</th><th>What to do</th><th>State</th><th><span className="sr-only">Act</span></th></tr></thead>
-          <tbody>{MOMENTS.map((m) => {
-            const [c, icon, word] = tone[m.state];
-            const Icon = Ico[icon];
-            return (
-              <tr key={m.who + m.moment} className="ops-static">
-                <td className="ops-strong">{m.who}</td><td data-label="Moment">{m.moment}</td><td data-label="When">{m.when}</td>
-                <td data-label="What to do">{m.ask}</td>
-                <td data-label="State" className={c}><Icon size={11} aria-hidden /> {word}</td>
-                <td>{m.state === "due" ? <button className="ops-btn ops-btn-sm" onClick={() => setToast("In the real screen you write it here, and it is recorded against the moment.")}>Write to them</button> : null}</td>
-              </tr>
-            );
-          })}</tbody>
-        </table>
+      <header className="ops-head">
+        <h1 className="ops-h1">Reviews and referrals</h1>
+        <span className="ops-muted">When to ask a client for a review or an introduction, and thanking the people who send you clients.</span>
+      </header>
+      <p className="ops-callout">
+        <Ico.info size={13} aria-hidden />
+        <span className="ops-grow">Rift watches for four moments: a hard step won mid-deal, closing day, two weeks after move-in, and one year in the home. It drafts the ask; nothing sends until you approve, and nobody unhappy is asked for a public review.</span>
+      </p>
+      <div className="ops-grid2">
+        <section className="ops-card ops-card-list">
+          <h2 className="ops-h2"><Ico.gift size={12} aria-hidden /> Moments</h2>
+          <ul className="ops-checklist">
+            {MOMENTS.map((m) => {
+              const [c, icon, word] = tone[m.state];
+              const Icon = Ico[icon];
+              return (
+                <li key={m.who + m.moment} className="ops-step">
+                  <span className={`ops-step-mark ${c}`}><Icon size={14} aria-hidden /></span>
+                  <div className="ops-step-body">
+                    <span className="ops-step-title">{m.who}: {m.moment.toLowerCase()}</span>
+                    <span className="ops-step-sub"><span className={c}>{word}</span> · {m.when} · <span className="ops-muted">{m.ask}</span></span>
+                  </div>
+                  <span />
+                  <span className="ops-step-act">{m.state === "due" ? <button className="ops-btn ops-btn-sm" onClick={() => setToast("In the real screen Rift's draft opens here for you to edit and approve.")}>Read the draft</button> : null}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="ops-muted ops-note">Under contract is listed so the restraint reads as deliberate: those weeks are not the time to ask for anything.</p>
+        </section>
+        <section className="ops-card">
+          <h2 className="ops-h2"><Ico.users size={12} aria-hidden /> Referrals</h2>
+          <ul className="ops-list">
+            <li><Ico.checkCircle size={11} aria-hidden className="c-pos" /><strong>The Abebes sent the Okafors</strong><span className="ops-muted">· thanked 12 Aug · a second thank-you is due when the Okafors close, Fri 16 Oct</span></li>
+            <li><Ico.checkCircle size={11} aria-hidden className="c-pos" /><strong>The Parks sent Hannah Lee</strong><span className="ops-muted">· thanked 3 Jul · second thank-you due at closing, Wed 30 Sep</span></li>
+          </ul>
+          <p className="ops-muted ops-note">Every past client has a personal link; whoever arrives through it is credited to them on their record.</p>
+        </section>
       </div>
-      <p className="ops-muted ops-note">&ldquo;Under contract&rdquo; is listed so the restraint reads as deliberate: thirty anxious days are not a window to ask for anything.</p>
     </>
   );
 }
@@ -1426,72 +1630,318 @@ function ReportsView() {
   );
 }
 
-function QuestionsView() {
+/* Was "Questions", which said nothing about what it was. These are the
+   agent's own questions on the public tools (the funnel question editor);
+   rule 5 keeps every one of them away from the numbers. */
+function QuestionsView({ setToast }: { setToast: (t: string) => void }) {
+  const [on, setOn] = useState<Record<string, boolean>>({ q1: true, q2: true, q3: true });
   const qs = [
-    { q: "When would you like to move?", on: "Every buyer value", answered: 214 },
-    { q: "Is anyone buying with you?", on: "Cost to buy, budget", answered: 158 },
-    { q: "Anything Kaleb should know?", on: "Saved plans", answered: 47 },
+    { id: "q1", q: "When would you like to move?", on: "Every buyer tool", answered: 214 },
+    { id: "q2", q: "Is anyone buying with you?", on: "Cost to buy, budget", answered: 158 },
+    { id: "q3", q: "Anything Kaleb should know?", on: "When they save a plan", answered: 47 },
   ];
   return (
     <>
-      <header className="ops-head"><h1 className="ops-h1">Questions</h1><span className="ops-muted">Your own questions on the public pages. Kept as it is, at this density.</span></header>
-      <div className="ops-table-wrap">
-        <table className="ops-table ops-table-cards">
-          <thead><tr><th>Question</th><th>Asked on</th><th>Answers</th></tr></thead>
-          <tbody>{qs.map((x) => <tr key={x.q} className="ops-static"><td className="ops-strong">{x.q}</td><td data-label="Asked on">{x.on}</td><td data-label="Answers" className="ops-num">{x.answered}</td></tr>)}</tbody>
-        </table>
+      <header className="ops-head">
+        <h1 className="ops-h1">Lead-form questions</h1>
+        <span className="ops-muted">Your own extra questions on the free tools on your website. The answers go on the person&apos;s record, for you.</span>
+      </header>
+      <p className="ops-callout"><Ico.lock size={13} aria-hidden /><span className="ops-grow">They never change a figure anyone sees (rule 5): the numbers come only from the tool&apos;s own questions.</span></p>
+      <div className="ops-grid2">
+        <section className="ops-card ops-card-list">
+          <div className="ops-section-head">
+            <h2 className="ops-h2">Your questions</h2>
+            <button className="ops-btn ops-btn-sm" onClick={() => setToast("In the real screen: the question, which tools show it, and whether it is optional.")}><Ico.plus size={11} aria-hidden />Add a question</button>
+          </div>
+          <ul className="ops-checklist">
+            {qs.map((x) => (
+              <li key={x.id} className="ops-step">
+                <span className="ops-step-mark"><Ico.info size={14} aria-hidden className="c-4" /></span>
+                <div className="ops-step-body">
+                  <span className="ops-step-title">{x.q}</span>
+                  <span className="ops-step-sub ops-muted">Shown on: {x.on} · answered {x.answered} times</span>
+                </div>
+                <span />
+                <span className="ops-step-act"><Switch id={`qs-${x.id}`} on={on[x.id]} set={(v) => setOn((o) => ({ ...o, [x.id]: v }))} label={`Ask “${x.q}”`} /></span>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="ops-card">
+          <h2 className="ops-h2">What a visitor sees</h2>
+          <p className="ops-muted ops-small">After their numbers, one short optional step:</p>
+          <div className="ops-preview">
+            <label htmlFor="pv-move">When would you like to move? <span className="ops-muted">(optional)</span></label>
+            <select id="pv-move" className="ops-input" defaultValue="">
+              <option value="" disabled>Choose one</option><option>Within 3 months</option><option>3 to 6 months</option><option>6 to 12 months</option><option>Just looking</option>
+            </select>
+            <p className="ops-muted ops-small">This does not change your numbers.</p>
+          </div>
+        </section>
       </div>
-      <p className="ops-muted ops-note"><Ico.lock size={11} aria-hidden /> Your questions never change a figure anyone sees (rule 5).</p>
     </>
   );
 }
 
-function SettingsView() {
-  const groups: { h: string; rows: { k: string; v: string; state?: "ok" | "off" | "warn" }[] }[] = [
-    { h: "Leads", rows: [
-      { k: "Reply target", v: "15 minutes" },
-      { k: "New-lead alert", v: "Text and email to you, instantly", state: "ok" },
-    ] },
-    { h: "Emails", rows: [
-      { k: "Sending domain", v: "Not verified with Brevo: morning summaries are held", state: "warn" },
-      { k: "Follow-ups", v: "4 emails over 6 weeks; stop the moment they reply", state: "ok" },
-    ] },
-    { h: "Contract dates", rows: [
-      { k: "Chase an outside party after", v: "7 days with no word" },
-      { k: "Morning summary", v: "7:00, with the next 14 days" },
-    ] },
-    { h: "Privacy", rows: [
-      { k: "How long records are kept", v: "The periods the privacy page promises, per kind of record" },
-    ] },
-    { h: "Connections", rows: [
-      { k: "Brevo (email)", v: "Connected, domain not verified", state: "warn" },
-      { k: "Cal.com (booked calls)", v: "Not connected: people see your phone number instead", state: "off" },
-      { k: "Offer PDF reading", v: "Off: people type the terms in themselves", state: "off" },
-    ] },
-  ];
-  const mark = { ok: ["c-pos", "checkCircle", "On"], off: ["c-4", "minus", "Off"], warn: ["c-warn", "alert", "Needs you"] } as const;
+/* ---------------------------------------------------------------- Settings */
+
+function Switch({ id, on, set, label, disabled }: { id?: string; on: boolean; set: (v: boolean) => void; label?: string; disabled?: boolean }) {
+  return (
+    <span className="ops-switch-wrap">
+      <button id={id} type="button" role="switch" aria-checked={on} aria-label={label} className="ops-switch" disabled={disabled} onClick={() => set(!on)}><span aria-hidden /></button>
+      <span className={on ? "ops-strong" : "ops-muted"}>{on ? "On" : "Off"}</span>
+    </span>
+  );
+}
+
+function SetRow({ id, label, help, children }: { id?: string; label: ReactNode; help?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="ops-set-row">
+      <div className="ops-set-label">
+        {id ? <label htmlFor={id}>{label}</label> : <span>{label}</span>}
+        {help ? <p>{help}</p> : null}
+      </div>
+      <div className="ops-set-ctl">{children}</div>
+    </div>
+  );
+}
+
+const SECTIONS: { s: string; label: string; icon: keyof typeof Ico }[] = [
+  { s: "profile", label: "Profile and hours", icon: "pin" },
+  { s: "team", label: "Team", icon: "users" },
+  { s: "automation", label: "Automation", icon: "bolt" },
+  { s: "checklists", label: "Checklists", icon: "check" },
+  { s: "leads", label: "Leads and emails", icon: "mail" },
+  { s: "connections", label: "Connections", icon: "layers" },
+  { s: "privacy", label: "Privacy and records", icon: "lock" },
+];
+
+const WORKFLOWS: { id: string; name: string; help: string; external: boolean; consented?: boolean; value: Assign | "manual" }[] = [
+  { id: "summary", name: "Morning summary to you", help: "7:00, with the next 14 days.", external: false, value: "auto" },
+  { id: "alert", name: "New-lead alert to you", help: "Text and email, the moment someone asks for a review.", external: false, value: "auto" },
+  { id: "chase", name: "Chase an outside party gone quiet", help: "Tells you or Meron after 7 days with no word.", external: false, value: "auto" },
+  { id: "programs", name: "Check assistance program pages", help: "Every morning. A change waits for you before anyone sees it.", external: false, value: "auto" },
+  { id: "nurture", name: "Follow-up emails to leads", help: "4 emails over 6 weeks, only to people who asked, stopping the moment they reply.", external: true, consented: true, value: "auto" },
+  { id: "tour", name: "Tour plans and reminders to clients", help: "Sent once the showings are confirmed.", external: true, value: "approve" },
+  { id: "kickoff", name: "Under-contract kickoff", help: "To the clients and the lender, with the verified dates.", external: true, value: "approve" },
+  { id: "closing", name: "Closing instructions and the wire-fraud warning", help: "From the closing attorney's instructions.", external: true, value: "approve" },
+  { id: "asks", name: "Review and referral asks", help: "At the four moments on Reviews and referrals.", external: true, value: "approve" },
+];
+
+function SettingsView({ section, setSection, assigns, setAssigns, setToast }: {
+  section: string; setSection: (s: string) => void;
+  assigns: Assigns; setAssigns: React.Dispatch<React.SetStateAction<Assigns>>; setToast: (t: string) => void;
+}) {
+  const [dirty, setDirty] = useState(false);
+  const [mode, setMode] = useState<"review" | "balanced" | "high">("balanced");
+  const [flows, setFlows] = useState<Record<string, string>>(() => Object.fromEntries(WORKFLOWS.map((w) => [w.id, w.value])));
+  const [toggles, setToggles] = useState<Record<string, boolean>>({
+    alertText: true, alertEmail: true, nurture: true, tcTick: true, tcBook: true, tcDraft: true, tcMoney: false, tcApprove: false,
+  });
+  const [pending, setPending] = useState<Assigns>(assigns);
+  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const touch = () => setDirty(true);
+  const toggle = (k: string) => (v: boolean) => { setToggles((t) => ({ ...t, [k]: v })); touch(); };
+  const pickMode = (m: typeof mode) => {
+    setMode(m);
+    /* Review everything: Rift prepares, you approve, apart from what only
+       ever reaches you. The other two keep today's settings. */
+    if (m === "review") setFlows((f) => Object.fromEntries(Object.keys(f).map((k) => [k, k === "summary" || k === "alert" ? "auto" : "approve"])));
+    else setFlows(Object.fromEntries(WORKFLOWS.map((w) => [w.id, w.value])));
+    touch();
+  };
+  const sec = SECTIONS.find((x) => x.s === section) ?? SECTIONS[0];
+  const save = () => { setAssigns(pending); setDirty(false); setToast("Saved for this session only: this is a mock-up. Checklist changes now show on the journeys and on Meron's list."); };
+  const discard = () => { setPending(assigns); setFlows(Object.fromEntries(WORKFLOWS.map((w) => [w.id, w.value]))); setMode("balanced"); setDirty(false); };
   return (
     <>
-      <header className="ops-head"><h1 className="ops-h1">Settings</h1><span className="ops-muted">Grouped by what they affect. A missing connection says what people see instead.</span></header>
-      <div className="ops-grid2">
-        {groups.map((g) => (
-          <section key={g.h} className="ops-card">
-            <h2 className="ops-h2">{g.h}</h2>
-            <dl className="ops-settings">
-              {g.rows.map((r) => {
-                const m = r.state ? mark[r.state] : null;
-                const Icon = m ? Ico[m[1]] : null;
+      <header className="ops-head"><h1 className="ops-h1">Settings</h1></header>
+      <div className="ops-settings-frame">
+        <nav className="ops-set-nav" aria-label="Settings sections">
+          {SECTIONS.map((x) => {
+            const Icon = Ico[x.icon];
+            return (
+              <button key={x.s} className="ops-nav" aria-current={sec.s === x.s ? "page" : undefined} onClick={() => setSection(x.s)}>
+                <Icon size={14} aria-hidden />{x.label}
+                {x.s === "connections" ? <span className="ops-count ops-count-neg">1<span className="sr-only"> needs you</span></span> : null}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="ops-set-body">
+          {sec.s === "profile" ? (
+            <section className="ops-card ops-set-card" aria-label="Profile and hours">
+              <h2 className="ops-h2">Profile and hours</h2>
+              <SetRow id="st-name" label="Your name" help="On emails, the booking page and every client page."><input id="st-name" className="ops-input" defaultValue="Kaleb" onChange={touch} /></SetRow>
+              <SetRow id="st-broker" label="Brokerage" help="Shown beside your name, as your broker requires."><input id="st-broker" className="ops-input" placeholder="Your brokerage's name" onChange={touch} /></SetRow>
+              <SetRow id="st-phone" label="Phone"><input id="st-phone" className="ops-input" defaultValue="(404) 555-0100" onChange={touch} /></SetRow>
+              <SetRow id="st-email" label="Email"><input id="st-email" className="ops-input" defaultValue="kaleb@example.com" onChange={touch} /></SetRow>
+              <SetRow id="st-from" label="Working hours" help="Outside them, a new lead is told when you will reply, and the 15-minute clock waits.">
+                <span className="ops-row">
+                  <select id="st-from" className="ops-input ops-input-auto" defaultValue="8:00 am" onChange={touch}><option>7:00 am</option><option>8:00 am</option><option>9:00 am</option></select>
+                  <span className="ops-muted">to</span>
+                  <select aria-label="Working hours end" className="ops-input ops-input-auto" defaultValue="7:00 pm" onChange={touch}><option>6:00 pm</option><option>7:00 pm</option><option>9:00 pm</option></select>
+                </span>
+              </SetRow>
+              <SetRow id="st-tz" label="Time zone"><select id="st-tz" className="ops-input ops-input-auto" defaultValue="Eastern (Atlanta)" onChange={touch}><option>Eastern (Atlanta)</option></select></SetRow>
+            </section>
+          ) : null}
+
+          {sec.s === "team" ? (
+            <section className="ops-card ops-set-card" aria-label="Team">
+              <div className="ops-section-head">
+                <h2 className="ops-h2">Team</h2>
+                <button className="ops-btn ops-btn-sm" onClick={() => setToast("In the real screen: their name, email and role. They get their own sign-in.")}><Ico.plus size={11} aria-hidden />Invite someone</button>
+              </div>
+              <ul className="ops-team">
+                <li><span className="ops-avatar" aria-hidden>K</span><span className="ops-grow"><strong>Kaleb</strong> <span className="ops-muted">(you)</span><span className="ops-sub">Agent · owns every client and every decision</span></span></li>
+                <li><span className="ops-avatar" aria-hidden>M</span><span className="ops-grow"><strong>{COORDINATOR}</strong><span className="ops-sub">Transaction coordinator · since August</span></span><span className="c-pos"><Ico.checkCircle size={11} aria-hidden /> Active</span></li>
+              </ul>
+              <h3 className="ops-h3">What {COORDINATOR} can do</h3>
+              <SetRow id="st-tc1" label="Tick off coordinator steps" help="Their steps on each checklist, and Meron's list on Today."><Switch id="st-tc1" on={toggles.tcTick} set={toggle("tcTick")} /></SetRow>
+              <SetRow id="st-tc2" label="Book showings and inspections"><Switch id="st-tc2" on={toggles.tcBook} set={toggle("tcBook")} /></SetRow>
+              <SetRow id="st-tc3" label="Write to clients" help="As drafts you approve, like Rift's."><Switch id="st-tc3" on={toggles.tcDraft} set={toggle("tcDraft")} /></SetRow>
+              <SetRow id="st-tc4" label="See clients' money" help="Budgets, savings and lender figures."><Switch id="st-tc4" on={toggles.tcMoney} set={toggle("tcMoney")} /></SetRow>
+              <SetRow id="st-tc5" label="Approve what Rift prepared" help="Off: approvals stay with you."><Switch id="st-tc5" on={toggles.tcApprove} set={toggle("tcApprove")} /></SetRow>
+              <SetRow label={<><Ico.lock size={11} aria-hidden /> Always yours</>} help="No setting gives these to anyone else.">
+                <span className="ops-muted">Sending agreements, presenting offers, price opinions</span>
+              </SetRow>
+            </section>
+          ) : null}
+
+          {sec.s === "automation" ? (
+            <section className="ops-card ops-set-card" aria-label="Automation">
+              <h2 className="ops-h2">Automation</h2>
+              <p className="ops-muted ops-small">How much Rift does without asking. You can change it any time, and per workflow below.</p>
+              <fieldset className="ops-modes">
+                <legend className="sr-only">Mode</legend>
+                {([
+                  ["review", "Review everything", "Rift prepares; you approve every step."],
+                  ["balanced", "Balanced", "Rift does the routine work on its own and asks you about anything a client or outside party sees."],
+                  ["high", "High automation", "Rift runs trusted workflows on its own, within your limits."],
+                ] as const).map(([m, t, d]) => (
+                  <label key={m} className={`ops-mode ${mode === m ? "is-on" : ""}`}>
+                    <input type="radio" name="st-mode" checked={mode === m} onChange={() => pickMode(m)} />
+                    <span><strong>{t}</strong><span className="ops-sub">{d}</span></span>
+                  </label>
+                ))}
+              </fieldset>
+              {mode === "high" ? <p className="ops-note c-warn"><Ico.info size={11} aria-hidden /> For now, anything a client sees still waits for you: sending on its own needs the approvals record (v5 §10.2) built first.</p> : null}
+              <h3 className="ops-h3">Each workflow</h3>
+              {WORKFLOWS.map((w) => (
+                <SetRow key={w.id} id={`wf-${w.id}`} label={w.name} help={<>{w.help}{w.external && !w.consented ? " A client sees it, so it waits for you." : ""}</>}>
+                  <select id={`wf-${w.id}`} className="ops-input ops-input-auto" value={flows[w.id]} onChange={(e) => { setFlows((f) => ({ ...f, [w.id]: e.target.value })); touch(); }}>
+                    <option value="manual">You do it</option>
+                    <option value="approve">Rift prepares, you approve</option>
+                    <option value="auto" disabled={w.external && !w.consented}>Rift does it on its own</option>
+                  </select>
+                </SetRow>
+              ))}
+              <SetRow label={<><Ico.lock size={11} aria-hidden /> Always yours</>} help="In every mode.">
+                <ul className="ops-plain">
+                  <li>Presenting an offer, or deciding not to</li><li>Sending or signing an agreement</li><li>A price opinion</li><li>Anything that states a legal or lending conclusion</li>
+                </ul>
+              </SetRow>
+              <p className="ops-rift-line"><Ico.bolt size={12} aria-hidden /> This week under these settings: Rift ran 38 steps on its own and 1 failed (the morning summary); you approved 6 it prepared.</p>
+            </section>
+          ) : null}
+
+          {sec.s === "checklists" ? (
+            <section className="ops-card ops-set-card" aria-label="Checklists">
+              <div className="ops-section-head">
+                <h2 className="ops-h2">Checklists</h2>
+                <div className="ops-seg ops-seg-sm" role="group" aria-label="Which checklist">
+                  <button aria-pressed={side === "buy"} onClick={() => setSide("buy")}>Buying</button>
+                  <button aria-pressed={side === "sell"} onClick={() => setSide("sell")}>Selling</button>
+                </div>
+              </div>
+              <p className="ops-muted ops-small">Who does each step, for every client. A step given to {COORDINATOR} goes on {COORDINATOR}&apos;s list; one given to Rift runs on its own or waits for you. The client&apos;s and outside professionals&apos; steps are theirs.</p>
+              {STAGES.map((s) => (
+                <div key={s} className="ops-set-group">
+                  <h3 className="ops-h3">{side === "sell" ? SELL_STAGE_LABEL[s] : STAGE_LABEL[s]}</h3>
+                  {(side === "buy" ? BUY_PLAYBOOK : SELL_PLAYBOOK).filter((x) => x.stage === s).map((step) => {
+                    const a = assignOf(step);
+                    return (
+                      <SetRow key={step.id} id={a && !step.protected ? `ck-${step.id}` : undefined}
+                        label={<>{step.title}{step.protected ? <span className="ops-lock" title="Always yours"><Ico.lock size={10} aria-hidden /></span> : null}</>}>
+                        {step.protected ? <span className="ops-muted">You, always</span>
+                          : a ? (
+                            <select id={`ck-${step.id}`} className="ops-input ops-input-auto" value={pending[step.id] ?? a}
+                              onChange={(e) => { setPending((p) => ({ ...p, [step.id]: e.target.value as Assign })); touch(); }}>
+                              <option value="you">You</option>
+                              <option value="tc">{COORDINATOR} (coordinator)</option>
+                              <option value="approve">Rift prepares, you approve</option>
+                              <option value="auto" disabled={step.external}>Rift, on its own</option>
+                            </select>
+                          ) : <span className="ops-muted">{step.doer === "client" ? "The client" : step.pro}</span>}
+                      </SetRow>
+                    );
+                  })}
+                </div>
+              ))}
+            </section>
+          ) : null}
+
+          {sec.s === "leads" ? (
+            <section className="ops-card ops-set-card" aria-label="Leads and emails">
+              <h2 className="ops-h2">Leads and emails</h2>
+              <SetRow id="st-reply" label="Reply target" help="Today counts down from when a lead asks for a review.">
+                <select id="st-reply" className="ops-input ops-input-auto" defaultValue="15 minutes" onChange={touch}><option>5 minutes</option><option>15 minutes</option><option>30 minutes</option><option>1 hour</option></select>
+              </SetRow>
+              <SetRow id="st-a1" label="New-lead alert by text"><Switch id="st-a1" on={toggles.alertText} set={toggle("alertText")} /></SetRow>
+              <SetRow id="st-a2" label="New-lead alert by email"><Switch id="st-a2" on={toggles.alertEmail} set={toggle("alertEmail")} /></SetRow>
+              <SetRow id="st-n" label="Follow-up emails" help="4 emails over 6 weeks, to people who asked for them. They stop the moment someone replies."><Switch id="st-n" on={toggles.nurture} set={toggle("nurture")} /></SetRow>
+              <SetRow id="st-sum" label="Morning summary">
+                <select id="st-sum" className="ops-input ops-input-auto" defaultValue="7:00 am" onChange={touch}><option>6:00 am</option><option>7:00 am</option><option>8:00 am</option><option>Off</option></select>
+              </SetRow>
+              <SetRow id="st-stale" label="Flag an outside party after" help="Days with no word from a lender, attorney or other agent.">
+                <span className="ops-row"><input id="st-stale" className="ops-input ops-input-num" type="number" min={1} max={30} defaultValue={7} onChange={touch} /><span className="ops-muted">days</span></span>
+              </SetRow>
+            </section>
+          ) : null}
+
+          {sec.s === "connections" ? (
+            <section className="ops-card ops-set-card" aria-label="Connections">
+              <h2 className="ops-h2">Connections</h2>
+              <p className="ops-muted ops-small">A missing connection says what people see instead. Nothing fails quietly.</p>
+              {([
+                ["Brevo (email)", "warn", "Connected, but the sending domain is not verified: morning summaries are held.", "Fix"],
+                ["Cal.com (booked calls)", "off", "Not connected: people see your phone number instead.", "Connect"],
+                ["Offer PDF reading", "off", "Off: people type an offer's terms in themselves.", "Turn on"],
+                ["Matrix", "manual", "No write access: Meron sets up saved searches by hand.", ""],
+                ["ShowingTime", "manual", "No write access: showings are booked there, and recorded here.", ""],
+                ["Remine", "manual", "Agreements and offers are prepared there; Rift records where they stand.", ""],
+              ] as const).map(([name, st, text, btn]) => {
+                const m = { warn: ["c-warn", "alert", "Needs you"], off: ["c-4", "minus", "Off"], manual: ["c-2", "pin", "By hand"] }[st];
+                const Icon = Ico[m[1] as keyof typeof Ico];
                 return (
-                  <div key={r.k}>
-                    <dt>{r.k}</dt>
-                    <dd>{m && Icon ? <span className={m[0]}><Icon size={11} aria-hidden /> {m[2]}: </span> : null}{r.v}</dd>
-                  </div>
+                  <SetRow key={name} label={name} help={text}>
+                    <span className="ops-row"><span className={m[0]}><Icon size={11} aria-hidden /> {m[2]}</span>
+                      {btn ? <button className="ops-btn ops-btn-sm" onClick={() => setToast(`In the real screen: ${btn.toLowerCase()} ${name}.`)}>{btn}</button> : null}</span>
+                  </SetRow>
                 );
               })}
-            </dl>
-          </section>
-        ))}
+            </section>
+          ) : null}
+
+          {sec.s === "privacy" ? (
+            <section className="ops-card ops-set-card" aria-label="Privacy and records">
+              <h2 className="ops-h2">Privacy and records</h2>
+              <SetRow label="How long records are kept" help="Set by the privacy page's promises, per kind of record. Not changed here."><span className="ops-muted">As promised on the privacy page</span></SetRow>
+              <SetRow label="What leads' answers are used for" help="Their numbers only. Your own questions never reach a figure (rule 5)."><span className="ops-muted">Fixed</span></SetRow>
+              <SetRow label="Export a client's records" help="Everything on their journey, for them."><button className="ops-btn ops-btn-sm" onClick={() => setToast("In the real screen: pick a client, and Rift prepares their export.")}>Export</button></SetRow>
+            </section>
+          ) : null}
+        </div>
       </div>
+      {dirty ? (
+        <div className="ops-savebar" role="region" aria-label="Unsaved changes">
+          <span className="ops-grow">You have unsaved changes.</span>
+          <button className="ops-btn ops-btn-sm" onClick={discard}>Discard</button>
+          <button className="ops-btn ops-btn-sm ops-btn-p" onClick={save}>Save changes</button>
+        </div>
+      ) : null}
     </>
   );
 }

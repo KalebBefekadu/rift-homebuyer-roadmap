@@ -722,30 +722,15 @@
 button.ops-glance-item:hover { border-color: var(--line); background: var(--sunk); }
 .ops-glance-item strong { font-variant-numeric: tabular-nums; color: var(--ink); }
 .ops-glance-item.is-neg, .ops-glance-item.is-neg strong { color: var(--neg); border-color: var(--neg-wash); background: #fff8f7; }
-.ops-glance-rift { cursor: default; }
 .ops-glance-plain .ops-glance-item { cursor: default; }
 
 .ops-lead { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; padding: 9px 12px; border: 1px solid #f3d2cf; background: #fff8f7; border-radius: 9px; margin-bottom: 14px; }
 .ops-lead-sum { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ops-lead-done { display: flex; flex-wrap: wrap; border-color: var(--pos-wash); background: var(--pos-wash); color: var(--pos); font-size: 12.5px; }
 
-.ops-today { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
-.ops-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.ops-group { display: flex; flex-direction: column; gap: 6px; }
 .ops-empty { font-size: 12.5px; color: var(--pos); display: flex; gap: 6px; align-items: center; }
-.ops-item { background: var(--paper); border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
-.ops-item-urgent { box-shadow: inset 3px 0 0 var(--neg); }
-.ops-item-top .ops-kind { transform: translateY(1px); }
-.ops-item-urgent .ops-kind { color: var(--neg); }
-.ops-item-done { flex-direction: row; justify-content: space-between; align-items: center; gap: 8px; background: var(--sunk); font-size: 12px; padding: 6px 10px; }
-.ops-item-top { display: flex; gap: 8px; align-items: baseline; }
 .ops-item-title { font: inherit; font-weight: 600; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); flex: 1; min-width: 0; line-height: 1.35; display: inline-flex; gap: 5px; align-items: baseline; }
 .ops-item-title:hover { text-decoration: underline; }
-.ops-item-why { color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
-/* Two lines on Today, so every group's first item fits the first screen (§8 acceptance); the whole reason is one click away and in the title. */
-.ops-item .ops-item-why { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.ops-item-meta { display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: center; font-size: 12px; margin-top: 1px; }
-.ops-item-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 5px; }
 .ops-owner { color: var(--ink-3); font-size: 12px; }
 .ops-owner-other { display: inline-flex; gap: 4px; align-items: center; color: var(--ink); font-weight: 600; background: var(--sunk); border-radius: 4px; padding: 0 6px; }
 .ops-evidence { display: inline-flex; gap: 4px; align-items: center; color: var(--ink-3); }
@@ -755,16 +740,7 @@ button.ops-glance-item:hover { border-color: var(--line); background: var(--sunk
 .ops-due { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ops-due-now { color: var(--neg); font-weight: 600; }
 
-.ops-agenda { list-style: none; margin: 0; padding: 0; background: var(--paper); border: 1px solid var(--line-2); border-radius: 8px; }
-.ops-agenda > li + li, .ops-agenda > .ops-item { border-top: 1px solid var(--line-3); }
-.ops-agenda .ops-item-done { border-radius: 0; border: 0; }
-.ops-agenda-row { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; padding: 8px 10px; }
 .ops-agenda-time { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
-.ops-agenda-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ops-wait { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 3px 0 0; font-size: 12px; }
-.ops-wait div { display: flex; gap: 5px; }
-.ops-wait dt { color: var(--ink-4); }
-.ops-wait dd { margin: 0; font-weight: 550; }
 
 .ops-card { background: var(--paper); border: 1px solid var(--line-2); border-radius: 9px; padding: 10px 12px; min-width: 0; }
 .ops-card-tight { padding: 4px 12px; }
@@ -808,7 +784,6 @@ button.ops-glance-item:hover { border-color: var(--line); background: var(--sunk
 .ops-seg button + button { border-left: 1px solid var(--line-2); }
 .ops-seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
 .ops-seg-n { font-size: 11px; opacity: .75; font-variant-numeric: tabular-nums; }
-.ops-tabs .ops-seg-n { margin-left: 5px; }
 .ops-search { position: relative; display: inline-flex; align-items: center; }
 .ops-search svg { position: absolute; left: 9px; color: var(--ink-4); pointer-events: none; }
 .ops-search .ops-input { padding-left: 28px; }
@@ -873,15 +848,8 @@ th[aria-sort] .ops-sort { color: var(--ink); }
 .ops-stage-head.is-done { color: var(--pos); }
 .ops-stage-head.is-done .ops-muted, .ops-stage-head.is-now .ops-muted { color: var(--ink-3); }
 .ops-stage-head strong { color: var(--ink); }
-.ops-card-next { border-style: dashed; }
 .ops-story { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
 .ops-story li { display: flex; gap: 8px; align-items: baseline; line-height: 1.4; }
-.ops-story li.ops-story-stage { display: block; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin-top: 6px; }
-.ops-story li.ops-story-stage:first-child { margin-top: 0; }
-.ops-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line-2); margin-bottom: 12px; overflow-x: auto; }
-.ops-tabs button { font: inherit; font-size: 12.5px; padding: 8px 11px; border: 0; background: none; cursor: pointer; color: var(--ink-3); border-bottom: 2px solid transparent; white-space: nowrap; display: inline-flex; align-items: center; }
-.ops-tabs button:hover { color: var(--ink); }
-.ops-tabs button[aria-selected="true"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
 .ops-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .ops-span2 { grid-column: 1 / -1; }
 .ops-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; }
@@ -917,10 +885,6 @@ th[aria-sort] .ops-sort { color: var(--ink); }
 .ops-funnel-n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .ops-big { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin: 4px 0; }
 .ops-big .ops-muted { font-size: 13px; font-weight: 400; }
-.ops-settings { display: flex; flex-direction: column; gap: 8px; margin: 0; font-size: 12.5px; }
-.ops-settings div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px; }
-.ops-settings dt { color: var(--ink-3); }
-.ops-settings dd { margin: 0; }
 
 .ops-modal { position: fixed; inset: 0; background: rgba(20,20,20,.35); display: grid; place-items: start center; padding: 10vh 16px 16px; z-index: 50; overflow-y: auto; }
 .ops-modal-card { background: var(--paper); border-radius: 12px; padding: 16px; width: min(520px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.2); display: flex; flex-direction: column; gap: 10px; }
@@ -946,6 +910,130 @@ th[aria-sort] .ops-sort { color: var(--ink); }
 .ops-toast { background: var(--ink); color: #fff; padding: 9px 14px; border-radius: 8px; font-size: 12.5px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
 .ops-scrim { display: none; }
 
+/* Version 3 (Kaleb's review of version 2): Today as one list, the journey
+   as a checklist that gets executed, offers as cards, settings as settings. */
+.ops-small { font-size: 12px; line-height: 1.45; }
+.ops-card-list { padding: 10px 12px 6px; }
+
+/* Today's first line: §8.2's seven questions in one sentence, each number
+   opening its section. */
+.ops-brief { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); margin-bottom: 12px; }
+.ops-brief-n { font: inherit; color: var(--ink); background: none; border: 0; padding: 0 2px; border-bottom: 1px dotted var(--ink-4); cursor: pointer; }
+.ops-brief-n:hover { border-bottom-style: solid; }
+.ops-brief-n.is-neg { color: var(--neg); border-bottom-color: var(--neg); }
+.ops-today2 { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+
+.ops-todos { list-style: none; margin: 0; padding: 0; }
+.ops-todo { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 2px 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-3); }
+.ops-todos > .ops-todo:first-child { border-top: 0; }
+.ops-todo-urgent .ops-kind { color: var(--neg); }
+.ops-todo-done { font-size: 12px; color: var(--ink-2); grid-template-columns: 22px minmax(0, 1fr) auto; }
+.ops-todo-icon { display: inline-grid; place-items: center; color: var(--ink-4); }
+.ops-todo-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ops-todo-line { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.ops-todo-why { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ops-todo-actions { display: inline-flex; gap: 4px; align-items: center; }
+.ops-todo .ops-more { grid-column: 2 / -1; }
+.ops-tag { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 0 5px; border-radius: 4px; background: #eef0fb; color: #3a44a0; margin-right: 6px; }
+/* A tick box that is a button: it records who and when rather than toggling a field. */
+.ops-tick { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--ink-4); background: var(--paper); color: transparent; cursor: pointer; padding: 0; }
+.ops-tick:hover { border-color: var(--ink); color: var(--ink-3); }
+.ops-item-title { font: inherit; font-weight: 600; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); min-width: 0; line-height: 1.35; display: inline-flex; gap: 5px; align-items: baseline; }
+.ops-item-title:hover { text-decoration: underline; }
+.ops-agenda2 { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-size: 12.5px; }
+.ops-agenda2 li { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line-3); }
+.ops-agenda2 li:first-child { border-top: 0; }
+.ops-agenda2 li.is-done { opacity: .55; }
+.ops-agenda2 .ops-agenda-time { font-size: 11.5px; }
+.ops-agenda2 .ops-item-title { flex-direction: column; gap: 0; font-weight: 550; }
+
+/* A section that opens and closes: detail that should not crowd a page. */
+.ops-fold { background: var(--paper); border: 1px solid var(--line-2); border-radius: 9px; }
+.ops-fold-h { font-size: 13px; font-weight: 650; }
+.ops-fold-btn { display: flex; gap: 7px; align-items: center; width: 100%; padding: 9px 12px; font: inherit; font-weight: 650; background: none; border: 0; cursor: pointer; color: var(--ink); text-align: left; border-radius: 9px; }
+.ops-fold-btn:hover { background: var(--sunk); }
+.ops-fold-btn svg { flex: none; }
+.ops-fold-chev { transition: transform .12s; }
+.ops-fold.is-open .ops-fold-chev { transform: rotate(90deg); }
+.ops-fold-note { font-size: 12px; font-weight: 400; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
+.ops-fold-body { padding: 0 12px 12px; }
+
+/* The journey: header facts, then the checklist for the chosen stage. */
+.ops-jfacts { font-size: 12.5px; gap: 6px 14px; }
+.ops-contact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.ops-check-head { display: flex; justify-content: space-between; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+.ops-check-count { font-weight: 500; font-size: 12.5px; color: var(--ink-3); }
+.ops-check-about { margin: 2px 0 6px; }
+.ops-seg-sm button { font-size: 12px; padding: 4px 9px; }
+.ops-seg button:disabled { cursor: default; opacity: .45; }
+.ops-checklist { list-style: none; margin: 0; padding: 0; }
+.ops-step { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto minmax(0, auto); gap: 2px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-3); }
+.ops-checklist > .ops-step:first-child { border-top: 0; }
+.ops-step-mark { display: inline-grid; place-items: center; }
+.ops-step-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ops-step-title { font-weight: 600; line-height: 1.35; display: inline-flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.ops-step.is-done .ops-step-title, .ops-step.is-skip .ops-step-title { font-weight: 500; color: var(--ink-3); }
+.ops-step.is-skip .ops-step-title { text-decoration: line-through; text-decoration-color: var(--ink-4); }
+.ops-step.is-later .ops-step-title { font-weight: 500; color: var(--ink-2); }
+.ops-step.is-blocked { box-shadow: inset 3px 0 0 var(--neg); padding-left: 6px; margin-left: -6px; }
+.ops-step-sub { font-size: 12px; line-height: 1.4; }
+.ops-step-act { display: inline-flex; gap: 4px; justify-content: flex-end; }
+.ops-lock { color: var(--ink-3); display: inline-flex; }
+.ops-doer { display: inline-flex; gap: 4px; align-items: center; font-size: 11.5px; padding: 1px 7px; border-radius: 5px; white-space: nowrap; background: var(--sunk); color: var(--ink-2); }
+.ops-doer-rift { background: #eef0fb; color: #3a44a0; }
+.ops-doer-you { background: var(--ink); color: #fff; }
+.ops-doer-tc { background: #f3ecdf; color: #7a5313; }
+.ops-doer-pro { background: #fff; border: 1px solid var(--line-2); }
+.ops-confirm { display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; padding: 6px 8px; border-radius: 7px; background: var(--sunk); font-size: 12px; }
+.ops-add-step { display: inline-flex; gap: 4px; align-items: center; margin: 6px 0 4px; }
+
+/* Offers: one card each, leading with what reaches the seller. */
+.ops-offers { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 6px; }
+.ops-offer { border: 1px solid var(--line-2); border-radius: 9px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; background: var(--paper); }
+.ops-offer.is-best { border-color: var(--pos); box-shadow: inset 0 3px 0 var(--pos); }
+.ops-offer-top { display: flex; gap: 6px 8px; align-items: baseline; flex-wrap: wrap; }
+.ops-offer-top .ops-chip { margin-left: auto; }
+.ops-offer-reach { display: flex; gap: 4px 8px; align-items: baseline; flex-wrap: wrap; }
+.ops-offer-big { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.ops-offer-terms { font-size: 12.5px; color: var(--ink-2); }
+.ops-offer-foot { display: flex; gap: 6px 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; font-size: 12.5px; padding-top: 6px; border-top: 1px solid var(--line-3); }
+.ops-preview { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 8px; background: var(--canvas); border: 1px dashed var(--line); font-size: 13px; }
+.ops-preview label { font-weight: 600; }
+
+/* Settings: sections down the side, one label and one control per row, a
+   save bar when something has changed. */
+.ops-settings-frame { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1040px; }
+.ops-set-nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 12px; }
+.ops-set-nav .ops-nav { min-height: 32px; font-size: 12.5px; }
+.ops-set-card { padding: 12px 16px; }
+.ops-set-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, auto); gap: 6px 24px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line-3); }
+.ops-set-card > .ops-set-row:first-of-type, .ops-set-group .ops-h3 + .ops-set-row, .ops-h3 + .ops-set-row { border-top: 0; }
+.ops-set-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ops-set-label label, .ops-set-label > span { font-weight: 600; display: inline-flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.ops-set-group .ops-set-label label, .ops-set-group .ops-set-label > span { font-weight: 500; }
+.ops-set-label p { font-size: 12px; color: var(--ink-3); line-height: 1.45; }
+.ops-set-ctl { display: flex; justify-content: flex-end; min-width: 0; }
+.ops-set-ctl .ops-input { min-width: 0; }
+.ops-input-auto { min-width: 0; width: auto; max-width: 100%; }
+.ops-input-num { min-width: 0; width: 72px; }
+.ops-switch-wrap { display: inline-flex; gap: 8px; align-items: center; font-size: 12px; min-width: 60px; }
+.ops-switch { position: relative; width: 36px; height: 20px; border-radius: 12px; border: 0; padding: 0; background: var(--line); cursor: pointer; flex: none; }
+.ops-switch span { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .12s; }
+.ops-switch[aria-checked="true"] { background: var(--ink); }
+.ops-switch[aria-checked="true"] span { left: 18px; }
+.ops-switch:disabled { opacity: .45; cursor: default; }
+.ops-modes { border: 0; padding: 0; margin: 10px 0 4px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ops-mode { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border: 1px solid var(--line-2); border-radius: 8px; cursor: pointer; font-size: 12.5px; }
+.ops-mode.is-on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.ops-mode input { margin-top: 3px; accent-color: var(--ink); }
+.ops-plain { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 2px; }
+.ops-team { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.ops-team li { display: flex; gap: 10px; align-items: center; }
+.ops-avatar { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sunk); font-weight: 650; flex: none; }
+.ops-savebar { position: sticky; bottom: 12px; margin: 14px auto 0; max-width: 1040px; display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: var(--ink); color: #fff; border-radius: 9px; box-shadow: 0 10px 30px rgba(0,0,0,.2); font-size: 12.5px; }
+.ops-savebar .ops-btn:not(.ops-btn-p) { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+.ops-savebar .ops-btn-p { background: #fff; color: var(--ink); border-color: #fff; }
+
 /* The public stylesheet zeroes every heading and paragraph margin inside
    .rift at a higher specificity than a single class, which silently flattened
    every gap above: the panel's section headings sat on the buttons above them.
@@ -960,10 +1048,14 @@ th[aria-sort] .ops-sort { color: var(--ink); }
 .ops .ops-big { margin: 4px 0; }
 .ops .ops-day-head { margin-bottom: 4px; }
 .ops .ops-callout { margin-bottom: 10px; }
+.ops .ops-brief { margin-bottom: 12px; }
+.ops .ops-check-about { margin: 2px 0 6px; }
+.ops .ops-h3-first { margin-top: 0; }
+.ops .ops-fold-h { margin: 0; }
+.ops .ops-offer-reach, .ops .ops-offer-terms, .ops .ops-sub { margin: 0; }
+.ops .ops-set-label p { margin: 0; }
 
 @media (max-width: 1180px) {
-  .ops-today { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ops-today > .ops-col:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ops-split-open { grid-template-columns: minmax(0, 1fr) 320px; }
   .ops-lead { grid-template-columns: auto minmax(0, 1fr); }
   .ops-lead-sum, .ops-lead-actions { grid-column: 1 / -1; }
@@ -985,15 +1077,11 @@ th[aria-sort] .ops-sort { color: var(--ink); }
   .ops-crumb { flex: 1; font-size: 12.5px; color: var(--ink-3); }
   .ops-main { padding: 10px 16px 48px; }
   .ops-mockbar-btn { display: none; }
-  .ops-today, .ops-grid2, .ops-today > .ops-col:last-child { grid-template-columns: minmax(0, 1fr); }
-  .ops-today > .ops-col:last-child { display: flex; }
   .ops-input { min-width: 0; width: 100%; }
   .ops-search { flex: 1 1 100%; }
   .ops-lead { grid-template-columns: minmax(0, 1fr); }
   .ops-lead .ops-btn { min-height: 40px; }
   .ops-btn-sm { min-height: 34px; }
-  .ops-item-actions .ops-btn { min-height: 36px; }
-  .ops-glance-rift { flex-basis: 100%; }
   .ops-person-wide { grid-template-columns: minmax(0, 1fr); }
   .ops-trackbar { flex-direction: column; }
   .ops-track button { flex: 0 0 auto; }
@@ -1008,9 +1096,34 @@ th[aria-sort] .ops-sort { color: var(--ink); }
   .ops-tx .ops-ws { display: none; }
   .ops-tx td.ops-ws-sum { display: block; }
   .ops-panel { position: fixed; inset: 0; z-index: 40; border-radius: 0; max-height: none; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
-  .ops-dl-row, .ops-settings div, .ops-keys-list div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ops-dl-row, .ops-keys-list div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .ops-form-2 { grid-template-columns: minmax(0, 1fr); }
   .ops-funnel li { grid-template-columns: 100px minmax(0, 1fr) 36px; }
+}
+
+@media (max-width: 1180px) {
+  .ops-today2 { grid-template-columns: minmax(0, 1fr) 260px; }
+  .ops-contact { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 960px) {
+  .ops-today2, .ops-contact { grid-template-columns: minmax(0, 1fr); }
+  .ops-settings-frame { grid-template-columns: minmax(0, 1fr); }
+  .ops-set-nav { position: static; flex-direction: row; overflow-x: auto; }
+  .ops-set-nav .ops-nav { width: auto; white-space: nowrap; box-shadow: none; }
+  .ops-modes { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ops-grid2 { grid-template-columns: minmax(0, 1fr); }
+  .ops-todo, .ops-step { grid-template-columns: 22px minmax(0, 1fr); align-items: start; }
+  .ops-step-mark, .ops-tick, .ops-todo-icon { margin-top: 1px; }
+  .ops-todo > .ops-due, .ops-todo > .ops-todo-actions, .ops-step > .ops-doer, .ops-step > .ops-step-act { grid-column: 2; justify-self: start; }
+  .ops-todo-why { white-space: normal; }
+  .ops-tick { width: 22px; height: 22px; }
+  .ops-todo-actions .ops-btn, .ops-step-act .ops-btn { min-height: 36px; }
+  .ops-set-row { grid-template-columns: minmax(0, 1fr); }
+  .ops-set-ctl { justify-content: flex-start; }
+  .ops-fold-note { display: none; }
+  .ops-check-head .ops-seg { width: 100%; }
 }
 
 /* The buyer's pages (Blueprint v5 §7.2): areas across the top, Help anywhere.

@@ -21,6 +21,7 @@
  */
 
 import type { Stage, Workstream, WorkState } from "@/lib/core/progress";
+import type { StepMark } from "./ops-playbook";
 
 /** The mock-up's "now": Fri 25 Sep 2026, 9:31 am, Atlanta. */
 export const NOW = { day: "2026-09-25", time: "9:31 am", label: "Fri 25 Sep, 9:31 am" };
@@ -201,6 +202,9 @@ export interface MockJourney {
   team?: MockParty[];
   /** The journey so far, stage by stage: what the stage track opens. */
   story: { stage: Stage; at: string; what: string }[];
+  /** Where this journey's checklist steps stand, where that is not simply
+   *  "done" for a passed stage or "to do" (ops-playbook.ts, stepsFor). */
+  checks?: Record<string, StepMark>;
 }
 
 export const JOURNEYS: MockJourney[] = [
@@ -242,6 +246,13 @@ export const JOURNEYS: MockJourney[] = [
       { name: "Inspection report", added: "18 Sep", shared: "Both buyers" },
       { name: "Amendment to address concerns", added: "24 Sep", shared: "Both buyers" },
     ],
+    checks: {
+      "b-uc-read": { state: "done", by: "You", on: "9 Sep", note: "Rift read the contract; you checked and approved the dates" },
+      "b-uc-dates": { state: "done", by: "You", on: "9 Sep" },
+      "b-uc-kickoff": { state: "done", by: "You", on: "10 Sep", note: "Approved by you, sent by Rift" },
+      "b-inspect-book": { state: "done", by: "Meron", on: "11 Sep" },
+      "b-chase": { state: "doing", note: "Flagged the lender today: no word on the appraisal for 7 days" },
+    },
     story: [
       { stage: "prepare", at: "2 Aug", what: "Saved a $425k plan on the cost-to-buy page" },
       { stage: "prepare", at: "9 Aug", what: "Buyer agreement signed by both" },
@@ -279,6 +290,11 @@ export const JOURNEYS: MockJourney[] = [
       { address: "1407 Line St, Decatur (townhouse)", price: "$275,000", reactions: [{ who: "Selam", says: "Maybe" }, { who: "Yonas", says: "No" }], showing: "Video tour Sat 11:40" },
       { address: "310 Glenwood Ave, DeKalb", price: "$299,000", reactions: [{ who: "Selam", says: "No: the road" }, { who: "Yonas", says: "No" }] },
     ],
+    checks: {
+      "b-react": { state: "doing", note: "Selam and Yonas reacted to all three; they disagree on both townhomes" },
+      "b-tour-book": { state: "waiting", due: "Sat 26 Sep", note: "Video tours Sat 11:00 and 11:40, if you approve the search change. Listing agents have not confirmed access" },
+      "b-tour-plan": { state: "todo", note: "Prepared for you once the tours are confirmed" },
+    },
     story: [
       { stage: "prepare", at: "14 Sep", what: "Checked she can buy from abroad; saved the plan" },
       { stage: "prepare", at: "18 Sep", what: "Buyer agreement signed" },
@@ -307,6 +323,14 @@ export const JOURNEYS: MockJourney[] = [
       { name: "Offer B contract (PDF)", added: "Today 2:14 am", shared: "Not shared" },
       { name: "Seller's property disclosure", added: "30 Aug", shared: "Grace" },
     ],
+    checks: {
+      "s-receive": { state: "done", by: "Rift", on: "Today 2:14 am", note: "Offer A Thu 3:20 pm, by email; Offer B today 2:14 am, through the offer page" },
+      "s-check": { state: "doing", due: "today, before 4:00 pm", note: "Offer A checked Thu. Offer B's terms were checked by its sender, not yet by you" },
+      "s-compare": { state: "done", by: "Rift", on: "Today 2:20 am", note: "Offer B leaves her $460 more, and closes two weeks sooner" },
+      "s-present": { state: "doing", due: "today 4:00 pm", note: "Offer A presented Thu. Offer B at 4:00 today" },
+      "s-decide": { state: "todo", due: "today 6:00 pm, when Offer B expires" },
+      "s-counter": { state: "todo", note: "When Grace decides" },
+    },
     story: [
       { stage: "prepare", at: "20 Aug", what: "Saved a selling plan: what she'd keep" },
       { stage: "prepare", at: "28 Aug", what: "Listing agreement signed" },
@@ -351,6 +375,11 @@ export const JOURNEYS: MockJourney[] = [
       { name: "Purchase and sale agreement", added: "8 Aug", shared: "Hannah" },
       { name: "HO-6 policy", added: "Thu 24 Sep", shared: "From Hannah" },
     ],
+    checks: {
+      "b-settle": { state: "doing", due: "Mon 28 Sep", note: "The attorney expects to send it Monday" },
+      "b-settle-check": { state: "todo", due: "Mon 28 Sep", note: "When the statement arrives" },
+      "b-wire": { state: "ready", note: "Drafted from the attorney's instructions. Nothing sends until you approve" },
+    },
     story: [
       { stage: "prepare", at: "2 Jul", what: "Buyer agreement signed; pre-approved with Peach State CU" },
       { stage: "search", at: "3 Jul", what: "Search brief agreed: Midtown condo, at most $330,000" },
@@ -396,6 +425,13 @@ export const JOURNEYS: MockJourney[] = [
     homes: [{ address: "17 Ridge Walk, Smyrna", price: "$352,000", reactions: [{ who: "Marcus", says: "Under contract" }] }],
     offers: [{ from: "Marcus Bell (your offer)", price: "$352,000", terms: "Conventional, 10 days due diligence, close 22 Oct", status: "Accepted 3 Sep" }],
     documents: [{ name: "Title commitment", added: "Tue 22 Sep", shared: "Marcus" }],
+    checks: {
+      "b-uc-read": { state: "done", by: "You", on: "3 Sep", note: "Rift read the contract; you checked and approved the dates" },
+      "b-uc-dates": { state: "done", by: "You", on: "3 Sep" },
+      "b-uc-kickoff": { state: "done", by: "You", on: "4 Sep", note: "Approved by you, sent by Rift" },
+      "b-inspect-book": { state: "done", by: "Meron", on: "5 Sep" },
+      "b-chase": { state: "doing", note: "Will flag the seller's attorney Mon 28 Sep if the lien proof has not come" },
+    },
     story: [
       { stage: "prepare", at: "30 Jul", what: "Saved a $360k plan" },
       { stage: "prepare", at: "3 Aug", what: "Buyer agreement signed" },
