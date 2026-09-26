@@ -25,6 +25,9 @@ import { documentsFor } from "@/lib/db/documents";
 import { Offers } from "./Offers";
 import { Dates } from "./Dates";
 import { deadlinesFor } from "@/lib/db/deadlines";
+import { checklistFor, workForChecklist } from "@/lib/db/checklist";
+import { Checklist } from "./Checklist";
+import { marketDay } from "@/lib/core/progress";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -135,6 +138,10 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
      any layer that failed to load or holds something waiting for the agent:
      a failure is never folded away. */
   const stage = prog?.progress.stage;
+  /* After progress, not beside it: the checklist needs the stage and the
+     open contract's workstreams, and it is one small read. */
+  const ck = buying && prog ? await checklistFor(id, journey.side, prog.progress.stage, workForChecklist(prog.open?.work)) : null;
+  const ckData = ck && ck.ok && "data" in ck ? ck.data : null;
   const nobodyIn = Boolean(memberList && !memberList.some((m) => m.state === "active" || m.state === "invited"));
   const searchStatus = s?.status ?? "unknown";
   const searchNeedsYou = ["awaiting-approval", "manual-action-needed", "update-pending", "unknown"].includes(searchStatus);
@@ -218,6 +225,23 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
             </p>
           </section>
         )}
+
+        {buying && prog ? (
+          <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="checklist-h">
+            <h2 id="checklist-h" className="t-md w6">What needs doing</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+              Each stage&apos;s steps, who does each, and where it stands. Nothing counts as done without who and the day.
+            </div>
+            {ckData ? (
+              <Checklist journeyId={id} stage={prog.progress.stage} steps={ckData.steps} unavailable={ckData.unavailable}
+                today={marketDay()} agentFirst={agentFirst} />
+            ) : (
+              <p className="t-xs c-neg">
+                {ck && !ck.ok ? `The checklist did not load (${ck.error}). That is not the same as nothing to do.` : ck && "skipped" in ck ? `${ck.reason}.` : "The checklist did not load."}
+              </p>
+            )}
+          </section>
+        ) : null}
 
         <div className="opsx-layers">
           {buying ? (

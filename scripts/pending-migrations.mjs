@@ -44,6 +44,7 @@ export const APPLIED_WHEN = {
   "20260924020000_rift_offers_documents": "public.rift_documents",
   "20260924030000_rift_deadlines_jobs": "public.rift_deadlines",
   "20260925010000_rift_reconciliations": "public.rift_reconciliations",
+  "20260928000000_rift_step_marks": "public.rift_step_marks",
 };
 
 export function riftMigrations() {

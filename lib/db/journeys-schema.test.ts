@@ -732,3 +732,45 @@ describe("deletion (first-migration-proposal §deletion compatibility)", () => {
     await c.query("rollback");
   });
 });
+
+describe("the journey checklist (Blueprint v5 §8.6; lib/core/checklist.ts)", () => {
+  const rq = (n: number) => `acccccc0-1111-4000-8000-${String(n).padStart(12, "0")}`;
+  const put = (seq: number, state: string, more: { by?: string | null; on?: string | null; note?: string | null; step?: string } = {}, n = seq): [string, unknown[]] => [
+    `insert into rift_step_marks (agent_id, journey_id, step_id, seq, state, by_name, done_on, note, actor_label, request_id)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,'Agent A',$9)`,
+    [A, J1, more.step ?? "b-call", seq, state, more.by ?? null, more.on ?? null, more.note ?? null, rq(n)],
+  ];
+
+  test("done needs who and the day (rule 9); a report needs whose word; a skip says why", async (c) => {
+    await refused(c, ...put(1, "done", { on: "2026-09-20" }), /done_is_named/);
+    await refused(c, ...put(1, "done", { by: "Kaleb" }), /done_is_named/);
+    await refused(c, ...put(1, "reported"), /report_is_named/);
+    await refused(c, ...put(1, "not-needed"), /skip_says_why/);
+    await refused(c, ...put(1, "reopened"), /skip_says_why/);
+    await c.query(...put(1, "done", { by: "Kaleb", on: "2026-09-20" }));
+  });
+
+  test("a step id is the checklist's shape, and a state the checklist knows", async (c) => {
+    await refused(c, ...put(1, "done", { by: "K", on: "2026-09-20", step: "call" }, 20), /step_id_check/);
+    await refused(c, ...put(1, "ticked", { by: "K", on: "2026-09-20", step: "b-brief" }, 21), /state_check/);
+  });
+
+  test("two people recording the same step at once: one wins", async (c) => {
+    await refused(c, ...put(1, "reopened", { note: "Second call needed" }, 30), /rift_step_marks_seq/);
+    await c.query(...put(2, "reopened", { note: "Second call needed" }, 31));
+  });
+
+  test("it is history, and another agent sees none of it", async (c) => {
+    await refused(c, "update rift_step_marks set state = 'done' where journey_id = $1", [J1], /is history/);
+    const mine = await as(c, A_USER, async () => (await c.query("select count(*)::int n from rift_step_marks")).rows[0].n);
+    const theirs = await as(c, B_USER, async () => (await c.query("select count(*)::int n from rift_step_marks")).rows[0].n);
+    expect(mine).toBeGreaterThan(0);
+    expect(theirs).toBe(0);
+  });
+
+  test("another agent cannot record a mark on this agent's journey", async (c) => {
+    await as(c, B_USER, async () => {
+      await expect(c.query(...put(9, "done", { by: "K", on: "2026-09-20" }, 40))).rejects.toThrow(/row-level security/);
+    });
+  });
+});

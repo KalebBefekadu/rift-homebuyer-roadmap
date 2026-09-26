@@ -6,13 +6,14 @@ import {
   startJourney, relabelJourney, saveBrief, approveSearch, confirmSearchSetUp, pauseSearch,
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
-  moveStage, setJourneyStatus, openContract, closeContract, updateWork,
+  moveStage, setJourneyStatus, openContract, closeContract, updateWork, markStep,
   documentSlot, documentFinish, documentShare, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
 import type { CheckResult } from "@/lib/core/pilot";
+import { MARK_STATES, type MarkState } from "@/lib/core/checklist";
 import {
   JOURNEY_STATUSES, STAGES, WORKSTREAMS, WORK_STATES,
   type JourneyStatus, type Owner, type Stage, type WorkState, type Workstream,
@@ -203,6 +204,13 @@ export async function POST(req: Request) {
       return json(await updateWork(journeyId, str(b.contractId, 40), workstream, {
         state, owner, ownerName: str(b.ownerName, 160) || null, source: str(b.source, 160) || null,
         confirmedOn: str(b.confirmedOn, 10) || null, note: str(b.note, 500) || null,
+      }, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "step": {
+      const state = str(b.state, 20) as MarkState;
+      if (!MARK_STATES.includes(state)) return json({ ok: false, error: "That could not be read. Reload and try again." }, 400);
+      return json(await markStep(journeyId, str(b.stepId, 50), {
+        state, byName: str(b.byName, 160) || null, doneOn: str(b.doneOn, 10) || null, note: str(b.note, 500) || null,
       }, num(b.expectedSeq), str(b.requestId, 40)));
     }
     case "doc-slot":

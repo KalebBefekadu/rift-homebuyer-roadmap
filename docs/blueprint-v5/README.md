@@ -942,9 +942,17 @@ button), the names that say what each page is, sans-serif Operations headings, a
 "Needs you" list (failed jobs, contract dates, people past the reply target, actions due,
 sellers' choices, agreements running out, a stale rate or program, figures to check, follow-ups
 that need him) with everything else in layers: follow-up, who to call, the week, everyone being
-worked, started-not-finished, where people stop. Next: the journey page as the checklist
-(which needs the step records), Relationships as a table with a side panel, Transactions,
-Offers as cards, Settings as sections.
+worked, started-not-finished, where people stop. The journey page is layered, and has the
+checklist ("What needs doing", 28 Sep): the stage track, each stage's steps from the journey
+contracts, who does each, and where it stands (`lib/core/checklist.ts`, one table,
+`rift_step_marks`, migration 20260928000000). Differences from the mock-up, on purpose: a Rift
+step that does not run yet shows as the agent's, "until Rift can" (UX-04: no claim without a
+live monitor; today only the lead summary, the quiet-party flag and, for sellers, taking and
+ranking offers run); a passed stage's unrecorded steps say "not recorded" instead of being
+assumed done; coordinator steps say Coordinator but anyone signed in records them, since
+coordinator accounts do not exist yet; and who does each step is not yet editable in Settings.
+Next: Relationships as a table with a side panel, Transactions, Offers as cards, Settings as
+sections (with Checklists and Team), coordinator accounts.
 
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
@@ -1093,6 +1101,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | The journey checklist, built: steps, who does each, marks with who and the day (§8.6; migration 20260928000000) |
 | 26 Sep 2026 | Principle 6 and §4.8: simple first, more one press away (layers), site-wide. Operations: sidebar on every page; Today rebuilt as one list with layers (§8) |
 | 26 Sep 2026 | Operations mock-up, third version: the journey as an executed checklist with who does each step, a simpler Today and Offers, real Settings (§8) |
 | 25 Sep 2026 | Operations mock-up, second version from an audit against §8 (D15) |

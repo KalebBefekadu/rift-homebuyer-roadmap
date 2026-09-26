@@ -11,6 +11,8 @@ import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
 import type { FeedbackInput, StepInput } from "@/lib/core/tour";
 import { changeStage, changeStatus, endContract, recordContract, recordWorkAsAgent } from "@/lib/db/progress";
+import { recordStep } from "@/lib/db/checklist";
+import type { MarkInput } from "@/lib/core/checklist";
 import { recordBidStep, responseAsAgent, startBid } from "@/lib/db/bids";
 import { finishUpload, shareDocument, uploadSlot } from "@/lib/db/documents";
 import { AUDIENCES, type Audience } from "@/lib/core/document-share";
@@ -253,6 +255,16 @@ export async function updateWork(
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(contractId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordWorkAsAgent(journeyId, contractId, workstream, input, expectedSeq, g.name, requestId);
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r, (d) => ({ seq: d.seq }));
+}
+
+/** Record a mark against one checklist step (Blueprint v5 §8.6). */
+export async function markStep(journeyId: string, stepId: string, input: MarkInput, expectedSeq: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordStep(journeyId, stepId, input, expectedSeq, g.name, requestId);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
 }
