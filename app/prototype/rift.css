@@ -1288,3 +1288,16 @@ a.opsx-link:hover .w6 { text-decoration: underline; }
 /* A layer that is a row of a figures card (abroad results): it keeps the card's gutter. */
 .abroad-running > .layer-sum { padding: 11px 18px; border-bottom: 1px solid var(--line-3); }
 .abroad-running > .layer-body { padding: 0; }
+
+/* The quick switcher (Blueprint v5 §8.3). */
+.opsx-find { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 0 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink-3); font: inherit; font-size: 13px; cursor: pointer; }
+.opsx-find:hover { border-color: var(--ink-4); color: var(--ink); }
+.opsx-find span { flex: 1; text-align: left; }
+.opsx kbd { font: inherit; font-size: 11px; padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--sunk); color: var(--ink-3); }
+.opsx-dialog-wrap { position: fixed; inset: 0; z-index: 60; background: rgba(20,20,20,.35); display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px; }
+.opsx-dialog { width: min(560px, 100%); max-height: 70vh; display: flex; flex-direction: column; background: var(--paper); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
+.opsx-find-box { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-2); }
+.opsx-find-box input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 15px; color: var(--ink); }
+.opsx-hits { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
+.opsx-hit { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 10px; border-radius: 7px; cursor: pointer; }
+.opsx-hit[aria-selected="true"] { background: var(--sunk); box-shadow: inset 3px 0 0 var(--ink); }

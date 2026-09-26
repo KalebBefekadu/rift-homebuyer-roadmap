@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Switcher } from "./Switcher";
 import { Ico, Mark } from "@/components/rift/icons";
 import { signOut } from "./actions";
 
@@ -57,6 +58,7 @@ export function OpsNav({ agentName, undecided = 0 }: { agentName: string; undeci
           <Mark size={18} /><span>Operations</span>
         </Link>
         <Link href="/operations/add" className="opsx-add"><Ico.plus size={14} aria-hidden />Add someone</Link>
+        <Switcher />
         <nav aria-label="Pages" className="opsx-navgroup">
           {MAIN.map((n) => {
             const Icon = Ico[n.icon];
