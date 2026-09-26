@@ -257,7 +257,7 @@ pages, the offer upload and a closed summary link, on desktop and phone: 256 pas
   breakdowns whose picture already shows the same lines (cash to close, selling costs, what you
   keep, the monthly payment's parts, where the months come from). Tables that answer the page's
   own question stay open ("The two scenarios", "Across three prices", "What your situation
-  means"). **Done (29 Sep):** the saved plan (late, this week and next on the page; this month,
+  means"). **Done (26 Sep, later):** the saved plan (late, this week and next on the page; this month,
   later and done in layers that say how many are theirs); the client journey (contract parts that
   need them or are blocked on the page, the rest in one layer with how many are confirmed; the
   full search priorities list in a layer, what changed and what is still to decide on the page);
@@ -863,7 +863,7 @@ due time and its next action:
 - Snooze with an owner and a resume time (never moving a contract date), delegate with
   acceptance, pin with a reason and expiry (OPS-02).
 
-### 8.5 Relationships (built 29 Sep)
+### 8.5 Relationships (built 26 Sep)
 - A table: name, side, stage, next action and due date, last contact, source. Search, filters
   that persist, sort.
 - Opening a person opens a **detail panel** beside the list, so the agent keeps his place; a
@@ -900,7 +900,7 @@ due time and its next action:
   journey can add a step of its own. The ten workstreams are steps too, so Transactions and the
   checklist read the same. Source: `lib/core/checklist.ts` (the mock-up re-exports it), tested in
   `lib/core/checklist.test.ts`.
-- **Who does each step (built 29 Sep).** Settings, "Who does each step", lists both checklists
+- **Who does each step (built 26 Sep).** Settings, "Who does each step", lists both checklists
   with a layer per stage. A step can go to the agent, the coordinator or, only where Rift was
   designed to do it, Rift. Protected steps stay the agent's, and the client's and the outside
   professionals' are theirs whoever records them; both say so instead of offering a choice.
@@ -909,7 +909,7 @@ due time and its next action:
   can". Table `rift_step_assignments` (migration 20260929000000). **Not yet:** a journey adding a
   step of its own.
 
-### 8.7 Transactions and the team (built 29 Sep)
+### 8.7 Transactions and the team (built 26 Sep)
 - Every contract in one table: property, client, stage, next deadline, workstreams at a glance
   (a small status for each of the ten), and anything blocked or unconfirmed.
 - Opens straight to the journey's Contract tab.
@@ -923,7 +923,7 @@ due time and its next action:
   a problem, not there being none (UX-04). Rules in `lib/core/transactions.ts`, read across the
   book in one round per table by `lib/db/transactions.ts`. Buying journeys only: selling
   journeys have no contract record yet (§9).
-- **Coordinator accounts (built 29 Sep).** Settings, Team, lists the agent and each coordinator
+- **Coordinator accounts (built 26 Sep).** Settings, Team, lists the agent and each coordinator
   with whether they have signed in. Adding one takes a name and the email they will sign in
   with, and gives the agent a link to send himself: Rift sends nothing (AUTO-01). The
   coordinator signs in at `/operations/tasks` with that address; the first sign-in binds their
@@ -946,7 +946,7 @@ due time and its next action:
 - **Settings:** sections down the side with real controls and a save bar: profile and hours,
   team (what the coordinator can do), automation (the three modes, each workflow, what is always
   the agent's), checklists (who does each step), leads and emails, connections, privacy.
-  **Built (29 Sep):** three sections as tabs: Your decisions (the six rules, unchanged, each
+  **Built (26 Sep):** three sections as tabs: Your decisions (the six rules, unchanged, each
   saved on its own rather than with a save bar, for the reason on `settings/Rules.tsx`), Who does
   each step (§8.6) and Team (§8.7). Profile and hours, automation, leads and emails, connections
   and privacy are added as sections when there is something real behind each; a section with
@@ -1009,7 +1009,7 @@ coordinator accounts do not exist yet; and who does each step is not yet editabl
 Next: Relationships as a table with a side panel, Transactions, Offers as cards, Settings as
 sections (with Checklists and Team), coordinator accounts.
 
-**Built 29 Sep:** Relationships as a table with a side panel (§8.5), Transactions (§8.7),
+**Built 26 Sep, later:** Relationships as a table with a side panel (§8.5), Transactions (§8.7),
 Settings as sections with who does each step and the team (§8.6 to §8.8), coordinator accounts
 (§8.7), and the layers pass on the client pages (§4.8). Also fixed on the way: a seller's
 checklist named its stages as a buyer's ("Search", "Tour"); it now says List, Showings, Offers
@@ -1168,7 +1168,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
-| 29 Sep 2026 | Built: Relationships as a table with a side panel, Transactions, Settings in sections with who does each step and the team, coordinator accounts (§8.5 to §8.8; migration 20260929000000); layers on the saved plan, client journey and abroad readout (§4.8); D26 opened |
+| 26 Sep 2026 | Built: Relationships as a table with a side panel, Transactions, Settings in sections with who does each step and the team, coordinator accounts (§8.5 to §8.8; migration 20260929000000); layers on the saved plan, client journey and abroad readout (§4.8); D26 opened |
 | 28 Sep 2026 | The journey checklist, built: steps, who does each, marks with who and the day (§8.6; migration 20260928000000) |
 | 26 Sep 2026 | Principle 6 and §4.8: simple first, more one press away (layers), site-wide. Operations: sidebar on every page; Today rebuilt as one list with layers (§8) |
 | 26 Sep 2026 | Operations mock-up, third version: the journey as an executed checklist with who does each step, a simpler Today and Offers, real Settings (§8) |

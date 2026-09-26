@@ -21,7 +21,7 @@ import { memberError, type TeamMember } from "@/lib/core/team";
  */
 
 export const TEAM_NOT_YET =
-  "The team needs the database update of 29 Sep (migration 20260929000000, in output/pending-migrations.sql).";
+  "The team needs the database update (migration 20260929000000, in output/pending-migrations.sql).";
 export const teamTablesMissing = (msg: string) =>
   /rift_(team_members|step_assignments)|actor_kind|team_member_id/.test(msg) && /does not exist|schema cache|Could not find/i.test(msg);
 

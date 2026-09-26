@@ -96,7 +96,7 @@ export async function setAssignment(stepId: string, doer: string, agentLabel: st
     : await boundedWrite(db.from("rift_step_assignments").upsert({
         agent_id: agentId, step_id: stepId, doer, actor_label: agentLabel.slice(0, 120), updated_at: new Date().toISOString(),
       }, { onConflict: "agent_id,step_id" }), "who does it");
-  if (!w.ok) return teamTablesMissing(w.error) ? failed("Choosing who does each step needs the database update of 29 Sep (in output/pending-migrations.sql).") : w;
+  if (!w.ok) return teamTablesMissing(w.error) ? failed("Choosing who does each step needs a database update (migration 20260929000000, in output/pending-migrations.sql).") : w;
   return done({ stepId });
 }
 
