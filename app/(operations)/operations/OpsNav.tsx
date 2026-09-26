@@ -26,6 +26,7 @@ const MAIN: { href: string; label: string; icon: keyof typeof Ico; match: RegExp
   { href: "/operations", label: "Today", icon: "home", match: /^\/operations\/?$/ },
   { href: "/operations/clients", label: "Relationships", icon: "users", match: /^\/operations\/(clients|lead|journey|add)/ },
   { href: "/operations/search", label: "Search", icon: "search", match: /^\/operations\/search/ },
+  { href: "/operations/transactions", label: "Transactions", icon: "doc", match: /^\/operations\/transactions/ },
   { href: "/operations/offers", label: "Offers", icon: "scale", match: /^\/operations\/offers/ },
   { href: "/operations/calendar", label: "Calendar", icon: "cal", match: /^\/operations\/calendar/ },
 ];

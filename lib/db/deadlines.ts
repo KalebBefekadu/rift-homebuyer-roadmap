@@ -37,7 +37,7 @@ const NOT_YET = "Contract dates need a database update that has not been applied
 const CHANGED = "A date changed since the page loaded. Reload and try again";
 const rows = (r: DbResult<unknown>) => (r.ok && "data" in r ? (r.data as Record<string, unknown>[]) : []);
 
-const shapeRevision = (r: Record<string, unknown>): Revision => ({
+export const shapeRevision = (r: Record<string, unknown>): Revision => ({
   seq: r.seq as number, state: r.state as RevisionState, dueDate: r.due_date as string,
   dueTime: r.due_time ? String(r.due_time).slice(0, 5) : null, timezone: r.timezone as string, dueAt: (r.due_at as string | null) ?? null,
   rule: r.rule as RuleId, triggerLabel: (r.trigger_label as string | null) ?? null, triggerDate: (r.trigger_date as string | null) ?? null,

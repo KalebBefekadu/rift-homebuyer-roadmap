@@ -469,6 +469,9 @@ export interface RosterQuery {
   /** "working" is the board, "new" is nobody has picked them up yet. */
   filter?: "all" | "working" | "new" | "archived";
   side?: "buy" | "sell" | "all";
+  /** Newest first unless asked. "due" puts what is owed soonest on top,
+      and anyone with nothing owed after everyone who has something. */
+  sort?: "arrived" | "name" | "due";
   limit?: number;
 }
 
@@ -505,6 +508,7 @@ export async function roster(query: RosterQuery = {}, now = new Date()): Promise
   const q = escapeForOr((query.q ?? "").slice(0, 80));
   const filter = query.filter ?? "all";
   const side = query.side ?? "all";
+  const sort = query.sort ?? "arrived";
   /* One more than asked for, so "there are others" is a fact rather than a
      guess from a full page. */
   const limit = Math.min(Math.max(query.limit ?? 100, 1), 500);
@@ -526,6 +530,10 @@ export async function roster(query: RosterQuery = {}, now = new Date()): Promise
     /* Newest first. The board sorts by neglect because it answers "who have I
        left alone"; this answers "where is that person", and recency is the
        closest thing to the order they are held in someone's memory. */
+    if (sort === "name") b = b.order("name", { ascending: true, nullsFirst: false });
+    /* Only while the follow-up columns exist: ordering by one that does not
+       would fail the retry that dropped it from the select. */
+    else if (sort === "due" && sel.includes("next_due")) b = b.order("next_due", { ascending: true, nullsFirst: false });
     return b.order("created_at", { ascending: false }).limit(limit + 1);
   }, "reading the roster");
 
@@ -535,7 +543,7 @@ export async function roster(query: RosterQuery = {}, now = new Date()): Promise
   return done({
     people: rows.slice(0, limit).map((r) => shape(r, now)),
     more: rows.length > limit,
-    applied: { q, filter, side },
+    applied: { q, filter, side, sort },
   });
 }
 

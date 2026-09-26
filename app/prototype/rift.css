@@ -1260,3 +1260,21 @@ a.opsx-link:hover .w6 { text-decoration: underline; }
 .client-help > summary { list-style: none; cursor: pointer; }
 .client-help > summary::-webkit-details-marker { display: none; }
 .client-help-panel { position: absolute; right: 0; top: calc(100% + 8px); width: min(340px, calc(100vw - 32px)); z-index: 30; box-shadow: 0 12px 40px rgba(0,0,0,.12); }
+
+/* Relationships, built (Blueprint v5 §8.5): the name's link covers its row,
+   so the whole row opens the panel with no script. */
+.opsx-people tbody tr { position: relative; }
+.rift a.opsx-rowlink { color: var(--ink); }
+.opsx-rowlink::after { content: ""; position: absolute; inset: 0; }
+.opsx-rowlink:focus-visible { outline: none; }
+.opsx-rowlink:focus-visible::after { outline: 2px solid var(--ink); outline-offset: -2px; border-radius: 4px; }
+.opsx .ops-panel h3 { margin: 4px 0 6px; }
+.opsx .ops-dl dd, .opsx .ops-dl dt { margin: 0; }
+@media (max-width: 760px) {
+  .opsx .ops-panel { z-index: 50; }
+}
+.opsx-strip { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+.opsx-deals .ops-flags { min-width: 0; }
+.opsx h1.serif { margin: 0; }
+.opsx-inl { display: inline-flex; align-items: baseline; gap: 4px; }
+.opsx-inl > svg { flex: none; align-self: center; }

@@ -17,6 +17,12 @@ const SIDES = [
   { id: "sell", label: "Selling" },
 ] as const;
 
+const SORTS = [
+  { id: "arrived", label: "Newest" },
+  { id: "due", label: "Owed soonest" },
+  { id: "name", label: "Name" },
+] as const;
+
 /**
  * Finding one person.
  *
@@ -36,6 +42,7 @@ export function Search({ total, more }: { total: number; more: boolean }) {
   const [q, setQ] = useState(params.get("q") ?? "");
   const filter = params.get("filter") ?? "all";
   const side = params.get("side") ?? "all";
+  const sort = params.get("sort") ?? "arrived";
 
   /* The first render must not navigate. Without this the page replaces its own
      URL on load, which resets the scroll position every time he comes back. */
@@ -53,14 +60,14 @@ export function Search({ total, more }: { total: number; more: boolean }) {
 
   const go = (key: string, value: string) => {
     const next = new URLSearchParams(params.toString());
-    if (value === "all") next.delete(key); else next.set(key, value);
+    if (value === "all" || (key === "sort" && value === "arrived")) next.delete(key); else next.set(key, value);
     start(() => router.replace(`/operations/clients?${next}`, { scroll: false }));
   };
 
   return (
     <div className="col gap-3">
       <div className="row gap-2" style={{
-        height: 40, padding: "0 12px", borderRadius: 9,
+        maxWidth: 560, height: 40, padding: "0 12px", borderRadius: 9,
         border: "1px solid var(--line)", background: "var(--paper)",
       }}>
         <Ico.search size={15} className="c-4" />
@@ -98,6 +105,14 @@ export function Search({ total, more }: { total: number; more: boolean }) {
             {s.label}
           </button>
         ))}
+        <span style={{ width: 8 }} />
+        <label className="row gap-2 t-xs c-3">
+          Sort
+          <select className="input" value={sort} onChange={(e) => go("sort", e.target.value)}
+            style={{ height: 28, padding: "0 8px", fontSize: 12.5, width: "auto" }}>
+            {SORTS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+          </select>
+        </label>
       </div>
 
       {/* Said plainly, including when it is nothing. A list that silently shows

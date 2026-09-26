@@ -6,26 +6,20 @@ import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { roster, liveRelationships, finishedRelationships } from "@/lib/db/clients";
 import { rulesOrDefaults } from "@/lib/db/settings";
-import { STALL_CHIP } from "@/lib/core/pipeline";
 import { Forward } from "./Forward";
-import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { Ico } from "@/components/rift/icons";
 import { OpsNav } from "../OpsNav";
 import { Layer } from "@/components/rift/Layer";
 import { Search } from "./Search";
+import { Panel } from "./Panel";
+import { PeopleTable } from "./PeopleTable";
+import { marketDay } from "@/lib/core/progress";
 
-export const metadata: Metadata = { title: "People" };
+export const metadata: Metadata = { title: "Relationships" };
 export const dynamic = "force-dynamic";
 
-const WHEN = (iso: string | null) => {
-  if (!iso) return "";
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days <= 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} days ago`;
-  if (days < 365) return `${Math.round(days / 30)} months ago`;
-  return `${Math.round(days / 365)} years ago`;
-};
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 
 /**
  * Everybody, findable.
@@ -70,11 +64,25 @@ export default async function ClientsPage({
       q: one("q"),
       filter: (["all", "working", "new", "archived"] as const).find((f) => f === one("filter")) ?? "all",
       side: (["all", "buy", "sell"] as const).find((s) => s === one("side")) ?? "all",
+      sort: (["arrived", "name", "due"] as const).find((x) => x === one("sort")) ?? "arrived",
     }),
     rulesOrDefaults(agent.agentId),
     liveRelationships(),
     finishedRelationships(),
   ]);
+
+  const sort = (["arrived", "name", "due"] as const).find((x) => x === one("sort")) ?? "arrived";
+  const openId = UUID.test(one("open") ?? "") ? one("open")! : null;
+  const today = marketDay();
+  /* Every link on the page keeps what he searched for, filtered and sorted
+     by; only the person beside the list changes. */
+  const hrefWith = (change: Record<string, string | null>) => {
+    const next = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) { const x = Array.isArray(v) ? v[0] : v; if (x) next.set(k, x); }
+    for (const [k, v] of Object.entries(change)) { if (v) next.set(k, v); else next.delete(k); }
+    const q = next.toString();
+    return q ? `/operations/clients?${q}` : "/operations/clients";
+  };
 
   const people = list.ok && "data" in list ? list.data.people : [];
   const more = list.ok && "data" in list ? list.data.more : false;
@@ -99,8 +107,8 @@ export default async function ClientsPage({
       <main className="shell-w sec" style={{ paddingTop: 28 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Relationships</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
-          Everyone, in the order they arrived. Today ranks them by what needs doing;
-          this is for when you already know whose name you are looking for.
+          Everyone you have, as a list. Choose a name to see them beside it;
+          Today is where what needs doing is ranked.
         </p>
 
         {/* Only when the roster is unfiltered. A forecast sitting above the
@@ -125,7 +133,7 @@ export default async function ClientsPage({
           </div>
         ) : null}
 
-        <div style={{ marginTop: 20, maxWidth: 560 }}>
+        <div style={{ marginTop: 20 }}>
           <Suspense fallback={<div className="t-sm c-4">Loading…</div>}>
             <Search total={people.length} more={more} />
           </Suspense>
@@ -159,63 +167,13 @@ export default async function ClientsPage({
             ) : null}
           </div>
         ) : (
-          <div className="card" style={{ marginTop: 20, overflow: "hidden" }}>
-            {people.map((p, i) => (
-              <Link
-                key={p.id}
-                href={`/operations/lead/${p.id}`}
-                className="between gap-3"
-                style={{
-                  padding: "13px 16px", gap: 12,
-                  borderBottom: i === people.length - 1 ? 0 : "1px solid var(--line-3)",
-                }}
-              >
-                <div className="col" style={{ gap: 3, minWidth: 0 }}>
-                  <div className="row gap-2 wrap">
-                    {/* The name, or an honest stand-in. A row reading only a dash is
-                        somebody who left an email and no name, and pretending
-                        otherwise makes him look for a record that is not
-                        missing. */}
-                    <span className="t-md w6">{p.name?.trim() || p.email || "Someone who left no name"}</span>
-                    <span className="chip t-2xs">{p.side === "buy" ? "Buying" : "Selling"}</span>
-                    {p.band ? (
-                      <span className={`chip t-2xs ${BAND_TONE[p.band as Band] ?? ""}`}>
-                        {BAND_LABEL[p.band as Band] ?? p.band}
-                      </span>
-                    ) : null}
-                    {p.archivedAt ? <span className="chip t-2xs">Archived</span> : null}
-                  </div>
-
-                  <div className="t-xs c-4" style={{
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>
-                    {[p.name?.trim() ? p.email : null, p.phone, `arrived ${WHEN(p.createdAt)}`]
-                      .filter(Boolean).join(" · ")}
-                  </div>
-
-                  {p.nextAction ? (
-                    <div className="t-xs c-3" style={{ marginTop: 2 }}>
-                      <Ico.clock size={11} style={{ marginRight: 5 }} />
-                      {p.nextAction}{p.nextDue ? `, ${p.nextDue}` : ""}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="row gap-2" style={{ flex: "none" }}>
-                  {p.stage ? (
-                    <span className="t-xs c-3 hide-sm">{p.stage}</span>
-                  ) : (
-                    <span className="t-xs c-4 hide-sm">Not picked up</span>
-                  )}
-                  {p.stall ? (
-                    <span className={`chip t-2xs ${STALL_CHIP[p.stall.level].c}`}>
-                      {STALL_CHIP[p.stall.level].l}
-                    </span>
-                  ) : null}
-                  <Ico.chevR size={14} className="c-4" />
-                </div>
-              </Link>
-            ))}
+          <div className={`ops-split ${openId ? "ops-split-open" : ""}`} style={{ marginTop: 16 }}>
+            <PeopleTable people={people} openId={openId} today={today} sort={sort} hrefOf={(id) => hrefWith({ open: id })} />
+            {openId ? (
+              <Suspense key={openId} fallback={<aside className="ops-panel t-sm c-4">Loading…</aside>}>
+                <Panel id={openId} closeHref={hrefWith({ open: null })} />
+              </Suspense>
+            ) : null}
           </div>
         )}
       </main>

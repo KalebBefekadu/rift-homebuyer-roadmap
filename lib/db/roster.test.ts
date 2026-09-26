@@ -151,6 +151,17 @@ describe("ordering", () => {
   });
 });
 
+describe("sorting when asked", () => {
+  it("sorts by name or by what is owed soonest, and keeps newest first as the tiebreak", async () => {
+    build();
+    await roster({ sort: "name" });
+    expect(db.calls[0]!.filters.filter((f) => f.startsWith("order:"))).toEqual(["order:name", "order:created_at desc"]);
+    build();
+    await roster({ sort: "due" });
+    expect(db.calls[0]!.filters.filter((f) => f.startsWith("order:"))).toEqual(["order:next_due", "order:created_at desc"]);
+  });
+});
+
 describe("what it reports back", () => {
   it("echoes the filters it actually applied", async () => {
     /* So the page cannot describe a search it did not run: including the
@@ -158,7 +169,7 @@ describe("what it reports back", () => {
     build();
     const r = await roster({ q: "sa,ra", filter: "working", side: "sell" });
     expect(r.ok && "data" in r && r.data.applied)
-      .toEqual({ q: "sa ra", filter: "working", side: "sell" });
+      .toEqual({ q: "sa ra", filter: "working", side: "sell", sort: "arrived" });
   });
 
   it("degrades with no database rather than returning an empty roster", async () => {
