@@ -774,3 +774,51 @@ describe("the journey checklist (Blueprint v5 §8.6; lib/core/checklist.ts)", ()
     });
   });
 });
+
+describe("the team and who does each step (Blueprint v5 §8.6, §8.7)", () => {
+  const M1 = "acccccc0-2222-4000-8000-000000000001";
+  const invite = (id: string, email: string, name = "Meron"): [string, unknown[]] => [
+    "insert into rift_team_members (id, agent_id, email, display_name, actor_label) values ($1,$2,$3,$4,'Agent A')", [id, A, email, name],
+  ];
+
+  test("an address is stored lower-case and live once per agent", async (c) => {
+    await refused(c, ...invite("acccccc0-2222-4000-8000-000000000009", "Meron@Example.com"), /email_check/);
+    await c.query(...invite(M1, "meron@example.com"));
+    await refused(c, ...invite("acccccc0-2222-4000-8000-000000000002", "meron@example.com"), /email_live/);
+  });
+
+  test("accepting binds an account, and removing says why", async (c) => {
+    await refused(c, "update rift_team_members set accepted_at = now() where id = $1", [M1], /accepted_has_user/);
+    await refused(c, "update rift_team_members set revoked_at = now() where id = $1", [M1], /revoked_says_why/);
+    await c.query("update rift_team_members set accepted_at = now(), auth_user_id = $2 where id = $1", [M1, CLIENT_USER]);
+  });
+
+  test("a coordinator's mark names the coordinator, and an agent's names nobody else", async (c) => {
+    const mark = (kind: string, member: string | null, n: number): [string, unknown[]] => [
+      `insert into rift_step_marks (agent_id, journey_id, step_id, seq, state, by_name, done_on, actor_label, request_id, actor_kind, team_member_id)
+       values ($1,$2,'b-kickoff',$3,'done','Meron','2026-09-20','Meron',$4,$5,$6)`,
+      [A, J1, n, `acccccc0-3333-4000-8000-${String(n).padStart(12, "0")}`, kind, member],
+    ];
+    await refused(c, ...mark("coordinator", null, 1), /coordinator_named/);
+    await refused(c, ...mark("agent", M1, 1), /coordinator_named/);
+    await c.query(...mark("coordinator", M1, 1));
+  });
+
+  test("a coordinator is not deleted while their marks exist", async (c) => {
+    await refused(c, "delete from rift_team_members where id = $1", [M1], /member_same_agent/);
+  });
+
+  test("an assignment is one of the agent's three, per step", async (c) => {
+    const assign = (step: string, doer: string): [string, unknown[]] => [
+      "insert into rift_step_assignments (agent_id, step_id, doer, actor_label) values ($1,$2,$3,'Agent A')", [A, step, doer],
+    ];
+    await refused(c, ...assign("b-kickoff", "pro"), /doer_check/);
+    await c.query(...assign("b-kickoff", "tc"));
+    await refused(c, ...assign("b-kickoff", "you"), /rift_step_assignments_pkey/);
+  });
+
+  test("another agent sees neither the team nor the assignments", async (c) => {
+    const n = await as(c, B_USER, async () => (await c.query("select (select count(*) from rift_team_members) + (select count(*) from rift_step_assignments) n")).rows[0].n);
+    expect(Number(n)).toBe(0);
+  });
+});

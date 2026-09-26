@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Ico } from "@/components/rift/icons";
-import { STAGES, STAGE_LABEL, type Stage } from "@/lib/core/progress";
-import { STEP_STATE_LABEL, isOpen, markError, type MarkState, type StepState, type StepView } from "@/lib/core/checklist";
+import { STAGES, type Stage } from "@/lib/core/progress";
+import { STEP_STATE_LABEL, isOpen, markError, stageName, type MarkState, type StepState, type StepView } from "@/lib/core/checklist";
 import { useWrite } from "./useWrite";
 
-const newRequest = () =>
+export const newRequest = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
@@ -61,6 +61,8 @@ export function Checklist({ journeyId, stage, steps, unavailable, today, agentFi
   const [picked, setPicked] = useState<Stage>(stage);
   const [req, setReq] = useState(newRequest);
   const now = STAGES.indexOf(stage);
+  const side = steps[0]?.step.id.startsWith("s-") ? "sell" : "buy";
+  const STAGE_LABEL = Object.fromEntries(STAGES.map((s) => [s, stageName(side, s)])) as Record<Stage, string>;
   /* On a phone the track scrolls sideways; the stage they are in starts in view. */
   const track = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -111,8 +113,13 @@ export function Checklist({ journeyId, stage, steps, unavailable, today, agentFi
   );
 }
 
-function StepRow({ v, busy, locked, today, agentFirst, run }: {
-  v: StepView; busy: boolean; locked: boolean; today: string; agentFirst: string;
+/**
+ * One step, with its one button. `me` is who is recording, first name, and
+ * `mine` the doers whose steps are theirs: "Who did it" starts with their
+ * name on those, and is typed on anyone else's.
+ */
+export function StepRow({ v, busy, locked, today, agentFirst: me, mine = ["you", "rift"], canReopen = true, run }: {
+  v: StepView; busy: boolean; locked: boolean; today: string; agentFirst: string; mine?: StepView["doer"][]; canReopen?: boolean;
   run: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [form, setForm] = useState<null | MarkState>(null);
@@ -134,7 +141,7 @@ function StepRow({ v, busy, locked, today, agentFirst, run }: {
     setNote("");
     setDoneOn(today);
     /* Whoever does it, when that is the agent; someone who confirms it is typed. */
-    setByName(state === "done" && !v.step.confirms && (v.doer === "you" || v.doer === "rift") ? agentFirst : "");
+    setByName(state === "done" && !v.step.confirms && mine.includes(v.doer) ? me : "");
   };
   const save = async () => {
     const input = { state: form!, byName, doneOn: form === "done" ? doneOn : null, note };
@@ -200,7 +207,7 @@ function StepRow({ v, busy, locked, today, agentFirst, run }: {
             {/* One button, the rest one press away (§4.8). */}
             <button className="btn btn-g btn-sm" aria-expanded={more} aria-label={`More for: ${v.step.title}`} onClick={() => setMore((m) => !m)}><Ico.more size={14} aria-hidden /></button>
           </>
-        ) : recorded && !locked ? (
+        ) : recorded && !locked && canReopen ? (
           <button className="btn btn-g btn-sm" disabled={busy} onClick={() => open("reopened")}>Reopen</button>
         ) : null}
       </span>

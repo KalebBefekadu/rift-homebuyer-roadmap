@@ -5,9 +5,9 @@
  */
 export type Sent = { ok: boolean; error?: string } & Record<string, unknown>;
 
-export async function send(op: string, body: Record<string, unknown>): Promise<Sent> {
+export async function send(op: string, body: Record<string, unknown>, path = "/api/operations/journey"): Promise<Sent> {
   try {
-    const res = await fetch("/api/operations/journey", {
+    const res = await fetch(path, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ op, ...body }),

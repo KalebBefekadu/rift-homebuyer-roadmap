@@ -264,7 +264,7 @@ export async function markStep(journeyId: string, stepId: string, input: MarkInp
   const g = await gate();
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
-  const r = await recordStep(journeyId, stepId, input, expectedSeq, g.name, requestId);
+  const r = await recordStep(journeyId, stepId, input, expectedSeq, { kind: "agent", label: g.name }, requestId);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
 }

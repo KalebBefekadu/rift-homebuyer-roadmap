@@ -35,7 +35,14 @@
  * Pure, like every rule in lib/core. lib/db/checklist.ts is the only writer.
  */
 
-import { STAGES, marketDay, type Stage, type Workstream, type WorkState } from "./progress";
+import { STAGES, STAGE_LABEL, marketDay, type Stage, type Workstream, type WorkState } from "./progress";
+
+/** A seller's journey has the same seven stages under the names a seller uses. */
+export const SELL_STAGE_LABEL: Record<Stage, string> = {
+  prepare: "Prepare", search: "List", tour: "Showings", offer: "Offers",
+  "under-contract": "Under contract", close: "Close", own: "After the sale",
+};
+export const stageName = (side: "buy" | "sell", s: Stage) => (side === "sell" ? SELL_STAGE_LABEL[s] : STAGE_LABEL[s]);
 
 /** Who does a step. "tc" is the transaction coordinator. */
 export type Doer = "rift" | "you" | "tc" | "client" | "pro";
@@ -185,6 +192,43 @@ export const SELL_STEPS: Step[] = [
 
 export const stepsFor = (side: "buy" | "sell") => (side === "buy" ? BUY_STEPS : SELL_STEPS);
 export const stepById = (side: "buy" | "sell", id: string) => stepsFor(side).find((s) => s.id === id);
+export const anyStepById = (id: string) => stepById(id.startsWith("s-") ? "sell" : "buy", id);
+
+/* ------------------------------------------------------------------ *
+ * Who does each step: the agent's to change, within limits
+ * ------------------------------------------------------------------ */
+
+/** The three an agent can hand a step to. The client and outside professionals do theirs whoever records it. */
+export type Assignable = "you" | "tc" | "rift";
+export const ASSIGNABLE: Assignable[] = ["you", "tc", "rift"];
+
+/**
+ * Who a step may be handed to; empty when it is not the agent's to hand out.
+ * A protected step stays the agent's in every mode. Rift is offered only for
+ * the steps it was designed for: handing Rift a step it has no automation for
+ * would put "Rift" beside something nobody does (UX-04).
+ */
+export function assignableTo(step: Step): Assignable[] {
+  if (step.protected || step.doer === "client" || step.doer === "pro") return [];
+  return step.doer === "rift" ? ["rift", "you", "tc"] : ["you", "tc"];
+}
+
+export function assignmentError(step: Step | undefined, doer: string): string | null {
+  if (!step) return "That is not a step on either checklist";
+  const allowed = assignableTo(step);
+  if (!allowed.length) {
+    return step.protected ? "This one stays yours whatever is automated" : "This one is done by someone outside your team";
+  }
+  if (!allowed.includes(doer as Assignable)) return doer === "rift" ? "Rift has nothing built for this step" : "Choose who does it";
+  return null;
+}
+
+/** Who may record a mark: the agent, anything; a coordinator, only the steps that are the coordinator's. */
+export function recordError(view: Pick<StepView, "doer" | "step">, actor: "agent" | "coordinator"): string | null {
+  if (actor === "agent") return null;
+  if (view.step.protected) return "Only the agent records this one";
+  return view.doer === "tc" ? null : "This step is not assigned to the coordinator";
+}
 
 /* ------------------------------------------------------------------ *
  * Marks: what the agent records against a step
@@ -296,6 +340,8 @@ export interface StepView {
   step: Step;
   /** Who does it now: a Rift step that does not run yet is the agent's. */
   doer: Doer;
+  /** The agent changed who does it from the default. */
+  assigned: boolean;
   /** "until Rift can", when Rift is meant to and cannot yet. */
   doerNote: string | null;
   state: StepState;
@@ -314,15 +360,23 @@ export interface StepView {
  * `work` is the open contract's workstreams, or null with none. A workstream
  * step with no contract is to do (or not recorded, in a passed stage).
  */
-export function checklist(side: "buy" | "sell", stage: Stage, marks: Map<string, StepMark[]>, work: WorkForChecklist[] | null): StepView[] {
+export function checklist(
+  side: "buy" | "sell", stage: Stage, marks: Map<string, StepMark[]>, work: WorkForChecklist[] | null,
+  assignments: Map<string, Assignable> = new Map(),
+): StepView[] {
   const now = STAGES.indexOf(stage);
   return stepsFor(side).map((step) => {
-    const planned = step.doer === "rift" && !step.live;
-    const doer: Doer = planned ? "you" : step.doer;
+    /* An assignment the step does not allow (a stale row, a step that became
+       protected) is ignored rather than obeyed. */
+    const chosen = assignments.get(step.id);
+    const valid = chosen && assignableTo(step).includes(chosen) ? chosen : null;
+    const intended: Doer = valid ?? step.doer;
+    const planned = intended === "rift" && !step.live;
+    const doer: Doer = planned ? "you" : intended;
     const doerNote = planned ? "until Rift can" : null;
     const history = [...(marks.get(step.id) ?? [])].sort((a, b) => a.seq - b.seq);
     const passed = STAGES.indexOf(step.stage) < now;
-    const base = { step, doer, doerNote, history };
+    const base = { step, doer, doerNote, history, assigned: Boolean(valid && valid !== step.doer) };
 
     const w = step.stream ? work?.find((x) => x.workstream === step.stream) : undefined;
     if (w) {
@@ -336,7 +390,7 @@ export function checklist(side: "buy" | "sell", stage: Stage, marks: Map<string,
     const latest = history[history.length - 1];
     /* A Rift step that really runs is running from the stage it belongs to:
        nobody ticks a monitor. */
-    if (step.doer === "rift" && step.live && !latest && STAGES.indexOf(step.stage) <= now) {
+    if (doer === "rift" && step.live && !latest && STAGES.indexOf(step.stage) <= now) {
       return { ...base, state: "doing" as StepState, fromWorkstream: false, by: null, on: null, note: "Runs on its own" };
     }
     if (latest && latest.state !== "reopened") {

@@ -26,7 +26,10 @@ export async function GET(request: Request) {
   const next = safeNext(searchParams.get("next"));
   /* A buyer's link fails back to the buyer's sign-in page, never to the
      agent's: "Operations: sign in" is not something a client should see. */
-  const signIn = next.startsWith("/app") ? "/app/sign-in" : "/operations/sign-in";
+  const signIn = next.startsWith("/app") ? "/app/sign-in"
+    /* A coordinator's link fails back to their own page, which signs them in. */
+    : next.startsWith("/operations/tasks") ? "/operations/tasks"
+    : "/operations/sign-in";
 
   if (!code) return NextResponse.redirect(`${origin}${signIn}?error=missing_code`);
 

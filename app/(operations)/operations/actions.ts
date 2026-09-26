@@ -105,6 +105,13 @@ export async function signOut() {
   redirect("/operations/sign-in");
 }
 
+/** A coordinator signs out back to their own page, which is where they sign in. */
+export async function signOutCoordinator() {
+  const supabase = await createClient();
+  if (supabase) await supabase.auth.signOut();
+  redirect("/operations/tasks");
+}
+
 /* ------------------------------------------------------------------ *
  * Managing people who never took an assessment
  * ------------------------------------------------------------------ */

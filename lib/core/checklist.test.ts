@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUY_STEPS, SELL_STEPS, checklist, markError, stepById, type StepMark } from "./checklist";
+import { BUY_STEPS, SELL_STEPS, assignableTo, assignmentError, checklist, markError, recordError, stepById, type Assignable, type StepMark } from "./checklist";
 import { STAGES, WORKSTREAMS } from "./progress";
 
 const mark = (seq: number, state: StepMark["state"], more: Partial<StepMark> = {}): StepMark =>
@@ -118,5 +118,46 @@ describe("recording a step", () => {
     expect(markError(call, "todo", { state: "reopened", note: "x" }, TODAY)).toMatch(/Only a recorded step/);
     expect(markError(call, "done", { state: "reopened" }, TODAY)).toBe("Say why it is open again");
     expect(markError(call, "done", { state: "reopened", note: "Wrong person" }, TODAY)).toBeNull();
+  });
+});
+
+describe("who does each step, as the agent sets it", () => {
+  const both = [...BUY_STEPS, ...SELL_STEPS];
+
+  it("never hands away a protected step, or the client's or a professional's", () => {
+    for (const s of both.filter((x) => x.protected || x.doer === "client" || x.doer === "pro")) expect(assignableTo(s), s.id).toEqual([]);
+    expect(assignmentError(stepById("buy", "b-agree-send"), "tc")).toMatch(/stays yours/);
+  });
+
+  it("offers Rift only for the steps Rift was designed for (UX-04)", () => {
+    expect(assignmentError(stepById("buy", "b-call"), "rift")).toMatch(/nothing built/);
+    const riftStep = BUY_STEPS.find((s) => s.doer === "rift")!;
+    expect(assignableTo(riftStep)).toContain("rift");
+  });
+
+  it("gives a step to the coordinator, and says it was changed", () => {
+    const view = checklist("buy", "prepare", new Map(), null, new Map<string, Assignable>([["b-call", "tc"]]));
+    expect(view.find((v) => v.step.id === "b-call")).toMatchObject({ doer: "tc", assigned: true });
+    expect(view.find((v) => v.step.id === "b-plan")).toMatchObject({ assigned: false });
+  });
+
+  it("keeps a Rift step that does not run yet with its new owner, not \"until Rift can\"", () => {
+    const planned = BUY_STEPS.find((s) => s.doer === "rift" && !s.live)!;
+    const view = checklist("buy", planned.stage, new Map(), null, new Map<string, Assignable>([[planned.id, "tc"]]));
+    expect(view.find((v) => v.step.id === planned.id)).toMatchObject({ doer: "tc", doerNote: null });
+  });
+
+  it("ignores a stored assignment the step does not allow", () => {
+    const view = checklist("buy", "prepare", new Map(), null, new Map<string, Assignable>([["b-agree-send", "tc"]]));
+    expect(view.find((v) => v.step.id === "b-agree-send")).toMatchObject({ doer: "you", assigned: false });
+  });
+
+  it("lets a coordinator record only the coordinator's steps", () => {
+    const view = checklist("buy", "prepare", new Map(), null);
+    const tcStep = view.find((v) => v.doer === "tc")!;
+    const yours = view.find((v) => v.doer === "you" && !v.step.protected)!;
+    expect(recordError(tcStep, "coordinator")).toBeNull();
+    expect(recordError(yours, "coordinator")).toMatch(/not assigned/);
+    expect(recordError(yours, "agent")).toBeNull();
   });
 });

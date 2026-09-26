@@ -16,7 +16,7 @@ import { send, type Sent } from "../send";
  * page never changes, the button comes back after ten seconds rather than
  * staying on "Saving…".
  */
-export function useWrite(stamp: string) {
+export function useWrite(stamp: string, path?: string) {
   const refresh = useRefresh(stamp);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export function useWrite(stamp: string) {
   const write = async (op: string, body: Record<string, unknown>, opts?: { reload?: boolean }): Promise<Sent> => {
     const mine = ++attempt.current;
     setBusy(true);
-    const r = await send(op, body);
+    const r = await send(op, body, path);
     if (!r.ok) {
       setError(r.error ?? "That did not work");
       setBusy(false);

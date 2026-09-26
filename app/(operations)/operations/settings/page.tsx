@@ -8,6 +8,18 @@ import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, type BusinessRules } from "@/lib
 import { Ico } from "@/components/rift/icons";
 import { Rules } from "./Rules";
 import { OpsNav } from "../OpsNav";
+import { Assignments } from "./Assignments";
+import { Team } from "./Team";
+import { readTeam, TEAM_NOT_YET } from "@/lib/db/team";
+import { assignmentsForSettings } from "@/lib/db/checklist";
+import { memberState } from "@/lib/core/team";
+
+const SECTIONS = [
+  { id: "decisions", label: "Your decisions", sub: "Six numbers and policies only you or your broker can set" },
+  { id: "steps", label: "Who does each step", sub: "The buying and selling checklists: you, your coordinator or Rift" },
+  { id: "team", label: "Team", sub: "Who else can sign in, and what they can do" },
+] as const;
+type Section = (typeof SECTIONS)[number]["id"];
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -32,7 +44,9 @@ export const dynamic = "force-dynamic";
  * default". A settings screen that shows six values and no provenance lets a
  * default become a policy by being looked at a few times.
  */
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const asked = (await searchParams).section;
+  const section: Section = SECTIONS.find((x) => x.id === asked)?.id ?? "decisions";
   const session = await agentSession();
   /* A blip is not an expired session. Redirecting on "unknown" shows the
      agent a sign-in form when his cookie is fine, which says something false
@@ -45,7 +59,7 @@ export default async function SettingsPage() {
 
   if (!read.ok) {
     return (
-      <Frame agentName={agent.name} undecided={undecidedOf(read)}>
+      <Frame agentName={agent.name} undecided={undecidedOf(read)} section="decisions">
         <h1 className="serif" style={{ fontSize: 26 }}>Settings could not be loaded.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
           The database did not answer, so this page cannot tell a value you chose from a default;
@@ -59,7 +73,7 @@ export default async function SettingsPage() {
 
   if ("skipped" in read) {
     return (
-      <Frame agentName={agent.name} undecided={undecidedOf(read)}>
+      <Frame agentName={agent.name} undecided={undecidedOf(read)} section="decisions">
         <h1 className="serif" style={{ fontSize: 26 }}>Settings need a database.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
           {read.reason}. Until then every figure in the product runs on the defaults below, which
@@ -73,14 +87,29 @@ export default async function SettingsPage() {
 
   const { rules, undecided, decided } = read.data;
 
+  if (section !== "decisions") {
+    const [team, changed] = await Promise.all([readTeam(), assignmentsForSettings()]);
+    const members = team.ok && "data" in team && team.data ? team.data : [];
+    const teamUnavailable = !team.ok ? `The team could not be read (${team.error}).` : "skipped" in team ? `${team.reason}.` : team.data === null ? TEAM_NOT_YET : null;
+    const stepsUnavailable = !changed.ok ? `Who does each step could not be read (${changed.error}); nothing can be changed until it can.`
+      : "skipped" in changed ? `${changed.reason}.` : changed.data === null ? TEAM_NOT_YET : null;
+    const list = changed.ok && "data" in changed && changed.data ? [...changed.data].map(([stepId, c]) => ({ stepId, ...c })) : [];
+    return (
+      <Frame agentName={agent.name} undecided={undecided.length} section={section}>
+        {section === "steps" ? (
+          <Assignments changed={list} unavailable={stepsUnavailable} hasCoordinator={members.some((m) => memberState(m) !== "removed")} />
+        ) : (
+          <Team members={members} unavailable={teamUnavailable} agentName={agent.name} />
+        )}
+      </Frame>
+    );
+  }
+
   return (
-    <Frame agentName={agent.name} undecided={undecidedOf(read)}>
+    <Frame agentName={agent.name} undecided={undecidedOf(read)} section="decisions">
       <div className="between wrap gap-3" style={{ alignItems: "flex-start" }}>
         <div>
-          <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,32px)", letterSpacing: "-0.02em" }}>
-            Your decisions
-          </h1>
-          <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 560 }}>
+          <p className="t-sm c-3" style={{ lineHeight: 1.6, maxWidth: 560 }}>
             Six things the product cannot decide for you. Each says what it changes and who owns
             it. Two of them are the broker&rsquo;s, not yours.
           </p>
@@ -143,11 +172,30 @@ export default async function SettingsPage() {
   );
 }
 
-function Frame({ children, agentName, undecided }: { children: React.ReactNode; agentName: string; undecided: number }) {
+/**
+ * Settings as settings: a title, the sections as tabs, and one section at a
+ * time. Each section is a link, so it works before any script and back
+ * returns to the one he was on.
+ */
+function Frame({ children, agentName, undecided, section }: { children: React.ReactNode; agentName: string; undecided: number; section: Section }) {
+  const here = SECTIONS.find((x) => x.id === section)!;
   return (
     <>
       <OpsNav agentName={agentName} undecided={undecided} />
-      <main className="shell-w sec" style={{ maxWidth: 760 }}>{children}</main>
+      <main className="shell-w sec" style={{ maxWidth: 820, paddingTop: 28 }}>
+        <h1 className="serif">Settings</h1>
+        <nav className="opsx-tabs" aria-label="Settings sections">
+          {SECTIONS.map((x) => (
+            <Link key={x.id} href={x.id === "decisions" ? "/operations/settings" : `/operations/settings?section=${x.id}`}
+              aria-current={x.id === section ? "page" : undefined} className="opsx-tab">
+              {x.label}
+              {x.id === "decisions" && undecided ? <span className="opsx-count">{undecided}</span> : null}
+            </Link>
+          ))}
+        </nav>
+        <p className="t-sm c-3" style={{ margin: "0 0 18px" }}>{here.sub}.</p>
+        {children}
+      </main>
     </>
   );
 }

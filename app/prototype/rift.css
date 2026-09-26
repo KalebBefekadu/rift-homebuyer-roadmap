@@ -1278,3 +1278,10 @@ a.opsx-link:hover .w6 { text-decoration: underline; }
 .opsx h1.serif { margin: 0; }
 .opsx-inl { display: inline-flex; align-items: baseline; gap: 4px; }
 .opsx-inl > svg { flex: none; align-self: center; }
+
+/* Settings sections as tabs; on a phone they scroll sideways rather than wrap. */
+.opsx-tabs { display: flex; gap: 4px; margin: 16px 0 12px; border-bottom: 1px solid var(--line-2); overflow-x: auto; }
+.rift a.opsx-tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 13.5px; color: var(--ink-3); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.rift a.opsx-tab:hover { color: var(--ink); }
+.rift a.opsx-tab[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+.opsx-tab .opsx-count { margin-left: 0; }
