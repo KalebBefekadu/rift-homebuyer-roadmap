@@ -91,7 +91,7 @@ Built since 24 Sep, each with its status line in the section named: the design r
 side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
 engine (§6), the client side's documents, help, summary links and moving in (§7), the Operations
 redesign (§8), money v2, the client money area and the side-by-side comparison (§10.1, §7, D27), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
-- The seller journey (§9) and the campaign composer (§5.10). Sequenced after pilot results (D08).
+- The campaign composer (§5.10). Sequenced after pilot results (D08).
 - Cal.com (§10): built as an adapter, waiting for the key.
 - Discovery research for more assistance programs (§6 status).
 - The pilot itself: 3 to 5 real buyers, added by hand (§13).
@@ -898,7 +898,7 @@ action.
   take"); negotiation; under contract; final proceeds reconciled to the official statement;
   post-sale. And a sale linked to a purchase (STATE-07).
 
-**Status (28 Sep 2026): first slice built** (D28). A selling journey has the seller's stages
+**Status (28 Sep 2026): built** (D28). A selling journey has the seller's stages
 (STATE-03): Prepare, Price & launch, Market & show, Review offers, Under contract, Close,
 Continue, with Continue reached only by closing the contract and marketing gated on a listing
 agreement. The workspace has the property (S02: address and facts from a named source, stored as
@@ -913,8 +913,17 @@ beside the estimate); listing and launch (S06, S07: a checklist of what is done,
 only with its link, syndication a separate fact whose absence is a delay, access recorded as
 arranged and never as a code), showings (S08: feedback counted over showings done with the
 denominator said) and weekly reviews (S09: the agent's reading and the seller's keep-or-change
-decision, never "price is the reason"). Next slices: preparation (S05),
-offers on the journey (S10, S11).
+decision, never "price is the reason"). Preparation (S05) and offers (S10, S11) are on the journey
+too, read as they stand from the plan and the offer room on the person's record, where they are
+worked. So every seller contract now has a place: S00 and S01 are the seller values and the record;
+S02 the property; S03 the listing agreement on the record and disclosures on the checklist; S04
+pricing; S05 preparation; S06 to S09 listing, showings and reviews; S10 and S11 the offer room;
+S12 to S17 the shared contract, dates, workstreams and proceeds; S18 Continue, with a next purchase
+linked (STATE-07).
+
+Found and fixed on the way: the offer room's net used a flat property-tax share while the seller
+values and proceeds worked it out from the price, so the two could quote different nets for the
+same sale. Both now use lib/core/seller.ts.
 
 ---
 
@@ -1080,6 +1089,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Seller preparation and offers on the journey; the offer room's net now matches the seller's own figures |
 | 28 Sep 2026 | Seller listing and launch, showings and weekly reviews (S06 to S09) |
 | 28 Sep 2026 | Seller pricing strategy (S04) and final proceeds (S16) |
 | 28 Sep 2026 | Seller journey, first slice (§9, STATE-03, D28): seller stages, the property, the shared contract, the seller's Today |

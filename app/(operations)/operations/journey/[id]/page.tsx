@@ -34,6 +34,10 @@ import { SellerProperty } from "./SellerProperty";
 import { SellerPricing } from "./SellerPricing";
 import { SellerProceeds } from "./SellerProceeds";
 import { SellerListing } from "./SellerListing";
+import { SellerOffersView, SellerPrepView } from "./SellerRecord";
+import { offersFor } from "@/lib/db/offers";
+import { roomFor } from "@/lib/db/offer-room";
+import { readPlanForAgent } from "@/lib/db/plan";
 import { listingOf } from "@/lib/db/listing";
 import { sellerMoneyFor } from "@/lib/db/seller";
 import { scenarios } from "@/lib/core/pricing";
@@ -99,7 +103,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
-  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead, listingRead] = await Promise.all([
+  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead, listingRead, offersRead, roomRead, planRead] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
     progressFor(id),
@@ -116,6 +120,9 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     settled(tab === "overview" ? journeysFor(journey.leadId) : null),
     settled(!buying && needs("pricing", "proceeds") ? sellerMoneyFor(id) : null),
     settled(!buying && needs("listing", "overview") ? listingOf(id, agent.agentId) : null),
+    settled(!buying && needs("seller-offers") ? offersFor(journey.leadId) : null),
+    settled(!buying && needs("seller-offers") ? roomFor(journey.leadId) : null),
+    settled(!buying && needs("prep") ? readPlanForAgent(journey.leadId) : null),
   ]);
   const listing = listingRead && listingRead.ok && "data" in listingRead ? listingRead.data : null;
   const seller = sellerRead && sellerRead.ok && "data" in sellerRead ? sellerRead.data : null;
@@ -364,6 +371,29 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
                 const p = homeList.find((h) => !h.withdrawnAt) ?? null;
                 return <SellerProperty journeyId={id} property={p ? { id: p.id, address: p.address, facts: p.facts, factsSource: p.factsSource, factsAsOf: p.factsAsOf } : null} />;
               })() : <p className="t-xs c-neg">The property did not load. That is not the same as none being recorded.</p>}
+            </div>
+          </section>
+        ) : null}
+
+        {tab === "seller-offers" ? (
+          <section className="card p-4" aria-labelledby="seller-offers-h">
+            <h2 id="seller-offers-h" className="t-md w6">Offers</h2>
+            <div style={{ marginTop: 10 }}>
+              {offersRead && offersRead.ok && "data" in offersRead
+                ? <SellerOffersView leadId={journey.leadId} offers={offersRead.data.offers} costs={offersRead.data.costs}
+                    room={roomRead && roomRead.ok && "data" in roomRead ? roomRead.data : null} />
+                : <p className="t-xs c-neg">The offers did not load. That is not the same as there being none.</p>}
+            </div>
+          </section>
+        ) : null}
+
+        {tab === "prep" ? (
+          <section className="card p-4" aria-labelledby="prep-h">
+            <h2 id="prep-h" className="t-md w6">Preparation</h2>
+            <div style={{ marginTop: 10 }}>
+              {planRead && planRead.ok && "data" in planRead
+                ? <SellerPrepView leadId={journey.leadId} items={planRead.data.items} agentFirst={agentFirst} clientFirst={person} />
+                : <p className="t-xs c-neg">The plan did not load. That is not the same as there being none.</p>}
             </div>
           </section>
         ) : null}

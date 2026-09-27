@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import {
   netOf, rankOffers, headlineTrap, gapsIn, anyReleased,
-  FIXED_SELLER_COSTS, type Offer, type SellerCosts,
+  fixedSellerCosts, type Offer, type SellerCosts,
 } from "./offers";
-import { netProceeds, GA_TRANSFER_TAX_RATE } from "./compute";
+import { GA_TRANSFER_TAX_RATE } from "./compute";
+import { proratedTax, sellerNet } from "./seller";
 
 /**
  * The one sentence this file exists to make true: the highest offer is often
@@ -25,8 +26,10 @@ describe("what actually reaches the seller", () => {
     const n = netOf(offer({ price: 400_000, concessions: 9_000, repairCredit: 3_500 }), costs);
     expect(n.askedBack).toBe(12_500);
     /* 400,000 − 200,000 payoff − 20,000 commission − 400 transfer tax
-       − 12,500 asked back − 2,675 fixed. */
-    expect(n.net).toBe(400_000 - 200_000 - 20_000 - 400 - 12_500 - FIXED_SELLER_COSTS);
+       − 12,500 asked back − the fixed lines: attorney 850, half a year's tax
+       2,000, payoff fees 375. */
+    expect(fixedSellerCosts(400_000, 200_000)).toBe(850 + 2_000 + 375);
+    expect(n.net).toBe(400_000 - 200_000 - 20_000 - 400 - 12_500 - fixedSellerCosts(400_000, 200_000));
   });
 
   it("does not treat earnest money as extra", () => {
@@ -42,15 +45,10 @@ describe("what actually reaches the seller", () => {
        fastest way to make a seller stop believing both of them. */
     const price = 400_000;
     const mine = netOf(offer({ price }), costs);
-    const readout = netProceeds({
-      price, payoff: costs.payoff, commissionPct: costs.commissionPct,
-      concessionsPct: 0, repairs: 0, moving: 0,
-      county: "Fulton", yearsOwned: 6, assessedValue: price, homesteadFiled: false,
-    } as never);
-
+    const readout = sellerNet({ price, payoff: costs.payoff, county: "Fulton", commissionPct: costs.commissionPct });
     expect(mine.transferTax).toBe(price * GA_TRANSFER_TAX_RATE);
-    /* The readout adds repairs and moving, which an offer does not know about.
-       Everything else must agree. */
+    /* The seller's own net (/sell/proceeds, the journey's proceeds) and the
+       offer table must agree to the dollar on a clean offer. */
     expect(mine.net).toBe(readout.net);
   });
 
@@ -83,8 +81,9 @@ describe("ranking", () => {
     const a = offer({ id: "a", price: 410_000 });
     const b = offer({ id: "b", price: 400_000 });
     const ranked = rankOffers([a, b], costs);
-    /* 10,000 less price, less 500 commission and 10 transfer tax on it. */
-    expect(ranked[1]!.behindBy).toBeCloseTo(-(10_000 - 500 - 10), 6);
+    /* 10,000 less price, less 500 commission, 10 transfer tax and 50 of
+       the half-year tax share on it. */
+    expect(ranked[1]!.behindBy).toBeCloseTo(-(10_000 - 500 - 10 - (proratedTax(410_000) - proratedTax(400_000))), 6);
   });
 
   it("keeps a genuine tie in the order it was given", () => {
@@ -94,7 +93,7 @@ describe("ranking", () => {
     const first = offer({ id: "first", price: 400_000 });
     /* Built from the rate rather than a literal, so the tie survives the next
        time a statutory rate is corrected: the last literal did not. */
-    const second = offer({ id: "second", price: 410_000, concessions: 10_000 - 500 - 10_000 * GA_TRANSFER_TAX_RATE });
+    const second = offer({ id: "second", price: 410_000, concessions: 10_000 - 500 - 10_000 * GA_TRANSFER_TAX_RATE - (proratedTax(410_000) - proratedTax(400_000)) });
 
     const ranked = rankOffers([first, second], costs);
     expect(ranked[0]!.net).toBeCloseTo(ranked[1]!.net, 6);

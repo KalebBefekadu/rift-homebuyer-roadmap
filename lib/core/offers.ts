@@ -18,6 +18,7 @@
  */
 
 import { GA_TRANSFER_TAX_RATE } from "./compute";
+import { PAYOFF_FEES, SELLER_SETTLEMENT, proratedTax } from "./seller";
 
 export type Financing = "cash" | "conventional" | "fha" | "va" | "usda" | "other";
 
@@ -77,19 +78,21 @@ export interface OfferNet {
   hiddenFromHeadline: number;
 }
 
-/* The same fixed lines netProceeds uses, so the offer table and the seller's
-   own readout cannot quote different closing costs for the same house. */
-const SETTLEMENT = 850;
-const PRORATED_TAX = 1_450;
-const PAYOFF_ADMIN = 375;
-export const FIXED_SELLER_COSTS = SETTLEMENT + PRORATED_TAX + PAYOFF_ADMIN;
+/* The seller's costs that do not depend on an offer's terms, from the same
+   rules as the seller's own net (lib/core/seller.ts, the /sell/proceeds value
+   and the journey's proceeds), so the offer table and the seller's figures
+   cannot quote different closing costs for the same house. It was a flat
+   copy here, with a flat property-tax share, and drifted from the seller
+   rules once they worked the tax out from the price (found 28 Sep 2026). */
+export const fixedSellerCosts = (price: number, payoff: number) =>
+  SELLER_SETTLEMENT + proratedTax(price) + (payoff > 0 ? PAYOFF_FEES : 0);
 
 export function netOf(offer: Offer, costs: SellerCosts): Omit<OfferNet, "behindBy"> {
   const commission = (offer.price * costs.commissionPct) / 100;
   const transferTax = offer.price * GA_TRANSFER_TAX_RATE;
   const askedBack = offer.concessions + offer.repairCredit;
 
-  const net = offer.price - costs.payoff - commission - transferTax - askedBack - FIXED_SELLER_COSTS;
+  const net = offer.price - costs.payoff - commission - transferTax - askedBack - fixedSellerCosts(offer.price, costs.payoff);
 
   return {
     offerId: offer.id,

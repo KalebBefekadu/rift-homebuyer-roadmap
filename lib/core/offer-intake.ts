@@ -1,5 +1,5 @@
 import { GA_TRANSFER_TAX_RATE } from "./compute";
-import { FIXED_SELLER_COSTS, gapsIn, type Financing, type Offer } from "./offers";
+import { gapsIn, type Financing, type Offer } from "./offers";
 
 /**
  * An offer submitted from outside, by somebody with no account.
@@ -245,5 +245,3 @@ export function read(s: Submission, commissionPct = ASSUMED_COMMISSION_PCT): Rea
   };
 }
 
-/** The fixed costs are the seller's either way and do not move between offers. */
-export const SELLER_FIXED_COSTS = FIXED_SELLER_COSTS;
