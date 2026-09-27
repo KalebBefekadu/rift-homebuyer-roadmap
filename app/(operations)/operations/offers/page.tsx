@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
-import { StudioHeader } from "../StudioHeader";
 import { inboundOffers, type InboundOffer } from "@/lib/db/offer-intake";
 import { read, type Submission } from "@/lib/core/offer-intake";
 import { Ico } from "@/components/rift/icons";
@@ -31,7 +30,6 @@ export default async function OffersInPage() {
   const session = await agentSession();
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  const agent = session.agent;
 
   const q = await inboundOffers();
   const failed = !q.ok ? q.error : null;
@@ -40,7 +38,6 @@ export default async function OffersInPage() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} current="offers" />
 
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 820 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>

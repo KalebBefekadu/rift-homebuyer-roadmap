@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
-import { StudioHeader } from "../StudioHeader";
 import { referralQueue } from "@/lib/db/referral";
 import { serviceCheck } from "@/lib/core/referral";
 import { Ico } from "@/components/rift/icons";
@@ -42,7 +41,6 @@ export default async function ReferralsPage() {
   const session = await agentSession();
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  const agent = session.agent;
 
   const q = await referralQueue();
 
@@ -56,7 +54,6 @@ export default async function ReferralsPage() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} current="referrals" />
 
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 780 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>

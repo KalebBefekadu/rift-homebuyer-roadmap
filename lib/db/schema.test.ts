@@ -699,3 +699,27 @@ describe("summary links, as stored (ACCESS-02)", () => {
     await rejects(c, "update rift_summary_links set revoked_at = null, revoked_by = null where id = $1", [l.id], /only be revoked/);
   });
 });
+
+describe("Today's marks, as stored (OPS-02)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  const ins = (c: Client, key: string, kind: string, until: string | null, person: string | null, reason: string | null) => c.query(
+    `insert into rift_desk_marks (agent_id, item_key, kind, until_at, person, reason, by_name, request_id)
+     values ($1,$2,$3,$4::timestamptz,$5,$6,'Kaleb',gen_random_uuid()) returning id`, [AGENT, key, kind, until, person, reason]);
+  const later = () => new Date(Date.now() + 86_400_000).toISOString();
+
+  test("a contract date is never snoozed, and a snooze has a time and an owner", async (c) => {
+    await expect(ins(c, "date:11111111-0000-4000-8000-0000000000aa", "snooze", later(), "Kaleb", null)).rejects.toThrow(/never_a_date/);
+    await expect(ins(c, "action:abc", "snooze", null, "Kaleb", null)).rejects.toThrow(/snooze/);
+    await expect(ins(c, "action:abc", "snooze", later(), null, null)).rejects.toThrow(/snooze/);
+    await expect(ins(c, "action:abc", "snooze", new Date(Date.now() - 60_000).toISOString(), "Kaleb", null)).rejects.toThrow(/snooze/);
+    await ins(c, "action:abc", "snooze", later(), "Kaleb", null);
+  });
+
+  test("a pin has a reason and an end; a delegation names someone; marks are history", async (c) => {
+    await expect(ins(c, "outbox:x1", "pin", later(), null, null)).rejects.toThrow(/pin/);
+    await expect(ins(c, "outbox:x1", "delegate", null, null, null)).rejects.toThrow(/delegate/);
+    await expect(ins(c, "not a key", "clear", null, null, null)).rejects.toThrow(/check/);
+    const { rows: [m] } = await ins(c, "outbox:x1", "delegate", null, "Sam", null);
+    await rejects(c, "update rift_desk_marks set person = 'Someone else' where id = $1", [m.id], /history/);
+  });
+});

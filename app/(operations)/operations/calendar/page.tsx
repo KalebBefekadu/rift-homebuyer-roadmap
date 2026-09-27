@@ -3,10 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { datedCommitments } from "@/lib/db/plan";
-import { rulesOrDefaults } from "@/lib/db/settings";
 import { buildAgenda, summariseAgenda, agendaHeadline } from "@/lib/core/agenda";
 import { Ico } from "@/components/rift/icons";
-import { StudioHeader } from "../StudioHeader";
 import { Unavailable } from "../Unavailable";
 
 export const metadata: Metadata = { title: "What's coming" };
@@ -33,12 +31,8 @@ export default async function CalendarPage() {
   const session = await agentSession();
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  const agent = session.agent;
 
-  const [read, rules] = await Promise.all([
-    datedCommitments(),
-    rulesOrDefaults(agent.agentId),
-  ]);
+  const read = await datedCommitments();
 
   const items = read.ok && "data" in read ? read.data : [];
   const days = buildAgenda(items, new Date(), HORIZON);
@@ -46,7 +40,6 @@ export default async function CalendarPage() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} undecided={rules.undecided.length} current="calendar" />
 
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 780 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>

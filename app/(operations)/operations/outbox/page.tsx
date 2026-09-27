@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { outbox } from "@/lib/db/outbox";
 import { STATE_LABEL, type OutboxState } from "@/lib/core/outbox";
-import { StudioHeader } from "../StudioHeader";
 import { Unavailable } from "../Unavailable";
 import { outboxAction } from "./actions";
 
@@ -33,7 +32,6 @@ export default async function Outbox() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} current="outbox" />
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Outbox</h1>
         <p className="t-sm c-3 mt-2 measure" style={{ lineHeight: 1.6 }}>

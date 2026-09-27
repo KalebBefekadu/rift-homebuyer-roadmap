@@ -49,7 +49,7 @@ The private buyer journey did not exist before. It now covers, end to end:
 8. Contract dates, as checked history, with deadlines on Today.
 9. The buyer's own pages: Today, priorities, homes, offers, and a printable records page.
 10. The morning summary email (9 AM Eastern, business days) of what buyers did.
-11. The pilot report at `/operations/pilot`.
+11. The pilot report at `/operations/reports`.
 
 The public site (the front door, buyer, seller and abroad readouts, `/offer`, `/book`) was
 already live and is unchanged in how it works, so it needs only a light pass (section 6).
@@ -87,7 +87,7 @@ hour. Browser A is you as the agent, browser B is the buyer.
     against the document" on each. **B:** the checked dates now appear for the buyer.
 17. **B:** on Today, report one of their tasks done ("I have done this" or "I sent it").
     **A:** confirm it on the workstream.
-18. **A:** open `/operations/pilot`. Your replies from steps 9, 13, 14 and 17 are counted there.
+18. **A:** open `/operations/reports`. Your replies from steps 9, 13, 14 and 17 are counted there.
     Record a check for the journey.
 19. **B:** open the records page (link on their journey page) and print it or save it as a PDF.
 20. **A:** Where it stands: "It closed, or was terminated", closed, with the closing confirmed.
@@ -211,7 +211,7 @@ This is the main new page. Each section on it:
 
 - [ ] After a closing: the same neutral review request for everyone, and a referral link to copy.
 
-### Pilot `/operations/pilot`
+### Pilot `/operations/reports`
 
 - [ ] "Same-day replies": every buyer request is counted as same day, later, past due or
       waiting. Something a buyer did on Saturday is due Monday.

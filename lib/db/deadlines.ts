@@ -7,9 +7,12 @@ import { journeyTablesMissing } from "./journeys";
 import { readProgress } from "./progress";
 import {
   amendmentError, deadlineError, deadlineView, labelError, resolve,
-  type AmendmentChange, type DeadlineInput, type DeadlineKind, type DeadlineView, type Revision, type RevisionState, type RuleId,
+  type AmendmentChange, type DeadlineInput, type DeadlineKind, type DeadlineView, type Revision, type RevisionState,
 } from "@/lib/core/deadline";
 import { WORKSTREAMS, type Workstream } from "@/lib/core/progress";
+import { datesNeeding, type DateAttention } from "@/lib/core/transactions";
+import { allContracts } from "./transactions";
+import { REVISION_COLUMNS, shapeRevision } from "./revisions";
 
 /**
  * Contract dates (blueprint v4 W09). The only writer of rift_deadlines and
@@ -37,14 +40,6 @@ const NOT_YET = "Contract dates need a database update that has not been applied
 const CHANGED = "A date changed since the page loaded. Reload and try again";
 const rows = (r: DbResult<unknown>) => (r.ok && "data" in r ? (r.data as Record<string, unknown>[]) : []);
 
-const shapeRevision = (r: Record<string, unknown>): Revision => ({
-  seq: r.seq as number, state: r.state as RevisionState, dueDate: r.due_date as string,
-  dueTime: r.due_time ? String(r.due_time).slice(0, 5) : null, timezone: r.timezone as string, dueAt: (r.due_at as string | null) ?? null,
-  rule: r.rule as RuleId, triggerLabel: (r.trigger_label as string | null) ?? null, triggerDate: (r.trigger_date as string | null) ?? null,
-  days: (r.days as number | null) ?? null, sourceTerm: r.source_term as string, sourcePage: (r.source_page as string | null) ?? null,
-  sourceDocumentId: (r.source_document_id as string | null) ?? null, amendment: (r.amendment as string | null) ?? null,
-  verified: r.verified as boolean, note: (r.note as string | null) ?? null, by: r.actor_label as string, at: r.created_at as string,
-});
 
 export async function readDeadlines(journeyId: string, agentId: string, now = new Date()): Promise<DbResult<{ deadlines: DeadlineRecord[]; unavailable?: string }>> {
   const db = serviceClient();
@@ -53,7 +48,7 @@ export async function readDeadlines(journeyId: string, agentId: string, now = ne
     boundedRead(db.from("rift_deadlines").select("id,transaction_id,label,kind,workstream,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(200), "the contract dates"),
     boundedRead(db.from("rift_deadline_revisions")
-      .select("deadline_id,seq,state,due_date,due_time,timezone,due_at,rule,trigger_label,trigger_date,days,source_term,source_page,source_document_id,amendment,verified,note,actor_label,created_at")
+      .select(REVISION_COLUMNS)
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(2000), "the contract dates"),
   ]);
   for (const r of [ds, rs]) if (!r.ok) return journeyTablesMissing(r.error) ? done({ deadlines: [], unavailable: NOT_YET }) : r;
@@ -234,62 +229,20 @@ export async function recordAmendment(
   return done({ changed: insertRows.length });
 }
 
-export interface DateAttention {
-  journeyId: string;
-  person: string;
-  label: string;
-  when: string;
-  why: "missed" | "unchecked" | "soon";
-  days: number | null;
-}
+export type { DateAttention } from "@/lib/core/transactions";
 
-/** Days ahead that an upcoming checked date is shown on Today. */
+/** Days ahead that an upcoming checked date is shown in the morning summary. */
 export const SOON_DAYS = 3;
 
 /**
  * Every date across the agent's open contracts that needs him: missed ones
  * (AT29), ones not yet checked against the document, and checked ones due
- * within SOON_DAYS. Contracts that closed or were terminated are left out;
- * their dates stay on the journey's record.
+ * within `aheadDays`. Contracts that closed or were terminated are left out;
+ * their dates stay on the journey's record. The same read as Transactions
+ * (lib/db/transactions.ts), so the two can never disagree about a date.
  */
-export async function datesNeedingAttention(now = new Date()): Promise<DbResult<DateAttention[] | null>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agentId = await currentAgentId();
-  if (!agentId) return skipped("no agent row exists yet");
-  const [ds, rs, ended] = await Promise.all([
-    boundedRead(db.from("rift_deadlines").select("id,journey_id,transaction_id,label,kind").eq("agent_id", agentId).limit(1000), "the contract dates"),
-    boundedRead(db.from("rift_deadline_revisions")
-      .select("deadline_id,seq,state,due_date,due_time,timezone,due_at,rule,trigger_label,trigger_date,days,source_term,source_page,source_document_id,amendment,verified,note,actor_label,created_at")
-      .eq("agent_id", agentId).order("seq").limit(5000), "the contract dates"),
-    boundedRead(db.from("rift_transaction_outcomes").select("transaction_id").eq("agent_id", agentId).limit(1000), "the contracts"),
-  ]);
-  for (const r of [ds, rs, ended]) if (!r.ok) return journeyTablesMissing(r.error) ? done(null) : r;
-  const endedIds = new Set(rows(ended).map((x) => x.transaction_id as string));
-  const revs = new Map<string, Revision[]>();
-  for (const r of rows(rs)) {
-    const l = revs.get(r.deadline_id as string) ?? [];
-    l.push(shapeRevision(r));
-    revs.set(r.deadline_id as string, l);
-  }
-  const live = rows(ds).filter((d) => !endedIds.has(d.transaction_id as string) && revs.has(d.id as string));
-  const journeyIds = [...new Set(live.map((d) => d.journey_id as string))];
-  const people = new Map<string, string>();
-  if (journeyIds.length) {
-    const j = await boundedRead(db.from("rift_journeys").select("id,origin_lead_id").eq("agent_id", agentId).in("id", journeyIds), "the journeys");
-    const leadOf = new Map(rows(j).map((x) => [x.id as string, x.origin_lead_id as string]));
-    const l = await boundedRead(db.from("rift_leads").select("id,name").eq("agent_id", agentId).in("id", [...new Set(leadOf.values())]), "the people");
-    const nameOf = new Map(rows(l).map((x) => [x.id as string, (x.name as string | null) ?? "Someone"]));
-    for (const [jid, lid] of leadOf) people.set(jid, nameOf.get(lid) ?? "Someone");
-  }
-  const out: DateAttention[] = [];
-  for (const d of live) {
-    const v = deadlineView(revs.get(d.id as string)!, d.kind as DeadlineKind, now);
-    if (v.state !== "active") continue;
-    const why = v.missed ? "missed" : !v.verified ? "unchecked" : v.days !== null && v.days <= SOON_DAYS ? "soon" : null;
-    if (!why) continue;
-    out.push({ journeyId: d.journey_id as string, person: people.get(d.journey_id as string) ?? "Someone", label: d.label as string, when: v.when, why, days: v.days });
-  }
-  const order = { missed: 0, unchecked: 1, soon: 2 };
-  return done(out.sort((a, b) => order[a.why] - order[b.why] || (a.days ?? 0) - (b.days ?? 0)));
+export async function datesNeedingAttention(now = new Date(), aheadDays = SOON_DAYS): Promise<DbResult<DateAttention[] | null>> {
+  const all = await allContracts(now);
+  if (!all.ok || !("data" in all)) return all as DbResult<never>;
+  return done(all.data ? datesNeeding(all.data, aheadDays) : null);
 }

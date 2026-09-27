@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { serviceClient } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead, boundedWrite } from "./bounded";
@@ -142,8 +143,14 @@ export async function clearRule(agentId: string, key: keyof BusinessRules): Prom
   }
 }
 
-/** For callers that cannot fail: the forecast, which must render something. */
-export async function rulesOrDefaults(agentId: string | null): Promise<AgentRules> {
+/**
+ * For callers that cannot fail: the forecast, which must render something.
+ * Once per request, because the Operations sidebar counts the undecided rules
+ * on every page and the page usually reads them too.
+ */
+export const rulesOrDefaults = cache(readRulesOrDefaults);
+
+async function readRulesOrDefaults(agentId: string | null): Promise<AgentRules> {
   if (!agentId) return FALLBACK;
   const r = await readAgentRules(agentId);
   return r.ok && "data" in r ? r.data : FALLBACK;

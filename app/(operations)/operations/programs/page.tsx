@@ -10,7 +10,6 @@ import { mayFit } from "@/lib/core/alerts";
 import { alertSubscribers } from "@/lib/db/saved-plan";
 import { applyChecks, openFlags, textDiff, type CheckOutcome, type SourceCheck } from "@/lib/core/program-check";
 import { Ico } from "@/components/rift/icons";
-import { StudioHeader } from "../StudioHeader";
 import { Unavailable } from "../Unavailable";
 import { reviewProgramPage, prepareProgramAlerts } from "./actions";
 
@@ -58,7 +57,6 @@ export default async function ProgramsReview() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} current="programs" />
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 1040 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Programs</h1>
         <p className="t-sm c-3 mt-2 measure" style={{ lineHeight: 1.6 }}>

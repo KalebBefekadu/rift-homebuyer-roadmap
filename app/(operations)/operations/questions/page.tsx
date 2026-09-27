@@ -5,7 +5,7 @@ import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { readWording } from "@/lib/db/funnel";
 import { BUY_FUNNEL, SELL_FUNNEL, type Wording } from "@/lib/core/funnel";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
 import { Editor } from "./Editor";
 
 export const metadata: Metadata = { title: "Your questions", robots: { index: false } };
@@ -54,17 +54,6 @@ export default async function QuestionsPage({
 
   return (
     <div style={{ minHeight: "100vh" }}>
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/operations" className="row gap-2">
-            <Mark size={19} />
-            <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-            <span className="chip chip-out t-2xs">Operations</span>
-          </Link>
-          <Link href="/operations" className="t-sm c-3">← Today</Link>
-        </div>
-      </header>
-
       <main className="shell-w sec" style={{ maxWidth: 760 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,32px)", letterSpacing: "-0.02em" }}>
           Your questions

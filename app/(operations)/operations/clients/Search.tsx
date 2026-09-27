@@ -51,9 +51,28 @@ export function Search({ total, more }: { total: number; more: boolean }) {
     return () => clearTimeout(t);
   }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Filters persist (§8.5): coming back from the sidebar, which carries no
+     address, restores the last filters used on this device. Only the
+     filters, never the search text, and only where the browser allows it. */
+  useEffect(() => {
+    if (params.get("filter") || params.get("side") || params.get("q") || params.get("open")) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem("ops-people-filters") ?? "null") as { filter?: string; side?: string } | null;
+      const next = new URLSearchParams();
+      if (saved?.filter && saved.filter !== "all" && FILTERS.some((f) => f.id === saved.filter)) next.set("filter", saved.filter);
+      if (saved?.side && saved.side !== "all" && SIDES.some((x) => x.id === saved.side)) next.set("side", saved.side);
+      if (next.size) router.replace(`/operations/clients?${next}`, { scroll: false });
+    } catch { /* private window: start from everyone */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    try { localStorage.setItem("ops-people-filters", JSON.stringify({ filter, side })); } catch { /* private window */ }
+  }, [filter, side]);
+
   const go = (key: string, value: string) => {
     const next = new URLSearchParams(params.toString());
     if (value === "all") next.delete(key); else next.set(key, value);
+    next.delete("open");
     start(() => router.replace(`/operations/clients?${next}`, { scroll: false }));
   };
 

@@ -10,14 +10,14 @@ import {
   durationText, promiseLine, replyStats, setupStats, timing, type CheckState,
 } from "@/lib/core/pilot";
 import { PrintButton } from "@/components/rift/PrintButton";
-import { StudioHeader } from "../StudioHeader";
 import { Unavailable } from "../Unavailable";
 import { Check } from "./Check";
+import { FunnelReports } from "./Funnel";
 import { ladderEvents, conversionCounts } from "@/lib/db/events";
 import { valueLadder } from "@/lib/core/ladder";
 import { valueById } from "@/lib/core/values";
 
-export const metadata: Metadata = { title: "Pilot" };
+export const metadata: Metadata = { title: "Reports" };
 export const dynamic = "force-dynamic";
 
 const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", {
@@ -52,11 +52,10 @@ function checkLine(c: CheckState): { text: string; tone: "pos" | "warn" | "neg" 
  * nothing is compared with a time before Rift, because none was measured.
  * The page prints, so the report can be kept or handed on as a PDF.
  */
-export default async function PilotPage() {
+export default async function ReportsPage() {
   const session = await agentSession();
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  const agent = session.agent;
 
   const now = new Date();
   const on = buyerSearchOn(process.env);
@@ -83,10 +82,9 @@ export default async function PilotPage() {
 
   return (
     <>
-      <div className="no-print"><StudioHeader agentName={agent.name} current="pilot" /></div>
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
         <div className="between gap-2 wrap">
-          <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Pilot</h1>
+          <h1 className="serif">Reports</h1>
           <div className="no-print"><PrintButton /></div>
         </div>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 640, lineHeight: 1.6 }}>
@@ -291,6 +289,7 @@ export default async function PilotPage() {
             </ul>
           </>
         )}
+        <div className="no-print"><FunnelReports h2={h2} /></div>
       </main>
     </>
   );

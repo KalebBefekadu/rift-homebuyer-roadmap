@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/studio", destination: "/operations", permanent: true },
       { source: "/studio/:path*", destination: "/operations/:path*", permanent: true },
+      /* Blueprint v5 §8.8: the pilot report became Reports, with the funnel. */
+      { source: "/operations/pilot", destination: "/operations/reports", permanent: true },
     ];
   },
 

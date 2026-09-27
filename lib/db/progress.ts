@@ -352,3 +352,28 @@ export async function recordWorkAsAgent(
   if (!agentId) return skipped("no agent row exists yet");
   return recordWork(journeyId, agentId, contractId, workstream, input, expectedSeq, { kind: "agent", label: agentLabel }, requestId);
 }
+
+/* ------------------------------------------------------------------ *
+ * Across journeys, for Today's recent activity
+ * ------------------------------------------------------------------ */
+
+export interface RecentEvent { journeyId: string; journeyLabel: string; kind: "stage" | "status"; to: string; by: string; at: string }
+
+/** Stage and status changes on any journey in the last `days`, newest first. Null before the tables exist. */
+export async function recentJourneyEvents(agentId: string, days = 7, now = new Date()): Promise<DbResult<RecentEvent[] | null>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const since = new Date(now.getTime() - days * 86_400_000).toISOString();
+  const ev = await boundedRead(db.from("rift_journey_events").select("journey_id,kind,to_value,actor_label,created_at")
+    .eq("agent_id", agentId).gte("created_at", since).order("created_at", { ascending: false }).limit(20), "recent changes");
+  if (!ev.ok) return journeyTablesMissing(ev.error) ? done(null) : ev;
+  const list = rows(ev);
+  if (!list.length) return done([]);
+  const js = await boundedRead(db.from("rift_journeys").select("id,label").eq("agent_id", agentId)
+    .in("id", [...new Set(list.map((e) => e.journey_id as string))]), "their journeys");
+  const label = new Map(rows(js).map((j) => [j.id as string, j.label as string]));
+  return done(list.map((e) => ({
+    journeyId: e.journey_id as string, journeyLabel: label.get(e.journey_id as string) ?? "A journey",
+    kind: e.kind as "stage" | "status", to: e.to_value as string, by: e.actor_label as string, at: e.created_at as string,
+  })));
+}

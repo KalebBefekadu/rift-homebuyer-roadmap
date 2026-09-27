@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { serviceClient } from "./service";
 import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
@@ -48,7 +49,14 @@ export type SessionState =
   /** We could not find out. Never a reason to show a sign-in page. */
   | { state: "unknown"; reason: string };
 
-export async function agentSession(): Promise<SessionState> {
+/**
+ * Once per request. The Operations layout asks for the sidebar and the page
+ * asks for its own reads; without `cache` that is two trips to the auth
+ * service on the request most likely to be paying for a cold start.
+ */
+export const agentSession = cache(readSession);
+
+async function readSession(): Promise<SessionState> {
   const supabase = await createClient();
   if (!supabase) return { state: "unknown", reason: "sign-in is not configured on this deployment" };
 

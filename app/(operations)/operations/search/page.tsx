@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
-import { StudioHeader } from "../StudioHeader";
 import { buyingJourneys } from "@/lib/db/journeys";
 import { searchStatuses, type SearchRow } from "@/lib/db/search";
 import { buyerSearchOn } from "@/lib/core/journey";
@@ -41,7 +40,6 @@ export default async function SearchPage() {
   const session = await agentSession();
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
-  const agent = session.agent;
 
   const on = buyerSearchOn(process.env);
   const journeys = on ? await buyingJourneys() : null;
@@ -58,7 +56,6 @@ export default async function SearchPage() {
 
   return (
     <>
-      <StudioHeader agentName={agent.name} current="search" />
       <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Search</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 620, lineHeight: 1.6 }}>

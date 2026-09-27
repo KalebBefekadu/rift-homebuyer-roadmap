@@ -1,5 +1,5 @@
 /**
- * Studio's loading state.
+ * Operations' loading state, for every page under it.
  *
  * The page makes six database reads before it can render anything. Without
  * this, the agent gets a blank screen for that whole time and no way to tell a
@@ -9,7 +9,7 @@
 export default function StudioLoading() {
   return (
     <main className="shell-w sec">
-      <p className="t-sm c-4">Gathering today…</p>
+      <p className="t-sm c-4">Loading…</p>
     </main>
   );
 }

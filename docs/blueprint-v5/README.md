@@ -57,7 +57,7 @@ Companion files in this folder:
 
 ---
 
-## 1. Where Rift stands (24 September 2026)
+## 1. Where Rift stands (28 September 2026)
 
 Live at https://rift-homebuyer-roadmap.vercel.app. Code at
 https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
@@ -68,7 +68,7 @@ https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
 | --- | --- |
 | Lead side | Front door; buyer, seller and abroad landings, questionnaires and readouts (computed on the server, shareable, dated snapshots); Georgia programs list; how-it-works pages; unclaimed money page; public offer form; booking request; privacy page with "delete all of it"; first-touch attribution; answer-free telemetry; follow-up emails with consent and stop rules |
 | Client side | Email sign-in by invitation; household members with scopes; the buyer's Today, search priorities, homes and reactions, showings answers, offer answers, checked contract dates, "You own your home" after a confirmed closing, and a printable records page |
-| Agent OS | Today (ranked leads, review queue, follow-ups, deadlines, failed jobs); Relationships; person records with plan, decisions, agreement, journeys; the journey page (brief, Matrix search record, household, homes, showings, offers and documents, where it stands, ten workstreams, contract dates); Search; Offers; Calendar; Advocacy; Pilot report; funnel question editor; settings; morning summary email |
+| Operations | A sidebar and quick switcher on every page; Today in five groups with new leads and recent activity, snooze, pin and delegate; Relationships with a detail panel; person records with plan, decisions, agreement, journeys; the journey workspace (overview, search, homes and showings, offers and documents, contract, household, history); Transactions; Offers; Calendar; Outbox; Advocacy; Programs; Reports; funnel question editor; settings; morning summary email |
 | Platform | Supabase with row-level security on every table, history-only tables, idempotent writes, job-run tracking and health checks, release switch `RIFT_BUYER_SEARCH`, Brevo email, Sentry |
 
 Blueprint v4 packages built: W00 to W09, W11 and W12. Not started: W10 (money v2) and W13 (seller
@@ -85,22 +85,18 @@ journey and campaigns). Details and dates: `docs/handoff.md` §8.2.
   values, and the Georgia programs need rethinking (§4, §5, §6).
 - Operations needs a major UI and UX redesign (§8).
 
-### Not built, in one list
+### Not built, in one list (28 Sep 2026)
 
-Everything below is specified in the section named.
-- Design system rules: spacing, symmetry, footers, form controls, calls to action (§4).
-- Lead side rebuilt as separate values, with a custom artifact each (§5).
-- Page-by-page public changes from the review (§5.6 to §5.9).
-- ~~The Georgia assistance engine (§6).~~ **Built 27 Sep** (records, matching, combinations,
-  programs table, weekly monitoring, review in Operations, AI comparison); discovery research
-  remains (§6 status).
-- Client side: money, documents and help areas; clearer sign-in; summary share links; the
-  dependency between a sale and a purchase; move-in handoff (§7).
-- Agent OS redesign, full rename to Operations, Transactions view, snooze, delegation and
-  pinning (§8).
-- Seller journey (§9) and the campaign composer (§5.10).
-- Money v2 (W10), the approval and outbox mechanism, AI budget controls, document extraction,
-  Cal.com, and the other integrations (§10).
+Built since 24 Sep, each with its status line in the section named: the design rules (§4), the lead
+side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
+engine (§6), the client side's documents, help, summary links and moving in (§7), the Operations
+redesign (§8), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
+- Money v2 (W10) and the client money area and side-by-side comparison that depend on it
+  (§7, §10.1). Sequenced after the pilot starts (D11).
+- A sale linked to a purchase (STATE-07), the seller journey (§9) and the campaign composer
+  (§5.10). Sequenced after pilot results (D08).
+- Cal.com (§10): built as an adapter, waiting for the key.
+- Discovery research for more assistance programs (§6 status).
 - The pilot itself: 3 to 5 real buyers, added by hand (§13).
 
 ---
@@ -862,7 +858,22 @@ due time and its next action:
   everything by keyboard.
 - Same accessibility bar as the rest (§4.7).
 
-**Status (27 Sep 2026).** The clickable mock-up D15 asks for is built at `/prototype/operations`
+**Status (28 Sep 2026): built.** Kaleb asked on 27 Sep for the whole blueprint to be built without
+stopping, so the redesign was built from the mock-up (D26). Live: the left sidebar with "Add
+someone", the quick switcher (Cmd+K finds people, journeys and pages) and "g" shortcuts, on every
+page (`app/(operations)/operations/OpsFrame.tsx`); Today in the five groups plus new leads and
+recent activity, each item with why, owner, what it is about, evidence, due and next action, with
+snooze, pin and delegate (`lib/core/desk.ts`); Relationships as a table with last contact, a
+detail panel that keeps the list and its filters, and filters remembered on the device;
+the journey as a workspace with a fixed header and seven tabs; Transactions (every contract, its
+next date, the ten workstreams as shapes with words, and what needs a look), read once for
+Transactions, Today and the morning summary (`lib/db/transactions.ts`); Reports (the pilot
+report, the value ladder, the funnel and started-not-finished; `/operations/pilot` redirects);
+the utilitarian scale. At 1280 by 800 every Today group, new leads and recent activity are on one
+screen. Not yet: keyboard shortcuts for actions beyond moving around; settings grouped by what
+they affect.
+
+**Before (27 Sep 2026).** The clickable mock-up D15 asks for is built at `/prototype/operations`
 (made-up people; open it with `npm run dev`, or on a deployment with `RIFT_INTERNAL=1`). It
 covers the sidebar and quick switcher, Today in its five groups with new leads and recent
 activity, Relationships with a detail panel, the journey workspace (Overview and Contract
@@ -982,6 +993,7 @@ change to reverse.
 | D23 | A record read from the program's own page says "Checked against the official source", never "confirmed with" a person; a person is named only when they review a change | Handoff §4.13: nothing is verified without a named party, and nobody at Rift confirmed these by phone | Kaleb confirming each program himself and being named |
 | D24 | A flagged change is reviewed in Operations by the signed-in agent ("still right" or "needs updating: stop showing it"); editing the record itself stays an engineering change | Records live in code; a full editor is weeks of work for 13 records | A record editor in Operations |
 | D25 | A higher amount named for a group narrower than Rift's job question (Beltline's "civil servants") is mentioned, never used as the amount | "Educator" includes private-school staff; the program decides | Kaleb confirming who counts |
+| D26 | The Operations redesign was built from the mock-up without the D15 click-through, because Kaleb asked for the build to continue to the end. Kaleb reviews the live screens instead | The mock-up and the live screens share the layout, so the review loses nothing but order | Any screen Kaleb wants changed; the old pages are in git history |
 
 ### Open
 
@@ -1036,6 +1048,8 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Five migrations applied to production and the site deployed; CI runs the query-shape suite against PostgREST |
+| 28 Sep 2026 | Operations redesign built (§8, D26): sidebar and quick switcher, Today in five groups with snooze, pin and delegate (OPS-02), Relationships table and panel, journey workspace, Transactions, Reports |
 | 27 Sep 2026 | Assistance engine built (§6); D22 to D25 applied by engineering for Kaleb to confirm or overrule |
 | 27 Sep 2026 | Seller values, retired readouts and questionnaires forwarded, how-it-works rewritten (§5.3, §5.8) |
 | 27 Sep 2026 | Submit an offer from a PDF, book-a-call order and wording, AI limits and records, AI comparison of changed program pages (§5.9, §6.5, §10.2) |

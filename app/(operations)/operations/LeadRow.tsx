@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { STOPS, type StopId } from "@/lib/core/nurture";
@@ -19,7 +20,7 @@ import { stopSequence, markRepliedTo } from "./actions";
  * Every stop names its reason, because "stopped, and nobody recorded why" is
  * how a cadence quietly dies and nobody can say when.
  */
-export function LeadRow({ lead, last }: {
+export function LeadRow({ lead, last, compact = false }: {
   lead: {
     id: string; name: string | null; email: string | null; side: "buy" | "sell";
     score: number; band: string;
@@ -34,8 +35,11 @@ export function LeadRow({ lead, last }: {
     breached?: boolean;
   };
   last: boolean;
+  /** One line on Today, so the five groups stay on screen; Details opens the rest in place. */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(!compact);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -59,10 +63,12 @@ export function LeadRow({ lead, last }: {
     });
 
   return (
-    <div style={{ padding: "13px 15px", borderBottom: last ? undefined : "1px solid var(--line-3)" }}>
+    <div style={{ padding: compact ? "7px 12px" : "13px 15px", borderBottom: last ? undefined : "1px solid var(--line-3)" }}>
       <div className="between wrap gap-2">
         <div className="row wrap gap-2">
-          <span className="t-sm w6">{lead.name || lead.email || "Anonymous"}</span>
+          {compact
+            ? <Link href={`/operations/lead/${lead.id}`} className="t-sm w6">{lead.name || lead.email || "Anonymous"}</Link>
+            : <span className="t-sm w6">{lead.name || lead.email || "Anonymous"}</span>}
           <span className={`chip ${BAND_TONE[lead.band as Band] ?? "chip"}`}>
             {BAND_LABEL[lead.band as Band] ?? lead.band}
           </span>
@@ -86,8 +92,18 @@ export function LeadRow({ lead, last }: {
             </span>
           ) : null}
           <span className="num t-sm">{lead.score}</span>
+          {compact ? (
+            <>
+              {!lead.humanRepliedAt ? (
+                <button className="btn btn-p btn-sm" disabled={pending} onClick={replied}><Ico.check size={12} />I have replied</button>
+              ) : null}
+              <button className="btn btn-g btn-sm" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>{expanded ? "Less" : "Details"}</button>
+            </>
+          ) : null}
         </span>
       </div>
+      {compact && error && !expanded ? <p className="t-xs c-neg" style={{ marginTop: 4 }}>{error}</p> : null}
+      {expanded ? <>
 
       {/* The arithmetic, on the row rather than in a tooltip. */}
       <div className="row wrap gap-2" style={{ marginTop: 7 }}>
@@ -140,7 +156,7 @@ export function LeadRow({ lead, last }: {
       {/* One action, because it is one event from his side. Asking him to
           record a reply AND stop the sequence after a single conversation is
           how the second one stops happening. */}
-      {!lead.humanRepliedAt ? (
+      {!lead.humanRepliedAt && !compact ? (
         <button className="btn btn-p btn-sm" style={{ marginTop: 9, marginRight: 8 }} disabled={pending} onClick={replied}>
           <Ico.check size={12} />I have replied
         </button>
@@ -163,6 +179,7 @@ export function LeadRow({ lead, last }: {
           <Ico.pause size={12} />Stop the sequence
         </button>
       )}
+      </> : null}
     </div>
   );
 }

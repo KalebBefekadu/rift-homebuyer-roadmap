@@ -352,6 +352,6 @@ export async function reconcile(journeyId: string, search: CheckResult, dates: C
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordCheck(journeyId, { search, dates, note }, g.name, requestId);
-  revalidatePath("/operations/pilot");
+  revalidatePath("/operations/reports");
   return out(r, (d) => ({ id: d.id }));
 }

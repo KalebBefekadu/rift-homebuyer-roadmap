@@ -4,16 +4,16 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
-import { roster, liveRelationships, finishedRelationships } from "@/lib/db/clients";
+import { roster, liveRelationships, finishedRelationships, lastContacts } from "@/lib/db/clients";
+import { Panel } from "./Panel";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { STALL_CHIP } from "@/lib/core/pipeline";
 import { Forward } from "./Forward";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { Ico } from "@/components/rift/icons";
-import { StudioHeader } from "../StudioHeader";
 import { Search } from "./Search";
 
-export const metadata: Metadata = { title: "People" };
+export const metadata: Metadata = { title: "Relationships" };
 export const dynamic = "force-dynamic";
 
 const WHEN = (iso: string | null) => {
@@ -76,6 +76,16 @@ export default async function ClientsPage({
   ]);
 
   const people = list.ok && "data" in list ? list.data.people : [];
+  /* The person open beside the list, kept in the address with the search. */
+  const open = /^[0-9a-f-]{36}$/i.test(one("open") ?? "") ? one("open")! : null;
+  const withOpen = (id: string | null) => {
+    const next = new URLSearchParams();
+    for (const k of ["q", "filter", "side"]) if (one(k)) next.set(k, one(k)!);
+    if (id) next.set("open", id);
+    return `/operations/clients${next.size ? `?${next}` : ""}`;
+  };
+  const contactRead = await lastContacts(people.map((p) => p.id));
+  const contacted = contactRead.ok && "data" in contactRead ? contactRead.data : null;
   const more = list.ok && "data" in list ? list.data.more : false;
   const searching = Boolean(one("q")?.trim());
 
@@ -93,10 +103,9 @@ export default async function ClientsPage({
 
   return (
     <>
-      <StudioHeader agentName={agent.name} undecided={rules.undecided.length} current="clients" />
 
-      <main className="shell-w sec" style={{ paddingTop: 28 }}>
-        <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>People</h1>
+      <main className="shell-w sec">
+        <h1 className="serif">Relationships</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
           Everyone, in the order they arrived. Today ranks them by what needs doing;
           this is for when you already know whose name you are looking for.
@@ -154,63 +163,37 @@ export default async function ClientsPage({
             ) : null}
           </div>
         ) : (
-          <div className="card" style={{ marginTop: 20, overflow: "hidden" }}>
-            {people.map((p, i) => (
-              <Link
-                key={p.id}
-                href={`/operations/lead/${p.id}`}
-                className="between gap-3"
-                style={{
-                  padding: "13px 16px", gap: 12,
-                  borderBottom: i === people.length - 1 ? 0 : "1px solid var(--line-3)",
-                }}
-              >
-                <div className="col" style={{ gap: 3, minWidth: 0 }}>
-                  <div className="row gap-2 wrap">
-                    {/* The name, or an honest stand-in. A row reading only a dash is
-                        somebody who left an email and no name, and pretending
-                        otherwise makes him look for a record that is not
-                        missing. */}
-                    <span className="t-md w6">{p.name?.trim() || p.email || "Someone who left no name"}</span>
-                    <span className="chip t-2xs">{p.side === "buy" ? "Buying" : "Selling"}</span>
-                    {p.band ? (
-                      <span className={`chip t-2xs ${BAND_TONE[p.band as Band] ?? ""}`}>
-                        {BAND_LABEL[p.band as Band] ?? p.band}
-                      </span>
-                    ) : null}
-                    {p.archivedAt ? <span className="chip t-2xs">Archived</span> : null}
-                  </div>
-
-                  <div className="t-xs c-4" style={{
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>
-                    {[p.name?.trim() ? p.email : null, p.phone, `arrived ${WHEN(p.createdAt)}`]
-                      .filter(Boolean).join(" · ")}
-                  </div>
-
-                  {p.nextAction ? (
-                    <div className="t-xs c-3" style={{ marginTop: 2 }}>
-                      <Ico.clock size={11} style={{ marginRight: 5 }} />
-                      {p.nextAction}{p.nextDue ? `, ${p.nextDue}` : ""}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="row gap-2" style={{ flex: "none" }}>
-                  {p.stage ? (
-                    <span className="t-xs c-3 hide-sm">{p.stage}</span>
-                  ) : (
-                    <span className="t-xs c-4 hide-sm">Not picked up</span>
-                  )}
-                  {p.stall ? (
-                    <span className={`chip t-2xs ${STALL_CHIP[p.stall.level].c}`}>
-                      {STALL_CHIP[p.stall.level].l}
-                    </span>
-                  ) : null}
-                  <Ico.chevR size={14} className="c-4" />
-                </div>
-              </Link>
-            ))}
+          <div className="ops-split" style={{ marginTop: 16 }}>
+            <div className="card" style={{ overflowX: "auto", minWidth: 0 }}>
+              <table className="ops-table">
+                <thead>
+                  <tr><th>Name</th><th>Side</th><th>Stage</th><th>Next action</th><th>Last contact</th><th>Source</th><th>Arrived</th></tr>
+                </thead>
+                <tbody>
+                  {people.map((p) => (
+                    <tr key={p.id} aria-selected={open === p.id}>
+                      <td>
+                        {/* Opens beside the list, keeping the search and the
+                            scroll; the full record is one click further. */}
+                        <Link href={withOpen(p.id)} scroll={false} className="w6">{p.name?.trim() || p.email || "Someone who left no name"}</Link>
+                        {p.band ? <span className={`chip t-2xs ${BAND_TONE[p.band as Band] ?? ""}`} style={{ marginLeft: 6 }}>{BAND_LABEL[p.band as Band] ?? p.band}</span> : null}
+                        {p.archivedAt ? <span className="chip t-2xs" style={{ marginLeft: 6 }}>Archived</span> : null}
+                      </td>
+                      <td>{p.side === "buy" ? "Buying" : "Selling"}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        {p.stage ?? <span className="c-4">Not picked up</span>}
+                        {p.stall && p.stall.level !== "moving" ? <div><span className={`chip t-2xs ${STALL_CHIP[p.stall.level].c}`}>{STALL_CHIP[p.stall.level].l}</span></div> : null}
+                      </td>
+                      <td>{p.nextAction ? <>{p.nextAction}{p.nextDue ? <div className="t-xs c-4">{p.nextDue}</div> : null}</> : <span className="c-4">None set</span>}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{contacted?.get(p.id) ? WHEN(contacted.get(p.id)!) : <span className="c-4">{contacted ? "None logged" : "Unknown"}</span>}</td>
+                      <td>{p.source}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>{WHEN(p.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {open ? <Panel id={open} closeHref={withOpen(null)} /> : null}
           </div>
         )}
       </main>

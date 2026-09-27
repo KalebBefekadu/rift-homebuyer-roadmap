@@ -430,6 +430,28 @@ await check("pilot: check replay (recordCheck)", () => db.from("rift_reconciliat
 await check("pilot: live search (recordCheck)", () => db.from("rift_search_packages").select("id").eq("journey_id", NIL).eq("agent_id", NIL)
   .in("status", ["active-confirmed", "paused"]).limit(1));
 
+/* Every contract at once (lib/db/transactions.ts): Transactions, Today, and the date alerts. */
+for (const [name, table, cols] of [
+  ["allContracts: contracts", "rift_transactions", "id,journey_id,home_id,financing,created_at"],
+  ["allContracts: outcomes", "rift_transaction_outcomes", "transaction_id,outcome,created_at"],
+  ["allContracts: workstreams", "rift_workstream_updates", "transaction_id,workstream,seq,state,owner,owner_name,source,confirmed_on,note,actor_kind,actor_label,created_at"],
+  ["allContracts: dates", "rift_deadlines", "id,transaction_id,label,kind,workstream"],
+  ["allContracts: date revisions", "rift_deadline_revisions", "deadline_id,seq,state,due_date,due_time,timezone,due_at,rule,trigger_label,trigger_date,days,source_term,source_page,source_document_id,amendment,verified,note,actor_label,created_at"],
+  ["allContracts: journeys", "rift_journeys", "id,label,origin_lead_id"],
+  ["allContracts: homes", "rift_shortlist_homes", "id,address"],
+  ["allContracts: history", "rift_journey_events", "journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at"],
+]) {
+  await check(name, () => db.from(table).select(cols).eq("agent_id", NIL).limit(1));
+}
+await check("recentJourneyEvents", () => db.from("rift_journey_events").select("journey_id,kind,to_value,actor_label,created_at")
+  .eq("agent_id", NIL).gte("created_at", new Date(0).toISOString()).order("created_at", { ascending: false }).limit(20));
+await check("readMarks", () => db.from("rift_desk_marks").select("item_key,kind,until_at,person,reason,by_name,created_at")
+  .eq("agent_id", NIL).gte("created_at", new Date(0).toISOString()).order("created_at").limit(1));
+await check("lastContacts", () => db.from("rift_lead_notes").select("lead_id,at").eq("agent_id", NIL)
+  .in("lead_id", [NIL]).in("kind", ["call", "email", "text", "meeting"]).order("at", { ascending: false }).limit(1));
+await check("journeysMatching", () => db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
+  .eq("agent_id", NIL).ilike("label", "%a%").order("created_at", { ascending: false }).limit(6));
+
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);
 }

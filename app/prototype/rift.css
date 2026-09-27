@@ -640,3 +640,81 @@
 .art-box { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: clamp(16px,2.4vw,28px); }
 .value-card { display: flex; flex-direction: column; gap: 10px; height: 100%; }
 .value-card .grow { flex: 1; }
+
+/* ------------------------------------------------------------------ *
+ * Operations (Blueprint v5 §8.3, §8.9): a stable sidebar and a compact,
+ * utilitarian scale. Scoped to .ops-frame so no public page changes.
+ * The pages still use the shared classes; the overrides below retune them
+ * here rather than forking every page's markup.
+ * ------------------------------------------------------------------ */
+.ops-frame { display: grid; grid-template-columns: 216px minmax(0,1fr); min-height: 100vh; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13.5px; }
+.ops-frame.ops-collapsed { grid-template-columns: 56px minmax(0,1fr); }
+.ops-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px 10px; border-right: 1px solid var(--line-2); background: var(--sunk); }
+.ops-brand { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 4px 8px; }
+.ops-collapsed .ops-brand { flex-direction: column; }
+.ops-add { margin: 0 2px 6px; }
+.ops-nav { display: flex; flex-direction: column; gap: 1px; }
+.ops-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 30px; padding: 0 10px; border-radius: 6px; color: var(--ink-2); white-space: nowrap; overflow: hidden; }
+.ops-link:hover { background: var(--paper); }
+.ops-link[aria-current="page"] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line-2); }
+.ops-rule { height: 1px; background: var(--line-2); margin: 8px 4px; }
+.ops-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px 2px 0; }
+.ops-jump { text-align: left; font-size: 12px; color: var(--ink-3); padding: 4px 8px; border-radius: 6px; }
+.ops-jump:hover { background: var(--paper); }
+.ops-who { font-size: 12px; color: var(--ink-3); padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ops-kbd { font-size: 11px; border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; color: var(--ink-3); background: var(--paper); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.ops-main { min-width: 0; }
+.ops-switch { width: 480px; max-width: calc(100vw - 32px); padding: 10px; height: fit-content; }
+.ops-hit { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 6px; text-align: left; }
+.ops-hit[data-on], .ops-hit:hover { background: var(--sunk); }
+.ops-hint { font-size: 11.5px; color: var(--ink-4); flex: none; }
+
+/* Today (§8.4): groups of items, each with its evidence and next action. */
+.ops-main .u { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line); }
+.ops-main .u:hover { text-decoration-color: currentColor; }
+.ops-main .input-sm { height: 30px; font-size: 13px; padding: 0 8px; }
+.desk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 10px; margin-top: 10px; align-items: start; }
+.desk-card { padding: 8px 12px; }
+.desk-card h2 { font-size: 13.5px; font-weight: 650; display: flex; justify-content: space-between; gap: 8px; }
+.desk-row { padding: 7px 0; border-bottom: 1px solid var(--line-3); }
+.desk-row:last-child { border-bottom: 0; }
+.desk-meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; line-height: 1.45; }
+/* On Today every group stays on one screen, so each line is one line; the full text is in its title. */
+.desk-today .desk-meta { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.desk-more summary { cursor: pointer; padding: 6px 0 2px; color: var(--ink-3); }
+.desk-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin-top: 6px; padding: 8px; background: var(--sunk); border-radius: 8px; font-size: 12px; }
+.desk-form label { display: flex; flex-direction: column; gap: 3px; }
+
+.ops-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ops-table th { text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ink-3); padding: 7px 10px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+.ops-table td { padding: 8px 10px; border-bottom: 1px solid var(--line-3); vertical-align: top; }
+.ops-table tr:last-child td { border-bottom: 0; }
+.ops-table tbody tr:hover { background: var(--sunk); }
+.ops-table tr[aria-selected="true"] { background: var(--sunk); }
+
+/* Relationships (§8.5): the list and one person beside it. */
+.ops-split { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; align-items: start; }
+.ops-split:has(> .ops-panel) { grid-template-columns: minmax(0,1fr) 360px; }
+.ops-panel { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+@media (max-width: 1100px) { .ops-split:has(> .ops-panel) { grid-template-columns: minmax(0,1fr); } .ops-panel { position: static; max-height: none; order: -1; } }
+
+/* The compact scale. Headings keep their hierarchy and lose the editorial serif. */
+.ops-main .serif { font-family: inherit; font-weight: 650; letter-spacing: -0.01em; }
+.ops-main h1.serif { font-size: 21px !important; }
+.ops-main h2.serif { font-size: 15.5px !important; }
+.ops-main .sec { padding-top: 22px; }
+.ops-main .shell-w { max-width: 1240px; margin: 0; padding: 0 clamp(14px,2.2vw,28px) 48px; }
+.ops-main .lede { font-size: 14px; }
+
+@media (max-width: 760px) {
+  .ops-frame, .ops-frame.ops-collapsed { grid-template-columns: minmax(0,1fr); }
+  .ops-side { position: static; height: auto; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--line-2); }
+  .ops-brand { padding: 0; }
+  .ops-collapse, .ops-foot .ops-who, .ops-jump { display: none; }
+  .ops-add { margin: 0; flex: none; }
+  .ops-nav { flex-direction: row; }
+  .ops-rule { width: 1px; height: 20px; margin: 0 4px; }
+  .ops-foot { margin: 0; flex-direction: row; padding: 0; }
+  .ops-link .ops-link-label { font-size: 13px; }
+}
+@media print { .ops-frame { display: block; } }

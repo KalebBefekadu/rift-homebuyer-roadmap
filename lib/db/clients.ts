@@ -539,6 +539,29 @@ export async function roster(query: RosterQuery = {}, now = new Date()): Promise
   });
 }
 
+/**
+ * When each person was last contacted: the latest call, email, text or
+ * meeting logged against them. From the notes, which are append-only, so the
+ * answer is what was recorded rather than a guess. Missing means none logged.
+ */
+export async function lastContacts(leadIds: string[]): Promise<DbResult<Map<string, string>>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+  if (!leadIds.length) return done(new Map());
+  const r = await boundedRead(
+    db.from("rift_lead_notes").select("lead_id,at").eq("agent_id", agent_id)
+      .in("lead_id", leadIds.slice(0, 500)).in("kind", ["call", "email", "text", "meeting"])
+      .order("at", { ascending: false }).limit(2000),
+    "when they were last contacted",
+  );
+  if (!r.ok || !("data" in r)) return r as DbResult<never>;
+  const out = new Map<string, string>();
+  for (const n of r.data as { lead_id: string; at: string }[]) if (!out.has(n.lead_id)) out.set(n.lead_id, n.at);
+  return done(out);
+}
+
 /* ------------------------------------------------------------------ *
  * The agent's own closed history
  * ------------------------------------------------------------------ */

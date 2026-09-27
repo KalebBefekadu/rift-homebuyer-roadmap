@@ -7,7 +7,7 @@ import { currentAgent } from "@/lib/db/session";
 import { promoteItem } from "@/lib/db/review";
 import { stop } from "@/lib/db/nurture";
 import { markReplied } from "@/lib/db/leads";
-import { addLead, addNote, setStage, archiveLead, setNextAction, type NewLead, type NoteKind, type Stage } from "@/lib/db/clients";
+import { addLead, addNote, setStage, archiveLead, setNextAction, roster, type NewLead, type NoteKind, type Stage } from "@/lib/db/clients";
 import type { StopId } from "@/lib/core/nurture";
 import { saveRule, clearRule } from "@/lib/db/settings";
 import type { BusinessRules } from "@/lib/core/settings";
@@ -18,6 +18,9 @@ import { approveTake, withdrawTake, reopenChoice } from "@/lib/db/offer-room";
 import type { Owner } from "@/lib/core/plan";
 import type { Wording } from "@/lib/core/funnel";
 import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
+import { journeysMatching } from "@/lib/db/journeys";
+import { recordMark } from "@/lib/db/desk";
+import type { MarkKind } from "@/lib/core/desk";
 import { compareToSnapshot } from "@/lib/db/seam";
 import { representationOf, setRepresentation, type RepStatus } from "@/lib/db/clients";
 import { standingOf } from "@/lib/core/representation";
@@ -30,7 +33,7 @@ import type { Kind as DecisionKind } from "@/lib/core/decision";
 import type { Mood, MomentId, MomentState } from "@/lib/core/referral";
 
 /**
- * Studio's write actions.
+ * Operations' write actions.
  *
  * Every one re-checks the session. A server action is a public HTTP endpoint
  * with a generated name: it is not protected by the page that renders the
@@ -742,6 +745,53 @@ export async function deleteDecision(leadId: string, decisionId: string) {
   const r = await removeDecision(decisionId);
   revalidatePath(`/operations/lead/${leadId}`);
 
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/* ------------------------------------------------------------------ *
+ * The quick switcher (Blueprint v5 §8.3)
+ * ------------------------------------------------------------------ */
+
+export interface Jump { label: string; hint: string; href: string }
+
+/**
+ * People and journeys matching what was typed, for Cmd+K. Pages are matched
+ * in the browser; only records need the database. Two characters at least,
+ * because one matches half the book and tells him nothing.
+ */
+export async function jumpTo(q: string): Promise<Jump[]> {
+  const agent = await currentAgent();
+  if (!agent) return [];
+  const term = q.trim().slice(0, 60);
+  if (term.length < 2) return [];
+  const [people, journeys] = await Promise.all([roster({ q: term, limit: 6 }), journeysMatching(term)]);
+  const out: Jump[] = [];
+  for (const p of people.ok && "data" in people ? people.data.people : []) {
+    out.push({
+      label: p.name ?? p.email ?? "Unnamed",
+      hint: `${p.side === "buy" ? "Buyer" : "Seller"}${p.stage ? ` · ${p.stage}` : " · not picked up"}`,
+      href: `/operations/lead/${p.id}`,
+    });
+  }
+  for (const j of journeys.ok && "data" in journeys ? journeys.data : []) {
+    out.push({ label: j.label, hint: `Journey · ${j.person}`, href: `/operations/journey/${j.id}` });
+  }
+  return out.slice(0, 10);
+}
+
+/* ------------------------------------------------------------------ *
+ * Snooze, pin and delegate on Today (OPS-02)
+ * ------------------------------------------------------------------ */
+
+export async function markItem(input: {
+  key: string; kind: MarkKind; until?: string | null; person?: string | null; reason?: string | null; requestId: string;
+}) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const r = await recordMark(agent.agentId, { ...input, by: agent.name });
+  revalidatePath("/operations");
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };

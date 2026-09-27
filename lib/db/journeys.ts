@@ -299,19 +299,38 @@ export async function buyingJourneys(): Promise<DbResult<Journey[]>> {
     "the buying journeys",
   );
   if (!r.ok) return journeyTablesMissing(r.error) ? done([]) : r;
-  const rows = ("data" in r ? r.data : []) as Record<string, unknown>[];
-  if (rows.length === 0) return done([]);
+  return done(await withPeople(s.db, s.agentId, ("data" in r ? r.data : []) as Record<string, unknown>[]));
+}
+
+/** Journeys whose label contains the words typed, for the quick switcher. */
+export async function journeysMatching(q: string): Promise<DbResult<Journey[]>> {
+  const s = await agentScope();
+  if (!s.db) return skipped(s.why!);
+  const term = q.replace(/[%_,()*"\\]/g, " ").trim().slice(0, 60);
+  if (!term) return done([]);
+  const r = await boundedRead(
+    s.db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
+      .eq("agent_id", s.agentId).ilike("label", `%${term}%`).order("created_at", { ascending: false }).limit(6),
+    "the journeys",
+  );
+  if (!r.ok) return journeyTablesMissing(r.error) ? done([]) : r;
+  return done(await withPeople(s.db, s.agentId, ("data" in r ? r.data : []) as Record<string, unknown>[]));
+}
+
+/** Journey rows with the name of the relationship each belongs to. */
+async function withPeople(db: NonNullable<ReturnType<typeof serviceClient>>, agentId: string, rows: Record<string, unknown>[]): Promise<Journey[]> {
+  if (rows.length === 0) return [];
   const leads = await boundedRead(
-    s.db.from("rift_leads").select("id,name,email").eq("agent_id", s.agentId)
+    db.from("rift_leads").select("id,name,email").eq("agent_id", agentId)
       .in("id", [...new Set(rows.map((x) => x.origin_lead_id as string))]),
     "their names",
   );
   const names = new Map(
     (leads.ok && "data" in leads ? (leads.data as { id: string; name: string | null; email: string | null }[]) : [])
-      .map((l) => [l.id, (l.name ?? "").trim() || l.email || "A buyer"]),
+      .map((l) => [l.id, (l.name ?? "").trim() || l.email || "A client"]),
   );
-  return done(rows.map((x) => ({
+  return rows.map((x) => ({
     id: x.id as string, leadId: x.origin_lead_id as string, side: x.side as Side, label: x.label as string,
-    createdAt: x.created_at as string, person: names.get(x.origin_lead_id as string) ?? "A buyer",
-  })));
+    createdAt: x.created_at as string, person: names.get(x.origin_lead_id as string) ?? "A client",
+  }));
 }
