@@ -15,8 +15,8 @@ test.use({ ...devices["Pixel 7"] });
 
 const PAGES = [
   "/", "/buy", "/sell", "/abroad", "/privacy", "/book",
-  "/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600",
-  "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months",
+  "/buy/cash-to-close?p=350000&d=3.5&c=Fulton",
+  "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5",
 ];
 
 test.describe("nothing spills off the side of a phone", () => {
@@ -72,7 +72,7 @@ test.describe("a sentence stays a sentence", () => {
   /* The property, not the two lines that were wrong. A row of flex children
      whose text is all short fragments is a shattered paragraph, whatever
      produced it. */
-  for (const path of ["/buy/results?t=In+the+next+3+months&c=Fulton&o=none&p=350000&s=12000&r=600", "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months", "/abroad"]) {
+  for (const path of ["/buy/cash-to-close?p=350000&d=3.5&c=Fulton", "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5", "/abroad"]) {
     test(`${path} has no prose broken into columns`, async ({ page }) => {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
@@ -106,31 +106,28 @@ test.describe("a sentence stays a sentence", () => {
   }
 });
 
-test("the funnel can be completed with a thumb", async ({ page }) => {
-  await page.goto("/buy/start");
-  await page.getByRole("button", { name: "In the next 3 months", exact: true }).click();
-  await page.getByRole("combobox").selectOption({ label: "Fulton" });
-  await page.getByRole("button", { name: /Next/ }).click();
-  await page.getByRole("button", { name: "No, I haven't owned anything", exact: true }).click();
+test("a value can be answered with a thumb", async ({ page }) => {
+  await page.goto("/buy/cash-to-close");
 
-  /* Every control the funnel needs has to be reachable and big enough to hit.
+  /* Every control a value needs has to be reachable and big enough to hit.
      24 CSS pixels is well under any guideline and still catches a control
      that has collapsed. */
-  /* Each slider has its own range, so one value cannot serve all three: a
-     range input refuses anything outside its own min and max. */
-  for (const [label, value] of [["Target price", "350000"], ["Saved so far", "12000"], ["Each month", "600"]] as const) {
-    const slider = page.getByLabel(label, { exact: true });
-    const box = await slider.boundingBox();
-    expect(box, `${label} is not on the page`).not.toBeNull();
-    expect(box!.height, `${label} is too small to use`).toBeGreaterThan(20);
+  const amount = page.locator('input[inputmode="numeric"]');
+  const box = await amount.boundingBox();
+  expect(box, "the amount box is not on the page").not.toBeNull();
+  expect(box!.height, "the amount box is too small to use").toBeGreaterThan(24);
+  await amount.fill("350000");
+  await page.getByRole("button", { name: /Continue/ }).click();
 
-    await slider.fill(value);
-    await slider.dispatchEvent("change");
-    await page.getByRole("button", { name: /Next/ }).click();
+  for (const name of [/^3\.5%/, /^Fulton$/]) {
+    const option = page.getByRole("radio", { name });
+    const b = await option.boundingBox();
+    expect(b, `${name} is not on the page`).not.toBeNull();
+    expect(b!.height, `${name} is too small to hit`).toBeGreaterThan(24);
+    await option.click();
   }
 
-  await page.getByRole("button", { name: /Show my numbers/ }).click();
-  await page.waitForURL(/\/buy\/results\?/, { timeout: 20_000 });
+  await page.waitForURL(/\/buy\/cash-to-close\?.*p=350000/, { timeout: 20_000 });
   await expect(page.locator("body")).toContainText(/\$[\d,]{4,}/);
 });
 

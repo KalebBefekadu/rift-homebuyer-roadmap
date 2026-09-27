@@ -11,8 +11,8 @@ import { test, expect } from "@playwright/test";
    being guarded is a route disappearing, and a crawler would simply not visit
    one that no longer exists. */
 const PUBLIC = [
-  "/", "/buy", "/buy/how", "/buy/start", "/buy/programs",
-  "/sell", "/sell/how", "/sell/start", "/sell/unclaimed",
+  "/", "/buy", "/buy/how", "/buy/cash-to-close", "/buy/assistance", "/buy/programs",
+  "/sell", "/sell/how", "/sell/proceeds", "/sell/unclaimed",
   "/abroad", "/book", "/privacy",
 ];
 
@@ -49,7 +49,7 @@ test.describe("no page links somewhere that is not there", () => {
   /* Five dead /prototype links sat on the live seller readout because the
      shell is shared with the prototype. Full green suite throughout: a <Link>
      to a 404 is not an error until somebody clicks it. */
-  for (const path of ["/", "/buy", "/sell", "/sell/results?c=Fulton&p=400000&o=200000&y=6&t=3+to+9+months", "/abroad", "/privacy"]) {
+  for (const path of ["/", "/buy", "/sell", "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5", "/abroad", "/privacy"]) {
     test(`${path} has no internal link to a missing page`, async ({ page, request }) => {
       await page.goto(path);
 
