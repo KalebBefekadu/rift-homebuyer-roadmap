@@ -28,6 +28,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
        were simply never in the list. */
     /* The values (Blueprint v5 §5.2): each answers one question, and each is
        a page somebody searching that question should land on. */
+    { url: `${base}/buy/lender-questions`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${base}/buy/afford`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/buy/assistance`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/buy/cash-to-close`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${base}/buy/monthly-cost`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },

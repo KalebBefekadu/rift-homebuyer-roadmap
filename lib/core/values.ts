@@ -20,7 +20,7 @@ export type ValueSide = "buy" | "sell" | "abroad";
  *  given to one value is never asked again by the next. */
 export type InputKey =
   | "county" | "ownership" | "price" | "downPct" | "savings" | "monthlySaving"
-  | "income" | "household" | "credit" | "occupation" | "loanType"
+  | "income" | "household" | "credit" | "occupation" | "loanType" | "debts" | "comfort"
   | "salePrice" | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
   | "roof" | "systems" | "finish"
   | "status" | "use";
@@ -76,6 +76,25 @@ export const VALUES: ValueDef[] = [
     gives: "How many months until you are ready, and the two changes that shorten it most.",
     cta: "See when I could buy",
     asks: ["price", "downPct", "savings", "monthlySaving"],
+    live: true,
+  },
+
+  /* D20: "Affordability follows once its model is tested" (lib/core/afford.ts, MONEY-05). */
+  {
+    id: "afford", side: "buy", href: "/buy/afford", name: "What fits",
+    question: "How much home fits me?",
+    gives: "The price your comfortable payment reaches, beside two common planning guidelines.",
+    cta: "See what fits me",
+    asks: ["comfort", "income", "debts", "downPct"],
+    live: true,
+  },
+
+  {
+    id: "lender", side: "buy", href: "/buy/lender-questions", name: "Lender questions",
+    question: "What should I ask a lender?",
+    gives: "Questions written for your situation, and why each one matters.",
+    cta: "Get my questions",
+    asks: ["price", "downPct", "ownership"],
     live: true,
   },
 

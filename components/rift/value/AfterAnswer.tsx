@@ -37,7 +37,11 @@ export function AfterAnswer({ tool, entry, answers }: {
     const mine = readAnswers();
     const fromThisDevice = def.asks.every((k) => mine[k] === undefined || String(mine[k]) === String(answers[k]));
     setKnown(answeredKeys({ ...mine, ...answers }));
-    setPlan(fromThisDevice ? rememberValue({ ...entry }) : readPlan());
+    /* One plan per side: somebody selling one home and buying the next has
+       two plans, and a buyer's saved plan must not carry a sale's figures
+       (the saved plan records a single side). */
+    const sameSide = (list: PlanEntry[]) => list.filter((p) => valueById(p.tool)?.side === def.side);
+    setPlan(sameSide(fromThisDevice ? rememberValue({ ...entry }) : readPlan()));
     track({ name: "value_answer", side: def.side === "abroad" ? undefined : def.side, meta: { tool } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

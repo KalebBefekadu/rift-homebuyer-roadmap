@@ -303,6 +303,15 @@ assistance engine powers it); 2. Cash to close (the site's core idea: the down p
 number); 3. Monthly cost; 4. Timeline. Affordability follows once its model is tested; the rest
 come later.
 
+**Status (27 Sep 2026).** The first four are built (24 Sep). Built since: **Affordability** at
+`/buy/afford`, "How much home fits me?", on a tested model (`lib/core/afford.ts`, MONEY-05): it
+starts from the payment the person is comfortable with, solves the price exactly with the same
+monthly-cost functions, shows the 28% and 36% planning guidelines beside it, says when the
+payment is above both, and never states what a lender would approve. **Lender questions** at
+`/buy/lender-questions`: questions for their price, down payment, first-time status and the
+programs they may fit, each with why it matters; printable. Rent vs. buy, the first-time
+roadmap and readiness are still "to define" and wait for Kaleb.
+
 ### 5.3 Seller values (Kaleb, R2: same lens as the buyer side)
 
 | Value | Question | Inputs | Answer |
@@ -1027,6 +1036,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Lead summary in Operations, saved plan into the search brief, my assistance plan, program alerts (§5.5, D14) |
 | 27 Sep 2026 | Client side: page navigation, Documents, Help on every page, moving in (§7.2) |
 | 27 Sep 2026 | Operations mock-up for Kaleb's click-through (§8, D15) |
+| 27 Sep 2026 | Affordability and lender questions values (§5.2) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
    checks; an hour is short enough to be honest and long enough to be cheap. */
 export const revalidate = 3600;
 
-const ICON = { assistance: Ico.spark, cash: Ico.wallet, monthly: Ico.cal, timeline: Ico.clock } as const;
+const ICON = { assistance: Ico.spark, cash: Ico.wallet, monthly: Ico.cal, timeline: Ico.clock, afford: Ico.home, lender: Ico.doc } as const;
 
 /**
  * The buyer landing (Blueprint v5 §5.7, Kaleb R1).
@@ -60,7 +60,12 @@ export default async function BuyLanding() {
             const Icon = ICON[v.id as keyof typeof ICON] ?? Ico.spark;
             return (
               <Link key={v.id} href={v.href} className="card p-6 lift value-card"
-                style={k === 0 ? { borderColor: "var(--brand-line)", background: "var(--brand-wash)" } : undefined}>
+                style={{
+                  ...(k === 0 ? { borderColor: "var(--brand-line)", background: "var(--brand-wash)" } : {}),
+                  /* An odd card out spans the row rather than leaving a hole
+                     beside it (§4.1). */
+                  ...(values.length % 2 === 1 && k === values.length - 1 ? { gridColumn: "1 / -1" } : {}),
+                }}>
                 <div className="row gap-2">
                   <span style={{ width: 34, height: 34, borderRadius: 9, display: "grid", placeItems: "center", background: k === 0 ? "var(--paper)" : "var(--brand-wash)" }}>
                     <Icon size={17} className="c-brand" />

@@ -113,6 +113,24 @@ export const ASKS: Record<InputKey, AskDef> = {
     unitLabel: "Household income",
     fallback: 75_000,
   },
+  debts: {
+    key: "debts", param: "db", type: "money",
+    title: "What do you pay each month on other debts?",
+    why: "Car loans, credit cards, student loans. Not rent. Only you see this.",
+    slider: { min: 0, max: 3_000, step: 25 },
+    limits: { min: 0, max: 100_000 },
+    unitLabel: "Each month",
+    fallback: 0,
+  },
+  comfort: {
+    key: "comfort", param: "cp", type: "money",
+    title: "What monthly housing payment would feel comfortable?",
+    why: "All in: the loan, taxes and insurance. What you would be happy paying, not the most you could.",
+    slider: { min: 800, max: 8_000, step: 50 },
+    limits: { min: 0, max: 100_000 },
+    unitLabel: "Each month",
+    fallback: 2_000,
+  },
   household: {
     key: "household", param: "h", type: "choice",
     title: "How many people will live in the home?",
@@ -328,7 +346,7 @@ export function answerLabel(key: InputKey, v: string | number | undefined): stri
 export const ASK_SHORT: Record<InputKey, string> = {
   county: "County", ownership: "Owned before", price: "Price", downPct: "Down payment",
   savings: "Saved", monthlySaving: "Each month", income: "Income", household: "Household",
-  credit: "Credit", occupation: "Work", loanType: "Loan", salePrice: "Sale price", payoff: "Still owed",
+  credit: "Credit", occupation: "Work", loanType: "Loan", debts: "Other debts", comfort: "Comfortable payment", salePrice: "Sale price", payoff: "Still owed",
   commission: "Commission", yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older",
   status: "Status", use: "Use", roof: "Roof", systems: "Systems", finish: "Finishes",
 };
