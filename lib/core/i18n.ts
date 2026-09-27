@@ -43,7 +43,7 @@ const en: Dict = {
   "nav.domestic": "Buying to live here",
   "nav.talk": "Talk to Kaleb",
 
-  "hero.h1": "You don't need a green card to own property in Georgia.",
+  "hero.h1": "You don't need a green card to own property in the United States.",
   "hero.lede":
     "No citizenship, no visa, no U.S. address, and no requirement to have set foot here. What you do need is a real number before you send anyone a document, and the honest one depends on which of these you are.",
 

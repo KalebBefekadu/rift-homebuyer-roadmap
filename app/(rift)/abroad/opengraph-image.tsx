@@ -37,7 +37,7 @@ export default async function Image() {
             <span style={{ fontFamily: "Noto Sans Ethiopic" }}>ከውጭ አገር</span>
           </>
         }
-        headline="You don't need a green card to own property in Georgia."
+        headline="You don't need a green card to own property in the United States."
         sub="See what you would have to send, what it would rent for, and what comes back."
         foot={
           <>

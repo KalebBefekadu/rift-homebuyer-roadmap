@@ -23,7 +23,7 @@ export default function robots(): MetadataRoute.Robots {
            indexing and absent from this list, which `Allow: /` covered by
            accident rather than by anybody deciding it. */
         allow: [
-          "/", "/abroad", "/abroad/how", "/buy", "/buy/programs", "/buy/how",
+          "/", "/abroad", "/abroad/cost", "/abroad/how", "/buy", "/buy/programs", "/buy/how",
           "/buy/assistance", "/buy/cash-to-close", "/buy/monthly-cost", "/buy/timeline",
           "/sell", "/sell/proceeds", "/sell/costs", "/sell/prepare", "/sell/how", "/sell/unclaimed", "/offer", "/privacy",
         ],

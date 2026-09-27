@@ -11,8 +11,8 @@ import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i1
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
 import {
-  abroadReturns, breakEvenDownPct, statusById, STATUSES, ASSUMPTIONS,
-  type AbroadInputs, type StatusId, type Use,
+  abroadReturns, statusById, STATUSES, ASSUMPTIONS,
+  type AbroadInputs, type StatusId,
 } from "@/lib/core/abroad";
 
 /**
@@ -33,13 +33,9 @@ import {
  * unflattering version is the reason they come back.
  */
 
-const USES: { id: Use; label: string; note: string }[] = [
-  { id: "rent", label: "Rent it out", note: "Income now, someone else paying the loan down" },
-  { id: "live", label: "Live in it later", note: "A place to return to, or for family here now" },
-];
 
-export function Landing({ counties, initial, initialLocale, localePinned }: {
-  counties: string[];
+
+export function Landing({ initial, initialLocale, localePinned }: {
   initial: AbroadInputs & { downPct: number };
   /* Resolved on the server from ?lang, so Amharic is in the HTML a crawler
      sees and an Amharic reader never watches the page start in English. */
@@ -48,15 +44,14 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
      for whoever opens it, including someone whose browser says otherwise. */
   localePinned: boolean;
 }) {
-  const [price, setPrice] = useState(initial.price);
-  const [county, setCounty] = useState(initial.county);
+  /* Blueprint v5 §5.4 (Kaleb R2: "too complicated... split it into
+     values"): this page answers the first value, whether you can buy, from
+     one question. What it would cost and what it would earn are their own
+     pages. The illustration further down still runs on the answers the
+     address carried, or the defaults. */
+  const { price, county, use } = initial;
   const [status, setStatus] = useState<StatusId>(initial.status);
-  const [use, setUse] = useState<Use>(initial.use);
-  /* Null means "the minimum for my situation", so changing status moves the
-     slider with it instead of stranding a number that no longer applies. */
-  const [extraDown, setExtraDown] = useState<number | null>(
-    initial.downPct > statusById(initial.status).down[initial.use] ? initial.downPct : null,
-  );
+  const extraDown: number | null = initial.downPct > statusById(initial.status).down[initial.use] ? initial.downPct : null;
 
   /* Remembered per visitor, and reflected onto <html lang> so a screen reader
      switches voice with the page and the browser stops offering to translate
@@ -116,13 +111,7 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
     [price, county, status, use, downPct],
   );
   const r = useMemo(() => abroadReturns(input), [input]);
-  /* The break-even sweeps every down payment, so it deliberately ignores the
-     one currently selected: dragging that slider must not recompute it. */
-  const breakEven = useMemo(
-    () => breakEvenDownPct(input),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [price, county, status, use],
-  );
+
   const answered = (qid: string) => track({ name: "hero_answer", side: "buy", meta: { qid, page: "abroad" } });
 
   /* Straight to the readout, not into the buyer funnel. That funnel asks what
@@ -186,149 +175,60 @@ export function Landing({ counties, initial, initialLocale, localePinned }: {
             <Distance className="c-brand" style={{ maxWidth: 340, opacity: 0.9 }} />
           </div>
 
-          <div className="ans" style={{ marginTop: 28, maxWidth: 940 }}>
-            <div className="ans-in">
-              <div className="field" style={{ marginBottom: 18 }}>
-                <span className="label" style={script}>{t("ask.status")}</span>
-                {/* Named as a group. Four radios with no group name are read
-                    out as four unrelated options with nothing to attach them
-                    to, and this is the question the whole page turns on. */}
-                <div className="col gap-2" style={{ marginTop: 8 }}
-                  role="radiogroup" aria-label={t("ask.status")}>
-                  {STATUSES.map((x) => (
-                    <label key={x.id} className="opt" data-on={status === x.id}>
-                      <input type="radio" name="status" checked={status === x.id}
-                        onChange={() => { setStatus(x.id); answered("status"); }} />
-                      <span style={script}>
-                        <span className="t-sm w55">{t(`status.${x.id}`)}</span>
-                        <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: am ? 1.8 : 1.5 }}>{t(`status.${x.id}.note`)}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
+          <div className="card p-5" style={{ marginTop: 28, maxWidth: 940 }}>
+            <div className="field">
+              <span className="label" style={script}>{t("ask.status")}</span>
+              {/* Named as a group. Four radios with no group name are read
+                  out as four unrelated options with nothing to attach them
+                  to, and this is the question the whole page turns on. */}
+              <div className="g2 gap-2" style={{ marginTop: 8 }}
+                role="radiogroup" aria-label={t("ask.status")}>
+                {STATUSES.map((x) => (
+                  <label key={x.id} className="opt" data-on={status === x.id}>
+                    <input type="radio" name="status" checked={status === x.id}
+                      onChange={() => { setStatus(x.id); answered("status"); }} />
+                    <span style={script}>
+                      <span className="t-sm w55">{t(`status.${x.id}`)}</span>
+                      <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: am ? 1.8 : 1.5 }}>{t(`status.${x.id}.note`)}</span>
+                    </span>
+                  </label>
+                ))}
               </div>
-
-              <div className="field" style={{ marginBottom: 18 }}>
-                <span className="label" style={script}>{t("ask.use")}</span>
-                <div className="g2 gap-2" style={{ marginTop: 8 }}
-                  role="radiogroup" aria-label={t("ask.use")}>
-                  {USES.map((u) => (
-                    <label key={u.id} className="opt" data-on={use === u.id}>
-                      <input type="radio" name="use" checked={use === u.id}
-                        onChange={() => { setUse(u.id); answered("use"); }} />
-                      <span style={script}>
-                        <span className="t-sm w55">{t(`use.${u.id}`)}</span>
-                        <span className="t-xs c-4" style={{ display: "block", marginTop: 2, lineHeight: 1.5 }}>{t(`use.${u.id}.note`)}</span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="g2 gap-4" style={{ alignItems: "end" }}>
-                <label className="field">
-                  <div className="between" style={{ marginBottom: 5 }}>
-                    <span className="label" style={{ margin: 0, ...script }}>{t("ask.price")}</span>
-                    <span className="num t-sm">{money(price)}</span>
-                  </div>
-                  <input className="rng" type="range" min={120_000} max={750_000} step={5_000}
-                    aria-label="Purchase price" aria-valuetext={money(price)}
-                    value={price} onChange={(e) => { setPrice(Number(e.target.value)); answered("price"); }} />
-                </label>
-                <label className="field">
-                  <span className="label" style={script}>{t("ask.county")}</span>
-                  <select className="select" value={county} aria-label={t("ask.county")}
-                    onChange={(e) => { setCounty(e.target.value); answered("county"); }}>
-                    {counties.map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                </label>
-              </div>
-
-              <label className="field" style={{ marginTop: 16 }}>
-                <div className="between" style={{ marginBottom: 5 }}>
-                  <span className="label" style={{ margin: 0, ...script }}>{t("ask.down")}</span>
-                  <span className="num t-sm">
-                    {downPct}% · {money(r.down)}
-                  </span>
-                </div>
-                <input className="rng" type="range" min={minDown} max={60} step={1}
-                  aria-label="Down payment percentage" aria-valuetext={`${downPct} percent, ${money(r.down)}`}
-                  value={downPct} onChange={(e) => { setExtraDown(Number(e.target.value)); answered("down"); }} />
-                <span className="t-xs c-4" style={{ marginTop: 6, display: "block", lineHeight: am ? 1.8 : 1.5, ...script }}>
-                  {minDown}% {t("down.floor")}
-                  {breakEven !== null
-                    ? ` ${breakEven}%: ${t("down.breakEven")}`
-                    : use === "rent" ? ` ${t("down.never")}` : ""}
-                </span>
-              </label>
             </div>
-
-            <div className="ans-out">
-              <div className="between wrap gap-4" style={{ alignItems: "flex-end" }}>
+            {/* The answer to the first value, for this situation: yes, and
+                what a lender will want. Composed from strings that already
+                exist in both languages. */}
+            <div className="card p-4 mt-4" style={{ background: "var(--brand-wash)", borderColor: "var(--brand-line)" }}>
+              <div className="row gap-2" style={{ alignItems: "flex-start" }}>
+                <Ico.check size={16} className="c-brand" style={{ flex: "none", marginTop: 3 }} />
                 <div>
-                  <div className="t-sm" style={{ color: "rgba(255,255,255,.55)" }}>
-                    {t("out.cashIn")}
-                  </div>
-                  <div className="ans-num" style={{ marginTop: 8 }}>{money(r.cashIn)}</div>
-                  <div className="t-sm" style={{ marginTop: 12, color: "rgba(255,255,255,.6)" }}>
-                    {r.downPct}% {t("out.down")} · {money(r.closing)} {t("out.closing")} · {r.ratePct.toFixed(2)}% {t("out.on")} {money(r.loan)}
-                  </div>
+                  <div className="t-md w6" style={script}>{t("hero.h1")}</div>
+                  <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: am ? 1.85 : 1.6, ...script }}>
+                    <strong>{t("lender.title")}:</strong> {t(`status.${s.id}.asks`)}
+                  </p>
+                  <p className="t-sm c-3" style={{ marginTop: 6, ...script }}>
+                    {s.down[use]}% {t("down.floor")}
+                  </p>
                 </div>
-                <Link href={go} className="btn btn-lg" style={{ background: "#fff", color: "var(--ink)" }}>
-                  <span style={script}>{t("out.cta")}</span> <Ico.arrowR size={16} />
-                </Link>
               </div>
-
-              {/* Composed from the labels already on the panel rather than from
-                  a new sentence, so the Amharic reader hears Amharic without
-                  anybody inventing a string for them to hear. */}
-              <Announce>
-                {`${t("out.cashIn")}: ${money(r.cashIn)}. ${r.downPct}% ${t("out.down")}, ${money(r.closing)} ${t("out.closing")}, ${r.ratePct.toFixed(2)}% ${t("out.on")} ${money(r.loan)}.`}
-                {use === "rent"
-                  ? ` ${r.cashFlow >= 0 ? t("out.left") : t("out.short")}: ${money(Math.abs(r.cashFlow))}.`
-                  : ""}
-              </Announce>
-
-              {use === "rent" ? (
-                <div className="g3 gap-3" style={{ marginTop: 26, borderTop: "1px solid rgba(255,255,255,.14)", paddingTop: 20 }}>
-                  {[
-                    [t("out.rent"), money(r.rent), `${county} ${t("out.rentNote")}`],
-                    [
-                      r.cashFlow >= 0 ? t("out.left") : t("out.short"),
-                      `${r.cashFlow < 0 ? "−" : ""}${money(Math.abs(r.cashFlow))}`,
-                      t("out.flowNote"),
-                    ],
-                    [t("out.year1"), money(r.year1.total), `${r.returnPct.toFixed(1)}% ${t("out.ofSent")}`],
-                  ].map(([t, v, n]) => (
-                    <div key={t}>
-                      <div className="t-xs" style={{ color: "rgba(255,255,255,.5)", ...script }}>{t}</div>
-                      <div className="num" style={{ fontSize: 24, color: "#fff", marginTop: 5 }}>{v}</div>
-                      <div className="t-xs" style={{ color: "rgba(255,255,255,.45)", marginTop: 4, lineHeight: 1.5 }}>{n}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ marginTop: 22, borderTop: "1px solid rgba(255,255,255,.14)", paddingTop: 18 }}>
-                  <div className="t-sm" style={{ color: "rgba(255,255,255,.72)", maxWidth: 560, lineHeight: 1.6 }}>
-                    Held empty for your own use it costs {money(r.monthly.total)} a month and
-                    earns nothing, but {money(r.year1.principal)} of the first year&apos;s
-                    payments is principal, which is yours, not the bank&apos;s.
-                  </div>
-                </div>
-              )}
+              <Announce>{`${t("lender.title")}: ${t(`status.${s.id}.asks`)} ${s.down[use]}% ${t("down.floor")}`}</Announce>
             </div>
           </div>
 
-          <div className="card p-4" style={{ marginTop: 16, maxWidth: 940, background: "var(--sunk)" }}>
-            <div className="row gap-2" style={{ alignItems: "flex-start" }}>
-              <Ico.alert size={15} className="c-brand" style={{ flex: "none", marginTop: 2 }} />
-              <div>
-                <div className="t-sm w6" style={script}>{t("lender.title")}</div>
-                <p className="t-sm c-3" style={{ marginTop: 4, lineHeight: am ? 1.85 : 1.6, ...script }}>{t(`status.${s.id}.asks`)}</p>
-              </div>
-            </div>
+          {/* The other two values, each its own page (§5.4, D20 order). */}
+          <div className="pair mt-4" style={{ maxWidth: 940 }} lang="en">
+            {[
+              { href: `/abroad/cost?st=${status}&lang=${locale}`, kicker: "Cost to buy and own", q: "What would buying and owning cost me?", b: "The cash you would send, and what owning costs each year." },
+              { href: `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&lang=${locale}`, kicker: "The return", q: "What would it earn if I rented it out?", b: "Rent, costs and what is left, marked as an estimate." },
+            ].map((v) => (
+              <Link key={v.href} href={v.href} className="card p-5 lift value-card">
+                <div className="kicker c-brand">{v.kicker}</div>
+                <div className="t-lg w6 serif">{v.q}</div>
+                <p className="t-sm c-3 grow" style={{ lineHeight: 1.55 }}>{v.b}</p>
+                <span className="row gap-1 t-sm w6 c-brand">{am ? "In English for now" : "See it"}<Ico.arrowR size={14} /></span>
+              </Link>
+            ))}
           </div>
-
           <p className="t-xs c-4" style={{ marginTop: 14, maxWidth: 700, lineHeight: am ? 1.85 : 1.6, ...script }}>
             {t("disc.hero")}
           </p>

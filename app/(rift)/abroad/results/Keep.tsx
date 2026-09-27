@@ -6,6 +6,7 @@ import { ForgetMe } from "@/components/rift/Forget";
 import { track } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
 import { ETHIOPIC_STACK, type Locale } from "@/lib/core/i18n";
+import { PHONE_CONSENT } from "@/lib/core/privacy";
 
 /**
  * The abroad readout, made durable, and deletable.
@@ -18,6 +19,12 @@ import { ETHIOPIC_STACK, type Locale } from "@/lib/core/i18n";
  *
  * It also had no delete control, on the page whose readers have the most
  * reason to ask what a U.S. company now holds about them.
+ *
+ * Blueprint v5 §5.4 (Kaleb R1): a phone number can be left too, under the
+ * same rule as everywhere else: unticked, specific consent, and a number
+ * without it is refused. The phone part is English on the Amharic page, and
+ * says so, until a native speaker writes it; consent wording is the last
+ * place a machine translation belongs.
  *
  * No share token and no snapshot, unlike the buyer readout. This page is pure
  * arithmetic on four URL parameters, so its own address IS the durable
@@ -35,6 +42,9 @@ export function Keep({
   cashIn: number;
 }) {
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [consent, setConsent] = useState(false);
+  const blocked = Boolean(phone.trim()) && !consent;
   const [state, setState] = useState<"idle" | "working" | "sent" | "off" | "bad" | "err">("idle");
 
   const am = locale === "am";
@@ -44,6 +54,7 @@ export function Keep({
   const send = async () => {
     const value = email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) { setState("bad"); return; }
+    if (blocked) return;
     setState("working");
 
     try {
@@ -52,6 +63,7 @@ export function Keep({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           email: value,
+          ...(phone.trim() ? { phone: phone.trim(), phoneConsent: consent } : {}),
           lead: {
             side: "buy",
             /* Their own words are on the landing page, not here. Completion is
@@ -133,10 +145,24 @@ export function Keep({
                   onChange={(e) => { setEmail(e.target.value); if (state === "bad") setState("idle"); }}
                   placeholder="you@example.com"
                 />
-                <button className="btn btn-p" onClick={send} disabled={state === "working"}>
+                <button className="btn btn-p" onClick={send} disabled={state === "working" || blocked}>
                   <span style={script}>{t["res.email.cta"]}</span>
                   <Ico.arrowR size={14} />
                 </button>
+              </div>
+              <div lang="en" style={{ marginTop: 14 }}>
+                <label className="t-xs c-4" style={{ display: "block" }}>
+                  Phone, with your country code (optional){am ? " · English only for now" : ""}
+                </label>
+                <input className="input" type="tel" autoComplete="tel" style={{ marginTop: 6, maxWidth: 280 }}
+                  value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+251 91 234 5678" />
+                {phone.trim() ? (
+                  <label className="opt fade-in" data-on={consent} style={{ marginTop: 10, alignItems: "flex-start" }}>
+                    <input type="checkbox" checked={consent} onChange={() => setConsent(!consent)} style={{ marginTop: 3 }} />
+                    <span className="t-xs c-2" style={{ lineHeight: 1.55 }}>{PHONE_CONSENT}</span>
+                  </label>
+                ) : null}
+                {blocked ? <p className="t-xs c-3" style={{ marginTop: 6 }}>Tick the box to include your phone number, or leave it empty.</p> : null}
               </div>
               {note ? (
                 <p className="t-xs c-neg" style={{ marginTop: 8, lineHeight: 1.6, ...body }}>{note}</p>

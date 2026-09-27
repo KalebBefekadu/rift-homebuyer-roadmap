@@ -127,8 +127,8 @@ export const VALUES: ValueDef[] = [
     question: "What would buying and owning cost me?",
     gives: "The cash you would send, and what owning costs each year.",
     cta: "See what it would cost",
-    asks: ["status", "use", "price"],
-    live: false,
+    asks: ["status", "use", "price", "county"],
+    live: true,
   },
   {
     id: "abroad-return", side: "abroad", href: "/abroad/results", name: "The return",
