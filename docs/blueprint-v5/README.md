@@ -845,6 +845,14 @@ due time and its next action:
   everything by keyboard.
 - Same accessibility bar as the rest (§4.7).
 
+**Status (27 Sep 2026).** The clickable mock-up D15 asks for is built at `/prototype/operations`
+(made-up people; open it with `npm run dev`, or on a deployment with `RIFT_INTERNAL=1`). It
+covers the sidebar and quick switcher, Today in its five groups with new leads and recent
+activity, Relationships with a detail panel, the journey workspace (Overview and Contract
+filled, the other tabs described) and Transactions. At 1280px every Today group and its first
+items are on one screen. **Waiting on Kaleb's click-through** before any real Operations screen
+is rebuilt; the rename to Operations and the Programs page are already live.
+
 **Acceptance:** the seven questions in §8.2 are answered from Today without scrolling on a
 1280px screen; no user-visible "Studio" remains and every old address redirects; returning from
 a detail keeps the list position and filters; every item on Today names its owner and next
@@ -991,7 +999,7 @@ verified on the live site as before.
 | 1. Design system | Spacing and grid, footer, form controls, call-to-action rules, artifact language (§4) | Nothing (D13 settled) |
 | 2. Lead side | Values split and questionnaire rebuilt (§5.1, §5.6); front door and buyer landing (§5.7); readouts, programs table, how it works (§5.8); offer upload and book page (§5.9); seller and abroad with the same lens (§5.3, §5.4); Save my plan and continuity (§5.5) | Nothing (D20 settled) |
 | 3. Assistance engine | Program records from official sources, matching, combinations, monitoring and discovery (§6) | Nothing (D16 settled) |
-| 4. Agent OS | Mock-up, Kaleb clicks through it, then build the redesign (§8) | Kaleb's review of the mock-up |
+| 4. Agent OS | Mock-up (built 27 Sep, `/prototype/operations`), Kaleb clicks through it, then build the redesign (§8) | Kaleb's review of the mock-up |
 | 5. Pilot and client side | Run the pilot with 3 to 5 buyers; client side design pass and missing areas (§7); money v2 (W10) once the pilot starts | Pilot buyers |
 | 6. Seller journey and campaigns | After pilot results (§9, §5.10) | D08 evidence |
 
@@ -1012,6 +1020,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Abroad split into values; phone with consent on the return page (§5.4) |
 | 27 Sep 2026 | Lead summary in Operations, saved plan into the search brief, my assistance plan, program alerts (§5.5, D14) |
 | 27 Sep 2026 | Client side: page navigation, Documents, Help on every page, moving in (§7.2) |
+| 27 Sep 2026 | Operations mock-up for Kaleb's click-through (§8, D15) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |
