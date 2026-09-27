@@ -4,6 +4,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead } from "./bounded";
 import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { sanitise, type EventInput } from "@/lib/core/telemetry";
+import type { LadderEvent } from "@/lib/core/ladder";
 
 export { EVENT_NAMES, isEventName, sanitise, type EventName, type EventInput } from "@/lib/core/telemetry";
 
@@ -140,4 +141,24 @@ export async function funnelReport(
   } catch (e) {
     return failed(e);
   }
+}
+
+/**
+ * The value ladder's events (Blueprint v5 §5.1), the last `days` days. Only
+ * the value's id is read from the payload; there is nothing else in it.
+ */
+export async function ladderEvents(days = 90): Promise<DbResult<LadderEvent[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const r = await boundedRead(
+    db.from("rift_events").select("session_id,name,payload").eq("agent_id", agent_id)
+      .in("name", ["value_view", "value_answer"]).gte("at", since).limit(20_000),
+    "the value events",
+  );
+  if (!r.ok) return r;
+  const rows = ("data" in r ? r.data : []) as { session_id: string; name: "value_view" | "value_answer"; payload: { tool?: unknown } }[];
+  return done(rows.map((x) => ({ session: x.session_id, name: x.name, tool: typeof x.payload?.tool === "string" ? x.payload.tool : "" })));
 }

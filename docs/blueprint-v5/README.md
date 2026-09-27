@@ -734,7 +734,7 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
 - **Ownership records** (B20) later: maintenance and warranty records, with retention approved
   first.
 - **Side-by-side home comparison** (SEARCH-05) once W10 provides monthly scenarios.
-- **Check the no-match state** (SEARCH-09).
+- **Check the no-match state** (SEARCH-09). Checked and built 27 Sep (requirements.md).
 
 **Status (27 Sep 2026).** Built: the client journey page lists its parts at the top (Today,
 Moving in, Offers, Priorities, Homes, Documents, Help: only what this person can see); a
@@ -1043,6 +1043,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Operations mock-up for Kaleb's click-through (§8, D15) |
 | 27 Sep 2026 | Affordability and lender questions values (§5.2) |
 | 27 Sep 2026 | Approval and outbox (§10.2); program alerts prepared as drafts |
+| 27 Sep 2026 | Value ladder on the Pilot page; the empty homes list names its limits (SEARCH-09) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

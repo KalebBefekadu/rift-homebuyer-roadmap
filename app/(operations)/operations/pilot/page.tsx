@@ -13,6 +13,9 @@ import { PrintButton } from "@/components/rift/PrintButton";
 import { StudioHeader } from "../StudioHeader";
 import { Unavailable } from "../Unavailable";
 import { Check } from "./Check";
+import { ladderEvents } from "@/lib/db/events";
+import { valueLadder } from "@/lib/core/ladder";
+import { valueById } from "@/lib/core/values";
 
 export const metadata: Metadata = { title: "Pilot" };
 export const dynamic = "force-dynamic";
@@ -71,6 +74,11 @@ export default async function PilotPage() {
   }), { invited: 0, accepted: 0, withdrawn: 0 }) : null;
 
   const h2 = { fontSize: 20, letterSpacing: "-0.01em", marginTop: 32 } as const;
+  /* The public side's own figure (Blueprint v5 §5.1): of those who finish
+     one value, how many take a second. Counted from events that carry the
+     value's id and never an answer. */
+  const ladderRead = await ladderEvents(90);
+  const ladder = ladderRead.ok && "data" in ladderRead ? valueLadder(ladderRead.data) : null;
 
   return (
     <>
@@ -84,6 +92,28 @@ export default async function PilotPage() {
           What the pilot shows so far, counted from what is recorded in Rift, as of {WHEN(now.toISOString())} (New York time).
           Nothing here is compared with how long the same work took before Rift, because that was never measured.
         </p>
+
+        <section style={{ marginTop: 20 }} aria-labelledby="ladder-h">
+          <h2 id="ladder-h" className="serif" style={{ ...h2, marginTop: 0 }}>The value ladder, last 90 days</h2>
+          {!ladder ? (
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>{ladderRead.ok ? ("reason" in ladderRead ? ladderRead.reason : "") : `It did not load (${ladderRead.error}). That is not the same as nobody visiting.`}</p>
+          ) : (
+            <>
+              <p className="t-sm c-2" style={{ marginTop: 8 }}>
+                {ladder.finishedOne
+                  ? <>{ladder.finishedOne} visitor{ladder.finishedOne === 1 ? "" : "s"} finished a value; {ladder.finishedTwo} of them went on to a second ({Math.round((ladder.rate ?? 0) * 100)}%).</>
+                  : "Nobody has finished a value yet."}
+              </p>
+              {ladder.byValue.length ? (
+                <table className="tbl" style={{ marginTop: 10 }}>
+                  <thead><tr><th scope="col">Value</th><th scope="col">Opened</th><th scope="col">Answered</th></tr></thead>
+                  <tbody>{ladder.byValue.map((v) => <tr key={v.tool}><td>{valueById(v.tool)?.name ?? v.tool}</td><td className="num">{v.opened}</td><td className="num">{v.finished}</td></tr>)}</tbody>
+                </table>
+              ) : null}
+              <p className="t-2xs c-4" style={{ marginTop: 6 }}>A visitor is a browser session. Counts what was opened and answered, never what was answered with.</p>
+            </>
+          )}
+        </section>
 
         {!on ? (
           <p className="t-sm c-3" style={{ marginTop: 20 }}>Journeys are switched off on this deployment (RIFT_BUYER_SEARCH=off).</p>

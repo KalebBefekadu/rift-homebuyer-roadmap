@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRefresh } from "@/components/rift/useRefresh";
 import { HomeCard, type HomeCardData } from "@/components/rift/HomeCard";
 import { AddHome, type HomeInput } from "@/components/rift/AddHome";
-import { REACTION_LABEL, type Reaction, type SearchCriterion } from "@/lib/core/search";
+import { REACTION_LABEL, describe, type Reaction, type SearchCriterion } from "@/lib/core/search";
 import { OFFER_LABEL, type OfferInterest } from "@/lib/core/tour";
 import { post } from "../../post";
 
@@ -106,7 +106,17 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
     <div style={{ marginTop: 10 }}>
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginBottom: 8 }}>{error}</p> : null}
       {live.length === 0 ? (
-        <p className="t-sm c-3">No homes here yet.</p>
+        /* SEARCH-09: an empty list names what limits it, and promises the
+           search is not quietly widened to fill it. */
+        <div className="t-sm c-3" style={{ lineHeight: 1.6 }}>
+          <p>No homes here yet.</p>
+          {criteria.some((c) => c.strength === "hard") ? (
+            <p style={{ marginTop: 4 }}>
+              Your must-haves decide what fits: {criteria.filter((c) => c.strength === "hard").map((c) => describe(c)).join("; ")}.
+              {" "}If nothing is coming up, {agentFirst} will talk to you before loosening any of them; nothing is widened without you.
+            </p>
+          ) : null}
+        </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {live.map((h) => {
