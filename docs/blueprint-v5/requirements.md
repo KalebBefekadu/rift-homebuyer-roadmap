@@ -35,7 +35,7 @@ kept so tests and commits that cite them stay traceable.
 | STATE-04 | Under contract, workstreams run at once, each with its own state, owner, evidence and dates. Cash buyers mark financing work as not applying. | Built (ten workstreams, including walkthrough and possession) |
 | STATE-05 | Stage changes need evidence and an authorized person. Time passing, an AI suggestion or unrelated ticks never advance a transaction. History keeps source, before and after, reason, actor, time and version. | Built |
 | STATE-06 | A failed offer returns the journey to search or offer and keeps the attempt. A terminated contract keeps its history; restarting is a new attempt. Amendments replace specific dates and their reminders together. | Built |
-| STATE-07 | A sale and a purchase can depend on each other (proceeds, possession). Neither moves the other; the first release shows a dependency the agent recorded, with its owner. | Not built (v5 §9) |
+| STATE-07 | A sale and a purchase can depend on each other (proceeds, possession). Neither moves the other; the first release shows a dependency the agent recorded, with its owner. | Built 28 Sep (`lib/core/dependency.ts`, migration 20260928020000): the agent links a selling journey to a buying one (proceeds, possession or timing) with its owner; shown on both journeys, on Today under waiting on others, and on the buyer's journey page. It moves neither journey and is met only with recorded evidence |
 
 ## 3. Lead side (public value and continuity)
 

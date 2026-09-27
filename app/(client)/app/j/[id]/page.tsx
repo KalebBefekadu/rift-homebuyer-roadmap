@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { clientMoney } from "@/lib/db/money";
+import { dependenciesFor } from "@/lib/db/dependencies";
+import { lineFor, stateOf } from "@/lib/core/dependency";
 import { LedgerView } from "@/components/rift/money/LedgerView";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -59,14 +61,20 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const member = m.data;
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
-  const [brief, homes, tours, prog, offers, moneyRead] = await Promise.all([
+  const [brief, homes, tours, prog, offers, moneyRead, depsRead] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
     member.side === "buy" ? clientProgress(member) : Promise.resolve(null),
     member.side === "buy" && member.scopes.includes("money") ? clientBids(member) : Promise.resolve(null),
     clientMoney(member),
+    dependenciesFor(member.journeyId, member.agentId),
   ]);
+  /* STATE-07: what this move depends on in the household's other one, as the
+     agent recorded it, with who owns it. Only the line and the owner leave
+     the server, never the agent's note. */
+  const linked = (depsRead.ok && "data" in depsRead ? depsRead.data ?? [] : []).filter((d) => stateOf(d) === "open")
+    .map((d) => ({ id: d.id, line: lineFor(d, member.side === "sell" ? "sell" : "buy"), owner: d.owner }));
   /* Money v2 (Blueprint v5 §10.1): only with "Price and fees", only buying. */
   const moneyOn = member.side === "buy" && member.scopes.includes("money");
   const moneyData = moneyRead.ok && "data" in moneyRead ? moneyRead.data : null;
@@ -175,6 +183,11 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       {member.side === "buy" ? (
         <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
           <h2 id="today-h" className="t-md w6">Today</h2>
+          {linked.length ? (
+            <ul className="t-sm" style={{ marginTop: 6 }}>
+              {linked.map((l) => <li key={l.id} className="c-2"><span aria-hidden>◷ </span>{l.line}. {l.owner} is handling it.</li>)}
+            </ul>
+          ) : null}
           {!p ? (
             <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
               What is due did not load. That is not the same as nothing being due; reload in a moment, or ask {agentFirst}.

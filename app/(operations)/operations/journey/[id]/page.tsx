@@ -19,7 +19,7 @@ import { Homes } from "./Homes";
 import { Showings } from "./Showings";
 import { Progress } from "./Progress";
 import { progressFor } from "@/lib/db/progress";
-import { STAGE_LABEL, STATUS_LABEL, isSettled } from "@/lib/core/progress";
+import { STAGE_LABEL, STATUS_LABEL, WORK_STATE_LABEL, isSettled } from "@/lib/core/progress";
 import { bidsFor } from "@/lib/db/bids";
 import { documentsFor } from "@/lib/db/documents";
 import { Offers } from "./Offers";
@@ -29,6 +29,10 @@ import { TAB_LABEL, tabFrom, tabsFor, type Tab } from "./tabs";
 import { moneyFor } from "@/lib/db/money";
 import { LedgerView } from "@/components/rift/money/LedgerView";
 import { MoneyFacts } from "./MoneyFacts";
+import { Linked } from "./Linked";
+import { dependenciesFor } from "@/lib/db/dependencies";
+import { journeysFor } from "@/lib/db/journeys";
+import { stateOf } from "@/lib/core/dependency";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -85,7 +89,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
-  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead] = await Promise.all([
+  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
     buying ? progressFor(id) : Promise.resolve(null),
@@ -98,7 +102,12 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     settled(needs("overview", "contract") ? deadlinesFor(id) : null),
     tab === "household" ? summaryLinksFor(id) : Promise.resolve(null),
     settled(needs("money") ? moneyFor(id) : null),
+    dependenciesFor(id),
+    settled(tab === "overview" ? journeysFor(journey.leadId) : null),
   ]);
+  const deps = depsRead.ok && "data" in depsRead ? depsRead.data : null;
+  const openDeps = (deps ?? []).filter((d) => stateOf(d) === "open");
+  const candidates = siblings && siblings.ok && "data" in siblings ? siblings.data.filter((x) => x.side !== journey.side).map((x) => ({ id: x.id, label: x.label })) : [];
   const moneyData = moneyRead && moneyRead.ok && "data" in moneyRead ? moneyRead.data : null;
 
   const memberList = members.ok && "data" in members ? members.data : null;
@@ -171,6 +180,11 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
             </div>
           ) : buying ? <span className="chip chip-warn">Stage unknown: did not load</span> : null}
         </div>
+        {openDeps.length ? (
+          <p className="t-xs" style={{ marginTop: 6 }}>
+            <span className="chip chip-warn t-2xs">◷ Linked</span> {openDeps.map((d) => `${journey.side === "buy" ? "Needs" : "Needed by"} ${journey.side === "buy" ? d.saleLabel : d.purchaseLabel} (${d.kind}, owner ${d.owner})`).join("; ")}
+          </p>
+        ) : null}
         {next ? (
           <p className="t-sm" style={{ marginTop: 8 }}>
             <span className="w6">Next:</span> {next.tab ? <Link className="u" href={href(next.tab)}>{next.text}</Link> : next.text}
@@ -218,12 +232,22 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
             {prog?.open ? (
               <section className="card desk-card" aria-labelledby="ov-work">
                 <h2 id="ov-work">Workstreams</h2>
-                <ul>{prog.open.work.filter((w) => !isSettled(w.state)).map((w) => (
-                  <li key={w.workstream} className="desk-row t-xs"><span className="w6">{w.label}</span> · {w.state.replace("-", " ")}{w.stale ? " · no word for a week" : ""}</li>
+                <ul>{prog.open.work.filter((w) => !isSettled(w.state) && w.state !== "not-started").map((w) => (
+                  <li key={w.workstream} className="desk-row t-xs"><span className="w6">{w.label}</span> · {WORK_STATE_LABEL[w.state].toLowerCase()}{w.stale && w.state !== "blocked" ? " · no word for a week" : ""}</li>
                 ))}</ul>
+                {(() => {
+                  const idle = prog.open.work.filter((w) => w.state === "not-started").length;
+                  const settled = prog.open.work.filter((w) => isSettled(w.state)).length;
+                  return <p className="t-xs c-4" style={{ marginTop: 4 }}>{idle} not started, {settled} confirmed or not needed.</p>;
+                })()}
                 <p className="t-xs" style={{ marginTop: 6 }}><Link className="u" href={href("contract")}>Open the contract</Link></p>
               </section>
             ) : null}
+            <section className="card desk-card" aria-labelledby="ov-linked">
+              <h2 id="ov-linked">Linked {buying ? "sale" : "purchase"}</h2>
+              {deps === null ? <p className="t-sm c-4">{depsRead.ok ? "Linking journeys needs database update 20260928020000." : "Did not load; unknown, not none."}</p>
+                : <Linked journeyId={id} side={journey.side} deps={deps} candidates={candidates} agentName={agent.name} />}
+            </section>
             {!buying ? (
               <section className="card desk-card">
                 <h2>Selling</h2>

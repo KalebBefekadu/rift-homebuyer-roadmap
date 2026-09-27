@@ -91,8 +91,7 @@ Built since 24 Sep, each with its status line in the section named: the design r
 side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
 engine (§6), the client side's documents, help, summary links and moving in (§7), the Operations
 redesign (§8), money v2, the client money area and the side-by-side comparison (§10.1, §7, D27), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
-- A sale linked to a purchase (STATE-07), the seller journey (§9) and the campaign composer
-  (§5.10). Sequenced after pilot results (D08).
+- The seller journey (§9) and the campaign composer (§5.10). Sequenced after pilot results (D08).
 - Cal.com (§10): built as an adapter, waiting for the key.
 - Discovery research for more assistance programs (§6 status).
 - The pilot itself: 3 to 5 real buyers, added by hand (§13).
@@ -722,7 +721,7 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
 - **Documents area**: every document shared with them in one place, not only through offers.
 - **Help**: how to reach the agent and what happens next, on every page.
 - **Selected read-only summary links** for someone outside the household (ACCESS-02).
-- **A sale linked to a purchase** shows the dependency and its owner (STATE-07).
+- **A sale linked to a purchase** shows the dependency and its owner (STATE-07). Built 28 Sep.
 - **Move-in handoff** (B19): utilities, keys, address changes, and county homestead and tax
   dates from maintained official sources.
 - **Ownership records** (B20) later: maintenance and warranty records, with retention approved
@@ -921,8 +920,8 @@ a shortfall (AT33, MONEY-01). Every line says whether it is Rift's estimate, the
 or recorded by the agent from a named source on a stated day (`rift_money_facts`, history
 only). The closing disclosure's cash to close is its own figure beside the estimate, with the
 difference. The agent records amounts on the journey's Money tab; members with "Price and fees"
-see the same ledger on their journey page. Waiting: the side-by-side home comparison (SEARCH-05)
-that uses its monthly figures.
+see the same ledger on their journey page. The side-by-side home comparison (SEARCH-05) uses its
+figures, also built 28 Sep.
 
 ### 10.2 Approvals, outbox and AI controls
 Needed before any integration writes or any AI draft is used:
@@ -1062,6 +1061,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | A sale linked to a purchase (STATE-07) |
 | 28 Sep 2026 | Homes side by side (SEARCH-05) for the agent and the household |
 | 28 Sep 2026 | Money v2 built (§10.1, D27): the buyer's ledger, recorded amounts on the journey's Money tab, the client money area |
 | 28 Sep 2026 | Five migrations applied to production and the site deployed; CI runs the query-shape suite against PostgREST |

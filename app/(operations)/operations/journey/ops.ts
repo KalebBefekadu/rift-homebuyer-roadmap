@@ -17,6 +17,8 @@ import { addDeadline, recordAmendment, reviseDeadline, type Revise } from "@/lib
 import type { AmendmentChange, DeadlineInput, DeadlineKind } from "@/lib/core/deadline";
 import { recordCheck } from "@/lib/db/pilot";
 import { recordFact } from "@/lib/db/money";
+import { recordDependency, recordDependencyEvent } from "@/lib/db/dependencies";
+import type { DependencyEvent } from "@/lib/core/dependency";
 import type { CheckResult } from "@/lib/core/pilot";
 import type { Instruction, StepInput as BidStepInput, Terms } from "@/lib/core/bid";
 import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
@@ -363,6 +365,26 @@ export async function recordMoney(journeyId: string, kind: string, amount: numbe
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordFact({ journeyId, kind, amount, source, asOf, by: g.name, requestId });
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r);
+}
+
+/** A purchase that depends on a sale (STATE-07). Moves neither journey. */
+export async function linkJourneys(journeyId: string, saleJourneyId: string, purchaseJourneyId: string, kind: string, note: string, owner: string, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (![journeyId, saleJourneyId, purchaseJourneyId, requestId].every(isUuid)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordDependency({ saleJourneyId, purchaseJourneyId, kind, note, owner, by: g.name, requestId });
+  revalidatePath(`/operations/journey/${saleJourneyId}`);
+  revalidatePath(`/operations/journey/${purchaseJourneyId}`);
+  return out(r, (d) => ({ id: d.id }));
+}
+
+export async function dependencyHappened(journeyId: string, dependencyId: string, state: DependencyEvent["state"], evidence: string, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (![journeyId, dependencyId, requestId].every(isUuid)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordDependencyEvent({ dependencyId, state, evidence, by: g.name, requestId });
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }

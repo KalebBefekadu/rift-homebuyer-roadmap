@@ -745,3 +745,24 @@ describe("money facts, as stored (money v2)", () => {
     expect(rows[0].n).toBe(0);
   });
 });
+
+describe("a sale linked to a purchase, as stored (STATE-07)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("only a selling journey and a buying journey, and history only", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'buy','linked-person@example.com',50,'soon') returning id", [AGENT]);
+    const j = async (side: string, label: string) => (await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,$3,$4) returning id", [AGENT, lead.id, side, label])).rows[0].id as string;
+    const sell = await j("sell", "Selling Oak"), buy = await j("buy", "Buying Decatur"), buy2 = await j("buy", "Buying Tucker");
+    const ins = (s: string, p: string) => c.query(
+      `insert into rift_dependencies (agent_id, sale_journey_id, purchase_journey_id, kind, note, owner, actor_label, request_id)
+       values ($1,$2,$3,'proceeds','Down payment from the sale','Kaleb','Kaleb',gen_random_uuid()) returning id`, [AGENT, s, p]);
+    await expect(ins(buy2, buy)).rejects.toThrow(/selling journeys/);
+    const { rows: [d] } = await ins(sell, buy);
+    await rejects(c, "update rift_dependencies set owner = 'Someone' where id = $1", [d.id], /history/);
+    await rejects(c, `insert into rift_dependency_events (agent_id, dependency_id, state, evidence, actor_label, request_id)
+      values ($1,$2,'met','x','Kaleb',gen_random_uuid())`, [AGENT, d.id], /check/);
+    await c.query(`insert into rift_dependency_events (agent_id, dependency_id, state, evidence, actor_label, request_id)
+      values ($1,$2,'met','Settlement statement','Kaleb',gen_random_uuid())`, [AGENT, d.id]);
+  });
+});

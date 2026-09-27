@@ -15,6 +15,8 @@ import { datedCommitments } from "@/lib/db/plan";
 import { allContracts } from "@/lib/db/transactions";
 import { recentJourneyEvents } from "@/lib/db/progress";
 import { readMarks } from "@/lib/db/desk";
+import { dependenciesFor } from "@/lib/db/dependencies";
+import { lineFor, stateOf } from "@/lib/core/dependency";
 import { jobsHealth } from "@/lib/db/jobs";
 import type { DbResult } from "@/lib/db/result";
 import { REVIEW_SLA_HOURS } from "@/lib/core/review";
@@ -82,7 +84,7 @@ export default async function OperationsToday() {
 
   /* One round. None of these depends on another, and Today's latency is the
      product's felt speed. */
-  const [leadsRead, reviewRead, dueRead, rate, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, programsRead, eventsRead, marksRead] =
+  const [leadsRead, reviewRead, dueRead, rate, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, programsRead, eventsRead, marksRead, depsRead] =
     await Promise.all([
       rankedLeads(50),
       openItems(),
@@ -98,11 +100,12 @@ export default async function OperationsToday() {
       programsToday(now, rules.registryDays.value),
       recentJourneyEvents(agent.agentId, 3, now),
       readMarks(agent.agentId, now),
+      dependenciesFor(null, agent.agentId),
     ]);
 
   /* Three states, not two: a query that FAILED is neither "nothing to do"
      nor "nothing recorded", and must not render as either. */
-  const reads: DbResult<unknown>[] = [leadsRead, reviewRead, dueRead, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, eventsRead, marksRead];
+  const reads: DbResult<unknown>[] = [leadsRead, reviewRead, dueRead, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, eventsRead, marksRead, depsRead];
   const notRecording = reads.some((r) => "skipped" in r);
   const failures = reads.flatMap((r) => (r.ok ? [] : [r.error]));
   for (const error of failures) captureOpError(new Error(error), { op: "operations.today" });
@@ -133,6 +136,8 @@ export default async function OperationsToday() {
     lapsing: list(lapsingRead).map((l) => ({ id: l.id, name: l.name, covered: l.standing.covered, note: l.standing.note })),
     choices: choices.map((c) => ({ leadId: c.leadId, name: c.name, from: c.seen.from, note: c.note })),
     rate: { stale: rate.freshness !== "fresh", pct: rate.pct, age: rate.asOf ? `${rate.ageDays} days old` : "Never recorded" },
+    dependencies: list(depsRead).filter((d) => stateOf(d) === "open")
+      .map((d) => ({ id: d.id, purchaseJourneyId: d.purchaseJourneyId, purchaseLabel: d.purchaseLabel, line: lineFor(d, "buy"), owner: d.owner, note: d.note })),
   });
   const groups = arrange(items, marks ?? [], now);
 

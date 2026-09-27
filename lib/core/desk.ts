@@ -93,6 +93,8 @@ export interface DeskInput {
   lapsing: { id: string; name: string; covered: boolean; note: string }[];
   choices: { leadId: string; name: string; from: string; note: string | null }[];
   rate: { stale: boolean; pct: number; age: string };
+  /** Open links between a sale and a purchase (STATE-07). */
+  dependencies?: { id: string; purchaseJourneyId: string; purchaseLabel: string; line: string; owner: string; note: string }[];
 }
 
 const DAY = 86_400_000;
@@ -185,6 +187,14 @@ export function deskItems(input: DeskInput): DeskItem[] {
 
   for (const t of input.touches) {
     push({ key: `touch:${t.leadId}`, group: "today", title: `${t.channel} ${t.name}`, why: t.daysLate > 0 ? `Follow-up ${t.daysLate} day${t.daysLate === 1 ? "" : "s"} late` : "Follow-up due, and it needs you", owner: me, about: lead(t.leadId, t.name), evidence: t.says, due: "Today", next: t.channel === "Call" ? "Call them" : "Send it", href: `/operations/lead/${t.leadId}`, tone: t.daysLate > 0 ? "warn" : "none", order: 2 });
+  }
+
+  for (const d of input.dependencies ?? []) {
+    push({
+      key: `link:${d.id}`, group: "waiting", title: d.line, why: "A purchase that depends on a sale; neither moves the other",
+      owner: d.owner, about: journey(d.purchaseJourneyId, d.purchaseLabel), evidence: d.note, due: null,
+      next: "Record it met when it is, with what shows it", href: `/operations/journey/${d.purchaseJourneyId}`, tone: "none", order: 50,
+    });
   }
 
   for (const w of input.waiting) {

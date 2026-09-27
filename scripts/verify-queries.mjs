@@ -453,6 +453,10 @@ await check("readFacts", () => db.from("rift_money_facts").select("kind,amount_c
   .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
 await check("journeyMoney: journey", () => db.from("rift_journeys").select("origin_lead_id,side").eq("id", NIL).eq("agent_id", NIL).maybeSingle());
 await check("journeyMoney: plan", () => db.from("rift_leads").select("plan,plan_saved_at").eq("id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("dependenciesFor", () => db.from("rift_dependencies").select("id,sale_journey_id,purchase_journey_id,kind,note,owner,actor_label,created_at")
+  .eq("agent_id", NIL).or(`sale_journey_id.eq.${NIL},purchase_journey_id.eq.${NIL}`).order("created_at").limit(1));
+await check("dependency events", () => db.from("rift_dependency_events").select("dependency_id,state,evidence,actor_label,created_at")
+  .eq("agent_id", NIL).in("dependency_id", [NIL]).order("created_at").limit(1));
 await check("journeysMatching", () => db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
   .eq("agent_id", NIL).ilike("label", "%a%").order("created_at", { ascending: false }).limit(6));
 

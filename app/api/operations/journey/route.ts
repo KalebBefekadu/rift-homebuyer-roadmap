@@ -7,7 +7,7 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
@@ -251,6 +251,13 @@ export async function POST(req: Request) {
         deadlineId: str(c.deadlineId, 40), remove: c.remove === true, input: c.remove === true ? null : dateInput(c.input), expectedSeq: num(c.expectedSeq),
       }));
       return json(await amendDates(journeyId, str(b.reference, 200), changes, str(b.requestId, 40)));
+    }
+    case "link-journeys":
+      return json(await linkJourneys(journeyId, str(b.saleJourneyId, 40), str(b.purchaseJourneyId, 40), str(b.kind, 20), str(b.note, 400), str(b.owner, 200), str(b.requestId, 40)));
+    case "dependency-event": {
+      const state = str(b.state, 10);
+      if (!["met", "removed", "reopened"].includes(state)) return json({ ok: false, error: "Choose what happened." }, 400);
+      return json(await dependencyHappened(journeyId, str(b.dependencyId, 40), state as "met" | "removed" | "reopened", str(b.evidence, 400), str(b.requestId, 40)));
     }
     case "record-money": {
       const amount = typeof b.amount === "number" && Number.isFinite(b.amount) ? b.amount : NaN;
