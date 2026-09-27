@@ -687,3 +687,21 @@ export const OFFICIAL_SOURCE = "the official source";
 
 export const CAUTION =
   "Program terms and funding availability may change. Confirm current eligibility with the program administrator or a participating lender before relying on this information.";
+
+/**
+ * The most a program offers, as a number to sort by and the words to show.
+ * Shared by the programs table and campaign pages, so the two cannot state a
+ * program's amount differently.
+ */
+export function upTo(p: ProgramRecord): { n: number; label: string } {
+  const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  const occ = p.amount.occupations;
+  const top = Math.max(p.amount.max, occ?.max ?? 0);
+  if (p.amount.pctOfLoan && !top) return { n: 0, label: `Up to ${p.amount.pctOfLoan}% of the loan` };
+  if (p.amount.pctOfPrice) return { n: top, label: `${p.amount.pctOfPrice}% of price, up to ${usd(top)}` };
+  return { n: top, label: `Up to ${usd(top)}` };
+}
+
+/** Programs that apply in a county: statewide ones and the county's own. */
+export const programsIn = (programs: ProgramRecord[], county: string) =>
+  programs.filter((p) => p.area.counties.length === 0 || p.area.counties.includes(county));

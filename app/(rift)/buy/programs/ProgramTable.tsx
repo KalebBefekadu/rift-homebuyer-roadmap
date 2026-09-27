@@ -2,18 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { Ico } from "@/components/rift/icons";
-import { KIND_LABEL, FUNDING_TEXT, type ProgramRecord } from "@/lib/core/assistance";
+import { KIND_LABEL, FUNDING_TEXT, upTo, type ProgramRecord } from "@/lib/core/assistance";
 
 const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const MONTH = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
-export function upTo(p: ProgramRecord): { n: number; label: string } {
-  const occ = p.amount.occupations;
-  const top = Math.max(p.amount.max, occ?.max ?? 0);
-  if (p.amount.pctOfLoan && !top) return { n: 0, label: `Up to ${p.amount.pctOfLoan}% of the loan` };
-  if (p.amount.pctOfPrice) return { n: top, label: `${p.amount.pctOfPrice}% of price, up to ${money(top)}` };
-  return { n: top, label: `Up to ${money(top)}` };
-}
 
 function incomeText(p: ProgramRecord) {
   const i = p.income;

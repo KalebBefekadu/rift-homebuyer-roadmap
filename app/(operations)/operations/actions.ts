@@ -20,6 +20,8 @@ import type { Wording } from "@/lib/core/funnel";
 import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
 import { journeysMatching } from "@/lib/db/journeys";
 import { recordMark } from "@/lib/db/desk";
+import { campaignFor, createCampaign, publish, saveRevision } from "@/lib/db/campaigns";
+import { assistanceRecipe, cleanRecipe, type PublicationAction } from "@/lib/core/campaign";
 import type { MarkKind } from "@/lib/core/desk";
 import { compareToSnapshot } from "@/lib/db/seam";
 import { representationOf, setRepresentation, type RepStatus } from "@/lib/db/clients";
@@ -795,4 +797,41 @@ export async function markItem(input: {
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };
+}
+
+/* ------------------------------------------------------------------ *
+ * Campaigns (Blueprint v5 §5.10; CAMP-01 to CAMP-03)
+ * ------------------------------------------------------------------ */
+
+export async function newCampaign(input: { name: string; slug: string; county: string; requestId: string }) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const r = await createCampaign({ name: input.name, slug: input.slug.trim().toLowerCase(), recipe: assistanceRecipe(input.county), by: agent.name, requestId: input.requestId });
+  revalidatePath("/operations/campaigns");
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, id: r.data.id };
+}
+
+export async function saveCampaign(input: { id: string; recipe: unknown; expectedVersion: number; note: string | null; requestId: string }) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const mine = await campaignFor(input.id);
+  if (!mine.ok || !("data" in mine) || !mine.data) return { ok: false as const, error: "That campaign is not yours" };
+  const r = await saveRevision(input.id, cleanRecipe(input.recipe), input.expectedVersion, input.note, agent.name, input.requestId);
+  revalidatePath(`/operations/campaigns/${input.id}`);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, version: r.data.version };
+}
+
+export async function publishCampaign(input: { id: string; action: PublicationAction; version: number | null; requestId: string }) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const r = await publish(input.id, input.action, input.version, agent.name, input.requestId);
+  revalidatePath(`/operations/campaigns/${input.id}`);
+  revalidatePath("/operations/campaigns");
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const, live: r.data.live };
 }

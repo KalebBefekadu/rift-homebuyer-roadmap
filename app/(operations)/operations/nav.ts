@@ -24,6 +24,7 @@ export const MORE: Place[] = [
   { href: "/operations/outbox", label: "Outbox" },
   { href: "/operations/referrals", label: "Advocacy" },
   { href: "/operations/reports", label: "Reports" },
+  { href: "/operations/campaigns", label: "Campaigns" },
   { href: "/operations/programs", label: "Programs" },
   { href: "/operations/questions", label: "Questions" },
   { href: "/operations/settings", label: "Settings" },

@@ -836,3 +836,22 @@ describe("a sale's listing, as stored (S06 to S09)", () => {
       values ($1,$2,current_date,'Three showings this week.','change','Kaleb',gen_random_uuid())`, [AGENT, j.id])).rejects.toThrow(/change_says_what/);
   });
 });
+
+describe("campaigns, as stored (CAMP-01 to CAMP-03)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("addresses are plain, versions are unique and never edited, publishing names a saved version", async (c) => {
+    await rejects(c, "insert into rift_campaigns (agent_id, slug, name, actor_label) values ($1,'Bad Slug!','Test','Kaleb')", [AGENT], /check/);
+    const { rows: [camp] } = await c.query("insert into rift_campaigns (agent_id, slug, name, actor_label) values ($1,'fulton-oct','Fulton October','Kaleb') returning id", [AGENT]);
+    const rev = (v: number) => c.query(`insert into rift_campaign_revisions (agent_id, campaign_id, version, recipe, actor_label, request_id)
+      values ($1,$2,$3,'{"blocks":[{"type":"heading","title":"T","lede":"L"}]}'::jsonb,'Kaleb',gen_random_uuid()) returning id`, [AGENT, camp.id, v]);
+    const { rows: [r1] } = await rev(1);
+    await expect(rev(1)).rejects.toThrow(/version/);
+    await rejects(c, "update rift_campaign_revisions set recipe = '{}'::jsonb where id = $1", [r1.id], /history/);
+    await rejects(c, `insert into rift_campaign_publications (agent_id, campaign_id, action, version, actor_label, request_id)
+      values ($1,$2,'publish',7,'Kaleb',gen_random_uuid())`, [AGENT, camp.id], /foreign key|revision/);
+    await rejects(c, `insert into rift_campaign_publications (agent_id, campaign_id, action, version, actor_label, request_id)
+      values ($1,$2,'unpublish',1,'Kaleb',gen_random_uuid())`, [AGENT, camp.id], /version/);
+    await c.query(`insert into rift_campaign_publications (agent_id, campaign_id, action, version, actor_label, request_id)
+      values ($1,$2,'publish',1,'Kaleb',gen_random_uuid())`, [AGENT, camp.id]);
+  });
+});

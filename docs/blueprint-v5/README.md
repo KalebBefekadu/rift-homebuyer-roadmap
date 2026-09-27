@@ -91,7 +91,6 @@ Built since 24 Sep, each with its status line in the section named: the design r
 side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
 engine (§6), the client side's documents, help, summary links and moving in (§7), the Operations
 redesign (§8), money v2, the client money area and the side-by-side comparison (§10.1, §7, D27), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
-- The campaign composer (§5.10). Sequenced after pilot results (D08).
 - Cal.com (§10): built as an adapter, waiting for the key.
 - Discovery research for more assistance programs (§6 status).
 - The pilot itself: 3 to 5 real buyers, added by hand (§13).
@@ -492,6 +491,16 @@ the custom artifact block, composed in Operations; AI may draft a recipe, never 
 validate, publish and roll back. Start with one buyer recipe on the assistance path; the general
 composer comes after. Campaign data flows into the lead summary (§5.5). **Waits for** the value
 components (§5.1), because campaigns are built from them.
+
+**Status (28 Sep 2026): built** (D29). Operations → Campaigns: a campaign starts as the
+assistance recipe for a county and is composed from five approved blocks (heading, a value, the
+county's programs, a paragraph, a button) with plain words only: code, links, and promises such
+as "qualify" or "guaranteed" are refused as they are typed and again at save and publish. The
+preview is the public page's own renderer at phone and desktop width. Every save is a version,
+kept; publish, roll back and unpublish are recorded with who and when. The page lives at
+/c/<slug>, is kept out of search, pins a visitor to the version they started on, and carries the
+campaign and version into first-touch attribution and so into the lead summary. Not built: an AI
+draft of a recipe (needs the Anthropic key).
 
 ---
 
@@ -1035,6 +1044,7 @@ change to reverse.
 | D26 | The Operations redesign was built from the mock-up without the D15 click-through, because Kaleb asked for the build to continue to the end. Kaleb reviews the live screens instead | The mock-up and the live screens share the layout, so the review loses nothing but order | Any screen Kaleb wants changed; the old pages are in git history |
 | D27 | Money v2 (W10) was built before the pilot starts, instead of after (D11), because Kaleb asked for the build to run to the end. The public values are unchanged; the ledger is on the journey and the client's journey page only | Nothing in W10 needs pilot data; its rules (AT30 to AT33) are fixed | Hiding the Money tab and section until the pilot starts |
 | D28 | The seller journey is being built before pilot results (D08), because Kaleb asked for the build to run to the end. A seller's property is stored as the selling journey's one home record, so contracts, dates and workstreams work unchanged | Reuses the tested contract model rather than a second one | Hiding selling journeys' workspace until the pilot reports |
+| D29 | The campaign composer is built before pilot results (D08), because Kaleb asked for the build to run to the end; campaign pages are kept out of search | Built from the values already live, so it adds no new maths | Unpublishing every campaign; the composer stays |
 
 ### Open
 
@@ -1089,6 +1099,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Campaign composer (§5.10, CAMP-01 to CAMP-03, D29) |
 | 28 Sep 2026 | Seller preparation and offers on the journey; the offer room's net now matches the seller's own figures |
 | 28 Sep 2026 | Seller listing and launch, showings and weekly reviews (S06 to S09) |
 | 28 Sep 2026 | Seller pricing strategy (S04) and final proceeds (S16) |
