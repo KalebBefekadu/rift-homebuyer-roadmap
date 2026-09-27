@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { clientMoney } from "@/lib/db/money";
+import { LedgerView } from "@/components/rift/money/LedgerView";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { clientBids, clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/client";
@@ -57,13 +59,17 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const member = m.data;
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
-  const [brief, homes, tours, prog, offers] = await Promise.all([
+  const [brief, homes, tours, prog, offers, moneyRead] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
     member.side === "buy" ? clientProgress(member) : Promise.resolve(null),
     member.side === "buy" && member.scopes.includes("money") ? clientBids(member) : Promise.resolve(null),
+    clientMoney(member),
   ]);
+  /* Money v2 (Blueprint v5 §10.1): only with "Price and fees", only buying. */
+  const moneyOn = member.side === "buy" && member.scopes.includes("money");
+  const moneyData = moneyRead.ok && "data" in moneyRead ? moneyRead.data : null;
   /* Worded here, on the server, so nothing but the buyer's line leaves it:
      not the agent's notes, not the ShowingTime reference, not why a showing
      is on hold. A read that failed shows no showings rather than wrong ones;
@@ -138,6 +144,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     { id: "offers-h", label: "Offers", on: member.side === "buy" && offers && (!o || o.unavailable || buyerBids.length > 0) },
     { id: "pri-h", label: "Priorities", on: member.side === "buy" && member.scopes.includes("search") },
     { id: "homes-h", label: "Homes", on: member.side === "buy" && member.scopes.includes("homes") },
+    { id: "money-h", label: "Money", on: moneyOn },
     { id: "docs-h", label: "Documents", on: documents.length > 0 },
     { id: "help-h", label: "Help", on: true },
   ].filter((x) => x.on);
@@ -316,6 +323,18 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
           ) : (
             <p className="t-sm c-3" style={{ marginTop: 8 }}>The homes did not load. That is not the same as an empty list; reload in a moment.</p>
           )}
+        </section>
+      ) : null}
+
+      {moneyOn ? (
+        <section id="money" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="money-h">
+          <h2 id="money-h" className="t-md w6">Money</h2>
+          <p className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+            What you pay before closing, what you bring to the table, and what your savings leave, worked out from
+            {moneyData?.answersFrom ? " the plan you saved" : " typical Georgia figures"} and the amounts {agentFirst} has recorded. Each line says where it came from.
+          </p>
+          {moneyData ? <LedgerView l={moneyData.ledger} audience="client" />
+            : <p className="t-sm c-3">This did not load. That is not the same as there being nothing to show; reload in a moment.</p>}
         </section>
       ) : null}
 

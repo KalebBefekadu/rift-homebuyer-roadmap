@@ -129,7 +129,8 @@ export interface Ledger {
   before: Bucket;
   table: Bucket;
   total: Bucket;
-  left: Bucket;
+  /** Null when their savings are not known: unknown is not zero (MONEY-01). */
+  left: Omit<Bucket, "amount"> & { amount: number | null };
   reserve: Bucket;
   moving: LedgerLine | null;
   /** From the closing document, when recorded. Never mixed with the estimate. */
@@ -186,13 +187,15 @@ export function ledger(inputs: BuyerInputs, answered: { price: boolean; downPct:
   const tableTotal = table.reduce((s, l) => s + (l.credit ? -l.amount : l.amount), 0);
 
   const total = beforeTotal + tableTotal;
-  const savings = line("Savings", inputs.savings, answered.savings ? "answer" : "estimate", null);
-  const left = savings.amount - total;
+  /* Savings nobody gave cannot be spent on paper: without their answer, what
+     is left is unknown, never a shortfall worked out from a default. */
+  const savings = line("Savings", inputs.savings, "answer", null);
+  const left = answered.savings ? savings.amount - total : null;
   const monthly = monthlyCost(i).total;
   const reserve = monthly * RESERVE_MONTHS;
   const official = f("official-cash-to-close");
 
-  const lines = [...before, ...table, savings];
+  const lines = [...before, ...table];
   return {
     version: LEDGER_VERSION,
     before: { key: "before", label: "Needed before closing", amount: beforeTotal, lines: before, says: "Paid while under contract, before the closing table." },
@@ -202,8 +205,9 @@ export function ledger(inputs: BuyerInputs, answered: { price: boolean; downPct:
     },
     total: { key: "total", label: "Total buying budget", amount: total, lines: [], says: "Before closing and at the table together. Earnest money counts once." },
     left: {
-      key: "left", label: "Left at closing", amount: left, lines: [savings],
-      says: left < 0 ? `Short by about ${money(-left)}: this has to be found before closing.` : "What your savings leave after closing, before any reserve.",
+      key: "left", label: "Left at closing", amount: left, lines: left === null ? [] : [savings],
+      says: left === null ? "Not known: nobody has said how much is saved, so what is left cannot be worked out."
+        : left < 0 ? `Short by about ${money(-left)}: this has to be found before closing.` : "What your savings leave after closing, before any reserve.",
     },
     reserve: {
       key: "reserve", label: "Suggested reserve", amount: reserve, lines: [],

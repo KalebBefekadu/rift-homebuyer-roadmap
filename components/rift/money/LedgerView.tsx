@@ -20,12 +20,14 @@ function Line({ l }: { l: LedgerLine }) {
   );
 }
 
-function Box({ b, strong }: { b: Bucket; strong?: boolean }) {
+function Box({ b, strong }: { b: Omit<Bucket, "amount"> & { amount: number | null }; strong?: boolean }) {
   return (
     <section className="card p-4" aria-labelledby={`b-${b.key}`}>
       <div className="between gap-2" style={{ alignItems: "baseline" }}>
         <h3 id={`b-${b.key}`} className={strong ? "t-md w6" : "t-sm w6"}>{b.label}</h3>
-        <span className={`num ${strong ? "t-lg w6" : "t-md"} ${b.amount < 0 ? "c-warn" : ""}`}>{b.amount < 0 ? `−${money(-b.amount)}` : money(b.amount)}</span>
+        <span className={`num ${strong ? "t-lg w6" : "t-md"} ${b.amount !== null && b.amount < 0 ? "c-warn" : ""}`}>
+          {b.amount === null ? "Not known" : b.amount < 0 ? `−${money(-b.amount)}` : money(b.amount)}
+        </span>
       </div>
       <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.5 }}>{b.says}</p>
       {b.lines.length ? <ul style={{ marginTop: 6 }}>{b.lines.map((l) => <Line key={l.label} l={l} />)}</ul> : null}

@@ -449,6 +449,10 @@ await check("readMarks", () => db.from("rift_desk_marks").select("item_key,kind,
   .eq("agent_id", NIL).gte("created_at", new Date(0).toISOString()).order("created_at").limit(1));
 await check("lastContacts", () => db.from("rift_lead_notes").select("lead_id,at").eq("agent_id", NIL)
   .in("lead_id", [NIL]).in("kind", ["call", "email", "text", "meeting"]).order("at", { ascending: false }).limit(1));
+await check("readFacts", () => db.from("rift_money_facts").select("kind,amount_cents,source,as_of,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("journeyMoney: journey", () => db.from("rift_journeys").select("origin_lead_id,side").eq("id", NIL).eq("agent_id", NIL).maybeSingle());
+await check("journeyMoney: plan", () => db.from("rift_leads").select("plan,plan_saved_at").eq("id", NIL).eq("agent_id", NIL).maybeSingle());
 await check("journeysMatching", () => db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
   .eq("agent_id", NIL).ilike("label", "%a%").order("created_at", { ascending: false }).limit(6));
 

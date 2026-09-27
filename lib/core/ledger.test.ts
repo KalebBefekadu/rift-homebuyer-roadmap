@@ -55,6 +55,12 @@ describe("money v2: the ledger (MONEY-03)", () => {
     expect(l.table.lines.find((x) => x.label === "Prepaids and escrow")!.provenance).toBe("estimate");
   });
 
+  it("unknown savings leave \"left at closing\" unknown, never a shortfall from a default", () => {
+    const l = ledger(BUYER_DEFAULTS, { price: true, downPct: true, savings: false });
+    expect(l.left.amount).toBeNull();
+    expect(l.left.says).toMatch(/Not known/);
+  });
+
   it("the official figure stands apart from the estimate and states the difference", () => {
     const l = ledger(BUYER_DEFAULTS, ALL, currentFacts([fact("official-cash-to-close", 21_000)]));
     expect(l.official).toMatchObject({ amount: 21_000 });

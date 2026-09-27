@@ -723,3 +723,25 @@ describe("Today's marks, as stored (OPS-02)", () => {
     await rejects(c, "update rift_desk_marks set person = 'Someone else' where id = $1", [m.id], /history/);
   });
 });
+
+describe("money facts, as stored (money v2)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("an amount has a known kind, is never negative, names a source, is not dated ahead, and is history", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'buy','money-person@example.com',50,'soon') returning id", [AGENT]);
+    const { rows: [j] } = await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'buy','Money test') returning id", [AGENT, lead.id]);
+    const ins = (kind: string, cents: number, source: string, asOf: string) => c.query(
+      `insert into rift_money_facts (agent_id, journey_id, kind, amount_cents, source, as_of, actor_label, request_id)
+       values ($1,$2,$3,$4,$5,$6::date,'Kaleb',gen_random_uuid()) returning id`, [AGENT, j.id, kind, cents, source, asOf]);
+    await expect(ins("tip", 100, "Smith Law", "2026-09-01")).rejects.toThrow(/kind_check|check/);
+    await expect(ins("earnest", -1, "Smith Law", "2026-09-01")).rejects.toThrow(/amount_cents/);
+    await expect(ins("earnest", 300000, "x", "2026-09-01")).rejects.toThrow(/source/);
+    await expect(ins("earnest", 300000, "Smith Law", "2999-01-01")).rejects.toThrow(/not_future/);
+    const { rows: [f] } = await ins("earnest", 300000, "Smith Law, the holder", "2026-09-01");
+    await rejects(c, "update rift_money_facts set amount_cents = 1 where id = $1", [f.id], /history/);
+    await c.query("delete from rift_journeys where id = $1", [j.id]);
+    const { rows } = await c.query("select count(*)::int n from rift_money_facts where id = $1", [f.id]);
+    expect(rows[0].n).toBe(0);
+  });
+});

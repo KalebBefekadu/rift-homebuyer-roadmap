@@ -4,7 +4,7 @@
  * and back returns to it.
  */
 
-export type Tab = "overview" | "search" | "homes" | "offers" | "contract" | "household" | "history";
+export type Tab = "overview" | "search" | "homes" | "offers" | "contract" | "money" | "household" | "history";
 
 export const TAB_LABEL: Record<Tab, string> = {
   overview: "Overview",
@@ -12,6 +12,7 @@ export const TAB_LABEL: Record<Tab, string> = {
   homes: "Homes and showings",
   offers: "Offers and documents",
   contract: "Contract",
+  money: "Money",
   household: "Household",
   history: "History",
 };
@@ -19,7 +20,7 @@ export const TAB_LABEL: Record<Tab, string> = {
 /** A selling journey has no search, homes, offers or contract here yet (§9 waits on the pilot). */
 export function tabsFor(buying: boolean): Tab[] {
   return buying
-    ? ["overview", "search", "homes", "offers", "contract", "household", "history"]
+    ? ["overview", "search", "homes", "offers", "contract", "money", "household", "history"]
     : ["overview", "household", "history"];
 }
 

@@ -91,8 +91,7 @@ Built since 24 Sep, each with its status line in the section named: the design r
 side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
 engine (§6), the client side's documents, help, summary links and moving in (§7), the Operations
 redesign (§8), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
-- Money v2 (W10) and the client money area and side-by-side comparison that depend on it
-  (§7, §10.1). Sequenced after the pilot starts (D11).
+- Side-by-side home comparison (SEARCH-05), which uses money v2's monthly figures (§7).
 - A sale linked to a purchase (STATE-07), the seller journey (§9) and the campaign composer
   (§5.10). Sequenced after pilot results (D08).
 - Cal.com (§10): built as an adapter, waiting for the key.
@@ -911,6 +910,21 @@ before closing; estimated remaining funds at settlement; suggested reserve; offi
 close from the closing document. Old snapshots keep their meaning. Acceptance AT30 to AT33. The
 moving-cost removal (§5.7) happens before W10, on the public figure only.
 
+**Status (28 Sep 2026): built**, ahead of the pilot because Kaleb asked for the whole blueprint
+(D27). `lib/core/ledger.ts` puts a buyer's money in five figures, each with one meaning: needed
+before closing (earnest money, inspection, appraisal), at the closing table (down payment,
+closing costs, prepaids, less the earnest money credited back, seller credits and assistance
+once approved), the total buying budget, what savings leave, and a suggested reserve of two
+months' full payment. Earnest money counts once (AT30); the reserve and moving are never
+settlement money (AT31); assistance enters only as an approved, recorded fact (AT32); a
+negative figure keeps its meaning and savings nobody gave leave "left at closing" unknown, not
+a shortfall (AT33, MONEY-01). Every line says whether it is Rift's estimate, the buyer's answer
+or recorded by the agent from a named source on a stated day (`rift_money_facts`, history
+only). The closing disclosure's cash to close is its own figure beside the estimate, with the
+difference. The agent records amounts on the journey's Money tab; members with "Price and fees"
+see the same ledger on their journey page. Waiting: the side-by-side home comparison (SEARCH-05)
+that uses its monthly figures.
+
 ### 10.2 Approvals, outbox and AI controls
 Needed before any integration writes or any AI draft is used:
 - The approval and outbox mechanism (AUTO-01, AUTO-02).
@@ -994,6 +1008,7 @@ change to reverse.
 | D24 | A flagged change is reviewed in Operations by the signed-in agent ("still right" or "needs updating: stop showing it"); editing the record itself stays an engineering change | Records live in code; a full editor is weeks of work for 13 records | A record editor in Operations |
 | D25 | A higher amount named for a group narrower than Rift's job question (Beltline's "civil servants") is mentioned, never used as the amount | "Educator" includes private-school staff; the program decides | Kaleb confirming who counts |
 | D26 | The Operations redesign was built from the mock-up without the D15 click-through, because Kaleb asked for the build to continue to the end. Kaleb reviews the live screens instead | The mock-up and the live screens share the layout, so the review loses nothing but order | Any screen Kaleb wants changed; the old pages are in git history |
+| D27 | Money v2 (W10) was built before the pilot starts, instead of after (D11), because Kaleb asked for the build to run to the end. The public values are unchanged; the ledger is on the journey and the client's journey page only | Nothing in W10 needs pilot data; its rules (AT30 to AT33) are fixed | Hiding the Money tab and section until the pilot starts |
 
 ### Open
 
@@ -1048,6 +1063,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Money v2 built (§10.1, D27): the buyer's ledger, recorded amounts on the journey's Money tab, the client money area |
 | 28 Sep 2026 | Five migrations applied to production and the site deployed; CI runs the query-shape suite against PostgREST |
 | 28 Sep 2026 | Operations redesign built (§8, D26): sidebar and quick switcher, Today in five groups with snooze, pin and delegate (OPS-02), Relationships table and panel, journey workspace, Transactions, Reports |
 | 27 Sep 2026 | Assistance engine built (§6); D22 to D25 applied by engineering for Kaleb to confirm or overrule |

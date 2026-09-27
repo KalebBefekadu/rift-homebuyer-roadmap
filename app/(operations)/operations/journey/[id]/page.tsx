@@ -26,6 +26,9 @@ import { Offers } from "./Offers";
 import { Dates } from "./Dates";
 import { deadlinesFor } from "@/lib/db/deadlines";
 import { TAB_LABEL, tabFrom, tabsFor, type Tab } from "./tabs";
+import { moneyFor } from "@/lib/db/money";
+import { LedgerView } from "@/components/rift/money/LedgerView";
+import { MoneyFacts } from "./MoneyFacts";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -82,7 +85,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
-  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead] = await Promise.all([
+  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
     buying ? progressFor(id) : Promise.resolve(null),
@@ -94,7 +97,9 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     settled(needs("offers", "contract") ? documentsFor(id) : null),
     settled(needs("overview", "contract") ? deadlinesFor(id) : null),
     tab === "household" ? summaryLinksFor(id) : Promise.resolve(null),
+    settled(needs("money") ? moneyFor(id) : null),
   ]);
+  const moneyData = moneyRead && moneyRead.ok && "data" in moneyRead ? moneyRead.data : null;
 
   const memberList = members.ok && "data" in members ? members.data : null;
   const leadRow = lead.ok && "data" in lead ? lead.data?.lead ?? null : null;
@@ -305,6 +310,26 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
               : dateData ? <Dates journeyId={id} dates={openDates} docs={(docData?.documents ?? []).map((d) => ({ id: d.id, label: d.label }))} />
               : <p className="t-xs c-neg" style={{ marginTop: 12 }}>The contract dates did not load. That is not the same as there being none.</p>
             ) : null}
+          </section>
+        ) : null}
+
+        {tab === "money" ? (
+          <section className="card p-4" aria-labelledby="money-h">
+            <h2 id="money-h" className="t-md w6">Money</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+              The buyer&apos;s ledger: {moneyData?.answersFrom ? `their answers from the plan they saved on ${DAY(moneyData.answersFrom)}` : "no saved plan, so Rift's starting figures"}, the
+              amounts you record, and {moneyData ? `this week's rate (${moneyData.rate.label})` : "this week's rate"}. Household members with &ldquo;Price and fees&rdquo; see it too.
+            </div>
+            {!moneyRead || !moneyRead.ok ? <p className="t-xs c-neg">The money record did not load{moneyRead && !moneyRead.ok ? ` (${moneyRead.error})` : ""}. That is not the same as there being none.</p>
+              : !moneyData ? <p className="t-xs c-3">{"skipped" in moneyRead ? moneyRead.reason : "Not available."}</p>
+              : (
+                <div className="col gap-4">
+                  <LedgerView l={moneyData.ledger} audience="agent" />
+                  {moneyData.recording
+                    ? <MoneyFacts journeyId={id} facts={moneyData.facts} />
+                    : <p className="t-xs c-warn">Recording amounts needs database update 20260928010000; until then every figure is an estimate or their answer.</p>}
+                </div>
+              )}
           </section>
         ) : null}
 
