@@ -306,7 +306,10 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
 
       {member.side === "buy" && member.scopes.includes("homes") ? (
         <section id="homes" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="homes-h">
-          <h2 id="homes-h" className="t-md w6">Homes</h2>
+          <div className="between gap-2 wrap">
+            <h2 id="homes-h" className="t-md w6">Homes</h2>
+            {(h?.filter((x) => !x.withdrawnAt).length ?? 0) >= 2 ? <Link href={`/app/j/${member.journeyId}/compare`} className="btn btn-g btn-sm">Compare side by side</Link> : null}
+          </div>
           <p className="t-xs c-4" style={{ marginTop: 2 }}>
             Homes you or {agentFirst} added. Reacting tells {agentFirst} what you think; it does not change your search.
           </p>

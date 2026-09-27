@@ -270,7 +270,10 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
         {tab === "homes" ? (
           <>
             <section className="card p-4" aria-labelledby="homes-h">
-              <h2 id="homes-h" className="t-md w6">Homes</h2>
+              <div className="between gap-2 wrap">
+                <h2 id="homes-h" className="t-md w6">Homes</h2>
+                {(homeList?.filter((h) => !h.withdrawnAt).length ?? 0) >= 2 ? <Link href={`/operations/journey/${id}/compare`} className="btn btn-g btn-sm">Compare side by side</Link> : null}
+              </div>
               <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>Homes you or the buyer added, with everyone&apos;s reactions. No listing feed: a link and the facts you typed.</div>
               {homeList ? (
                 <Homes journeyId={id} homes={homeList.map((h) => ({ ...h, historyCount: h.history.length }))} criteria={fitRevision?.brief.criteria ?? []} against={against} />

@@ -90,8 +90,7 @@ journey and campaigns). Details and dates: `docs/handoff.md` §8.2.
 Built since 24 Sep, each with its status line in the section named: the design rules (§4), the lead
 side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
 engine (§6), the client side's documents, help, summary links and moving in (§7), the Operations
-redesign (§8), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
-- Side-by-side home comparison (SEARCH-05), which uses money v2's monthly figures (§7).
+redesign (§8), money v2, the client money area and the side-by-side comparison (§10.1, §7, D27), the approval and outbox, AI budget controls and offer reading (§10.2). Still to do:
 - A sale linked to a purchase (STATE-07), the seller journey (§9) and the campaign composer
   (§5.10). Sequenced after pilot results (D08).
 - Cal.com (§10): built as an adapter, waiting for the key.
@@ -728,7 +727,7 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
   dates from maintained official sources.
 - **Ownership records** (B20) later: maintenance and warranty records, with retention approved
   first.
-- **Side-by-side home comparison** (SEARCH-05) once W10 provides monthly scenarios.
+- **Side-by-side home comparison** (SEARCH-05). Built 28 Sep on money v2's figures (requirements.md).
 - **Check the no-match state** (SEARCH-09). Checked and built 27 Sep (requirements.md).
 
 **Status (27 Sep 2026).** Built: the client journey page lists its parts at the top (Today,
@@ -1063,6 +1062,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Homes side by side (SEARCH-05) for the agent and the household |
 | 28 Sep 2026 | Money v2 built (§10.1, D27): the buyer's ledger, recorded amounts on the journey's Money tab, the client money area |
 | 28 Sep 2026 | Five migrations applied to production and the site deployed; CI runs the query-shape suite against PostgREST |
 | 28 Sep 2026 | Operations redesign built (§8, D26): sidebar and quick switcher, Today in five groups with snooze, pin and delegate (OPS-02), Relationships table and panel, journey workspace, Transactions, Reports |

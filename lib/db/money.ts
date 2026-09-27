@@ -6,6 +6,7 @@ import { currentRate } from "./rates";
 import { marketDay } from "@/lib/core/progress";
 import { currentFacts, factError, ledger, planInputs, type Fact, type FactKind, type Ledger } from "@/lib/core/ledger";
 import type { Membership } from "./client";
+import type { BuyerInputs } from "@/lib/core/compute";
 
 /**
  * The only reader and writer of rift_money_facts, and where a journey's
@@ -60,6 +61,8 @@ export interface JourneyMoney {
   /** When their answers came from, or null when none were saved. */
   answersFrom: string | null;
   rate: { pct: number; label: string };
+  /** The buyer's terms, for working out other homes on the same basis (SEARCH-05). */
+  plan: { inputs: BuyerInputs; savingsKnown: boolean };
 }
 
 /** A journey's ledger, for the agent or for a member allowed to see money. */
@@ -85,6 +88,7 @@ export async function journeyMoney(journeyId: string, agentId: string): Promise<
     recording: list !== null,
     answersFrom: plan?.plan_saved_at ? plan.plan_saved_at.slice(0, 10) : null,
     rate: { pct: rate.pct, label: rate.label },
+    plan: { inputs, savingsKnown: answered.savings },
   });
 }
 
