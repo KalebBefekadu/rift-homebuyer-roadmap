@@ -18,6 +18,7 @@ import type { AmendmentChange, DeadlineInput, DeadlineKind } from "@/lib/core/de
 import { recordCheck } from "@/lib/db/pilot";
 import { recordFact } from "@/lib/db/money";
 import { recordFigure, recordOpinion } from "@/lib/db/seller";
+import { recordListingEvent, recordReview, recordShowing } from "@/lib/db/listing";
 import type { PricingInput } from "@/lib/core/pricing";
 import type { FigureInput } from "@/lib/core/proceeds";
 import { recordDependency, recordDependencyEvent } from "@/lib/db/dependencies";
@@ -408,6 +409,36 @@ export async function recordProceeds(journeyId: string, input: FigureInput, requ
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordFigure(journeyId, input, g.name, requestId);
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r);
+}
+
+/** The launch checklist and the listing's history (S06, S07). */
+export async function listingHappened(journeyId: string, input: { kind: string; detail: string; url: string | null; price: number | null }, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordListingEvent(journeyId, input, g.name, requestId);
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r);
+}
+
+/** A showing of the home, or its next step (S08). */
+export async function showingStep(journeyId: string, input: { key: string | null; startsAt: string; state: string; showingAgent: string | null; feedback: string | null; interest: string | null }, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId) || (input.key !== null && !isUuid(input.key))) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordShowing(journeyId, input, g.name, requestId);
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r, (d) => ({ key: d.key }));
+}
+
+/** The weekly account and the seller's decision (S09). */
+export async function weeklyReview(journeyId: string, input: { weekOf: string; metrics: string | null; summary: string; decision: string; decisionNote: string | null }, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordReview(journeyId, input, g.name, requestId);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }

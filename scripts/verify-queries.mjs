@@ -463,6 +463,9 @@ await check("sellerMoney: figures", () => db.from("rift_seller_figures").select(
   .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
 await check("sellerMoney: answers", () => db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", NIL).in("opinion_id", [NIL]).limit(1));
 await check("sellerMoney: who answered", () => db.from("rift_journey_members").select("id,display_name,email").in("id", [NIL]));
+await check("listingOf: events", () => db.from("rift_listing_events").select("kind,detail,url,price_cents,actor_label,created_at").eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("listingOf: showings", () => db.from("rift_listing_showings").select("showing_key,starts_at,state,showing_agent,feedback,interest,actor_label,created_at").eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("listingOf: reviews", () => db.from("rift_listing_reviews").select("week_of,metrics,summary,decision,decision_note,actor_label,created_at").eq("journey_id", NIL).eq("agent_id", NIL).order("week_of").limit(1));
 await check("journeysMatching", () => db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
   .eq("agent_id", NIL).ilike("label", "%a%").order("created_at", { ascending: false }).limit(6));
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { clientMoney } from "@/lib/db/money";
 import { sellerMoney } from "@/lib/db/seller";
+import { listingOf } from "@/lib/db/listing";
+import { listingLine } from "@/lib/core/listing";
 import { scenarios as pricingScenarios } from "@/lib/core/pricing";
 import { proceedsLine, viewFigures, FIGURE_LABEL, OWED_LABEL } from "@/lib/core/proceeds";
 import { ClientPricing } from "./ClientPricing";
@@ -67,7 +69,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
   const sellerMoneyOn = member.side === "sell" && member.scopes.includes("money");
-  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead] = await Promise.all([
+  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead, listingRead] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
@@ -76,7 +78,13 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     clientMoney(member),
     dependenciesFor(member.journeyId, member.agentId),
     sellerMoneyOn ? sellerMoney(member.journeyId, member.agentId) : Promise.resolve(null),
+    member.side === "sell" ? listingOf(member.journeyId, member.agentId) : Promise.resolve(null),
   ]);
+  /* The listing's summary line only: never the showing agents' names, the
+     feedback text or anything about access (S06 to S08). */
+  const listingData = listingRead && listingRead.ok && "data" in listingRead ? listingRead.data : null;
+  const listingSays = listingData ? listingLine(listingData.events, listingData.showings) : null;
+  const latestReview = listingData?.reviews.at(-1) ?? null;
   /* A sale's pricing and proceeds (S04, S16), only with price and fees. */
   const sale = sellerRead && sellerRead.ok && "data" in sellerRead ? sellerRead.data : null;
   const saleViews = viewFigures(sale?.figures ?? []);
@@ -198,6 +206,13 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
 
       <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
         <h2 id="today-h" className="t-md w6">Today</h2>
+        {listingSays ? <p className="t-sm" style={{ marginTop: 6 }}>{listingSays}</p> : null}
+        {latestReview ? (
+          <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.6 }}>
+            {agentFirst}&apos;s review of the week of {new Date(`${latestReview.weekOf}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })}: {latestReview.summary}
+            {latestReview.decision === "keep" ? " You decided to keep the strategy." : latestReview.decision === "change" ? ` You decided to change it: ${latestReview.decisionNote}.` : ""}
+          </p>
+        ) : null}
         {linked.length ? (
           <ul className="t-sm" style={{ marginTop: 6 }}>
             {linked.map((l) => <li key={l.id} className="c-2"><span aria-hidden>◷ </span>{l.line}. {l.owner} is handling it.</li>)}

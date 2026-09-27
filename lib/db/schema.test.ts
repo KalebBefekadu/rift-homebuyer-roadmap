@@ -812,3 +812,27 @@ describe("seller pricing and proceeds, as stored (S04, S16)", () => {
     await fig("official", "payoff-statement", 18000000);
   });
 });
+
+describe("a sale's listing, as stored (S06 to S09)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("live needs a link, feedback only after a showing, a change says what", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'sell','listing-person@example.com',50,'soon') returning id", [AGENT]);
+    const { rows: [j] } = await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'sell','Listing test') returning id", [AGENT, lead.id]);
+    const ev = (kind: string, url: string | null, price: number | null) => c.query(
+      `insert into rift_listing_events (agent_id, journey_id, kind, detail, url, price_cents, actor_label, request_id)
+       values ($1,$2,$3,'Done by Kaleb',$4,$5,'Kaleb',gen_random_uuid())`, [AGENT, j.id, kind, url, price]);
+    await expect(ev("mls-live", null, null)).rejects.toThrow(/live_link/);
+    await expect(ev("price-change", null, null)).rejects.toThrow(/price/);
+    await ev("mls-live", "https://fmls.com/123", null);
+    const sh = (state: string, feedback: string | null, interest: string | null) => c.query(
+      `insert into rift_listing_showings (agent_id, journey_id, showing_key, starts_at, state, feedback, interest, actor_label, request_id)
+       values ($1,$2,gen_random_uuid(),now(),$3,$4,$5,'Kaleb',gen_random_uuid())`, [AGENT, j.id, state, feedback, interest]);
+    await expect(sh("confirmed", "Nice", null)).rejects.toThrow(/feedback_after/);
+    await expect(sh("done", null, "strong")).rejects.toThrow(/interest_with_feedback/);
+    await sh("done", "Liked the kitchen", "some");
+    await expect(c.query(`insert into rift_listing_reviews (agent_id, journey_id, week_of, summary, decision, actor_label, request_id)
+      values ($1,$2,current_date,'Three showings this week.','change','Kaleb',gen_random_uuid())`, [AGENT, j.id])).rejects.toThrow(/change_says_what/);
+  });
+});

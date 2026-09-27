@@ -7,7 +7,7 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds, listingHappened, showingStep, weeklyReview,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
@@ -273,6 +273,20 @@ export async function POST(req: Request) {
         source: str(f.source, 200), asOf: str(f.asOf, 10), note: str(f.note, 500) || null,
       }, str(b.requestId, 40)));
     }
+    case "listing": {
+      const price = typeof b.price === "number" && Number.isFinite(b.price) ? b.price : null;
+      return json(await listingHappened(journeyId, { kind: str(b.kind, 20), detail: str(b.detail, 400), url: str(b.url, 600) || null, price }, str(b.requestId, 40)));
+    }
+    case "showing":
+      return json(await showingStep(journeyId, {
+        key: str(b.key, 40) || null, startsAt: str(b.startsAt, 40), state: str(b.state, 20),
+        showingAgent: str(b.showingAgent, 200) || null, feedback: str(b.feedback, 1000) || null, interest: str(b.interest, 20) || null,
+      }, str(b.requestId, 40)));
+    case "review":
+      return json(await weeklyReview(journeyId, {
+        weekOf: str(b.weekOf, 10), metrics: str(b.metrics, 1000) || null, summary: str(b.summary, 1600),
+        decision: str(b.decision, 20), decisionNote: str(b.decisionNote, 500) || null,
+      }, str(b.requestId, 40)));
     case "link-journeys":
       return json(await linkJourneys(journeyId, str(b.saleJourneyId, 40), str(b.purchaseJourneyId, 40), str(b.kind, 20), str(b.note, 400), str(b.owner, 200), str(b.requestId, 40)));
     case "dependency-event": {

@@ -909,8 +909,11 @@ Built since: pricing strategy (S04: the agent's approved opinion in versions, a 
 price, chosen comparables with why, a review date, the seller's net at each end on their terms,
 and the seller's answer from their page) and final proceeds (S16: planning, offer, revised and
 official versions from named sources, a balance never passed off as a payoff, the statement's net
-beside the estimate). Next slices: preparation (S05),
-listing and launch (S06, S07), showings with honest denominators (S08), weekly reviews (S09),
+beside the estimate); listing and launch (S06, S07: a checklist of what is done, live on the MLS
+only with its link, syndication a separate fact whose absence is a delay, access recorded as
+arranged and never as a code), showings (S08: feedback counted over showings done with the
+denominator said) and weekly reviews (S09: the agent's reading and the seller's keep-or-change
+decision, never "price is the reason"). Next slices: preparation (S05),
 offers on the journey (S10, S11).
 
 ---
@@ -1077,6 +1080,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Seller listing and launch, showings and weekly reviews (S06 to S09) |
 | 28 Sep 2026 | Seller pricing strategy (S04) and final proceeds (S16) |
 | 28 Sep 2026 | Seller journey, first slice (§9, STATE-03, D28): seller stages, the property, the shared contract, the seller's Today |
 | 28 Sep 2026 | A sale linked to a purchase (STATE-07) |

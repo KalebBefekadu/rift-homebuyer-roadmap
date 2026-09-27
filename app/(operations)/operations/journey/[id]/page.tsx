@@ -33,6 +33,8 @@ import { Linked } from "./Linked";
 import { SellerProperty } from "./SellerProperty";
 import { SellerPricing } from "./SellerPricing";
 import { SellerProceeds } from "./SellerProceeds";
+import { SellerListing } from "./SellerListing";
+import { listingOf } from "@/lib/db/listing";
 import { sellerMoneyFor } from "@/lib/db/seller";
 import { scenarios } from "@/lib/core/pricing";
 import { proceedsLine, viewFigures } from "@/lib/core/proceeds";
@@ -97,7 +99,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
-  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead] = await Promise.all([
+  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead, listingRead] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
     progressFor(id),
@@ -113,7 +115,9 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     dependenciesFor(id),
     settled(tab === "overview" ? journeysFor(journey.leadId) : null),
     settled(!buying && needs("pricing", "proceeds") ? sellerMoneyFor(id) : null),
+    settled(!buying && needs("listing", "overview") ? listingOf(id, agent.agentId) : null),
   ]);
+  const listing = listingRead && listingRead.ok && "data" in listingRead ? listingRead.data : null;
   const seller = sellerRead && sellerRead.ok && "data" in sellerRead ? sellerRead.data : null;
   const figureViews = viewFigures(seller?.figures ?? []);
   const lastFigure = figureViews.at(-1) ?? null;
@@ -361,6 +365,19 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
                 return <SellerProperty journeyId={id} property={p ? { id: p.id, address: p.address, facts: p.facts, factsSource: p.factsSource, factsAsOf: p.factsAsOf } : null} />;
               })() : <p className="t-xs c-neg">The property did not load. That is not the same as none being recorded.</p>}
             </div>
+          </section>
+        ) : null}
+
+        {tab === "listing" ? (
+          <section className="card p-4" aria-labelledby="listing-h">
+            <h2 id="listing-h" className="t-md w6">Listing and showings</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+              What is done for the launch, when it went live and where, each showing with the feedback actually given, and the weekly account.
+              The seller sees the summary on their page, never access details.
+            </div>
+            {!listingRead || !listingRead.ok ? <p className="t-xs c-neg">This did not load. That is not the same as there being none.</p>
+              : !listing ? <p className="t-xs c-warn">The listing needs database update 20260928050000.</p>
+              : <SellerListing journeyId={id} events={listing.events} showings={listing.showings} reviews={listing.reviews} />}
           </section>
         ) : null}
 
