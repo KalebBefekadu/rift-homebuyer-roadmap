@@ -1,5 +1,6 @@
 "use client";
 
+import { REASON_LABEL } from "@/lib/core/seam";
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { ownerLabel, type Owner, type PlanItem } from "@/lib/core/plan";
@@ -125,9 +126,10 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
                     <span className="w6">{d.field}</span>{" "}
                     <span className="num">${d.was.toLocaleString()}</span>
                     {" → "}
-                    <span className="num w6">${d.now.toLocaleString()}</span>{" "}
+                    <span className="num w6">{d.now === null ? "no longer worked out" : `$${d.now.toLocaleString()}`}</span>{" "}
                     <span className="c-3">
-                      ({d.deltaPct > 0 ? "+" : ""}{d.deltaPct}%, {d.cause})
+                      ({d.deltaPct !== null ? `${d.deltaPct > 0 ? "+" : ""}${d.deltaPct}%` : "missing"}
+                      {d.reasons.filter((r) => r !== "moved" && r !== "missing").map((r) => `, ${REASON_LABEL[r]}`).join("")}, {d.cause})
                     </span>
                   </div>
                 ))}

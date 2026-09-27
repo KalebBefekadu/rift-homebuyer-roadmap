@@ -226,7 +226,10 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
       s.label === "All-in monthly" ? rateCause
       : s.label === "Still to find" || s.label === "Covered" ? programmeCause
       : "recomputed from the same answers; the arithmetic itself changed";
-    drifts.push(drift(s.label, s.value, Math.round(recomputed), cause));
+    /* A recompute is only ever an estimate. A figure somebody had confirmed
+       coming back as a fresh estimate has changed who stands behind it, and
+       that is disclosed whatever the number did (MONEY-07). */
+    drifts.push(drift(s.label, s.value, Math.round(recomputed), cause, { was: s.trustState, now: "preliminary" }));
   }
 
   } catch {

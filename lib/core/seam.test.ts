@@ -133,9 +133,10 @@ describe("what must be true before a plan goes out", () => {
 
   it("counts the drifts correctly in what it says", () => {
     const one = canPublish({ ...ok, drifts: [drift("A", 100, 200, "x")] });
-    expect(one.blocks.join(" ")).toContain("1 figure has moved");
+    expect(one.blocks.join(" ")).toContain("1 figure has changed");
+    expect(one.blocks.join(" ")).toContain("moved more than 3%");
     const two = canPublish({ ...ok, drifts: [drift("A", 100, 200, "x"), drift("B", 100, 200, "x")] });
-    expect(two.blocks.join(" ")).toContain("2 figures have moved");
+    expect(two.blocks.join(" ")).toContain("2 figures have changed");
   });
 
   it("warns, but does not block, when every figure is still preliminary", () => {
@@ -194,5 +195,28 @@ describe("the crossing table covers the readout", () => {
 
   it("recomputes the headline gap, because they will plan against it", () => {
     expect(CROSSINGS.find((c) => c.field === "The headline gap")?.carry).toBe("recompute");
+  });
+});
+
+describe("changes that are material at any size (MONEY-07)", () => {
+  it("crossing zero is disclosed even when the change is small", () => {
+    const d = drift("Net proceeds", 500, -200, "Payoff statement arrived.");
+    expect(d.reasons).toContain("sign");
+    expect(d.material).toBe(true);
+    const tiny = drift("Net proceeds", 100_000, 100_000 - 1, "Rounding.");
+    expect(tiny.material).toBe(false);
+  });
+
+  it("a figure that can no longer be worked out is disclosed, with no percentage invented", () => {
+    const d = drift("Cash to close", 31_000, null, "The price was removed from the brief.");
+    expect(d).toMatchObject({ now: null, deltaPct: null, material: true });
+    expect(d.reasons[0]).toBe("missing");
+  });
+
+  it("a change in who stands behind a figure is disclosed even when the number is the same", () => {
+    const d = drift("Cash to close", 31_000, 31_000, "The lender's worksheet arrived.", { was: "estimate", now: "lender" });
+    expect(d.reasons).toEqual(["authority"]);
+    expect(d.material).toBe(true);
+    expect(canPublish({ ...ok, drifts: [d] }).blocks.join(" ")).toContain("now backed by someone else");
   });
 });

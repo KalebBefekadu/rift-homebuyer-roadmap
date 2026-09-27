@@ -408,9 +408,9 @@ function Publishing() {
                     <span className="row gap-2">
                       <span className="mono t-xs c-4" style={{ textDecoration: d.material ? "line-through" : undefined }}>{money(d.was)}</span>
                       <Ico.arrowR size={11} className="c-4" />
-                      <span className="mono t-sm w6">{money(d.now)}</span>
+                      <span className="mono t-sm w6">{d.now === null ? "missing" : money(d.now)}</span>
                       <span className={`chip ${d.material ? "chip-warn" : "chip-pos"}`}>
-                        {d.deltaPct > 0 ? "+" : ""}{d.deltaPct}%
+                        {d.deltaPct === null ? "missing" : `${d.deltaPct > 0 ? "+" : ""}${d.deltaPct}%`}
                       </span>
                     </span>
                   </div>

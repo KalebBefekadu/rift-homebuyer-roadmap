@@ -120,17 +120,37 @@ export const CROSSINGS: Crossing[] = [
  */
 export const DRIFT_PCT = 3;
 
+/**
+ * Why a change must be disclosed (MONEY-07). Size is one reason; three
+ * others are material at any size, because each changes what the figure
+ * MEANS rather than how big it is:
+ *
+ *   sign       it crossed zero: money left over became money short, or back
+ *   missing    it can no longer be worked out: an input it needed is gone
+ *   authority  who stands behind it changed: an estimate became a lender's
+ *              figure, or a figure somebody confirmed became an estimate again
+ */
+export type DriftReason = "moved" | "sign" | "missing" | "authority";
+
 export interface Drift {
   field: string;
   was: number;
-  now: number;
-  deltaPct: number;
+  /** Null: it can no longer be worked out. */
+  now: number | null;
+  /** Null when there is no new figure to compare. */
+  deltaPct: number | null;
   material: boolean;
+  reasons: DriftReason[];
   /** What actually moved. A drift with no named cause is a bug report. */
   cause: string;
 }
 
-export function drift(field: string, was: number, now: number, cause: string): Drift {
+export function drift(field: string, was: number, now: number | null, cause: string, authority?: { was: string; now: string }): Drift {
+  const reasons: DriftReason[] = [];
+  if (authority && authority.was !== authority.now) reasons.push("authority");
+  if (now === null) {
+    return { field, was, now, deltaPct: null, material: true, reasons: ["missing", ...reasons], cause };
+  }
   /**
    * Divided by the MAGNITUDE of the old figure, not the old figure.
    *
@@ -152,13 +172,23 @@ export function drift(field: string, was: number, now: number, cause: string): D
            signed so the direction still means something. */
         : now > 0 ? 100 : -100
       : ((now - was) / Math.abs(was)) * 100;
+  if (Math.abs(deltaPct) >= DRIFT_PCT) reasons.unshift("moved");
+  if ((was < 0 && now >= 0) || (was >= 0 && now < 0)) reasons.push("sign");
   return {
     field, was, now,
     deltaPct: Math.round(deltaPct * 10) / 10,
-    material: Math.abs(deltaPct) >= DRIFT_PCT,
+    material: reasons.length > 0,
+    reasons,
     cause,
   };
 }
+
+export const REASON_LABEL: Record<DriftReason, string> = {
+  moved: `moved more than ${DRIFT_PCT}%`,
+  sign: "crossed zero",
+  missing: "can no longer be worked out",
+  authority: "is now backed by someone else",
+};
 
 /** Publishing is allowed to change numbers. It is not allowed to do it quietly. */
 export function mustDisclose(ds: Drift[]) {
@@ -195,7 +225,8 @@ export function canPublish(input: {
 
   const material = mustDisclose(input.drifts);
   if (material.length && !input.disclosed) {
-    blocks.push(`${material.length} figure${material.length === 1 ? " has" : "s have"} moved more than ${DRIFT_PCT}% since their readout. Show the change and its cause before publishing.`);
+    const why = [...new Set(material.flatMap((d) => d.reasons))].map((r) => REASON_LABEL[r]).join(", ");
+    blocks.push(`${material.length} figure${material.length === 1 ? " has" : "s have"} changed since their readout (${why}). Show the change and its cause before publishing.`);
   }
 
   /* `[].every()` is true, so a plan carrying no figures at all warned that

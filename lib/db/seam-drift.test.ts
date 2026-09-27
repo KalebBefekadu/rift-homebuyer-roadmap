@@ -90,7 +90,7 @@ describe("what moved", () => {
     const first = await got();
     const monthly = first.drifts.find((d) => d.field === "All-in monthly")!;
     seed({ figures: [
-      { label: "All-in monthly", value_cents: Math.round(monthly.now * 100), trust_state: "preliminary" },
+      { label: "All-in monthly", value_cents: Math.round(monthly.now! * 100), trust_state: "preliminary" },
     ] });
     const second = await got();
     expect(second.drifts[0]!.deltaPct).toBe(0);
@@ -102,7 +102,7 @@ describe("what moved", () => {
     const before = (await got()).drifts[0]!;
 
     ratePct = 7.4;
-    seed({ figures: [{ label: "All-in monthly", value_cents: Math.round(before.now * 100), trust_state: "preliminary" }] });
+    seed({ figures: [{ label: "All-in monthly", value_cents: Math.round(before.now! * 100), trust_state: "preliminary" }] });
     const after = (await got()).drifts[0]!;
 
     expect(after.cause).toContain("6.50%");
