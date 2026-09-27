@@ -236,6 +236,12 @@ Every redesigned page passes again: WCAG 2.2 AA, keyboard, focus, 200% and 400% 
 motion, 375px and 390px with no sideways scroll, 44px touch targets on public and client pages,
 and the performance targets in QUALITY-03.
 
+**Status (27 Sep 2026).** axe-core with the WCAG 2.0 to 2.2 A and AA rules found no violations on
+22 rebuilt pages (front door; buyer landing, values, programs, how it works; seller landing and
+values; abroad pages; offer; book; unclaimed; privacy; the Operations mock-up), including
+question and answer states. None of them scrolls sideways at 375px. Not measured: zoom, screen
+reader walkthroughs and real-traffic performance (QUALITY-03 needs traffic).
+
 ---
 
 ## 5. Lead side

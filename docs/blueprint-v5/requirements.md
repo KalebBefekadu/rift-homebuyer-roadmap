@@ -1,7 +1,7 @@
 # Requirements
 
 **Part of [Blueprint v5](README.md).** Every requirement from blueprint v4 is carried over here, reworded
-only where needed, each with its status on 24 September 2026. Where v5 changes a requirement,
+only where needed, each with its status on 24 September 2026, updated as items ship (latest 27 September). Where v5 changes a requirement,
 the change is stated beside it and the v5 section that owns it is named. Requirement IDs are
 kept so tests and commits that cite them stay traceable.
 
@@ -42,11 +42,11 @@ kept so tests and commits that cite them stay traceable.
 | ID | Requirement | Status |
 | --- | --- | --- |
 | LEAD-01 | Every tool answers its advertised question before asking for contact details, and the answer stays available if the visitor declines to save, book or subscribe. | Built. **Changed by v5:** extra functionality beyond the advertised answer may ask for details (decision D14, README §5.1) |
-| LEAD-02 | Ask only what the chosen tool needs. Explain sensitive inputs; tell unknown from zero and answers from defaults; show a partial result as soon as possible; keep back navigation and edits without duplicate telemetry. | Partly. One long questionnaire asks everything today; v5 §5 splits it into values |
-| LEAD-03 | After value, offer "Save my plan", "Ask Kaleb to review" and "Book a conversation". Saving, hiring the agent, marketing permission and transaction readiness are separate events. | Partly. Email capture, a review request and booking exist; "Save my plan" as a plan does not (v5 §5.5) |
-| LEAD-04 | Answers, preferences, source and snapshots carry into the client journey with their dates. Clients confirm only what is stale, missing, conflicting or consequential. | Partly. The readout shows when a journey starts; answers do not yet prefill the brief (v5 §5.5) |
+| LEAD-02 | Ask only what the chosen tool needs. Explain sensitive inputs; tell unknown from zero and answers from defaults; show a partial result as soon as possible; keep back navigation and edits without duplicate telemetry. | Built 27 Sep. Each value asks only its own questions and reuses earlier answers (v5 §5.1 to §5.4) |
+| LEAD-03 | After value, offer "Save my plan", "Ask Kaleb to review" and "Book a conversation". Saving, hiring the agent, marketing permission and transaction readiness are separate events. | Built. Save my plan, Ask Kaleb to review and Book a call after every value (v5 §5.5) |
+| LEAD-04 | Answers, preferences, source and snapshots carry into the client journey with their dates. Clients confirm only what is stale, missing, conflicting or consequential. | Built 27 Sep for price and county: a saved plan (or an older readout) prefills the first brief, UNDECIDED, with its source and date |
 | LEAD-05 | First touch never changes. Agent corrections and last touch are stored separately. Campaign parameters are bounded identifiers, never financial answers, tokens, full URLs or free text. | Built |
-| LEAD-06 | Anonymous progress on one device expires and can be reset or deleted. Restoring on another device needs an authorized claim. No fingerprinting; no merging by an unverified email. | Not built as specified (v5 §5.5) |
+| LEAD-06 | Anonymous progress on one device expires and can be reset or deleted. Restoring on another device needs an authorized claim. No fingerprinting; no merging by an unverified email. | Partly. Progress on a device expires after thirty days and is deleted with "delete all of it"; restoring elsewhere is the saved plan's private link (v5 §5.5 status) |
 | LEAD-07 | Saved readouts keep their original figures. A recalculation is a new snapshot with versions and a comparison. | Built |
 
 ## 4. Buyer search
@@ -98,7 +98,7 @@ author a number or choose an assumption.
 | MONEY-03 | A versioned breakdown: estimated total buying budget; needed before closing; estimated remaining funds at settlement; suggested reserve; official cash to close (from the closing document). Earnest money is timing, not a second cost; nothing is paid twice; negative amounts keep their meaning. Old snapshots keep their labels. | Not built (W10). **Changed by v5:** moving costs leave the headline cash figure now (Kaleb, R1), ahead of W10 |
 | MONEY-04 | Monthly payment separates principal and interest, mortgage insurance, taxes, insurance, HOA and optional reserves; missing property costs are visible; the generic PMI rule is never presented as FHA, VA or USDA underwriting. | Partly (readout); completed in W10 |
 | MONEY-05 | A comfort range is a planning scenario, never a lending decision. An "how much can I afford" solver needs its own bounds, tests and disclosures before release. | Not built. Needed for the "What can I afford" value (v5 §5.2) |
-| MONEY-06 | Seller net is price minus uniquely classified costs and payoff. Commission is negotiated, never a "standard rate". No double counting of credits; negative net is a shortfall to resolve; no generated repair ROI, valuation or equity figure. | Partly (seller readout); revisit in the seller values (v5 §5.3) |
+| MONEY-06 | Seller net is price minus uniquely classified costs and payoff. Commission is negotiated, never a "standard rate". No double counting of credits; negative net is a shortfall to resolve; no generated repair ROI, valuation or equity figure. | Built 27 Sep in the seller values: commission asked, moving and unagreed concessions excluded, shortfall said as one, no repair returns (v5 §5.3) |
 | MONEY-07 | Keep the 3% material drift guard; also disclose sign changes, newly missing inputs and changed authority. Publishing never promotes verification. | Partly. The 3% guard is built; the extra disclosures are not |
 
 **Evidence contract.** Record separately: origin (user, agent, computed, provider, document);
@@ -113,7 +113,7 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 | ID | Requirement | Status |
 | --- | --- | --- |
 | DOC-01 | Keep the original and its checksum; classify by transaction, family, form and edition, parties and version; quarantine and validate before use. | Built (structural check, not a virus scan, and the screen says so) |
-| DOC-02 | Extraction returns candidate fields with exact source references; consequential amounts, dates, parties and terms need a person's confirmation; a failure leaves the original and a manual path. | Not built. **Needed by v5 §5.8** (offer upload that fills the form) |
+| DOC-02 | Extraction returns candidate fields with exact source references; consequential amounts, dates, parties and terms need a person's confirmation; a failure leaves the original and a manual path. | Built 27 Sep for offer PDFs: candidates with page and quoted words, dropped when they fail the form's checks, confirmed by the sender; a failed read leaves the form (v5 §5.9) |
 | DEC-01 | A decision has options, comparable figures, tradeoffs, sources, a response deadline, decision makers and agent context. A counter supersedes older versions and their approvals. | Built (buyer offers) |
 | DEC-02 | Responses need a signed-in, permitted person and the current version. Household disagreement is its own state; everyone required must agree. | Built |
 | DEC-03 | Client responses are instructions, never signatures, acceptance or notices. Remine governs signed documents. | Built |
@@ -137,8 +137,8 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 | AUTO-02 | Every run records prepared, awaiting approval, queued, running, succeeded, failed, unknown outcome or cancelled, with an idempotency key, attempts, receipt and recovery owner. Timeouts after a send are unknown until reconciled. | Partly (job runs and idempotent writes); the general outbox is not built |
 | AUTO-03 | Consent, representation, version and revocation are rechecked just before execution. A human reply stops nurture before the next send; a fallback channel never overrides an opt-out. | Built |
 | AUTO-04 | Existing consented nurture keeps its policy until explicitly changed. | Built |
-| AUTO-05 | AI drafts intake, document candidates, short sourced summaries and campaign recipes. It never publishes, sends, changes searches, decides representation, moves money, sets legal deadlines or changes numbers on its own. Uploaded content is untrusted and cannot grant permissions. | Policy stands. Rift calls no AI today |
-| AUTO-06 | Per-workflow and monthly AI cost limits before AI is switched on; running out means manual entry, never a lost deadline. Model and prompt versions are auditable; private data is not used for training. | Not built. **Required before v5 §5.8 and §6 AI features** (pilot cap $50 a month, D07) |
+| AUTO-05 | AI drafts intake, document candidates, short sourced summaries and campaign recipes. It never publishes, sends, changes searches, decides representation, moves money, sets legal deadlines or changes numbers on its own. Uploaded content is untrusted and cannot grant permissions. | Built 27 Sep. A changed program page is flagged and a named person reviews it before the record is trusted again (v5 §6.5) |
+| AUTO-06 | Per-workflow and monthly AI cost limits before AI is switched on; running out means manual entry, never a lost deadline. Model and prompt versions are auditable; private data is not used for training. | Built 27 Sep. $50 monthly limit in code, per-call records with model and prompt version, a named degraded state for every failure (v5 §10.2) |
 
 ## 9. Access and privacy
 
