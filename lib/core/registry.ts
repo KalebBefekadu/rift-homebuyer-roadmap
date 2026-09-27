@@ -13,8 +13,8 @@
 
 import { DEFAULT_RULES } from "./settings";
 
-export type ProgramType = "grant" | "forgivable" | "deferred" | "second-lien";
-export type FundingState = "open" | "closed" | "waitlist";
+export type ProgramType = "grant" | "forgivable" | "deferred" | "second-lien" | "assistance";
+export type FundingState = "open" | "closed" | "waitlist" | "confirm";
 
 export interface AssistanceProgram {
   id: string;
@@ -284,6 +284,7 @@ export const FUNDING_LABEL: Record<FundingState, string> = {
   open: "Funding open",
   closed: "Funding closed",
   waitlist: "Waiting list",
+  confirm: "Confirm availability",
 };
 
 export const TYPE_LABEL: Record<ProgramType, string> = {
@@ -291,4 +292,5 @@ export const TYPE_LABEL: Record<ProgramType, string> = {
   forgivable: "Forgivable over time",
   deferred: "Deferred second loan",
   "second-lien": "Second lien",
+  assistance: "Assistance through a lender",
 };

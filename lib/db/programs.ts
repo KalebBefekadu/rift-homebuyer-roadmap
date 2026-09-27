@@ -1,12 +1,9 @@
 import "server-only";
 import { serviceClient } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import {
-  PROGRAMS as SEED_PROGRAMS,
-  type AssistanceProgram,
-  type FundingState,
-  type ProgramType,
-} from "@/lib/core/registry";
+import type { AssistanceProgram, FundingState, ProgramType } from "@/lib/core/registry";
+import { GEORGIA_PROGRAMS, legacyCanCheck as recordCanBeChecked, toLegacy } from "@/lib/core/assistance";
+import { currentPrograms } from "./program-checks";
 import { DEFAULT_RULES } from "@/lib/core/settings";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 
@@ -26,10 +23,20 @@ import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
  * a literal in two places and a stated open decision at the same time, which
  * meant nobody owned it. See docs/handoff.md §4.4.
  *
- * With no database configured this falls back to the seeded registry so the
- * product still works end to end, and it says so, rather than pretending the
- * data came from somewhere authoritative.
+ * With no database configured this falls back to the assistance engine's own
+ * records (lib/core/assistance.ts), so the product still works end to end, and
+ * it says so. It used to fall back to the placeholder programmes the table was
+ * first seeded with, which would have put invented terms in front of a buyer
+ * on exactly the day the database was down.
+ *
+ * THIRD (Blueprint v5 §6.5): the table's `verified_on` is the day each record
+ * was written. The weekly check renews a record whose official page has not
+ * changed, and a reviewer can withdraw one; both live in the engine's view of
+ * the records, so this reads the dates from there when they are newer.
  */
+
+/** The engine's records in this reader's shape, for when there is no database. */
+const SEED_PROGRAMS: AssistanceProgram[] = GEORGIA_PROGRAMS.filter(recordCanBeChecked).map(toLegacy);
 
 type Row = {
   slug: string; name: string; administrator: string;
@@ -39,7 +46,18 @@ type Row = {
   reopens: string | null; source_note: string;
   income_limit_note: string; price_cap_note: string;
   conditions: string[]; verified_on: string; verified_by: string;
+  rules?: { onlyFor?: unknown; alsoCheck?: unknown; area?: { within?: unknown; counties?: unknown[] } } | null;
 };
+
+/* The older readout matches on county and first-time status only. A record
+   for certain jobs, or one that depends on something it never asks (a
+   disability in the household), cannot be checked by it and would be added
+   to the total as if it applied to everyone. Those are left to the
+   assistance value, which asks (Blueprint v5 §6.3). */
+/* The same for one limited to part of a county (inside Atlanta's city limits,
+   a Beltline subarea): it would be counted for everyone in the county. */
+const legacyCanCheck = (r: Row) => !r.rules
+  || (!r.rules.onlyFor && !r.rules.alsoCheck && !r.rules.area?.within && (r.rules.area?.counties?.length ?? 0) <= 1);
 
 const toProgram = (r: Row): AssistanceProgram => ({
   id: r.slug,
@@ -102,7 +120,7 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
        perfectly good list of real, verified programmes sitting unused. */
     const query = Promise.resolve(
       db.from("rift_programs")
-        .select("slug,name,administrator,type,funding_state,amount_min,amount_max,county,first_time_only,reopens,source_note,income_limit_note,price_cap_note,conditions,verified_on,verified_by")
+        .select("slug,name,administrator,type,funding_state,amount_min,amount_max,county,first_time_only,reopens,source_note,income_limit_note,price_cap_note,conditions,verified_on,verified_by,rules")
         .eq("active", true)
         .order("verified_on", { ascending: false }),
     );
@@ -118,7 +136,13 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
     if (error) return failed(error.message);
     if (!data?.length) return skipped("registry table is empty. Seed it before launch");
 
-    const rows = data as Row[];
+    const effective = new Map((await currentPrograms()).map((p) => [p.slug, p]));
+    const rows = (data as Row[]).filter(legacyCanCheck)
+      .filter((r) => !effective.get(r.slug)?.withheldReason)
+      .map((r) => {
+        const e = effective.get(r.slug);
+        return e && e.checkedOn > r.verified_on ? { ...r, verified_on: e.checkedOn } : r;
+      });
     return done({
       programs: rows.filter((r) => r.verified_on >= cutoffISO).map(toProgram),
       suppressed: rows.filter((r) => r.verified_on < cutoffISO).map(toProgram),

@@ -235,7 +235,7 @@ export function buyerReadout(
     : months === null
       ? "Without a monthly saving figure we cannot put a date on it. That is the first thing worth deciding."
     : helped
-      ? `The ${range(m.openMin, m.openMax)} of assistance you may qualify for would ${helpMonths === 0 ? "close that gap entirely" : `bring it to about ${helpMonths} month${helpMonths === 1 ? "" : "s"}`}, if a lender confirms it.`
+      ? `The ${range(m.openMin, m.openMax)} of assistance you may be eligible for would ${helpMonths === 0 ? "close that gap entirely" : `bring it to about ${helpMonths} month${helpMonths === 1 ? "" : "s"}`}, if a lender confirms it.`
       : undefined;
 
   const tension = tensionOf(timing, timingStated, months, helpMonths, hasHelp, own.fullyCovered);
@@ -249,7 +249,7 @@ export function buyerReadout(
 
   const blocker: Blocker = hasHelp
     ? {
-        title: "Confirming which assistance you actually qualify for",
+        title: "Confirming which assistance you are actually eligible for",
         body: `${m.matched.length} Georgia program${m.matched.length === 1 ? "" : "s"} may fit your answers, worth ${range(m.usableMin, m.usableMax)}. None of it is counted in your figures above, because none of it is real until a participating lender checks your income against the limits${
           months !== null && helpMonths !== null ? `. It is the difference between about ${months} months and ${helpMonths}` : ""
         }.`,
@@ -310,7 +310,7 @@ export function buyerReadout(
     ...(hasHelp ? [
       `Are you an approved participating lender for ${m.matched[0].name}?`,
       `Have you actually closed one of these in the last year, and how long did the assistance side take?`,
-      `Can ${m.matched.length > 1 ? "these programs" : "this program"} be combined with anything else I qualify for?`,
+      `Can ${m.matched.length > 1 ? "these programs" : "this program"} be combined with anything else I am eligible for?`,
     ] : []),
     `What is my real rate today with my credit profile, and what would a lock cost?`,
     `What is the total cash I bring to the table on your worksheet, every line, not the down payment?`,

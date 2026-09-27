@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           <Link href="/" className="row gap-2">
             <Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
           </Link>
-          <Link href="/buy/start" className="btn btn-g btn-sm">Get my numbers</Link>
+          <Link href="/buy" className="btn btn-g btn-sm">Get my numbers</Link>
         </div>
       </header>
 
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
             discard, goes.
           </p>
           <div className="row gap-2 wrap" style={{ marginTop: 14 }}>
-            <Link href="/buy/start" className="btn btn-g btn-sm">Buyer readout<Ico.arrowR size={13} /></Link>
+            <Link href="/buy" className="btn btn-g btn-sm">Buyer readout<Ico.arrowR size={13} /></Link>
             <Link href="/sell/start" className="btn btn-g btn-sm">Seller readout<Ico.arrowR size={13} /></Link>
           </div>
         </Block>

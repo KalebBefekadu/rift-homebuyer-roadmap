@@ -99,7 +99,7 @@ export function buildReadout(r: ReadoutEmail): { subject: string; html: string }
   </p>
   <p style="font-size:15px">
     <a href="${r.shareUrl}" style="color:#e8442a">Your full readout is here</a>. Every line of
-    that figure${r.side === "buy" ? ", the Georgia programs you may qualify for, and what to ask a lender" : ", what it is worth fixing first, and what you may be able to claim"}.
+    that figure${r.side === "buy" ? ", the Georgia programs that may fit you, and what to ask a lender" : ", what it is worth fixing first, and what you may be able to claim"}.
   </p>
   <p style="font-size:13px;color:#666">
     It is yours to keep and to share. Every figure is a planning estimate, not a lending

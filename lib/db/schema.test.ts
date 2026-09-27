@@ -172,14 +172,16 @@ describe("rift schema", () => {
     expect(rows[0]).toMatchObject({ first_source: "facebook", last_source: "google", visits: 2 });
   });
 
-  test("the seeded registry loads and a stale programme is identifiable", async (c) => {
-    const { rows } = await c.query("select count(*)::int n from rift_programs");
+  test("the seeded registry is the assistance engine's records, with unconfirmed ones held back", async (c) => {
+    /* The seed is generated from lib/core/assistance.ts (Blueprint v5 §6.2).
+       Staleness is now a matter of dates against the weekly checks, and is
+       exercised in lib/core/program-check.test.ts rather than by a fixture. */
+    const { rows } = await c.query("select count(*)::int n from rift_programs where active");
     expect(rows[0].n).toBeGreaterThanOrEqual(8);
-    /* The registry ships one deliberately stale fixture so the suppression rule
-       stays demonstrable rather than theoretical. */
-    const stale = await c.query(
-      "select slug from rift_programs where verified_on < (date '2026-09-07' - interval '90 days')");
-    expect(stale.rows.length).toBeGreaterThan(0);
+    const held = await c.query("select active, verified_by from rift_programs where slug = 'dekalb-homestart'");
+    expect(held.rows[0]).toMatchObject({ active: false, verified_by: "the official source" });
+    const rules = await c.query("select count(*)::int n from rift_programs where active and rules is null");
+    expect(rules.rows[0].n).toBe(0);
   });
 
   test("a programme cannot have an inverted amount range", async (c) => {
@@ -594,5 +596,32 @@ describe("the offer room", () => {
     await c.query("delete from rift_leads where id = $1", [SELLER]);
     const { rows } = await c.query("select count(*)::int n from rift_offer_rooms where lead_id = $1", [SELLER]);
     expect(rows[0].n).toBe(0);
+  });
+});
+
+describe("program checks (Blueprint v5 §6.5)", () => {
+  const SRC = "https://dca.georgia.gov/example";
+
+  test("a reading is history, and a readable page must carry its fingerprint", async (c) => {
+    const { rows } = await c.query(
+      "insert into rift_program_checks (source_url, outcome, fingerprint) values ($1, 'baseline', $2) returning id", [SRC, "a".repeat(64)]);
+    await rejects(c, "update rift_program_checks set outcome = 'unchanged' where id = $1", [rows[0].id], /history/);
+    await rejects(c, "delete from rift_program_checks where id = $1", [rows[0].id], /history/);
+    await rejects(c, "insert into rift_program_checks (source_url, outcome) values ($1, 'changed')", [SRC], /read_or_not/);
+    await rejects(c, "insert into rift_program_checks (source_url, outcome, fingerprint) values ($1, 'unreachable', $2)", [SRC, "b".repeat(64)], /read_or_not/);
+    await rejects(c, "insert into rift_program_checks (source_url, outcome, fingerprint) values ('http://insecure.example', 'baseline', $1)", ["c".repeat(64)], /check/);
+  });
+
+  test("a review names a person, is given once per reading, and is never edited", async (c) => {
+    const { rows } = await c.query(
+      "insert into rift_program_checks (source_url, outcome, fingerprint) values ($1, 'changed', $2) returning id", [SRC, "d".repeat(64)]);
+    await rejects(c, "insert into rift_program_reviews (check_id, outcome, reviewed_by) values ($1, 'still-right', '  ')", [rows[0].id], /reviewed_by/);
+    const r = await c.query("insert into rift_program_reviews (check_id, outcome, reviewed_by) values ($1, 'still-right', 'Kaleb') returning id", [rows[0].id]);
+    await rejects(c, "insert into rift_program_reviews (check_id, outcome, reviewed_by) values ($1, 'needs-update', 'Kaleb')", [rows[0].id], /unique|duplicate/);
+    await rejects(c, "update rift_program_reviews set outcome = 'needs-update' where id = $1", [r.rows[0].id], /history/);
+  });
+
+  test("the weekly check's runs can be recorded", async (c) => {
+    await c.query("insert into rift_job_runs (job) values ('program-check')");
   });
 });

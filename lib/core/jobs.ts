@@ -15,7 +15,7 @@
 import { isBusinessDay } from "./deadline";
 import { marketDay } from "./progress";
 
-export type JobId = "nurture-run" | "retention-sweep" | "rates-refresh" | "daily-summary";
+export type JobId = "nurture-run" | "retention-sweep" | "rates-refresh" | "daily-summary" | "program-check";
 
 export const JOBS: Record<JobId, {
   label: string; path: string; everyHours: number; graceHours: number; matters: string;
@@ -37,6 +37,10 @@ export const JOBS: Record<JobId, {
   "daily-summary": {
     label: "Morning summary", path: "/api/summary/run", everyHours: 24, graceHours: 6, businessDaysOnly: true,
     matters: "The morning summary email is not arriving. Everything it would say is still on Today.",
+  },
+  "program-check": {
+    label: "Weekly program check", path: "/api/programs/check", everyHours: 24 * 7, graceHours: 24,
+    matters: "Georgia programs are not being compared with their official pages, so each one is withheld from buyers when its review date passes.",
   },
 };
 export const JOB_IDS = Object.keys(JOBS) as JobId[];

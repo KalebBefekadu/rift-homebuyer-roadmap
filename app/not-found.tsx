@@ -30,7 +30,7 @@ export default function NotFound() {
           the person who made them at any time.
         </p>
         <div className="row gap-2 wrap" style={{ marginTop: 20 }}>
-          <Link href="/buy/start" className="btn btn-p">Work out my numbers</Link>
+          <Link href="/buy" className="btn btn-p">Work out my numbers</Link>
           <Link href="/buy/programs" className="btn btn-g">Georgia programs</Link>
           <Link href="/buy/how" className="btn btn-g">How this works</Link>
         </div>

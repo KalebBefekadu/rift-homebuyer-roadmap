@@ -12,14 +12,14 @@ import { readRegistry } from "./programs";
  * and reports no error while doing so.
  *
  * No database here. With none configured `readRegistry` falls back to the
- * seeded registry, which is real verified data and exactly the surface these
- * assertions need.
+ * assistance engine's records, which are real and dated, and exactly the
+ * surface these assertions need.
  */
 
 /* Fixed, because "is this programme stale" is a question about elapsed days
    and a test that asks it against the real clock answers differently every
    morning. */
-const TODAY = new Date("2026-09-20T12:00:00Z");
+const TODAY = new Date("2026-10-20T12:00:00Z");
 
 describe("the window the caller asks for", () => {
   it("is used instead of the default", async () => {

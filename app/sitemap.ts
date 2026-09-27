@@ -25,7 +25,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
        searching "first time home buyer georgia help" should land on: were the
        only public pages a crawler could not find. Nothing was broken; they
        were simply never in the list. */
-    { url: `${base}/buy/start`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     /* The values (Blueprint v5 §5.2): each answers one question, and each is
        a page somebody searching that question should land on. */
     { url: `${base}/buy/assistance`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },

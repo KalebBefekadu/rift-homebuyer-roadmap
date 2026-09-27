@@ -7,6 +7,7 @@ import { money, range, type BuyerInputs, type GapResult } from "@/lib/core/compu
 import type { Readout as ReadoutData } from "@/lib/core/results";
 import type { MatchResult } from "@/lib/core/registry";
 import { FUNDING_LABEL, TYPE_LABEL } from "@/lib/core/registry";
+import { OFFICIAL_SOURCE } from "@/lib/core/assistance";
 import { OWN_LABEL, type Ownership } from "@/lib/core/funnel";
 import { RETENTION } from "@/lib/core/privacy";
 import type { RateAssumption } from "@/lib/core/rate";
@@ -143,7 +144,7 @@ export function Readout(p: Props) {
             <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
             <span className="chip chip-brand hide-sm">Your readout</span>
           </Link>
-          <Link href="/buy/start" className="btn btn-g btn-sm"><Ico.refresh size={13} />Change my answers</Link>
+          <Link href="/buy" className="btn btn-g btn-sm"><Ico.refresh size={13} />Change my answers</Link>
         </div>
       </header>
 
@@ -194,7 +195,7 @@ export function Readout(p: Props) {
                   looked correct for as long as nobody opened it on a phone. */}
               <span>
                 Part of this link was not readable, so we used our own figures for{" "}
-                {p.substituted.join(", ")}. <Link href="/buy/start" className="c-brand">Answer again</Link> for
+                {p.substituted.join(", ")}. <Link href="/buy" className="c-brand">Answer again</Link> for
                 numbers that are actually yours.
               </span>
             </p>
@@ -212,7 +213,7 @@ export function Readout(p: Props) {
                   "what you set aside each month , so the figures". */}
               <span>
                 {`You did not tell us ${p.assumed.join(", ")}, so the figures below are typical Georgia ones rather than yours. `}
-                <Link href="/buy/start" className="c-brand">Answer the questions</Link> and every
+                <Link href="/buy" className="c-brand">Answer the questions</Link> and every
                 number on this page changes.
               </span>
             </p>
@@ -327,8 +328,13 @@ export function Readout(p: Props) {
                   <div className="row gap-2 wrap" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line-3)" }}>
                     <Trust state="verified" short />
                     <span className="t-2xs c-4">
-                      Terms confirmed with {prog.verifiedBy} on {prog.verifiedOn}. Whether <em>you</em> qualify
-                      is still preliminary until a lender checks your income.
+                      {/* A record read from the program's own page names no person, and
+                          "confirmed with the official source" would claim a conversation
+                          nobody had (handoff §4.13). Older rows name who confirmed them. */}
+                      {prog.verifiedBy === OFFICIAL_SOURCE
+                        ? <>Terms checked against the program&apos;s official source on {prog.verifiedOn}.</>
+                        : <>Terms confirmed with {prog.verifiedBy} on {prog.verifiedOn}.</>}{" "}
+                      Whether <em>you</em> are eligible is still preliminary until a lender checks your income.
                     </span>
                   </div>
                 </div>

@@ -50,7 +50,7 @@ export const VALUES: ValueDef[] = [
     question: "What Georgia programs might help me buy?",
     gives: "The programs that may fit you, what each one checks, and the most they could add up to.",
     cta: "Check my programs",
-    asks: ["county", "ownership", "price"],
+    asks: ["county", "ownership", "price", "income", "household", "occupation"],
     live: true,
   },
   {

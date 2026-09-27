@@ -51,7 +51,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
      the far end would reject is a referral silently lost between two pieces of
      our own code. */
   const handle = refFrom(token);
-  const start = handle ? `/buy/start?r=${encodeURIComponent(handle)}` : "/buy/start";
+  const start = handle ? `/buy?r=${encodeURIComponent(handle)}` : "/buy";
 
   /* A broken query is not an expired link.
      

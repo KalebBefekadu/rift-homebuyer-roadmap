@@ -48,7 +48,7 @@ export default function HowPage() {
 
         <Block title="What it will not do">
           <ul>
-            <li>It will not tell you that you qualify for anything. A lender decides that.</li>
+            <li>It will not tell you that you are eligible for anything. A lender or the program decides that.</li>
             <li>It will not count assistance money in your headline figure, because that money is not yours until somebody approves it.</li>
             <li>It will not show you a program we have not re-checked recently, even if that makes the list shorter.</li>
             <li>It will not ask for your credit score, your social security number, or your bank login. Ever.</li>

@@ -18,7 +18,7 @@ export default function Image() {
       <Card
         chip="For buyers"
         headline="The down payment is not the number."
-        sub="Cash to close, the Georgia assistance you may qualify for, and how far away you actually are."
+        sub="Cash to close, the Georgia assistance that may fit you, and how far away you actually are."
       />
     ),
     size,

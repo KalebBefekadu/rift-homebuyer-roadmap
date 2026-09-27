@@ -7,7 +7,8 @@ import { funnelReport } from "@/lib/db/events";
 import { board, dueActions, lapsingAgreements } from "@/lib/db/clients";
 import { recentChoices } from "@/lib/db/offer-room";
 import { STALL_CHIP } from "@/lib/core/pipeline";
-import { readStale } from "@/lib/db/programs";
+import { programsToday, programFlags } from "@/lib/db/program-checks";
+import { done } from "@/lib/db/result";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { openItems } from "@/lib/db/review";
 import { due } from "@/lib/db/nurture";
@@ -83,14 +84,16 @@ export default async function StudioToday() {
   const recheckDays = rules.registryDays.value;
   const undecidedCount = agentRules.undecided.length;
 
-  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead, datesRead, jobsRead] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead, datesRead, jobsRead, flagsRead] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
       funnelReport("sell"),
       board(),
       dueActions(),
-      readStale(new Date(), recheckDays),
+      /* The assistance engine's records after the weekly checks (Blueprint
+         v5 §6.5): the ones buyers see. The older table follows them. */
+      programsToday(new Date(), recheckDays).then((t) => done([...t.stale, ...t.withdrawn])),
       openItems(),
       due(new Date()),
       abandoned(),
@@ -99,11 +102,13 @@ export default async function StudioToday() {
       recentChoices(),
       datesNeedingAttention(),
       jobsHealth(),
+      programFlags(),
     ]);
   /* Null means not tracked yet (the tables are not there); a failed read is
      shown as one, never as nothing to do. */
   const dates = datesRead.ok && "data" in datesRead ? datesRead.data : null;
   const datesFailed = !datesRead.ok;
+  const flags = flagsRead.ok && "data" in flagsRead ? flagsRead.data : null;
   const jobProblems = jobsRead.ok && "data" in jobsRead && jobsRead.data ? jobsRead.data.filter((j) => j.problem) : [];
 
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
@@ -225,8 +230,8 @@ export default async function StudioToday() {
             </div>
             <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
               {stale.map((s) => s.name).join(", ")}. Nobody is being shown {stale.length === 1 ? "it" : "them"}
-              {" "}until {stale.length === 1 ? "it is" : "they are"} checked again. Suppression is
-              silent to the customer and loud here, which is the right way round.
+              {" "}until {stale.length === 1 ? "it is" : "they are"} checked again; buyers are told that
+              some programs are being re-checked, never that none exist.
             </p>
             {/* The task has a name on it. An unowned cadence is not a cadence:
                 programmes rot, stop being shown, and the list quietly shortens
@@ -234,10 +239,33 @@ export default async function StudioToday() {
                 precisely so this sentence is somebody's decision rather than a
                 literal in a file. */}
             <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.55 }}>
-              {rules.registryOwner.value} re-checks these, within {recheckDays} days of the last
-              verification. <Link href="/operations/settings" className="c-brand">Change either</Link>.
+              The weekly check renews a program whose official page has not changed. These are the
+              ones it could not renew: {rules.registryOwner.value} reviews them on{" "}
+              <Link href="/operations/programs" className="c-brand">Programs</Link>, within {recheckDays} days
+              of the last check. <Link href="/operations/settings" className="c-brand">Change either</Link>.
             </p>
           </div>
+        ) : null}
+
+        {/* Flagged program pages (Blueprint v5 §6.5, §8.4 "needs your
+            approval"): an official page changed or could not be read. Until
+            someone looks, the program is not renewed. */}
+        {flags && flags.length ? (
+          <Link href="/operations/programs" className="card p-4" style={{ display: "block", marginTop: 16 }}>
+            <div className="between wrap gap-2">
+              <div className="row gap-2">
+                <Ico.alert size={15} className="c-warn" />
+                <span className="t-sm w6">
+                  {flags.length === 1 ? "An official program page changed" : `${flags.length} official program pages changed`}
+                </span>
+              </div>
+              <span className="chip chip-warn">Needs your review</span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {flags.flatMap((f) => f.programs.map((p) => p.name)).join(", ")}. Look at what changed and say
+              whether the record is still right. Until then {flags.length === 1 ? "it is" : "they are"} not renewed.
+            </p>
+          </Link>
         ) : null}
 
         {/* Contract dates and scheduled jobs (W09). A missed date or a job

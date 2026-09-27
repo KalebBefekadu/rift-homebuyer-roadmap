@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { matchForVisitor } from "@/lib/db/match";
+import { programsToday } from "@/lib/db/program-checks";
+import { rulesOrDefaults } from "@/lib/db/settings";
+import { currentAgentId } from "@/lib/db/service";
 import { money, cashToClose, BUYER_DEFAULTS } from "@/lib/core/compute";
 import { valuesFor } from "@/lib/core/values";
 import { Ico } from "@/components/rift/icons";
@@ -15,8 +17,8 @@ export const metadata: Metadata = {
     "The down payment is not the number. Check the Georgia programs that may help you, your real cash to close, your monthly cost and when you could buy, from your own numbers.",
 };
 
-/* The program count below is live registry data; an hour is short enough to
-   be honest and long enough to be cheap. */
+/* The program count below is the assistance engine's, after the weekly
+   checks; an hour is short enough to be honest and long enough to be cheap. */
 export const revalidate = 3600;
 
 const ICON = { assistance: Ico.spark, cash: Ico.wallet, monthly: Ico.cal, timeline: Ico.clock } as const;
@@ -31,13 +33,14 @@ const ICON = { assistance: Ico.spark, cash: Ico.wallet, monthly: Ico.cal, timeli
  * Moving is gone from "what you bring" (D4): it is not paid at closing.
  */
 export default async function BuyLanding() {
-  const { match } = await matchForVisitor("DeKalb", true);
+  const { rules } = await rulesOrDefaults(await currentAgentId());
+  const { shown } = await programsToday(new Date(), rules.registryDays.value);
   const cash = cashToClose({ ...BUYER_DEFAULTS, assistance: 0 });
   const values = valuesFor("buy");
 
   return (
     <div className="buy">
-      <LandingTrack side="buy" meta={{ matched: match.matched.length }} />
+      <LandingTrack side="buy" meta={{ matched: shown.length }} />
       <SiteHeader side="buy" current="/buy" action={{ href: "/book?v=buy", label: "Book a call" }} />
 
       <main className="shell-w">
@@ -95,7 +98,7 @@ export default async function BuyLanding() {
           <div className="card p-6 between wrap gap-4">
             <div className="measure">
               <div className="kicker c-brand">Georgia programs</div>
-              <h2 className="t-xl serif mt-2">{match.matched.length > 0 ? `${match.matched.length} programs may apply in DeKalb County alone.` : "Every program we check, in one table."}</h2>
+              <h2 className="t-xl serif mt-2">{shown.length > 0 ? `${shown.length} Georgia programs, each checked against its official page.` : "Every program we check, in one table."}</h2>
               <p className="t-md c-3 mt-2" style={{ lineHeight: 1.6 }}>
                 Down payment help from the state, counties, cities and lenders, each with its official source
                 and the date it was last checked. Filter and sort them yourself.

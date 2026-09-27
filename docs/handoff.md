@@ -162,10 +162,22 @@ every programme has gone stale sees an empty list and concludes **no help exists
 That is false, it is the most discouraging thing this product could tell somebody, and they
 have no way to find out otherwise. One sentence prevents it.
 
-It is also the only version consistent with the rest of the product. `/buy/programs` shows
-stale entries marked as such for the same reason: a page that claims verified data and hides
-its own gaps has made the claim untrue. Admitting the gap is what makes the verification
-rule read as real rather than as marketing.
+It is also the only version consistent with the rest of the product. `/buy/programs` says how
+many programs it is not showing and why, for the same reason: a page that claims verified data
+and hides its own gaps has made the claim untrue. Admitting the gap is what makes the
+verification rule read as real rather than as marketing.
+
+**Since Blueprint v5 §6 (September 2026)** the public programs come from the assistance engine,
+`lib/core/assistance.ts`, and "verified" means **checked against the official page**. A record's
+date moves forward when the weekly check (`/api/programs/check`, Mondays) finds its official
+page unchanged, or when a named person reviews a change and answers "still right" on
+`/operations/programs`. A changed page stops renewal until someone answers; "needs updating"
+withholds the program at once. An unreachable page is retried once, and clears itself when a
+later reading finds it unchanged. Rules in `lib/core/program-check.ts`, with their tests; the
+public pages read the result through `currentPrograms()` in `lib/db/program-checks.ts`, which
+falls back to the written dates (so programs age out on schedule) when the checks cannot be read.
+The older readout's registry (`readRegistry`) follows the same dates and never includes a
+program it cannot check honestly (certain jobs, part of a county).
 
 ### 4.5 Core funnel questions are bound; custom ones are inert
 A question with a `bound` field writes to a compute input. Its wording, order and option

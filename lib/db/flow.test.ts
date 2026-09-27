@@ -161,12 +161,16 @@ describe("a visitor's journey, as stored", () => {
   test("the registry suppresses on the configured window, in SQL", async (c) => {
     /* Enforced in the query rather than trusted to the caller: a second reader
        (an export, a report, an admin screen) could forget to filter. */
+    /* The seed is the assistance engine's records, all written on one day, so
+       the same rows are fresh a week later and stale four months later. The
+       placeholder seed carried a deliberately stale row for this; the engine
+       does not invent one. */
     const fresh = await c.query(
-      "select count(*)::int n from rift_programs where verified_on >= (date '2026-09-07' - interval '90 days')");
+      "select count(*)::int n from rift_programs where active and verified_on >= (date '2026-10-01' - interval '90 days')");
     const stale = await c.query(
-      "select count(*)::int n from rift_programs where verified_on <  (date '2026-09-07' - interval '90 days')");
+      "select count(*)::int n from rift_programs where active and verified_on <  (date '2027-02-01' - interval '90 days')");
     expect(fresh.rows[0].n).toBeGreaterThan(0);
-    expect(stale.rows[0].n).toBeGreaterThan(0);
+    expect(stale.rows[0].n).toBe(fresh.rows[0].n);
   });
 });
 

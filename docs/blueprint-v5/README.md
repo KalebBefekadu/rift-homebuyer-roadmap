@@ -91,7 +91,9 @@ Everything below is specified in the section named.
 - Design system rules: spacing, symmetry, footers, form controls, calls to action (§4).
 - Lead side rebuilt as separate values, with a custom artifact each (§5).
 - Page-by-page public changes from the review (§5.6 to §5.9).
-- The Georgia assistance engine (§6).
+- ~~The Georgia assistance engine (§6).~~ **Built 27 Sep** (records, matching, combinations,
+  programs table, weekly monitoring, review in Operations); discovery research and the AI page
+  comparison remain (§6 status).
 - Client side: money, documents and help areas; clearer sign-in; summary share links; the
   dependency between a sale and a purchase; move-in handoff (§7).
 - Agent OS redesign, full rename to Operations, Transactions view, snooze, delegation and
@@ -633,6 +635,15 @@ past its review date is withheld with the reason shown; no combination is shown 
 programs' rules allowing it; "qualify" never appears; the programs table filters and sorts; a
 failed monitoring check shows in Operations.
 
+**Status (27 Sep 2026).** Built: 13 shown records and 2 held back (DeKalb's own pages did not
+confirm them), in `lib/core/assistance.ts`; matching and combinations on `/buy/assistance`; the
+table on `/buy/programs`; the weekly check (`/api/programs/check`, Mondays) with a failed or
+missed run on Today like every job; changed pages on Today and reviewed on
+`/operations/programs`. Not built: the 6-to-12-month discovery search (a research task, not
+code), and the AI step that compares an old and a new page (the reviewer sees the lines that
+left and arrived instead; the AI step waits for the §10.2 cost controls). How the checks renew
+a record is D22 to D25 in §11.
+
 ---
 
 ## 7. Client side
@@ -867,6 +878,19 @@ release; no secrets in `NEXT_PUBLIC_`; verify on the live site after each deploy
 | D20 | The first values, in order. Buyer: assistance, cash to close, monthly cost, timeline. Seller: net proceeds, unclaimed money, selling costs, preparation. Abroad: can I buy in the United States, cost to buy and own, the return (§5.2 to §5.4) | 24 Sep |
 | D21 | Design and lead side first (phases 1 to 3 together), the Operations mock-up alongside; the pilot starts whenever Kaleb has 3 to 5 buyers ready (§13) | 24 Sep |
 
+### Applied by engineering, Kaleb may overrule
+
+Kaleb asked on 27 Sep for the build to continue without stopping. These were open when the work
+reached them; engineering applied the default below so the work could proceed. Each is one
+change to reverse.
+
+| ID | Default applied | Why | Reverse by |
+| --- | --- | --- | --- |
+| D22 | An official page found **unchanged** by the weekly check renews the program's last-checked date. Without it every program is withheld 90 days after it was written (23 Dec 2026) unless someone edits code | §6.5 says "Page unchanged? Do nothing", with no staff | Removing the renewal in `applyChecks` (`lib/core/program-check.ts`) |
+| D23 | A record read from the program's own page says "Checked against the official source", never "confirmed with" a person; a person is named only when they review a change | Handoff §4.13: nothing is verified without a named party, and nobody at Rift confirmed these by phone | Kaleb confirming each program himself and being named |
+| D24 | A flagged change is reviewed in Operations by the signed-in agent ("still right" or "needs updating: stop showing it"); editing the record itself stays an engineering change | Records live in code; a full editor is weeks of work for 13 records | A record editor in Operations |
+| D25 | A higher amount named for a group narrower than Rift's job question (Beltline's "civil servants") is mentioned, never used as the amount | "Educator" includes private-school staff; the program decides | Kaleb confirming who counts |
+
 ### Open
 
 | ID | Question | Why it matters | Who |
@@ -919,6 +943,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 27 Sep 2026 | Assistance engine built (§6); D22 to D25 applied by engineering for Kaleb to confirm or overrule |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |
