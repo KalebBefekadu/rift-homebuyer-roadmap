@@ -72,7 +72,7 @@ export async function GET(req: Request) {
             name: "<script>alert(1)</script>",
             says: "You were most of the way through. Here is what you had so far",
             body: "Your answers are still here, exactly where you left them.",
-            resumeUrl: `${url.origin}/buy/start`,
+            resumeUrl: `${url.origin}/buy`,
             answered: 3,
             of: 7,
             last: url.searchParams.get("last") === "1",

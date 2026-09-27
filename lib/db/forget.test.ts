@@ -285,21 +285,25 @@ describe("every capture surface hands over a session", () => {
     return out;
   }
 
+  /* Every endpoint that turns a visitor into a lead. */
+  const ENDPOINTS = ['"/api/capture"', '"/api/plan/save"'];
+
   const callers = ["app/(rift)", "components/rift"]
     .flatMap(tsxFiles)
-    .filter((f) => readFileSync(f, "utf8").includes('"/api/capture"'));
+    .filter((f) => ENDPOINTS.some((e) => readFileSync(f, "utf8").includes(e)));
 
   it("finds the capture forms", () => {
-    /* Four today: the buyer readout, the seller readout, /book, and the
-       abroad readout. If this drops, a form was removed or renamed and the
-       assertion below has stopped covering it. */
-    expect(callers.length).toBeGreaterThanOrEqual(4);
+    /* Three today: Save my plan on every value (Blueprint v5 §5.5), /book,
+       and the abroad readout. The buyer and seller readouts that also
+       captured were retired in v5. If this drops, a form was removed or
+       renamed and the assertion below has stopped covering it. */
+    expect(callers.length).toBeGreaterThanOrEqual(3);
   });
 
   it("sends sessionId from each of them", () => {
     const silent = callers.filter((f) => {
       const src = readFileSync(f, "utf8");
-      const at = src.indexOf('"/api/capture"');
+      const at = Math.max(...ENDPOINTS.map((e) => src.indexOf(e)));
       /* The body follows the URL closely; a generous window rather than a
          parse, because the shape of these calls varies. */
       return !/sessionId:\s*sessionId\(\)/.test(src.slice(at, at + 1600));

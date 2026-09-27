@@ -80,7 +80,7 @@ describe("the production import graph", () => {
   const closure = productionClosure();
 
   it("reaches the shared components, or it is not testing anything", () => {
-    expect(closure.has("components/rift/Readout.tsx")).toBe(true);
+    expect(closure.has("components/rift/value/parts.tsx")).toBe(true);
     expect(closure.has("lib/core/compute.ts")).toBe(true);
   });
 

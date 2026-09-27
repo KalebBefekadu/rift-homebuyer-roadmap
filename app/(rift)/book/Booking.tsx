@@ -49,7 +49,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
 
   const home = abroad ? `/abroad${lang}` : side === "sell" ? "/sell" : "/buy";
   const backLabel = am ? t("book.back") : abroad ? "Back to my numbers" : "Back to my readout";
-  const backHref = abroad ? `/abroad${lang}` : side === "sell" ? "/sell/results" : "/buy/results";
+  const backHref = abroad ? `/abroad${lang}` : side === "sell" ? "/sell" : "/buy";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

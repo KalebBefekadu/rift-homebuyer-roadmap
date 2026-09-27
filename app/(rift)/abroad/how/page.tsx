@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
+import { HowItWorks } from "@/components/rift/site/HowItWorks";
 import { RENT_RATIO_SOURCE } from "@/lib/core/abroad";
 
 export const metadata: Metadata = {
   title: "How buying from abroad works",
   description:
-    "What a foreign buyer can and cannot do in Georgia, which questions have a professional attached to them, and how Rift is paid. No citizenship requirement, no green card, no advice we are not qualified to give.",
+    "You do not need citizenship, a green card or a visa to own a home in the United States. What it takes from abroad, which questions belong to a tax adviser or attorney, and how buying with Kaleb works.",
   alternates: { canonical: "/abroad/how" },
 };
 
@@ -46,179 +47,84 @@ export const metadata: Metadata = {
  */
 export default function AbroadHowPage() {
   return (
-    <div className="buy">
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/abroad" className="row gap-2">
-            <Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-          </Link>
-          <Link href="/abroad" className="btn btn-p btn-sm">See my numbers</Link>
+    <HowItWorks
+      side="abroad"
+      title="Buying a home in the United States from abroad."
+      lede="For somebody who is not in the United States, may never have lived there, and wants to know what is possible before spending an evening on it."
+      steps={[
+        { title: "Find out whether you can buy", body: "You do not need citizenship, a green card or a visa to own property in the United States. Your status decides how you pay and borrow, not whether you are allowed." },
+        { title: "See what it would take", body: "What you would send to buy, what owning costs each year, and, if you would rent it out, what could come back, each worked out from your answers and marked where it is an estimate." },
+        { title: "Talk to Kaleb across the time difference", body: "Book a call at a time that works where you are. He will tell you what is settled, and which questions belong to a tax adviser or an attorney." },
+        { title: "Buy without being in the room", body: "Remote signing, identity checks, inspections and the money's arrival are ordinary work, arranged before they are needed rather than in the last week." },
+      ]}
+      gives={[
+        { title: "A straight answer on permission", body: "Most people arrive asking whether they are allowed. They are, and the rest is money and paperwork." },
+        { title: "Numbers that say what they are", body: "Calculated figures are labelled as calculated; the rent figure is labelled as our own estimate until real county figures replace it." },
+        { title: "The right professional for each question", body: "Tax, withholding and ownership structure named plainly, with who answers each, rather than a guessed number." },
+        { title: "One person on the ground", body: "A licensed Georgia agent who does this from start to finish, so distance is not the reason a purchase slips." },
+      ]}
+      fees="The only fees are the ones any purchase has, such as agent, lender, closing and international transfer costs, and you see them before they apply."
+      start={{ href: "/abroad", label: "Check if I can buy" }}
+      extra={<AbroadDetail />}
+    />
+  );
+}
+
+/* The settled facts and the questions with a professional attached: the
+   part of the old page worth keeping (see the docblock above). */
+function AbroadDetail() {
+  return (
+    <section className="sec-sm" style={{ maxWidth: 760, margin: "0 auto" }}>
+      <div className="card p-4" style={{ background: "var(--sunk)" }}>
+        <div className="row-t gap-2">
+          <Ico.alert size={14} className="c-4" style={{ flex: "none", marginTop: 3 }} />
+          <div>
+            <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
+              This page is in English only so far. <Link href="/abroad" className="u">The main page</Link>{" "}
+              is available in Amharic, and this one will be once it has been written by somebody who speaks it,
+              not by a machine.
+            </p>
+            <p className="t-xs c-3" lang="am" style={{ marginTop: 6, lineHeight: 1.7 }}>
+              ይህ ገጽ እስካሁን በእንግሊዝኛ ብቻ ነው።
+            </p>
+          </div>
         </div>
-      </header>
+      </div>
 
-      <main className="shell-w sec" style={{ maxWidth: 720 }}>
-        <h1 className="serif" style={{ fontSize: "clamp(26px,3.6vw,42px)", lineHeight: 1.12, letterSpacing: "-0.025em" }}>
-          How buying from abroad works
-        </h1>
+      <Block title="What is harder from abroad, and why">
+        <ul>
+          <li><strong>A mortgage, if you have no U.S. credit history.</strong> Lenders who work with foreign nationals exist and usually ask for a larger deposit. It decides your budget, so it is the first thing worth establishing.</li>
+          <li><strong>Paying cash</strong> removes most of the difficulty and raises a different question: how the money arrives, and what the closing attorney needs to see for it. Ask early.</li>
+          <li><strong>Distance.</strong> Signing, identity checks and inspections assume somebody is in the room. They are solvable, and they make the timeline longer than a domestic purchase.</li>
+        </ul>
+      </Block>
 
-        <p className="t-sm c-3" style={{ marginTop: 14, lineHeight: 1.7 }}>
-          Written for somebody who is not in the United States, may never have lived there, and
-          wants to know what is actually possible before spending an evening on it.
+      <Block title="The questions with a professional attached">
+        <p>
+          These have real answers, but not from us: Kaleb is a licensed Georgia real-estate agent, not a tax
+          adviser and not an attorney.
         </p>
+        <ul>
+          <li><strong>Tax on rental income, and what you file.</strong> It depends on your country&rsquo;s treaty with the United States and how you hold the property. <em>Ask a U.S. tax adviser who works with non-resident owners.</em></li>
+          <li><strong>Withholding when you sell.</strong> Tax is withheld at closing when a foreign person sells, and it is not the same as the tax owed. <em>Same adviser, and ask before you buy.</em></li>
+          <li><strong>Buying personally or through an entity.</strong> It changes your tax, your liability and your costs. <em>Ask the tax adviser and an attorney together.</em></li>
+          <li><strong>A taxpayer identification number.</strong> You will likely need one. <em>The tax adviser handles it; it is routine.</em></li>
+        </ul>
+        <p>Kaleb can introduce you to people who do this work; you are free to use your own.</p>
+      </Block>
 
-        {/* Said once, at the top, in both scripts. A reader who came through
-            the Amharic page should find out that this one is not translated
-            from this page rather than from three paragraphs of English. */}
-        <div className="card p-4" style={{ marginTop: 18, background: "var(--sunk)" }}>
-          <div className="row gap-2">
-            <Ico.alert size={14} className="c-4" style={{ flex: "none", marginTop: 3 }} />
-            <div>
-              <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
-                This page is in English only so far. <Link href="/abroad" className="u">The main page</Link>{" "}
-                is available in Amharic, and this one will be once it has been written by
-                somebody who speaks it, not by a machine.
-              </p>
-              <p className="t-xs c-3" lang="am" style={{ marginTop: 6, lineHeight: 1.7 }}>
-                ይህ ገጽ እስካሁን በእንግሊዝኛ ብቻ ነው።
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <Block title="You are allowed to do this">
-          <p>
-            There is <strong>no citizenship requirement and no residency requirement</strong> to
-            own property in the United States. You do not need a green card, a visa, or to have
-            ever set foot in Georgia. Foreign nationals buy American property every day, and
-            Georgia places no additional restriction on residential purchases by non-citizens.
-          </p>
-          <p>
-            That is the question most people arrive with, and it is one of the few here with a
-            short answer. Nearly everything below it is a question about <em>money and paperwork</em>,
-            not about permission.
-          </p>
-        </Block>
-
-        <Block title="What is genuinely harder, and why">
-          <ul>
-            <li>
-              <strong>A mortgage, if you have no U.S. credit history.</strong> Most ordinary
-              lenders score a borrower using a credit file you will not have. Lenders who work
-              with foreign nationals exist and price that risk differently, usually by asking
-              for a larger deposit. This is the single biggest practical difference between your
-              purchase and a domestic one, and it is the first thing worth establishing, because
-              it decides your entire budget.
-            </li>
-            <li>
-              <strong>Paying cash removes most of the difficulty</strong> and creates a different
-              question, which is how the money arrives and what documentation the closing
-              attorney needs for it. Ask that early rather than in the last week.
-            </li>
-            <li>
-              <strong>Being eight time zones away.</strong> Signing, identity verification and
-              inspections all assume somebody is in the room. They are solvable (this is
-              ordinary work for an agent who has done it before), but they are what makes the
-              timeline longer than the one on a domestic purchase.
-            </li>
-          </ul>
-        </Block>
-
-        <Block title="The questions with a professional attached">
-          <p>
-            These have real answers. They do not have answers <em>from us</em>: Kaleb is a
-            licensed Georgia real-estate agent, which is not a tax adviser and not an attorney,
-            and the honest version of this page names the question rather than guessing at the
-            number.
-          </p>
-          <ul>
-            <li>
-              <strong>Tax on rental income, and what you have to file.</strong> Rental income
-              from U.S. property is U.S.-source income. What you owe, what you can deduct, and
-              which return you file depend on your own country&rsquo;s treaty with the United
-              States and on how you hold the property. <em>Ask a U.S. tax adviser who works with
-              non-resident owners.</em>
-            </li>
-            <li>
-              <strong>Withholding when you eventually sell.</strong> The United States withholds
-              tax at closing when a foreign person sells real property, and the amount withheld
-              is not the same as the tax owed; the difference is reclaimed by filing. The rate,
-              the exemptions and the paperwork are specific enough that a number quoted here
-              would be worth less than nothing. <em>Same adviser, and ask before you buy rather
-              than before you sell.</em>
-            </li>
-            <li>
-              <strong>Whether to buy personally or through an entity.</strong> This changes your
-              tax position, your liability and your costs, and there is no general right answer.
-              <em> Ask the tax adviser and an attorney together.</em>
-            </li>
-            <li>
-              <strong>A taxpayer identification number.</strong> You will likely need one to file
-              anything. <em>The tax adviser handles this; it is routine.</em>
-            </li>
-          </ul>
-          <p>
-            Kaleb can introduce you to people who do this work. He is not paid for the
-            introduction, and you are free to use your own.
-          </p>
-        </Block>
-
-        <Block title="What the numbers on the main page are, and are not">
-          <p>
-            The purchase costs, the monthly carrying cost and the break-even deposit are{" "}
-            <strong>calculated</strong> from published figures and the answers you give. The same
-            arithmetic runs for everybody.
-          </p>
-          <p>
-            The <strong>rent estimate is not</strong>, and it is the number to treat most
-            carefully, because the return figure is built on it. {rentBasis()} Before you
-            rely on a rental return, get a rent estimate from somebody who manages property in
-            that county. It is the cheapest check on this page and it moves the answer more
-            than anything else does.
-          </p>
-          <p>
-            One thing the main page deliberately does not do is assume you will claim Georgia&rsquo;s
-            homestead exemption. It reduces the property tax bill on a home you live in as your
-            primary residence, which an overseas owner is not doing, so counting it would flatter
-            the monthly figure for exactly the reader it is written for.
-          </p>
-        </Block>
-
-        <Block title="How Kaleb is paid">
-          <p>
-            Nothing here costs you anything. Kaleb is a licensed Georgia agent and is paid a
-            commission when somebody he represents buys or sells, the ordinary arrangement,
-            disclosed in writing before it applies to you.
-          </p>
-          <p>
-            He is <strong>not</strong> paid by any lender, tax adviser, attorney or property
-            manager named or introduced here, and nobody pays to appear in your results.
-          </p>
-        </Block>
-
-        <Block title="Why there is no account">
-          <p>
-            Your readout is a link you keep. There is nothing to sign up for, nothing to cancel,
-            and you can delete everything we hold from the bottom of it in one click, which
-            matters more, not less, when you are handing your financial position to a company on
-            another continent.
-          </p>
-        </Block>
-
-        <div className="card p-5" style={{ marginTop: 28, background: "var(--sunk)" }}>
-          <div className="t-sm w6">Four answers, about two minutes</div>
-          <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-            What you would have to send, what it would rent for, and what comes back. Yours to
-            keep whether or not you ever speak to anyone.
-          </p>
-          <div className="row gap-2 wrap" style={{ marginTop: 14 }}>
-            <Link href="/abroad" className="btn btn-p">
-              See my numbers<Ico.arrowR size={14} />
-            </Link>
-            <Link href="/book?v=abroad" className="btn btn-g">Book fifteen minutes</Link>
-          </div>
-        </div>
-      </main>
-    </div>
+      <Block title="What the numbers are, and are not">
+        <p>
+          The purchase costs and the yearly cost of owning are <strong>calculated</strong> from published figures and your
+          answers. The <strong>rent is not</strong>. {rentBasis()} Before relying on a return, get a rent estimate from
+          somebody who manages property in that county.
+        </p>
+        <p>
+          The figures do not assume a homestead exemption: it applies to a home you live in as your main residence,
+          which an overseas owner is not doing.
+        </p>
+      </Block>
+    </section>
   );
 }
 

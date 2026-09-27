@@ -5,7 +5,8 @@ import { AgentSchema } from "@/components/rift/Agent";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { CashStack, ProceedsFlow } from "@/components/rift/value/artifacts";
-import { money, cashToClose, netProceeds, BUYER_DEFAULTS, SELLER_DEFAULTS } from "@/lib/core/compute";
+import { money, cashToClose, BUYER_DEFAULTS, SELLER_DEFAULTS } from "@/lib/core/compute";
+import { sellerNet } from "@/lib/core/seller";
 import { valuesFor } from "@/lib/core/values";
 
 export const metadata: Metadata = {
@@ -28,10 +29,12 @@ export const revalidate = 86400;
  */
 export default function HomePage() {
   const buy = cashToClose({ ...BUYER_DEFAULTS, assistance: 0 });
-  const sell = netProceeds(SELLER_DEFAULTS);
+  /* Commission left out, never set to a rate we chose (MONEY-06); the
+     caption says so. Moving is not a cost of the sale. */
+  const sell = sellerNet({ price: SELLER_DEFAULTS.price, payoff: SELLER_DEFAULTS.payoff, county: SELLER_DEFAULTS.county, commissionPct: null });
   const sellParts = [
     { label: "Loan payoff", amount: SELLER_DEFAULTS.payoff },
-    { label: "Selling costs", amount: sell.totalCosts - SELLER_DEFAULTS.payoff },
+    { label: "Selling costs", amount: sell.costs.total },
   ];
 
   return (
@@ -67,7 +70,7 @@ export default function HomePage() {
             kicker="I'm selling"
             title="The sale price is not the number either."
             figure={money(sell.net)}
-            caption={`is what reaches you from a ${money(SELLER_DEFAULTS.price)} sale, after the loan payoff and the cost of selling.`}
+            caption={`is what a ${money(SELLER_DEFAULTS.price)} sale leaves after the loan payoff and Georgia's costs of selling, before the commission you agree.`}
             art={<ProceedsFlow price={SELLER_DEFAULTS.price} parts={sellParts} net={sell.net} />}
             href="/sell"
             cta="Start with selling"

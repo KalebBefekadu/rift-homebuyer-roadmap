@@ -28,7 +28,7 @@ export function Unclaimed({ counties }: { counties: string[] }) {
             <Mark size={19} />
             <span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
           </Link>
-          <Link href="/sell/start" className="btn btn-p btn-sm">Full readout</Link>
+          <Link href="/sell/proceeds" className="btn btn-s btn-sm">What I&apos;d keep</Link>
         </div>
       </header>
 
@@ -142,10 +142,10 @@ export function Unclaimed({ counties }: { counties: string[] }) {
             <div className="card p-5" style={{ marginTop: 20 }}>
               <div className="t-md w6 serif">Thinking about selling too?</div>
               <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-                The full readout adds what actually reaches you after payoff and costs, and which
-                pre-sale work comes back in the price.
+                See what a sale would leave you after your loan and the costs of selling, and
+                what is worth fixing before you list.
               </p>
-              <Link href="/sell/start" className="btn btn-brand" style={{ marginTop: 14 }}>
+              <Link href="/sell/proceeds" className="btn btn-brand" style={{ marginTop: 14 }}>
                 See what you would keep
               </Link>
             </div>

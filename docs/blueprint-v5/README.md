@@ -316,6 +316,12 @@ spacing rules, and a rewritten how-it-works page. Seller pages: `/sell`, `/sell/
 `/sell/results`, `/sell/unclaimed`, `/sell/how`. This is public-page work and is not held back by
 the seller journey's gate (§9).
 
+**Status (27 Sep 2026).** Built: `/sell/proceeds`, `/sell/costs` and `/sell/prepare` (rules in
+`lib/core/seller.ts`: commission is asked, and "not agreed yet" leaves it out; moving and
+unagreed concessions are not costs; a shortfall is said as one; preparation has no costs or
+returns); the seller landing offers the four values; `/sell/start` and `/sell/results` forward
+to the proceeds value with their answers. The front door's seller figure uses the same rules.
+
 ### 5.4 Buyers abroad (Kaleb, R1 and R2)
 
 - Say **the United States**, not Georgia, where the point is about being allowed to buy: "You
@@ -404,6 +410,14 @@ the seller journey's gate (§9).
   the value Rift gives.
 - The only money message: **you pay Rift nothing**; the only fees are the ones any transaction
   has, such as agent fees. No other talk about money.
+
+**Status (27 Sep 2026).** Built: `/buy/results` forwards to cash to close and `/sell/results` to
+what you would keep, carrying their answers (`lib/core/forward.ts`); the old readouts are gone,
+and issued snapshots at `/r/<token>` are untouched. The programs table is built (§6). The three
+how-it-works pages share one layout (`components/rift/site/HowItWorks.tsx`): the steps in the
+order a person lives them, what Rift gives, and one money line. Found and fixed on the way: the
+timeline value carried monthly saving as `r`, the referral handle every page reads, so an answer
+could be recorded as a referral source; it is now `ms`.
 
 ### 5.9 Submit an offer and book a call
 
@@ -944,6 +958,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | Date | Change |
 | --- | --- |
 | 27 Sep 2026 | Assistance engine built (§6); D22 to D25 applied by engineering for Kaleb to confirm or overrule |
+| 27 Sep 2026 | Seller values, retired readouts and questionnaires forwarded, how-it-works rewritten (§5.3, §5.8) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

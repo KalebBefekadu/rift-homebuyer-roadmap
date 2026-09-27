@@ -1,166 +1,37 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Mark } from "@/components/rift/icons";
-import { RETENTION } from "@/lib/core/privacy";
+import { HowItWorks } from "@/components/rift/site/HowItWorks";
 
 export const metadata: Metadata = {
-  title: "How this works",
-  description: "What Rift does for a seller, what it will not do, how the proceeds are worked out, and how it makes money.",
+  title: "How selling with Rift works",
+  description: "See what a sale would leave you, what you may be missing, and what to fix first, then sell with Kaleb when you are ready. You pay Rift nothing.",
 };
 
-const STEPS: [string, string, string][] = [
-  ["Six questions", "Timing, county, likely price, payoff, how long you have owned it, and who else is deciding.", "Free, no account"],
-  ["Everything at once", "Net proceeds line by line, unclaimed value, what to fix and what to skip, and a dated preparation plan.", "Yours to keep"],
-  ["A conversation, if you want one", "Kaleb walks in already knowing your numbers and your timeline.", "Only if you ask"],
-  ["Through to closing", "Preparation, pricing, launch, showings, offers compared on net rather than price, and settlement.", "The whole way"],
-];
-
-const STAGES: [string, string][] = [
-  ["Considering", "Goals, timing, likely costs, and whether now is right."],
-  ["Preparing", "Repairs that pay back, documents, presentation, vendors."],
-  ["Pricing and launch", "Strategy, estimated proceeds, marketing, launch plan."],
-  ["Active listing", "Activity, feedback, showings, and honest adjustments."],
-  ["Reviewing offers", "Compared on net proceeds, terms, timing and risk."],
-  ["Under contract", "Contingencies, diligence, appraisal, title, obligations."],
-  ["Closing", "Settlement, payoff, possession, and your proceeds."],
-  ["After", "Records, the move, and what comes next."],
-];
-
 /**
- * The seller's "just tell me how this works" door.
- *
- * Says how Rift is paid, in plain terms, on the page about trust, because a
- * page about trust that avoids the commercial question is the least
- * trustworthy page on a site. That matters more on the seller side, where the
- * reader is being asked to believe a commission figure computed by the person
- * who would earn it.
+ * How selling works (Blueprint v5 §5.8, Kaleb R1), the same lens as buying.
+ * No generated valuation anywhere in it: the price is the seller's, and
+ * Kaleb's opinion of it is his, given in person (§9).
  */
-export default function SellHowPage() {
+export default function SellHow() {
   return (
-    <div className="sell">
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/sell" className="row gap-2"><Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span></Link>
-          <Link href="/sell/start" className="btn btn-p btn-sm">Get my numbers</Link>
-        </div>
-      </header>
-
-      <main className="shell-w sec" style={{ maxWidth: 720 }}>
-        <h1 className="serif" style={{ fontSize: "clamp(26px,3.6vw,42px)", lineHeight: 1.12, letterSpacing: "-0.025em" }}>
-          How this works
-        </h1>
-
-        <Block title="What happens, in order">
-          <div className="col gap-2" style={{ marginTop: 4 }}>
-            {STEPS.map(([t, d, tag], n) => (
-              <div key={t} className="card p-4 row gap-3" style={{ alignItems: "flex-start" }}>
-                <div className="num c-brand" style={{ fontSize: 20, lineHeight: 1.2, minWidth: 28 }}>{n + 1}</div>
-                <div className="grow">
-                  <div className="between wrap gap-2">
-                    <span className="t-md w6">{t}</span>
-                    <span className="chip" style={{ flex: "none" }}>{tag}</span>
-                  </div>
-                  <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>{d}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Block>
-
-        <Block title="Where the numbers come from">
-          <p>
-            Every figure is <strong>calculated</strong>: from your answers, published Georgia
-            transfer tax, and typical costs for a sale of this size. Nothing is written by a
-            language model and nothing is a number somebody typed in.
-          </p>
-          <p>
-            Commission is shown at a typical rate, not a promise. It is negotiable, it is set in
-            your listing agreement, and the readout tells you what rate it used so you can put a
-            different one in.
-          </p>
-          <p>
-            What we cannot know is your exact payoff on the day, what a buyer will ask for in
-            concessions, or what an inspection turns up. Those are named on the readout rather
-            than buried, so you can see which figures are solid and which will move.
-          </p>
-        </Block>
-
-        <Block title="What this will not do">
-          <p>
-            It will not value your home. A likely price is your input, not our output; an
-            algorithm that has never seen your kitchen should not be the thing that prices it.
-            Bring a number you believe, or a range, and see what each end leaves you.
-          </p>
-          <p>
-            It is not tax or legal advice. On exemptions, appeals and the capital gains
-            exclusion, we tell you the question is worth asking and exactly who is allowed to
-            answer it. That is the honest limit of what software can do here.
-          </p>
-        </Block>
-
-        <Block title="How Kaleb is paid">
-          <p>
-            By commission, from the sale, set in your listing agreement and paid at closing. If
-            you never list, or you list with somebody else, this costs you nothing and there is
-            no invoice.
-          </p>
-          <p>
-            That is the whole model. The readout is free because a seller who knows their real
-            net is a better client than one who finds out at the settlement table, not because
-            there is a charge waiting further in.
-          </p>
-        </Block>
-
-        <Block title="If you do work with Kaleb">
-          <p>These are the stages, and you can see where you are in all of them.</p>
-          <div className="card" style={{ overflow: "hidden", marginTop: 12 }}>
-            {STAGES.map(([t, d], n) => (
-              <div key={t} className="row gap-3" style={{ padding: "12px 18px", borderBottom: n < STAGES.length - 1 ? "1px solid var(--line-3)" : undefined, alignItems: "flex-start" }}>
-                <span className="t-2xs c-4 num" style={{ minWidth: 20, paddingTop: 3 }}>{n + 1}</span>
-                <div>
-                  <div className="t-sm w6">{t}</div>
-                  <div className="t-xs c-4" style={{ marginTop: 2, lineHeight: 1.55 }}>{d}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Block>
-
-        <Block title="What we keep">
-          <p>
-            Your answers, so the readout works and your link stays live. An email address only if
-            you give one. No phone number is asked for, and there is no call unless you request
-            it.
-          </p>
-          <div className="card" style={{ overflow: "hidden", marginTop: 12 }}>
-            {RETENTION.map((r, n) => (
-              <div key={r.id} style={{ padding: "13px 18px", borderBottom: n < RETENTION.length - 1 ? "1px solid var(--line-3)" : undefined }}>
-                <div className="between wrap gap-2">
-                  <span className="t-sm w6 grow" style={{ minWidth: 200 }}>{r.what}</span>
-                  <span className="chip" style={{ flex: "none" }}>{r.keptFor}</span>
-                </div>
-                <p className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55 }}>{r.why}</p>
-                <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>{r.thenWhat}</p>
-              </div>
-            ))}
-          </div>
-          <p>You can have everything deleted at any time, and it is one link rather than a request.</p>
-        </Block>
-
-        <div className="row gap-3 wrap" style={{ marginTop: 34 }}>
-          <Link href="/sell/start" className="btn btn-brand btn-lg">See what you would keep</Link>
-          <Link href="/sell/unclaimed" className="btn btn-p btn-lg">Just check unclaimed value</Link>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section style={{ marginTop: 34 }}>
-      <h2 className="t-lg w6 serif" style={{ letterSpacing: "-0.018em" }}>{title}</h2>
-      <div className="col gap-2 t-sm c-2" style={{ marginTop: 10, lineHeight: 1.68 }}>{children}</div>
-    </section>
+    <HowItWorks
+      side="sell"
+      title="From “what would I keep?” to the closing table."
+      lede="Rift answers what sellers want to know before they list, then carries those answers through the sale."
+      steps={[
+        { title: "Ask the question you have", body: "What you would keep, whether you are losing money on your home already, what selling costs, or what to fix first. Each asks only a few questions." },
+        { title: "See your answer, worked out", body: "From your own figures and Georgia's published costs, line by line, with commission as the number you agree, never a standard rate." },
+        { title: "Keep your plan", body: "Save what you found and reopen it on any device." },
+        { title: "Talk to Kaleb when you are ready", body: "Ask him to look over your numbers, or book a call. He gives you his own view of price and preparation, starting from what you already know." },
+        { title: "Sell with Kaleb", body: "Preparation, pricing, launch, showings and feedback, then offers compared on what each one leaves you rather than on price, through to closing." },
+      ]}
+      gives={[
+        { title: "What you would keep", body: "The sale price is not the number. What reaches you after the loan and the costs of selling is." },
+        { title: "Money you may be missing", body: "Exemptions you may not have filed and appeal dates that apply, useful even if you are not selling yet." },
+        { title: "What is worth fixing", body: "What to address before listing, what maybe, and what can wait, without invented returns." },
+        { title: "Offers on net", body: "When offers arrive, each is shown as what it leaves you after its terms, not only its price." },
+      ]}
+      fees="The only fees are the ones any home sale has, such as the commission you agree and Georgia's closing costs, and you see them before they apply."
+      start={{ href: "/sell", label: "Start with a question" }}
+    />
   );
 }

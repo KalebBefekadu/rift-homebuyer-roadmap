@@ -228,23 +228,28 @@ export function ProceedsFlow({ price, parts, net }: {
        as money reaching them (lib/core/announce.test.ts). */
     { label: net < 0 ? "Short at closing" : "Reaches you", amount: net, kind: "net" as const }];
   const H = top + rows.length * rowH + 14;
-  const x0 = 120, span = W - x0 - 14;
-  const unit = span / Math.max(price, 1);
+  const x0 = 104, span = W - x0 - 12;
+  /* The scale runs from the shortfall (when there is one) to the price, so a
+     sale that does not cover the loan draws to the left of a zero line
+     instead of into the labels. */
+  const lo = Math.min(0, net);
+  const at = (v: number) => x0 + ((v - lo) / Math.max(price - lo, 1)) * span;
   let run = price;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
-      aria-label={`From a ${money(price)} sale, ${money(net)} reaches you after ${parts.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`}>
+      aria-label={net < 0
+        ? `A ${money(price)} sale is ${money(-net)} short of covering ${parts.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`
+        : `From a ${money(price)} sale, ${money(net)} reaches you after ${parts.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`}>
+      {lo < 0 ? <line x1={at(0)} y1={top - 6} x2={at(0)} y2={H - 8} stroke="var(--ink-5)" strokeDasharray="2 3" /> : null}
       {rows.map((r, k) => {
         const y = top + k * rowH;
-        let x = x0, w = r.amount * unit, fill = "var(--sunk)";
-        if (r.kind === "price") { fill = "var(--ink)"; }
-        else if (r.kind === "cost") { run -= r.amount; x = x0 + run * unit; fill = "var(--ink-5)"; }
-        else { w = Math.max(net, 0) * unit; fill = "var(--brand)"; }
+        let x = at(0), w = at(price) - at(0), fill = "var(--ink)";
+        if (r.kind === "cost") { const before = run; run -= r.amount; x = at(run); w = at(before) - at(run); fill = "var(--ink-5)"; }
+        else if (r.kind === "net") { x = at(Math.min(net, 0)); w = Math.abs(at(net) - at(0)); fill = net < 0 ? "var(--neg, #b3261e)" : "var(--brand)"; }
         return (
           <g key={r.label} className="art-rise" style={{ animationDelay: `${k * 80}ms` }}>
-            <text x={x0 - 10} y={y + 15} textAnchor="end" fontSize="11.5" fill={r.kind === "net" ? "var(--brand-2)" : "var(--ink-3)"} fontWeight={r.kind === "cost" ? 450 : 600}>{r.label}</text>
+            <text x={x0 - 10} y={y + 15} textAnchor="end" fontSize="11.5" fill={r.kind === "net" ? (net < 0 ? "var(--neg, #b3261e)" : "var(--brand-2)") : "var(--ink-3)"} fontWeight={r.kind === "cost" ? 450 : 600}>{r.label}</text>
             <rect x={x} y={y + 3} width={Math.max(w, 2)} height={rowH - 10} rx="2" fill={fill} />
-            {r.kind === "cost" ? <line x1={x} y1={y - 5} x2={x} y2={y + 3} stroke="var(--ink-5)" strokeDasharray="2 2" /> : null}
           </g>
         );
       })}

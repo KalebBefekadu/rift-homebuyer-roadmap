@@ -145,7 +145,7 @@ async function run(req: Request) {
           name: t.name,
           says: t.says,
           body: t.body,
-          resumeUrl: `${origin}/${t.side}/start`,
+          resumeUrl: `${origin}/${t.side}`,
           answered: t.answered,
           of: t.of,
           /* The dormant sequence's closing touch says outright that it is the

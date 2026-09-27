@@ -93,7 +93,11 @@ export const ASKS: Record<InputKey, AskDef> = {
     fallback: 9_000,
   },
   monthlySaving: {
-    key: "monthlySaving", param: "r", type: "money",
+    /* Not `r`: first-touch attribution reads `r` on every page as a
+       referral handle (lib/core/attribution.ts), so a monthly saving carried
+       as `r` was recorded as the visitor's referral source, an answer in
+       attribution. `ms` collides with nothing. */
+    key: "monthlySaving", param: "ms", type: "money",
     title: "How much can you put aside each month?",
     slider: { min: 0, max: 5_000, step: 50 },
     limits: { min: 0, max: 100_000 },
@@ -155,6 +159,61 @@ export const ASKS: Record<InputKey, AskDef> = {
       { value: "unsure", label: "Not sure yet" },
     ],
     fallback: "unsure",
+  },
+  salePrice: {
+    key: "salePrice", param: "sp", type: "money",
+    title: "What do you expect the home to sell for?",
+    why: "An offer, an agent's opinion or your own guess. Rift does not estimate it for you. You can change it on the answer.",
+    slider: { min: 100_000, max: 1_500_000, step: 5_000 },
+    limits: { min: 50_000, max: 5_000_000 },
+    unitLabel: "Sale price",
+    fallback: 415_000,
+  },
+  commission: {
+    key: "commission", param: "cm", type: "choice",
+    title: "What commission have you agreed, in total?",
+    why: "Commission is negotiated, and there is no standard rate. If you have not agreed one, we leave it out and show what each percent would cost.",
+    options: [
+      { value: "none", label: "Not agreed yet" },
+      { value: "2", label: "2%" },
+      { value: "2.5", label: "2.5%" },
+      { value: "3", label: "3%" },
+      { value: "4", label: "4%" },
+      { value: "5", label: "5%" },
+      { value: "6", label: "6%" },
+    ],
+    fallback: "none",
+  },
+  roof: {
+    key: "roof", param: "rf", type: "choice",
+    title: "How old is the roof?",
+    options: [
+      { value: "under10", label: "Under 10 years" },
+      { value: "10to20", label: "10 to 20 years" },
+      { value: "over20", label: "Over 20 years" },
+      { value: "unsure", label: "I'm not sure" },
+    ],
+    fallback: "unsure",
+  },
+  systems: {
+    key: "systems", param: "sy", type: "choice",
+    title: "Is anything not working: heating, cooling, plumbing, electrical or the water heater?",
+    options: [
+      { value: "working", label: "Everything works" },
+      { value: "broken", label: "Something is not working" },
+      { value: "unsure", label: "I'm not sure" },
+    ],
+    fallback: "unsure",
+  },
+  finish: {
+    key: "finish", param: "fn", type: "choice",
+    title: "How do the walls, floors and finishes look?",
+    options: [
+      { value: "fresh", label: "Fresh" },
+      { value: "lived", label: "Lived in" },
+      { value: "worn", label: "Worn or dated" },
+    ],
+    fallback: "lived",
   },
   payoff: {
     key: "payoff", param: "po", type: "money",
@@ -269,6 +328,7 @@ export function answerLabel(key: InputKey, v: string | number | undefined): stri
 export const ASK_SHORT: Record<InputKey, string> = {
   county: "County", ownership: "Owned before", price: "Price", downPct: "Down payment",
   savings: "Saved", monthlySaving: "Each month", income: "Income", household: "Household",
-  credit: "Credit", occupation: "Work", loanType: "Loan", payoff: "Still owed",
-  yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older", status: "Status", use: "Use",
+  credit: "Credit", occupation: "Work", loanType: "Loan", salePrice: "Sale price", payoff: "Still owed",
+  commission: "Commission", yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older",
+  status: "Status", use: "Use", roof: "Roof", systems: "Systems", finish: "Finishes",
 };

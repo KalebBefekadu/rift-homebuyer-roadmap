@@ -21,7 +21,8 @@ export type ValueSide = "buy" | "sell" | "abroad";
 export type InputKey =
   | "county" | "ownership" | "price" | "downPct" | "savings" | "monthlySaving"
   | "income" | "household" | "credit" | "occupation" | "loanType"
-  | "payoff" | "yearsOwned" | "homestead" | "age65"
+  | "salePrice" | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
+  | "roof" | "systems" | "finish"
   | "status" | "use";
 
 export interface ValueDef {
@@ -84,8 +85,8 @@ export const VALUES: ValueDef[] = [
     question: "What would I actually keep?",
     gives: "What reaches you after the loan payoff and every cost of selling.",
     cta: "See what I'd keep",
-    asks: ["county", "price", "payoff"],
-    live: false,
+    asks: ["county", "salePrice", "payoff", "commission"],
+    live: true,
   },
   {
     id: "unclaimed", side: "sell", href: "/sell/unclaimed", name: "Money you may be losing",
@@ -100,16 +101,16 @@ export const VALUES: ValueDef[] = [
     question: "What will selling cost me?",
     gives: "Each cost of selling, line by line, with commission as your own number.",
     cta: "See my selling costs",
-    asks: ["county", "price"],
-    live: false,
+    asks: ["county", "salePrice", "commission"],
+    live: true,
   },
   {
     id: "prepare", side: "sell", href: "/sell/prepare", name: "Should I fix it first",
     question: "Should I fix things before I list?",
     gives: "What is worth addressing, what maybe, and what not yet.",
     cta: "See what to fix first",
-    asks: ["price"],
-    live: false,
+    asks: ["roof", "systems", "finish"],
+    live: true,
   },
 
   /* Abroad, D20: can I buy, what it costs, the return. */

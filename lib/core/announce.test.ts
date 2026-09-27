@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { SELLER_DEFAULTS, netProceeds } from "./compute";
+import { sellerNet } from "./seller";
+import { ASKS } from "./asks";
 
 /**
  * Source guards for what a landing says when nobody is looking at it.
@@ -21,11 +22,10 @@ import { SELLER_DEFAULTS, netProceeds } from "./compute";
  * not.
  */
 
-/* The buyer landing no longer answers in place: since Blueprint v5 it offers
-   the values as separate pages, and each value page is a server render with
-   nothing that changes under the reader. */
+/* The buyer and seller landings no longer answer in place: since Blueprint
+   v5 they offer the values as separate pages, and each value page is a server
+   render with nothing that changes under the reader. */
 const LANDINGS = [
-  "app/(rift)/sell/Landing.tsx",
   "app/(rift)/abroad/Landing.tsx",
 ] as const;
 
@@ -55,31 +55,25 @@ describe("every landing that answers in place announces its answer", () => {
   });
 });
 
-describe("the seller's front door handles a sale that does not cover the loan", () => {
-  const src = readFileSync("app/(rift)/sell/Landing.tsx", "utf8");
+describe("what you would keep handles a sale that does not cover the loan", () => {
+  /* The seller landing's sliders were where this was first found. Since
+     Blueprint v5 the figure is the proceeds value, whose limits come from
+     lib/core/asks.ts: a payoff can be as large as any price. */
+  const src = readFileSync("app/(rift)/sell/proceeds/page.tsx", "utf8");
 
-  it("is a case the sliders can actually reach", () => {
-    /* Read the bounds out of the component rather than assuming them. */
-    const priceMin = Number(src.match(/\["price",[^\]]*?(\d[\d_]*), *\d[\d_]*, *\d/)?.[1]?.replace(/_/g, "") ?? NaN);
-    const payoffMax = Number(src.match(/\["payoff",[^\]]*?\d[\d_]*, *(\d[\d_]*), *\d/)?.[1]?.replace(/_/g, "") ?? NaN);
-    expect(priceMin).toBeGreaterThan(0);
+  it("is a case the questions can actually reach", () => {
+    const priceMin = ASKS.salePrice.limits!.min;
+    const payoffMax = ASKS.payoff.limits!.max;
     expect(payoffMax).toBeGreaterThan(priceMin);
-
-    const worst = netProceeds({ ...SELLER_DEFAULTS, price: priceMin, payoff: payoffMax });
+    const worst = sellerNet({ price: priceMin, payoff: payoffMax, county: "Cobb", commissionPct: null });
     expect(worst.net).toBeLessThan(0);
+    expect(worst.shortfall).toBe(-worst.net);
   });
 
   it("branches on it rather than printing a negative under a positive label", () => {
     expect(src).toMatch(/const underwater = r\.net < 0;/);
-    expect(src).toContain("bring to the closing table");
-    /* The panel must not reach `money(r.net)` unguarded: that is the string
-       that rendered "-$566,000" beside "What you'd actually walk away with". */
-    expect(src).toMatch(/underwater \? short : money\(r\.net\)/);
-  });
-
-  it("does not offer a percentage of the price when the percentage is negative", () => {
-    const pctLine = src.slice(src.indexOf("% of the sale price") - 400, src.indexOf("% of the sale price"));
-    expect(pctLine).toContain("underwater");
+    expect(src).toContain("brought to closing");
+    expect(src).toMatch(/underwater \? money\(r\.shortfall\) : money\(r\.net\)/);
   });
 });
 
@@ -97,8 +91,8 @@ describe("the seller's front door handles a sale that does not cover the loan", 
  */
 describe("no seller surface describes a shortfall as a gain", () => {
   const SURFACES = [
-    "app/(rift)/sell/Landing.tsx",
-    "app/(rift)/sell/results/Readout.tsx",
+    "app/(rift)/sell/page.tsx",
+    "app/(rift)/sell/proceeds/page.tsx",
   ] as const;
 
   /* Phrases that are only true when the number is positive. */
