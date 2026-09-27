@@ -766,3 +766,22 @@ describe("a sale linked to a purchase, as stored (STATE-07)", () => {
       values ($1,$2,'met','Settlement statement','Kaleb',gen_random_uuid())`, [AGENT, d.id]);
   });
 });
+
+describe("seller stages, as stored (STATE-03)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("each journey uses only its own side's stages", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'sell','stages-person@example.com',50,'soon') returning id", [AGENT]);
+    const j = async (side: string) => (await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,$3,$4) returning id", [AGENT, lead.id, side, `Stages ${side}`])).rows[0].id as string;
+    const sell = await j("sell"), buy = await j("buy");
+    const ev = (journey: string, to: string) => c.query(
+      `insert into rift_journey_events (agent_id, journey_id, seq, kind, from_value, to_value, reason, actor_label, request_id)
+       values ($1,$2,1,'stage','prepare',$3,'because','Kaleb',gen_random_uuid())`, [AGENT, journey, to]);
+    await expect(ev(sell, "search")).rejects.toThrow(/has no search stage/);
+    await expect(ev(buy, "market")).rejects.toThrow(/has no market stage/);
+    await expect(ev(sell, "continue")).rejects.toThrow(/contract_stages/);
+    await ev(sell, "price-launch");
+    await ev(buy, "search");
+  });
+});

@@ -6,7 +6,8 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { coverageFor } from "./tours";
 import {
-  AFTER_CLOSING, WORKSTREAMS, afterClose, contractError, endContractError, initialWork, progressOf, stageError, statusError, workError, workstreamView,
+  AFTER_CLOSING, TERMINAL, WORKSTREAMS, afterClose, contractError, endContractError, initialWork, progressOf, stageError, statusError, workError, workstreamView,
+  type Side,
   type ContractInput, type ContractOutcome, type Financing, type JourneyEvent, type JourneyStatus, type Progress,
   type Stage, type StageContext, type WorkInput, type WorkState, type WorkUpdate, type Workstream, type WorkstreamView,
 } from "@/lib/core/progress";
@@ -36,6 +37,8 @@ export interface ContractRecord {
 }
 
 export interface ProgressRecord {
+  /** Which stages apply: a buyer's or a seller's (STATE-03). */
+  side: Side;
   progress: Progress;
   events: JourneyEvent[];
   /** Newest first. */
@@ -81,7 +84,8 @@ export function shapeUpdates(list: Record<string, unknown>[]): Map<string, WorkU
 export async function readProgress(journeyId: string, agentId: string, now = new Date()): Promise<DbResult<ProgressRecord>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const [events, contracts, outcomes, updates, homes, coverage] = await Promise.all([
+  const [journey, events, contracts, outcomes, updates, homes, coverage] = await Promise.all([
+    boundedRead(db.from("rift_journeys").select("side").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey"),
     boundedRead(db.from("rift_journey_events").select("seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(1000), "the journey's history"),
     boundedRead(db.from("rift_transactions").select("id,home_id,financing,evidence,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(50), "the contracts"),
     boundedRead(db.from("rift_transaction_outcomes").select("transaction_id,outcome,reason,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "how contracts ended"),
@@ -92,11 +96,13 @@ export async function readProgress(journeyId: string, agentId: string, now = new
   for (const r of [events, contracts, outcomes, updates, homes]) {
     if (!r.ok) {
       return journeyTablesMissing(r.error)
-        ? done({ progress: progressOf([]), events: [], contracts: [], open: null, coverage: { covered: false, note: "" }, homes: [], unavailable: NOT_YET })
+        ? done({ side: "buy" as Side, progress: progressOf([]), events: [], contracts: [], open: null, coverage: { covered: false, note: "" }, homes: [], unavailable: NOT_YET })
         : r;
     }
   }
   if (!coverage.ok) return coverage;
+  if (!journey.ok) return journey;
+  const side: Side = (("data" in journey ? journey.data : null) as { side: Side } | null)?.side === "sell" ? "sell" : "buy";
 
   const address = new Map(rows(homes).map((h) => [h.id as string, h.address as string]));
   const ended = new Map(rows(outcomes).map((o) => [o.transaction_id as string, {
@@ -116,6 +122,7 @@ export async function readProgress(journeyId: string, agentId: string, now = new
   });
   const evs = shapeEvents(rows(events));
   return done({
+    side,
     progress: progressOf(evs),
     events: evs,
     contracts: list,
@@ -185,7 +192,7 @@ export async function changeStage(
   if (!again.ok) return again;
   if ("data" in again && again.data) return done({ seq: l.data.rec.progress.seq });
   if (l.data.rec.progress.seq !== expectedSeq) return failed(CHANGED);
-  const bad = stageError(l.data.rec.progress, to, { reason, evidence }, ctxOf(l.data.rec));
+  const bad = stageError(l.data.rec.progress, to, { reason, evidence }, ctxOf(l.data.rec), l.data.rec.side);
   if (bad) return failed(bad);
   const w = await insertEvent(l.data, journeyId, { kind: "stage", from: l.data.rec.progress.stage, to, reason, evidence }, agentLabel, requestId);
   if (!w.ok) return seqConflict(w.error) ? failed(CHANGED) : w;
@@ -201,7 +208,7 @@ export async function changeStatus(
   if (!again.ok) return again;
   if ("data" in again && again.data) return done({ seq: l.data.rec.progress.seq });
   if (l.data.rec.progress.seq !== expectedSeq) return failed(CHANGED);
-  const bad = statusError(l.data.rec.progress, to, reason);
+  const bad = statusError(l.data.rec.progress, to, reason, l.data.rec.side);
   if (bad) return failed(bad);
   const w = await insertEvent(l.data, journeyId, { kind: "status", from: l.data.rec.progress.status, to, reason }, agentLabel, requestId);
   if (!w.ok) return seqConflict(w.error) ? failed(CHANGED) : w;
@@ -225,7 +232,7 @@ export async function recordContract(
   const seen = ("data" in prior ? prior.data : null) as { id: string } | null;
   if (seen) return done({ id: seen.id });
   if (rec.progress.seq !== expectedSeq) return failed(CHANGED);
-  const bad = contractError(rec.progress, input, { ...ctxOf(rec), homeOnList: rec.homes.some((h) => h.id === input.homeId) });
+  const bad = contractError(rec.progress, input, { ...ctxOf(rec), homeOnList: rec.homes.some((h) => h.id === input.homeId) }, rec.side);
   if (bad) return failed(bad);
 
   const t = await boundedWrite(
@@ -240,7 +247,7 @@ export async function recordContract(
   const undo = () => boundedWrite(db.from("rift_transactions").delete().eq("id", id).eq("agent_id", agentId), "the contract");
 
   const first = await boundedWrite(
-    db.from("rift_workstream_updates").insert(initialWork(input.financing).map(({ workstream, input: w }) => ({
+    db.from("rift_workstream_updates").insert(initialWork(input.financing, rec.side).map(({ workstream, input: w }) => ({
       agent_id: agentId, journey_id: journeyId, transaction_id: id, workstream, seq: 1,
       state: w.state, owner: w.owner, owner_name: w.ownerName ?? null, note: w.note ?? null,
       actor_kind: "agent", actor_label: agentLabel.slice(0, 120), request_id: randomUUID(),
@@ -274,7 +281,7 @@ export async function endContract(
   if ("data" in again && again.data) return done({ seq: rec.progress.seq });
   if (!rec.open || rec.open.id !== contractId) return failed("That contract is not the open one on this journey. Reload");
   if (rec.progress.seq !== expectedSeq) return failed(CHANGED);
-  const bad = endContractError(outcome, reason, backTo, rec.open.work);
+  const bad = endContractError(outcome, reason, backTo, rec.open.work, rec.side);
   if (bad) return failed(bad);
 
   const o = await boundedWrite(
@@ -285,7 +292,7 @@ export async function endContract(
     "how the contract ended",
   );
   if (!o.ok) return seqConflict(o.error) ? failed(CHANGED) : o;
-  const to: Stage = outcome === "closed" ? "own" : backTo!;
+  const to: Stage = outcome === "closed" ? TERMINAL[rec.side] : backTo!;
   const moved = await insertEvent(l.data, journeyId, {
     kind: "stage", from: rec.progress.stage, to,
     reason: outcome === "closed" ? `Closed: ${reason.trim()}` : `Contract terminated: ${reason.trim()}`,

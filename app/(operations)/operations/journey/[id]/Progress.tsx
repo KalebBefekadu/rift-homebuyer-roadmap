@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   STAGE_LABEL, STATUS_LABEL, WORK_STATES, WORK_STATE_LABEL,
-  afterClose, marketDay, ownerText, stageStrip, visitedStages, workSummary,
+  afterClose, marketDay, ownerText, stageStrip, visitedStages, workSummary, BACK_TO, TERMINAL, type Side,
   type Financing, type JourneyEvent, type JourneyStatus, type Owner, type Progress as ProgressState,
   type Stage, type WorkState, type WorkUpdate, type Workstream, type WorkstreamView,
 } from "@/lib/core/progress";
@@ -39,7 +39,11 @@ const CHIP: Record<WorkState, string> = {
    0.55 the label fell to 3:1, and the stages ahead are exactly the ones a
    buyer reads to see what is coming. --ink-4 is the AA floor on --sunk. */
 const AHEAD = { color: "var(--ink-4)", borderStyle: "dashed" } as const;
-const MANUAL: Stage[] = ["prepare", "search", "tour", "offer", "close"];
+/* The stages the agent moves by hand; Under contract and the last stage come from the contract record. */
+const MANUAL: Record<Side, Stage[]> = {
+  buy: ["prepare", "search", "tour", "offer", "close"],
+  sell: ["prepare", "price-launch", "market", "offers", "close"],
+};
 
 /**
  * Where the journey is and, under contract, what is running (W07).
@@ -50,8 +54,10 @@ const MANUAL: Stage[] = ["prepare", "search", "tour", "offer", "close"];
  * disagree. Each workstream has its own owner and the date of the last word
  * from whoever gave it; one gone quiet for a week says so.
  */
-export function Progress({ journeyId, progress, events, open, past, homes, coverage, leadId, person, unavailable, nudge }: {
+export function Progress({ journeyId, side = "buy", progress, events, open, past, homes, coverage, leadId, person, unavailable, nudge }: {
   journeyId: string;
+  /** A buyer's stages or a seller's (STATE-03). */
+  side?: Side;
   progress: ProgressState;
   events: JourneyEvent[];
   open: ContractView | null;
@@ -70,14 +76,15 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
   const { busy, error, write } = useWrite(stamp);
   const [req, setReq] = useState(newRequest);
   const [form, setForm] = useState<null | "stage" | "status" | "contract" | "end">(null);
-  const [to, setTo] = useState<Stage>("search");
+  const manual = MANUAL[side];
+  const [to, setTo] = useState<Stage>(manual[1]!);
   const [status, setStatus] = useState<JourneyStatus>("paused");
   const [reason, setReason] = useState("");
   const [evidence, setEvidence] = useState("");
   const [homeId, setHomeId] = useState("");
   const [financing, setFinancing] = useState<Financing>("financed");
   const [outcome, setOutcome] = useState<"closed" | "terminated">("terminated");
-  const [backTo, setBackTo] = useState<Stage>("search");
+  const [backTo, setBackTo] = useState<Stage>(BACK_TO[side][0]!);
   const [history, setHistory] = useState(false);
 
   if (unavailable) return <p className="t-xs c-warn">{unavailable}</p>;
@@ -92,12 +99,12 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
     ? ["active"]
     : progress.status === "paused"
       ? ["active", "cancelled"]
-      : progress.stage === "own" ? ["completed", "paused", "cancelled"] : ["paused", "cancelled"];
+      : progress.stage === TERMINAL[side] ? ["completed", "paused", "cancelled"] : ["paused", "cancelled"];
 
   return (
     <div>
       <ol className="row gap-1 wrap" aria-label="Stages" style={{ listStyle: "none", padding: 0 }}>
-        {stageStrip(progress, visitedStages(events)).map((s) => (
+        {stageStrip(progress, visitedStages(events), side).map((s) => (
           <li key={s.stage} className={`chip t-2xs ${s.state === "now" ? "chip-pos" : ""}`}
             aria-current={s.state === "now" ? "step" : undefined} style={s.state === "ahead" ? AHEAD : undefined}>
             {s.state === "done" ? "✓ " : ""}{s.label}{s.state === "skipped" ? " (not recorded)" : ""}
@@ -113,7 +120,7 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
 
       <div className="row gap-2 wrap" style={{ marginTop: 10 }}>
-        {!finished ? <button className="btn btn-s btn-sm" onClick={() => { setTo(MANUAL.find((s) => s !== progress.stage)!); setForm(form === "stage" ? null : "stage"); }}>Change the stage</button> : null}
+        {!finished ? <button className="btn btn-s btn-sm" onClick={() => { setTo(manual.find((s) => s !== progress.stage)!); setForm(form === "stage" ? null : "stage"); }}>Change the stage</button> : null}
         <button className="btn btn-g btn-sm" onClick={() => { setStatus(statusChoices[0]!); setForm(form === "status" ? null : "status"); }}>
           {finished ? "Reopen" : progress.status === "paused" ? "Resume or cancel" : "Pause, cancel or complete"}
         </button>
@@ -125,10 +132,10 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
           <div className="row gap-2 wrap">
             <label className="field" style={{ flex: "1 1 160px" }}><span className="label">Move to</span>
               <select className="input" value={to} onChange={(e) => setTo(e.target.value as Stage)}>
-                {MANUAL.filter((s) => s !== progress.stage).map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
+                {manual.filter((s) => s !== progress.stage).map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
               </select></label>
             <label className="field" style={{ flex: "3 1 240px" }}><span className="label">Why</span>
-              <input className="input" value={reason} maxLength={500} placeholder="Search set up in Matrix and approved"
+              <input className="input" value={reason} maxLength={500} placeholder={side === "sell" ? "Price agreed; photos booked for Friday" : "Search set up in Matrix and approved"}
                 onChange={(e) => setReason(e.target.value)} /></label>
           </div>
           {to === "close" ? (
@@ -143,8 +150,8 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
             <button className="btn btn-g btn-sm" onClick={() => setForm(null)}>Back</button>
           </div>
           <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
-            Under contract and Own come from recording the contract below, so the stage always matches it.
-            {!coverage.covered ? <> Moving forward past Prepare needs {person}&apos;s agreement in force: {coverage.note} <Link className="u" href={`/operations/lead/${leadId}`}>Their record</Link>.</> : null}
+            Under contract and {STAGE_LABEL[TERMINAL[side]]} come from recording the contract below, so the stage always matches it.
+            {!coverage.covered ? <> Moving forward to {side === "sell" ? "Market & show" : "Search"} or later needs {person}&apos;s {side === "sell" ? "listing" : "buyer"} agreement in force: {coverage.note} <Link className="u" href={`/operations/lead/${leadId}`}>Their record</Link>.</> : null}
           </p>
         </div>
       ) : null}
@@ -191,14 +198,14 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
             Possession is recorded here: it can come after the closing, and {person} sees it on Today until it is confirmed.
           </p>
           <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-            {closed.work.map((w) => <Work key={w.workstream} contractId={closed.contract.id} w={w} history={closed.contract.history[w.workstream]} busy={busy} run={run} person={person} />)}
+            {closed.work.map((w) => <Work key={w.workstream} contractId={closed.contract.id} w={w} history={closed.contract.history[w.workstream]} busy={busy} run={run} person={person} side={side} />)}
           </div>
         </div>
       ) : null}
 
       <div style={{ marginTop: 16 }}>
         {open ? (
-          <OpenContract c={open} busy={busy} run={run} person={person}
+          <OpenContract c={open} side={side} busy={busy} run={run} person={person}
             ending={form === "end"} setEnding={(v) => setForm(v ? "end" : null)}
             outcome={outcome} setOutcome={setOutcome} backTo={backTo} setBackTo={setBackTo} reason={reason} setReason={setReason} />
         ) : form === "contract" ? (
@@ -207,7 +214,7 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
             <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
               <label className="field" style={{ flex: "2 1 220px" }}><span className="label">Home</span>
                 <select className="input" value={homeId} onChange={(e) => setHomeId(e.target.value)}>
-                  <option value="">Choose a home on the list</option>
+                  <option value="">{side === "sell" ? "The property" : "Choose a home on the list"}</option>
                   {homes.map((h) => <option key={h.id} value={h.id}>{h.address}</option>)}
                 </select></label>
               <label className="field" style={{ flex: "1 1 140px" }}><span className="label">Paying by</span>
@@ -231,10 +238,10 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
               {financing === "cash" ? " A cash purchase has no loan or lender appraisal to track, so those two are marked as not applying." : ""}
             </p>
           </div>
-        ) : !finished && progress.stage !== "own" ? (
+        ) : !finished && progress.stage !== TERMINAL[side] ? (
           <button className="btn btn-s btn-sm" disabled={!homes.length} onClick={() => setForm("contract")}>Record a contract</button>
         ) : null}
-        {!open && !homes.length && !finished && progress.stage !== "own" ? <p className="t-2xs c-4" style={{ marginTop: 6 }}>Add the home to the list first.</p> : null}
+        {!open && !homes.length && !finished && progress.stage !== TERMINAL[side] ? <p className="t-2xs c-4" style={{ marginTop: 6 }}>{side === "sell" ? "Record the property first, on the Property tab." : "Add the home to the list first."}</p> : null}
       </div>
 
       {past.length ? (
@@ -253,8 +260,9 @@ export function Progress({ journeyId, progress, events, open, past, homes, cover
   );
 }
 
-function OpenContract({ c, busy, run, person, ending, setEnding, outcome, setOutcome, backTo, setBackTo, reason, setReason }: {
+function OpenContract({ c, side, busy, run, person, ending, setEnding, outcome, setOutcome, backTo, setBackTo, reason, setReason }: {
   c: ContractView;
+  side: Side;
   busy: boolean;
   run: (op: string, body: Record<string, unknown>) => Promise<boolean>;
   person: string;
@@ -277,7 +285,7 @@ function OpenContract({ c, busy, run, person, ending, setEnding, outcome, setOut
       <p className="t-xs" style={{ marginTop: 8 }}>{workSummary(c.work)}</p>
 
       <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-        {c.work.map((w) => <Work key={w.workstream} contractId={c.id} w={w} history={c.history[w.workstream]} busy={busy} run={run} person={person} />)}
+        {c.work.map((w) => <Work key={w.workstream} contractId={c.id} w={w} history={c.history[w.workstream]} busy={busy} run={run} person={person} side={side} />)}
       </div>
 
       <div style={{ marginTop: 12 }}>
@@ -292,8 +300,7 @@ function OpenContract({ c, busy, run, person, ending, setEnding, outcome, setOut
               {outcome === "terminated" ? (
                 <label className="field" style={{ flex: "1 1 160px" }}><span className="label">The journey goes back to</span>
                   <select className="input" value={backTo} onChange={(e) => setBackTo(e.target.value as Stage)}>
-                    <option value="search">Search</option>
-                    <option value="offer">Offer, on another home</option>
+                    {BACK_TO[side].map((b) => <option key={b} value={b}>{side === "buy" && b === "offer" ? "Offer, on another home" : STAGE_LABEL[b]}</option>)}
                   </select></label>
               ) : null}
               <label className="field" style={{ flex: "3 1 240px" }}><span className="label">Why, or what shows it</span>
@@ -321,8 +328,9 @@ function OpenContract({ c, busy, run, person, ending, setEnding, outcome, setOut
   );
 }
 
-function Work({ contractId, w, history, busy, run, person }: {
+function Work({ contractId, w, history, busy, run, person, side }: {
   contractId: string;
+  side: Side;
   w: WorkstreamView;
   history: WorkUpdate[];
   busy: boolean;
@@ -352,7 +360,7 @@ function Work({ contractId, w, history, busy, run, person }: {
       </div>
       <p className={`t-2xs ${w.stale ? "c-warn" : "c-4"}`} style={{ marginTop: 4, lineHeight: 1.5 }}>
         {w.lastWord ? `Last word ${DAY(w.lastWord.on)}, from ${w.lastWord.from}.` : "No word from anybody yet."}
-        {w.stale ? ` ${w.daysSinceWord === null ? "Nobody has given word yet" : `Nothing for ${w.daysSinceWord} days`}: ask for an update. The buyer sees "waiting for an update".` : ""}
+        {w.stale ? ` ${w.daysSinceWord === null ? "Nobody has given word yet" : `Nothing for ${w.daysSinceWord} days`}: ask for an update. The ${side === "sell" ? "seller" : "buyer"} sees "waiting for an update".` : ""}
         {w.note ? ` ${w.note}` : ""}
       </p>
       {w.state === "reported" ? (
@@ -408,7 +416,7 @@ function Work({ contractId, w, history, busy, run, person }: {
           {[...history].reverse().map((u) => (
             <li key={u.seq}>
               {DAY(u.at)} · {WORK_STATE_LABEL[u.state]}{u.source ? `, from ${u.source}` : ""}{u.confirmedOn ? ` on ${DAY(u.confirmedOn)}` : ""}
-              {u.note ? `: ${u.note}` : ""} · {u.by}{u.byKind === "client" ? " (buyer)" : ""}
+              {u.note ? `: ${u.note}` : ""} · {u.by}{u.byKind === "client" ? (side === "sell" ? " (seller)" : " (buyer)") : ""}
             </li>
           ))}
         </ul>

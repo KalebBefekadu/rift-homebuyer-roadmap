@@ -46,8 +46,24 @@ export function marketDay(now = new Date(), timeZone = TOUR_TIMEZONE): string {
  * Stage and status
  * ------------------------------------------------------------------ */
 
-export type Stage = "prepare" | "search" | "tour" | "offer" | "under-contract" | "close" | "own";
+export type Stage =
+  | "prepare" | "search" | "tour" | "offer" | "under-contract" | "close" | "own"
+  /* A seller's own stages (STATE-03, Blueprint v5 §9). Prepare, Under
+     contract and Close are shared with the buyer's. */
+  | "price-launch" | "market" | "offers" | "continue";
+export type Side = "buy" | "sell";
+/** A buyer's stages, in order. */
 export const STAGES: Stage[] = ["prepare", "search", "tour", "offer", "under-contract", "close", "own"];
+/** A seller's stages, in order. */
+export const SELL_STAGES: Stage[] = ["prepare", "price-launch", "market", "offers", "under-contract", "close", "continue"];
+export const stagesFor = (side: Side): Stage[] => (side === "sell" ? SELL_STAGES : STAGES);
+/** Reached only by closing the contract: the home is theirs, or the sale is done. */
+export const TERMINAL: Record<Side, Stage> = { buy: "own", sell: "continue" };
+/** From here on, the agent is acting on their behalf, so an agreement must be in force. */
+const GATE_STAGE: Record<Side, Stage> = { buy: "search", sell: "market" };
+/** Where a terminated contract can send the journey. */
+export const BACK_TO: Record<Side, Stage[]> = { buy: ["search", "offer"], sell: ["market", "offers"] };
+const AGREEMENT: Record<Side, string> = { buy: "a signed buyer agreement", sell: "a signed listing agreement" };
 export const STAGE_LABEL: Record<Stage, string> = {
   prepare: "Prepare",
   search: "Search",
@@ -56,6 +72,10 @@ export const STAGE_LABEL: Record<Stage, string> = {
   "under-contract": "Under contract",
   close: "Close",
   own: "Own",
+  "price-launch": "Price & launch",
+  market: "Market & show",
+  offers: "Review offers",
+  continue: "Continue",
 };
 
 export type JourneyStatus = "active" | "paused" | "completed" | "cancelled";
@@ -106,7 +126,7 @@ export function progressOf(events: JourneyEvent[]): Progress {
   };
 }
 
-const at = (s: Stage) => STAGES.indexOf(s);
+const at = (s: Stage, side: Side = "buy") => stagesFor(side).indexOf(s);
 
 /** What is true when a stage change is asked for. */
 export interface StageContext {
@@ -131,15 +151,16 @@ export interface StageContext {
  * (lib/core/representation `mayAdvance`) until the broker says otherwise
  * (decision D06). Going back never needs one.
  */
-export function stageError(p: Progress, to: Stage, input: { reason: string; evidence?: string | null }, ctx: StageContext): string | null {
-  if (!STAGES.includes(to)) return "Choose a stage";
+export function stageError(p: Progress, to: Stage, input: { reason: string; evidence?: string | null }, ctx: StageContext, side: Side = "buy"): string | null {
+  const at_ = (x: Stage) => at(x, side);
+  if (!stagesFor(side).includes(to)) return "Choose a stage";
   if (p.status === "completed" || p.status === "cancelled") {
     return `This journey is ${p.status}. Reopen it before changing its stage`;
   }
   if (to === p.stage) return `It is already at ${STAGE_LABEL[to]}`;
   if (to === "under-contract") return "Record the contract below. That moves the journey to Under contract";
-  if (to === "own") return "Record the contract as closed. That moves the journey to Own";
-  if (ctx.openContract && at(to) < at("under-contract")) {
+  if (to === TERMINAL[side]) return `Record the contract as closed. That moves the journey to ${STAGE_LABEL[to]}`;
+  if (ctx.openContract && at_(to) < at_("under-contract")) {
     return "A contract is open. Record how it ended first; that also says where the journey goes next";
   }
   if (to === "close" && !ctx.openContract) return "Close follows a contract. Record the contract first";
@@ -149,8 +170,8 @@ export function stageError(p: Progress, to: Stage, input: { reason: string; evid
     return "Say what shows closing is being prepared, like \"Closing set with the attorney for 30 Oct\"";
   }
   if (input.evidence && input.evidence.trim().length > EVIDENCE_MAX) return `Keep the evidence under ${EVIDENCE_MAX} characters`;
-  if (at(to) > at(p.stage) && at(to) >= at("search") && !ctx.covered) {
-    return `Moving to ${STAGE_LABEL[to]} needs a signed buyer agreement in force. ${ctx.coverageNote}`;
+  if (at_(to) > at_(p.stage) && at_(to) >= at_(GATE_STAGE[side]) && !ctx.covered) {
+    return `Moving to ${STAGE_LABEL[to]} needs ${AGREEMENT[side]} in force. ${ctx.coverageNote}`;
   }
   return null;
 }
@@ -167,10 +188,12 @@ export function reasonError(reason: string | null | undefined): string | null {
  * so it follows Own. Anything can be reopened, and anything can be
  * cancelled, with a reason.
  */
-export function statusError(p: Progress, to: JourneyStatus, reason: string): string | null {
+export function statusError(p: Progress, to: JourneyStatus, reason: string, side: Side = "buy"): string | null {
   if (!JOURNEY_STATUSES.includes(to)) return "Choose a status";
   if (to === p.status) return `It is already ${p.status}`;
-  if (to === "completed" && p.stage !== "own") return "A journey is completed once the home is theirs. Record the closing first";
+  if (to === "completed" && p.stage !== TERMINAL[side]) {
+    return side === "sell" ? "A sale is completed once it has closed. Record the closing first" : "A journey is completed once the home is theirs. Record the closing first";
+  }
   if (to === "paused" && p.status !== "active") return "Only an active journey can be paused";
   return reasonError(reason);
 }
@@ -185,10 +208,10 @@ export const visitedStages = (events: JourneyEvent[]): Stage[] =>
  * recorded at it: going from Search straight to a contract does not claim
  * that anybody toured or offered through Rift. Those read "skipped".
  */
-export function stageStrip(p: Progress, visited: Stage[]): { stage: Stage; label: string; state: "done" | "skipped" | "now" | "ahead" }[] {
-  const now = at(p.stage);
+export function stageStrip(p: Progress, visited: Stage[], side: Side = "buy"): { stage: Stage; label: string; state: "done" | "skipped" | "now" | "ahead" }[] {
+  const now = at(p.stage, side);
   const been = new Set(visited);
-  return STAGES.map((s, i) => ({
+  return stagesFor(side).map((s, i) => ({
     stage: s, label: STAGE_LABEL[s],
     state: i === now ? "now" : i > now ? "ahead" : been.has(s) ? "done" : "skipped",
   }));
@@ -208,18 +231,18 @@ export interface ContractInput {
   evidence: string;
 }
 
-export function contractError(p: Progress, input: ContractInput, ctx: StageContext & { homeOnList: boolean }): string | null {
+export function contractError(p: Progress, input: ContractInput, ctx: StageContext & { homeOnList: boolean }, side: Side = "buy"): string | null {
   if (p.status === "completed" || p.status === "cancelled") return `This journey is ${p.status}. Reopen it first`;
   if (ctx.openContract) return "A contract is already open. Record how it ended before recording another";
   /* The home is theirs. Closing history stays intact; a next purchase is a
      new journey, not another attempt on this one (B20). */
-  if (p.stage === "own") return "This home is theirs. A next move starts a new journey";
-  if (!ctx.homeOnList) return "Choose a home on the list";
+  if (p.stage === TERMINAL[side]) return side === "sell" ? "This sale has closed. A next sale starts a new journey" : "This home is theirs. A next move starts a new journey";
+  if (!ctx.homeOnList) return side === "sell" ? "Record the property first" : "Choose a home on the list";
   if (input.financing !== "financed" && input.financing !== "cash") return "Say whether it is financed or cash";
   const e = input.evidence?.trim() ?? "";
   if (e.length < 3) return "Say what shows the contract is binding, like \"Executed purchase agreement, 23 Sep\"";
   if (e.length > EVIDENCE_MAX) return `Keep it under ${EVIDENCE_MAX} characters`;
-  if (!ctx.covered) return `A contract needs a signed buyer agreement in force. ${ctx.coverageNote}`;
+  if (!ctx.covered) return `A contract needs ${AGREEMENT[side]} in force. ${ctx.coverageNote}`;
   return null;
 }
 
@@ -231,12 +254,14 @@ export function contractError(p: Progress, input: ContractInput, ctx: StageConte
  * where the journey goes: back to Search, or to Offer on another home.
  */
 export function endContractError(
-  outcome: ContractOutcome, reason: string, backTo: Stage | null, workstreams: WorkstreamView[],
+  outcome: ContractOutcome, reason: string, backTo: Stage | null, workstreams: WorkstreamView[], side: Side = "buy",
 ): string | null {
   if (outcome !== "closed" && outcome !== "terminated") return "Say whether it closed or was terminated";
   const r = reasonError(reason);
   if (r) return r;
-  if (outcome === "terminated" && backTo !== "search" && backTo !== "offer") return "Say where the journey goes now: Search or Offer";
+  if (outcome === "terminated" && (!backTo || !BACK_TO[side].includes(backTo))) {
+    return `Say where the journey goes now: ${BACK_TO[side].map((x) => STAGE_LABEL[x]).join(" or ")}`;
+  }
   if (outcome === "closed") {
     const closing = workstreams.find((w) => w.workstream === "closing");
     if (!closing || closing.state !== "confirmed") {
@@ -344,15 +369,38 @@ export const DEFAULT_OWNER: Record<Workstream, { owner: Owner; ownerName: string
   possession: { owner: "agent", ownerName: null },
 };
 
+/**
+ * Who owns each workstream on a sale, before the agent changes anything. The
+ * buyer's side does most of it; the seller sees those milestones, never the
+ * buyer's own files (S12, S14).
+ */
+export const SELL_OWNER: Record<Workstream, { owner: Owner; ownerName: string | null }> = {
+  "earnest-money": { owner: "other", ownerName: "The buyer, to the escrow holder" },
+  inspection: { owner: "other", ownerName: "The buyer's inspector" },
+  financing: { owner: "other", ownerName: "The buyer's lender" },
+  appraisal: { owner: "other", ownerName: "The buyer's lender" },
+  title: { owner: "other", ownerName: "The closing attorney" },
+  insurance: { owner: "other", ownerName: "The buyer" },
+  repairs: { owner: "client", ownerName: null },
+  walkthrough: { owner: "other", ownerName: "The buyer" },
+  closing: { owner: "other", ownerName: "The closing attorney" },
+  possession: { owner: "client", ownerName: null },
+};
+
 /** The first row of each workstream on a new contract. A cash purchase has no lender work to track. */
-export function initialWork(financing: Financing): { workstream: Workstream; input: WorkInput }[] {
+export function initialWork(financing: Financing, side: Side = "buy"): { workstream: Workstream; input: WorkInput }[] {
   return WORKSTREAMS.map((w) => {
     const cashSkips = financing === "cash" && (w === "financing" || w === "appraisal");
+    /* The buyer insures the home they buy; on a sale there is nothing for
+       the seller to track there. */
+    const sellerSkips = side === "sell" && w === "insurance";
     return {
       workstream: w,
       input: cashSkips
         ? { state: "not-applicable", owner: "agent", ownerName: null, note: "Cash purchase: no loan" }
-        : { state: "not-started", ...DEFAULT_OWNER[w] },
+        : sellerSkips
+          ? { state: "not-applicable", owner: "agent", ownerName: null, note: "The buyer insures the home" }
+          : { state: "not-started", ...(side === "sell" ? SELL_OWNER[w] : DEFAULT_OWNER[w]) },
     };
   });
 }

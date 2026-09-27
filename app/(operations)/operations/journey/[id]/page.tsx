@@ -30,6 +30,7 @@ import { moneyFor } from "@/lib/db/money";
 import { LedgerView } from "@/components/rift/money/LedgerView";
 import { MoneyFacts } from "./MoneyFacts";
 import { Linked } from "./Linked";
+import { SellerProperty } from "./SellerProperty";
 import { dependenciesFor } from "@/lib/db/dependencies";
 import { journeysFor } from "@/lib/db/journeys";
 import { stateOf } from "@/lib/core/dependency";
@@ -85,23 +86,25 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const journey = j.data;
   const buying = journey.side === "buy";
   const tab = tabFrom((await searchParams).tab, buying);
-  const needs = (...ts: Tab[]) => buying && ts.includes(tab);
+  /* What this tab reads. `buyer` marks reads that only a purchase has. */
+  const needs = (...ts: Tab[]) => ts.includes(tab);
+  const buyerNeeds = (...ts: Tab[]) => buying && needs(...ts);
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
   const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
-    buying ? progressFor(id) : Promise.resolve(null),
-    settled(needs("search", "homes", "history") ? searchState(id) : null),
-    settled(needs("search") ? readoutStart(journey.leadId) : null),
-    settled(needs("homes", "offers") ? homesOf(id) : null),
-    settled(needs("homes") ? toursOf(id) : null),
-    settled(needs("overview", "offers", "contract") ? bidsFor(id, agentFirst) : null),
+    progressFor(id),
+    settled(buyerNeeds("search", "homes", "history") ? searchState(id) : null),
+    settled(buyerNeeds("search") ? readoutStart(journey.leadId) : null),
+    settled(needs("homes", "offers", "property") ? homesOf(id) : null),
+    settled(buyerNeeds("homes") ? toursOf(id) : null),
+    settled(buyerNeeds("overview", "offers", "contract") ? bidsFor(id, agentFirst) : null),
     settled(needs("offers", "contract") ? documentsFor(id) : null),
     settled(needs("overview", "contract") ? deadlinesFor(id) : null),
     tab === "household" ? summaryLinksFor(id) : Promise.resolve(null),
-    settled(needs("money") ? moneyFor(id) : null),
+    settled(buyerNeeds("money") ? moneyFor(id) : null),
     dependenciesFor(id),
     settled(tab === "overview" ? journeysFor(journey.leadId) : null),
   ]);
@@ -252,8 +255,8 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
               <section className="card desk-card">
                 <h2>Selling</h2>
                 <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
-                  The seller journey (pricing, launch, offers, net) follows the buyer pilot. Offers and the offer room for this
-                  person are on <Link className="u" href={`/operations/lead/${journey.leadId}`}>their record</Link>.
+                  The property, the stages from Prepare to Continue, and the contract with its dates and workstreams are here.
+                  Offers and the offer room are on <Link className="u" href={`/operations/lead/${journey.leadId}`}>their record</Link>.
                 </p>
               </section>
             ) : null}
@@ -327,9 +330,9 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
         {tab === "contract" ? (
           <section className="card p-4" aria-labelledby="progress-h">
             <h2 id="progress-h" className="t-md w6">Where it stands</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>The stage the buyer sees, and under contract what is running at once. Each change is recorded with why and by whom.</div>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>The stage the {buying ? "buyer" : "seller"} sees, and under contract what is running at once. Each change is recorded with why and by whom.</div>
             {prog ? (
-              <Progress journeyId={id} progress={prog.progress} events={prog.events} open={prog.open} past={prog.contracts.filter((c) => c.outcome)}
+              <Progress journeyId={id} side={journey.side} progress={prog.progress} events={prog.events} open={prog.open} past={prog.contracts.filter((c) => c.outcome)}
                 homes={prog.homes} coverage={prog.coverage} leadId={journey.leadId} person={person} unavailable={prog.unavailable} nudge={nudge} />
             ) : <p className="t-xs c-neg">Where this journey stands did not load. That is not the same as it being at Prepare.</p>}
             {prog?.open ? (
@@ -337,6 +340,18 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
               : dateData ? <Dates journeyId={id} dates={openDates} docs={(docData?.documents ?? []).map((d) => ({ id: d.id, label: d.label }))} />
               : <p className="t-xs c-neg" style={{ marginTop: 12 }}>The contract dates did not load. That is not the same as there being none.</p>
             ) : null}
+          </section>
+        ) : null}
+
+        {tab === "property" ? (
+          <section className="card p-4" aria-labelledby="property-h">
+            <h2 id="property-h" className="t-md w6">The property</h2>
+            <div style={{ marginTop: 10 }}>
+              {homeList ? (() => {
+                const p = homeList.find((h) => !h.withdrawnAt) ?? null;
+                return <SellerProperty journeyId={id} property={p ? { id: p.id, address: p.address, facts: p.facts, factsSource: p.factsSource, factsAsOf: p.factsAsOf } : null} />;
+              })() : <p className="t-xs c-neg">The property did not load. That is not the same as none being recorded.</p>}
+            </div>
           </section>
         ) : null}
 
@@ -393,8 +408,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
       </div>
 
       <p className="t-2xs c-4" style={{ marginTop: 20, lineHeight: 1.6, maxWidth: 640 }}>
-        Nothing on this page sends anything to anybody. Invitation links are for you to send, and the Matrix search is
-        set up by you. Rift records what you did, {agentFirst}, and when.
+        Nothing on this page sends anything to anybody. Invitation links are for you to send{buying ? ", and the Matrix search is set up by you" : ", and the listing goes live through your MLS"}. Rift records what you did, {agentFirst}, and when.
       </p>
     </main>
   );

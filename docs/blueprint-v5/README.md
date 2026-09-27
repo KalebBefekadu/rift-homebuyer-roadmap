@@ -898,6 +898,17 @@ action.
   take"); negotiation; under contract; final proceeds reconciled to the official statement;
   post-sale. And a sale linked to a purchase (STATE-07).
 
+**Status (28 Sep 2026): first slice built** (D28). A selling journey has the seller's stages
+(STATE-03): Prepare, Price & launch, Market & show, Review offers, Under contract, Close,
+Continue, with Continue reached only by closing the contract and marketing gated on a listing
+agreement. The workspace has the property (S02: address and facts from a named source, stored as
+the journey's one home so contracts work unchanged), the contract with its dates and workstreams
+(S12 to S17, the buyer's side named as owner where it is theirs), the household and history; the
+seller's journey page shows Today and the stage strip. A sale links to a purchase (STATE-07).
+Next slices: pricing strategy with the agent's approved opinion (S04), preparation (S05),
+listing and launch (S06, S07), showings with honest denominators (S08), weekly reviews (S09),
+offers on the journey (S10, S11) and final proceeds reconciled to the official statement (S16).
+
 ---
 
 ## 10. Platform: money, automation, integrations
@@ -1007,6 +1018,7 @@ change to reverse.
 | D25 | A higher amount named for a group narrower than Rift's job question (Beltline's "civil servants") is mentioned, never used as the amount | "Educator" includes private-school staff; the program decides | Kaleb confirming who counts |
 | D26 | The Operations redesign was built from the mock-up without the D15 click-through, because Kaleb asked for the build to continue to the end. Kaleb reviews the live screens instead | The mock-up and the live screens share the layout, so the review loses nothing but order | Any screen Kaleb wants changed; the old pages are in git history |
 | D27 | Money v2 (W10) was built before the pilot starts, instead of after (D11), because Kaleb asked for the build to run to the end. The public values are unchanged; the ledger is on the journey and the client's journey page only | Nothing in W10 needs pilot data; its rules (AT30 to AT33) are fixed | Hiding the Money tab and section until the pilot starts |
+| D28 | The seller journey is being built before pilot results (D08), because Kaleb asked for the build to run to the end. A seller's property is stored as the selling journey's one home record, so contracts, dates and workstreams work unchanged | Reuses the tested contract model rather than a second one | Hiding selling journeys' workspace until the pilot reports |
 
 ### Open
 
@@ -1061,6 +1073,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Seller journey, first slice (§9, STATE-03, D28): seller stages, the property, the shared contract, the seller's Today |
 | 28 Sep 2026 | A sale linked to a purchase (STATE-07) |
 | 28 Sep 2026 | Homes side by side (SEARCH-05) for the agent and the household |
 | 28 Sep 2026 | Money v2 built (§10.1, D27): the buyer's ledger, recorded amounts on the journey's Money tab, the client money area |

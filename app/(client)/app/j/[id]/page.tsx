@@ -65,7 +65,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
-    member.side === "buy" ? clientProgress(member) : Promise.resolve(null),
+    clientProgress(member),
     member.side === "buy" && member.scopes.includes("money") ? clientBids(member) : Promise.resolve(null),
     clientMoney(member),
     dependenciesFor(member.journeyId, member.agentId),
@@ -129,10 +129,12 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const contract = shown ? {
     id: shown.id,
     address: shown.address,
-    title: p?.open ? `Under contract: ${shown.address}` : `Your home: ${shown.address}`,
+    title: p?.open ? `Under contract: ${shown.address}` : member.side === "sell" ? `Sold: ${shown.address}` : `Your home: ${shown.address}`,
     summary: p?.open
       ? `${workSummary(shown.work)} These run at the same time; one finishing says nothing about the others.`
-      : "The closing is done. Possession and keys are recorded separately, because they can come later.",
+      : member.side === "sell"
+        ? "The closing is done. Handing over the keys is recorded separately, because it can come later."
+        : "The closing is done. Possession and keys are recorded separately, because they can come later.",
     work: shown.work.map((w): BuyerWork => ({
       workstream: w.workstream, label: w.label, state: w.state, stateLabel: WORK_STATE_LABEL[w.state],
       line: workLine(w, agentFirst), seq: w.seq,
@@ -147,7 +149,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     if (!documents.some((y) => y.id === d.id)) documents.push({ ...d, with: x.address });
   }
   const sections = [
-    { id: "today-h", label: "Today", on: member.side === "buy" },
+    { id: "today-h", label: "Today", on: true },
     { id: "movein-h", label: "Moving in", on: member.side === "buy" && Boolean(p?.closed) },
     { id: "offers-h", label: "Offers", on: member.side === "buy" && offers && (!o || o.unavailable || buyerBids.length > 0) },
     { id: "pri-h", label: "Priorities", on: member.side === "buy" && member.scopes.includes("search") },
@@ -180,45 +182,43 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
         </p>
       ) : null}
 
-      {member.side === "buy" ? (
-        <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
-          <h2 id="today-h" className="t-md w6">Today</h2>
-          {linked.length ? (
-            <ul className="t-sm" style={{ marginTop: 6 }}>
-              {linked.map((l) => <li key={l.id} className="c-2"><span aria-hidden>◷ </span>{l.line}. {l.owner} is handling it.</li>)}
-            </ul>
-          ) : null}
-          {!p ? (
-            <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              What is due did not load. That is not the same as nothing being due; reload in a moment, or ask {agentFirst}.
-            </p>
-          ) : p.unavailable || !today ? (
-            <p className="t-sm c-3" style={{ marginTop: 8 }}>This part is being set up. Ask {agentFirst} what comes next.</p>
-          ) : p.detail ? (
-            <Today
-              journeyId={member.journeyId}
-              where={today.where}
-              strip={stageStrip(p.progress, p.visited)}
-              items={today.items}
-              nothingOwed={today.nothingOwed}
-              contract={contract}
-              canRespond={respond}
-              agentFirst={agentFirst}
-            />
-          ) : (
-            <Today
-              journeyId={member.journeyId}
-              where={`${today.where} Your access shows where the move is, not the details of it.`}
-              strip={stageStrip(p.progress, p.visited)}
-              items={[]}
-              nothingOwed={null}
-              contract={null}
-              canRespond={false}
-              agentFirst={agentFirst}
-            />
-          )}
-        </section>
-      ) : null}
+      <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
+        <h2 id="today-h" className="t-md w6">Today</h2>
+        {linked.length ? (
+          <ul className="t-sm" style={{ marginTop: 6 }}>
+            {linked.map((l) => <li key={l.id} className="c-2"><span aria-hidden>◷ </span>{l.line}. {l.owner} is handling it.</li>)}
+          </ul>
+        ) : null}
+        {!p ? (
+          <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
+            What is due did not load. That is not the same as nothing being due; reload in a moment, or ask {agentFirst}.
+          </p>
+        ) : p.unavailable || !today ? (
+          <p className="t-sm c-3" style={{ marginTop: 8 }}>This part is being set up. Ask {agentFirst} what comes next.</p>
+        ) : p.detail ? (
+          <Today
+            journeyId={member.journeyId}
+            where={today.where}
+            strip={stageStrip(p.progress, p.visited, member.side)}
+            items={today.items}
+            nothingOwed={today.nothingOwed}
+            contract={contract}
+            canRespond={respond}
+            agentFirst={agentFirst}
+          />
+        ) : (
+          <Today
+            journeyId={member.journeyId}
+            where={`${today.where} Your access shows where the move is, not the details of it.`}
+            strip={stageStrip(p.progress, p.visited, member.side)}
+            items={[]}
+            nothingOwed={null}
+            contract={null}
+            canRespond={false}
+            agentFirst={agentFirst}
+          />
+        )}
+      </section>
 
       {/* Blueprint v5 §7.2, B19: once the closing is recorded, what a new
           owner does next, each with the office that runs it. */}

@@ -197,9 +197,13 @@ function whereLine(p: Progress, agentFirst: string, closing: { on: string; from:
   if (p.stage === "own" && p.status === "active") {
     return closing ? `You own your home. ${closing.from} confirmed the closing on ${DAY(closing.on)}.` : "You own your home.";
   }
+  /* A sale's last stage (STATE-03): sold, and the handover may still be open. */
+  if (p.stage === "continue" && p.status === "active") {
+    return closing ? `Sold. ${closing.from} confirmed the closing on ${DAY(closing.on)}; keys and possession are recorded separately.` : "Sold. Keys and possession are recorded separately.";
+  }
   switch (p.status) {
     case "paused": return `Paused at ${stage}. Anything under contract keeps its dates; ${agentFirst} will pick the rest back up with you.`;
-    case "completed": return "Completed. The home is yours.";
+    case "completed": return p.stage === "continue" ? "Completed. The sale is done." : "Completed. The home is yours.";
     case "cancelled": return `This move was stopped at ${stage}. Talk to ${agentFirst} if that is not what you expected.`;
     default: return `Now: ${stage}.`;
   }

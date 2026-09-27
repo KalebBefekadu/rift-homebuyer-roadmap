@@ -31,7 +31,7 @@ kept so tests and commits that cite them stay traceable.
 | --- | --- | --- |
 | STATE-01 | Journey status (active, paused, completed, cancelled) is separate from stage. Pausing a search does not suspend contract obligations. | Built |
 | STATE-02 | Buyer stages: Prepare, Search, Tour & evaluate, Offer, Under contract, Close, Own. Discovery is the public side, not a client stage. Stages summarize reality; they are not forced screens. | Built |
-| STATE-03 | Seller stages: Prepare, Price & launch, Market & show, Review offers, Under contract, Close, Continue. | Not built (v5 §9) |
+| STATE-03 | Seller stages: Prepare, Price & launch, Market & show, Review offers, Under contract, Close, Continue. | Built 28 Sep (D28, migration 20260928030000): a selling journey moves through these stages, a trigger keeps each journey to its side's stages, Continue comes only from closing the contract, and marketing needs a listing agreement in force. The contract, dates and workstreams are shared; the seller's workstreams start with the buyer's side named |
 | STATE-04 | Under contract, workstreams run at once, each with its own state, owner, evidence and dates. Cash buyers mark financing work as not applying. | Built (ten workstreams, including walkthrough and possession) |
 | STATE-05 | Stage changes need evidence and an authorized person. Time passing, an AI suggestion or unrelated ticks never advance a transaction. History keeps source, before and after, reason, actor, time and version. | Built |
 | STATE-06 | A failed offer returns the journey to search or offer and keeps the attempt. A terminated contract keeps its history; restarting is a new attempt. Amendments replace specific dates and their reminders together. | Built |

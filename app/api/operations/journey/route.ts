@@ -14,7 +14,7 @@ import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
 import type { CheckResult } from "@/lib/core/pilot";
 import {
-  JOURNEY_STATUSES, STAGES, WORKSTREAMS, WORK_STATES,
+  JOURNEY_STATUSES, STAGES, SELL_STAGES, WORKSTREAMS, WORK_STATES,
   type JourneyStatus, type Owner, type Stage, type WorkState, type Workstream,
 } from "@/lib/core/progress";
 
@@ -172,7 +172,8 @@ export async function POST(req: Request) {
     }
     case "stage": {
       const to = str(b.to, 20) as Stage;
-      if (!STAGES.includes(to)) return json({ ok: false, error: "Choose a stage." }, 400);
+      /* Either side's stages; which one this journey may use is the rule in lib/core/progress.ts. */
+      if (!STAGES.includes(to) && !SELL_STAGES.includes(to)) return json({ ok: false, error: "Choose a stage." }, 400);
       return json(await moveStage(journeyId, to, str(b.reason, 500), str(b.evidence, 300) || null, num(b.expectedSeq), str(b.requestId, 40)));
     }
     case "status": {
@@ -191,7 +192,7 @@ export async function POST(req: Request) {
       if (outcome !== "closed" && outcome !== "terminated") return json({ ok: false, error: "Say whether it closed or was terminated." }, 400);
       const backTo = str(b.backTo, 20) as Stage;
       return json(await closeContract(journeyId, str(b.contractId, 40), outcome, str(b.reason, 500),
-        STAGES.includes(backTo) ? backTo : null, num(b.expectedSeq), str(b.requestId, 40)));
+        STAGES.includes(backTo) || SELL_STAGES.includes(backTo) ? backTo : null, num(b.expectedSeq), str(b.requestId, 40)));
     }
     case "work": {
       const workstream = str(b.workstream, 20) as Workstream;
