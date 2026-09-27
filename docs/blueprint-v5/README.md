@@ -92,8 +92,8 @@ Everything below is specified in the section named.
 - Lead side rebuilt as separate values, with a custom artifact each (§5).
 - Page-by-page public changes from the review (§5.6 to §5.9).
 - ~~The Georgia assistance engine (§6).~~ **Built 27 Sep** (records, matching, combinations,
-  programs table, weekly monitoring, review in Operations); discovery research and the AI page
-  comparison remain (§6 status).
+  programs table, weekly monitoring, review in Operations, AI comparison); discovery research
+  remains (§6 status).
 - Client side: money, documents and help areas; clearer sign-in; summary share links; the
   dependency between a sale and a purchase; move-in handoff (§7).
 - Agent OS redesign, full rename to Operations, Transactions view, snooze, delegation and
@@ -435,6 +435,16 @@ could be recorded as a referral source; it is now `ms`.
   either way." The sender must say whether they are "a real estate agent" or "the buyer", and
   phone is required.
 
+**Status, submit an offer (27 Sep 2026).** Built: the upload comes first and fills the boxes,
+each marked "From your PDF, page N" until changed (`lib/core/offer-extract.ts`: candidates that
+fail the form's own checks are dropped, not repaired); repair credit and brokerage are gone;
+"Other" financing asks what it is; due diligence days added; the sender must say "a real estate
+agent" or "the buyer" and give a phone number. Operations shows the PDF and where the terms sent
+differ from what the PDF says. Reading needs `ANTHROPIC_API_KEY`; without it the form says so
+and works by hand. Found on the way: the privacy page promised an offer's phone number was
+"never stored" and that offers were deleted after 24 months; the phone was stored and nothing
+deleted offers. The wording now matches, and the retention job deletes offers and their PDFs.
+
 **Book a call `/book`** (Kaleb, R2)
 - The form is not centred.
 - Field order: name, phone, email, then time.
@@ -442,6 +452,10 @@ could be recorded as a referral source; it is now `ms`.
 - **Real times from Cal.com** (decided 24 Sep): free plan, connected to Kaleb's Google Calendar,
   so bookings appear there. Rift already has the Cal.com adapter; it needs `CAL_API_KEY` and
   `CAL_EVENT_TYPE_ID`. Until then the page asks for a preferred time.
+
+**Status, book a call (27 Sep 2026).** Built: centred, fields in the order name, phone, email,
+time; "What time works best for you?"; phone required (with the existing consent gate); the
+shared header and footer. Real times need Kaleb's Cal.com key (§12).
 
 ### 5.10 Campaigns (later)
 
@@ -653,10 +667,10 @@ failed monitoring check shows in Operations.
 confirm them), in `lib/core/assistance.ts`; matching and combinations on `/buy/assistance`; the
 table on `/buy/programs`; the weekly check (`/api/programs/check`, Mondays) with a failed or
 missed run on Today like every job; changed pages on Today and reviewed on
-`/operations/programs`. Not built: the 6-to-12-month discovery search (a research task, not
-code), and the AI step that compares an old and a new page (the reviewer sees the lines that
-left and arrived instead; the AI step waits for the §10.2 cost controls). How the checks renew
-a record is D22 to D25 in §11.
+`/operations/programs`, with an AI comparison of the change against the record (Haiku, inside
+the §10.2 limit) beside the lines that left and arrived. Not built: the 6-to-12-month
+discovery search, which is a research task rather than code. How the checks renew a record is
+D22 to D25 in §11.
 
 ---
 
@@ -844,6 +858,10 @@ Needed before any integration writes or any AI draft is used:
 - First AI uses: offer PDF extraction (§5.9), program page monitoring (§6.5), optionally turning
   an agent's notes into a draft search brief (v4 §3.2: candidates with source spans, never a
   ready search).
+- **Status (27 Sep 2026).** Built: the monthly limit, per-call records and the degraded states
+  (`lib/core/ai.ts`, `rift_ai_usage`, `docs/integrations.md` §6b); offer PDF extraction and the
+  program page comparison use them. Not built: the approval and outbox mechanism (AUTO-01,
+  AUTO-02), which waits for the first integration that writes anywhere.
 
 ### 10.3 Integrations
 
@@ -959,6 +977,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | --- | --- |
 | 27 Sep 2026 | Assistance engine built (§6); D22 to D25 applied by engineering for Kaleb to confirm or overrule |
 | 27 Sep 2026 | Seller values, retired readouts and questionnaires forwarded, how-it-works rewritten (§5.3, §5.8) |
+| 27 Sep 2026 | Submit an offer from a PDF, book-a-call order and wording, AI limits and records, AI comparison of changed program pages (§5.9, §6.5, §10.2) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

@@ -24,6 +24,7 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 | **Sentry** | Errors, tracing, source maps | Wired and deployed | `next.config.ts`, `instrumentation*.ts`, `lib/monitoring/capture.ts` |
 | **Brevo** | Transactional email, contact attributes | Client written, one caller | `lib/brevo/sync.ts`, `app/actions/brevo.ts` |
 | **Vercel** | Hosting, edge, cron | Project linked (`rift-homebuyer-roadmap`) | `.vercel/project.json` |
+| **Anthropic (Claude API)** | Reading an uploaded offer PDF into the form; comparing a changed program page with its record | Built, off until `ANTHROPIC_API_KEY` is set (Blueprint v5 §10.2, D16) | `lib/core/ai.ts`, `lib/db/ai.ts`, `lib/db/offer-read.ts`, `lib/db/program-checks.ts` |
 
 ## 2. What is specified but has nothing behind it
 
@@ -177,6 +178,14 @@ it was a bug rather than a company that does not pay attention. The claim is a
 unique constraint on (enrolment, step), which is the only thing that survives two
 workers racing.
 
+### The weekly program check
+
+`/api/programs/check`, Mondays at 12:00 UTC, reads each Georgia assistance program's official
+page and compares it with the last reading (Blueprint v5 §6.5). An unchanged page renews the
+record; a changed one is flagged on Operations Today and reviewed on `/operations/programs`; an
+unreachable one is retried once and clears itself when a later reading finds it again. Runs are
+recorded like every job (`program-check`). `?dry=1` reads every page and writes nothing.
+
 ### Retention
 
 `/api/retention/sweep` enforces the schedule in `lib/core/privacy.ts`, daily at 03:00 UTC.
@@ -222,6 +231,30 @@ outage must not lose the relationship — the contact details are the durable pa
 be rearranged.
 
 ---
+
+## 6b. Anthropic: AI inside a hard limit
+
+Blueprint v5 §10.2 and D16. Two uses, neither of which produces a number a customer is shown
+(AGENTS.md rule 1):
+
+| Use | Model | What a person does with it |
+| --- | --- | --- |
+| Reading an uploaded offer PDF | `claude-opus-5` | Checks each box it filled, each marked with the page and words it came from, before sending |
+| Comparing a changed program page with its record | `claude-haiku-4-5` | Reads the summary beside the changed lines, then says whether the record is still right |
+
+**The limit is in code.** `MONTHLY_LIMIT_CENTS` in `lib/core/ai.ts` is $50 across all AI. Every
+call is recorded in `rift_ai_usage` (workflow, model, prompt version, tokens, cost; nothing about
+the person or the document), and a call is made only when this month's spend plus a reserve for
+the call stays under the limit. A model with no price in `PRICE_CENTS_PER_MTOK` cannot be called.
+
+**What happens without it.** No key, the limit reached, the spend unreadable, a refusal or an
+error: each is a named state, and the manual path carries on. The offer form says "Fill in the
+boxes below from your offer"; the program reviewer has the lines that left and arrived. Nothing
+fails because AI is off.
+
+**Environment.** `ANTHROPIC_API_KEY`, server only (never `NEXT_PUBLIC_`). The offer read asks for
+the server-side refusal fallback to `claude-opus-4-8`; the cost is recorded at the rates of the
+model that served the call.
 
 ## 7. Not yet chosen
 

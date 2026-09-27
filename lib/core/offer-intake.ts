@@ -54,17 +54,23 @@ export interface Submission {
   repairCredit: number;
   earnest: number;
   financing: Financing;
+  /** What "other" financing is. Required when financing is other (§5.9). */
+  financingOther: string | null;
   closeOn: string | null;
+  /** The due diligence period, in days (§5.9). */
+  dueDiligenceDays: number | null;
+  /** The uploaded PDF, waiting to be attached (lib/db/offer-read.ts). */
+  documentToken: string | null;
   contingencies: string[];
   preapproval: boolean;
   proofOfFunds: boolean;
   /** Who is making it, as the seller would read it. */
   from: string;
   email: string;
-  phone: string | null;
+  phone: string;
   firm: string | null;
   note: string | null;
-  /** Submitting on their own behalf, or representing the buyer. */
+  /** "self": the buyer. "buyer": a real estate agent representing the buyer. Always said, never assumed. */
   representing: "self" | "buyer";
 }
 
@@ -131,6 +137,23 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
 
   const financing = isFinancing(raw.financing) ? raw.financing : null;
   if (!financing) errors.push("Say how this is being financed.");
+  const financingOther = String(raw.financingOther ?? "").trim();
+  if (financing === "other" && (financingOther.length < 2 || financingOther.length > 80)) {
+    errors.push("Say what kind of financing \"other\" is.");
+  }
+
+  /* Blueprint v5 §5.9: sending is the point of the page, so who is sending
+     it and how to reach them by phone are required, not optional. */
+  const representing = raw.representing === "self" || raw.representing === "buyer" ? raw.representing : null;
+  if (!representing) errors.push("Say whether you are the buyer or a real estate agent.");
+  const phone = String(raw.phone ?? "").trim();
+  if (phone.replace(/\D/g, "").length < 10 || phone.length > 40) errors.push("A phone number is needed, with its area code.");
+
+  const ddRaw = String(raw.dueDiligenceDays ?? "").trim();
+  const dueDiligenceDays = ddRaw === "" ? null : Number(ddRaw);
+  if (dueDiligenceDays !== null && (!Number.isInteger(dueDiligenceDays) || dueDiligenceDays < 0 || dueDiligenceDays > 60)) {
+    errors.push("Due diligence is a number of days, from 0 to 60.");
+  }
 
   const closeOnRaw = String(raw.closeOn ?? "").trim();
   const closeOn = /^\d{4}-\d{2}-\d{2}$/.test(closeOnRaw) ? closeOnRaw : null;
@@ -156,15 +179,18 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
       repairCredit: Math.round(clampNumber(raw.repairCredit, 0, price, 0)),
       earnest: Math.round(clampNumber(raw.earnest, 0, price, 0)),
       financing: financing!,
+      financingOther: financing === "other" ? financingOther : null,
       closeOn,
+      dueDiligenceDays,
+      documentToken: /^[0-9a-f-]{36}$/.test(String(raw.documentToken ?? "")) ? String(raw.documentToken) : null,
       contingencies,
       preapproval: raw.preapproval === true,
       proofOfFunds: raw.proofOfFunds === true,
       from, email,
-      phone: trimmed(raw.phone, 40),
+      phone: phone.slice(0, 40),
       firm: trimmed(raw.firm, 120),
       note: trimmed(raw.note, 2000),
-      representing: raw.representing === "self" ? "self" : "buyer",
+      representing: representing!,
     },
   };
 }

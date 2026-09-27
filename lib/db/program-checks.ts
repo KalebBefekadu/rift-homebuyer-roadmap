@@ -5,9 +5,13 @@ import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
+import Anthropic from "@anthropic-ai/sdk";
 import { GEORGIA_PROGRAMS, isCurrent, type ProgramRecord } from "@/lib/core/assistance";
+import { MODEL_FOR } from "@/lib/core/ai";
+import { mayCall, recordCall } from "./ai";
 import {
   applyChecks, classify, lastGood, openFlags, readableText, sourcesToCheck,
+  COMPARE_INSTRUCTIONS, COMPARE_PROMPT_VERSION, COMPARE_SCHEMA, compareSummary,
   type CheckOutcome, type Flag, type ReviewOutcome, type SourceCheck, type SourceReview,
 } from "@/lib/core/program-check";
 
@@ -21,12 +25,14 @@ const MISSING = /rift_program_(checks|reviews)|does not exist|schema cache/;
 type CheckRow = {
   id: string; source_url: string; checked_at: string; outcome: CheckOutcome;
   http_status: number | null; fingerprint: string | null; body: string | null; detail: string | null;
+  summary?: string | null;
 };
 type ReviewRow = { check_id: string; outcome: ReviewOutcome; reviewed_by: string; reviewed_at: string; note: string | null };
 
 const toCheck = (r: CheckRow): SourceCheck => ({
   id: r.id, sourceUrl: r.source_url, checkedAt: r.checked_at, outcome: r.outcome,
   httpStatus: r.http_status, fingerprint: r.fingerprint, text: r.body, detail: r.detail,
+  summary: r.summary ?? null,
 });
 const toReview = (r: ReviewRow): SourceReview => ({
   checkId: r.check_id, outcome: r.outcome, reviewedBy: r.reviewed_by, reviewedAt: r.reviewed_at, note: r.note,
@@ -41,7 +47,7 @@ const toReview = (r: ReviewRow): SourceReview => ({
 export async function readChecks(opts: { withText?: boolean } = {}): Promise<DbResult<{ checks: SourceCheck[]; reviews: SourceReview[] } | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const cols = `id,source_url,checked_at,outcome,http_status,fingerprint,detail${opts.withText ? ",body" : ""}`;
+  const cols = `id,source_url,checked_at,outcome,http_status,fingerprint,detail${opts.withText ? ",body,summary" : ""}`;
   const [c, r] = await Promise.all([
     boundedRead(db.from("rift_program_checks").select(cols).order("checked_at", { ascending: false }).limit(500), "the program checks"),
     boundedRead(db.from("rift_program_reviews").select("check_id,outcome,reviewed_by,reviewed_at,note").limit(500), "the program reviews"),
@@ -129,6 +135,44 @@ export async function readSource(url: string): Promise<{ ok: boolean; status: nu
   }
 }
 
+/** The text of one earlier reading, fetched only when a comparison needs it. */
+async function bodyOf(id: string): Promise<string | null> {
+  const db = serviceClient();
+  if (!db) return null;
+  const r = await boundedRead(db.from("rift_program_checks").select("body").eq("id", id).maybeSingle(), "the earlier reading");
+  return r.ok && "data" in r && r.data ? ((r.data as { body: string | null }).body ?? null) : null;
+}
+
+/**
+ * What changed, against the record, for the reviewer (§6.5, D16). Inside the
+ * monthly AI limit or not at all: without it the reviewer still has the lines
+ * that left and arrived, which is what they had before this existed.
+ */
+async function compare(before: string, after: string, records: ProgramRecord[]): Promise<string | null> {
+  const may = await mayCall("program-compare");
+  if (!may.ok) return null;
+  const model = MODEL_FOR["program-compare"];
+  try {
+    const client = new Anthropic();
+    const res = await client.messages.create({
+      model,
+      max_tokens: 2_000,
+      output_config: { format: { type: "json_schema", schema: COMPARE_SCHEMA as unknown as Record<string, unknown> } },
+      messages: [{
+        role: "user",
+        content: `${COMPARE_INSTRUCTIONS}\n\n<record>\n${JSON.stringify(records.map((r) => ({ name: r.name, amount: r.amount, area: r.area, firstTime: r.firstTime, income: r.income, price: r.price, minCredit: r.minCredit, conditions: r.conditions, funding: r.funding, fundingNote: r.fundingNote })))}\n</record>\n\n<before>\n${before.slice(0, 30_000)}\n</before>\n\n<after>\n${after.slice(0, 30_000)}\n</after>`,
+      }],
+    }, { timeout: 60_000, maxRetries: 1 });
+    await recordCall({ workflow: "program-compare", model: res.model, promptVersion: COMPARE_PROMPT_VERSION, usage: res.usage, outcome: res.stop_reason === "refusal" ? "refused" : "ok" });
+    const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
+    try { return compareSummary(JSON.parse(text)); } catch { return null; }
+  } catch (e) {
+    captureOpError(e, { op: "programs.compare" });
+    await recordCall({ workflow: "program-compare", model, promptVersion: COMPARE_PROMPT_VERSION, usage: null, outcome: "failed" });
+    return null;
+  }
+}
+
 export interface CheckRun { checked: number; unchanged: number; changed: number; unreachable: number; baseline: number }
 
 /**
@@ -152,7 +196,13 @@ export async function runProgramCheck(read = readSource, retryAfterMs = 5_000): 
       await new Promise((r) => setTimeout(r, retryAfterMs));
       reading = await read(url);
     }
-    const outcome = classify(lastGood(prior.data.checks, url), reading);
+    const previous = lastGood(prior.data.checks, url);
+    const outcome = classify(previous, reading);
+    let summary: string | null = null;
+    if (outcome === "changed" && previous && reading.text) {
+      const before = await bodyOf(previous.id);
+      if (before) summary = await compare(before, reading.text, GEORGIA_PROGRAMS.filter((p) => p.sourceUrl === url));
+    }
     const w = await boundedWrite(db.from("rift_program_checks").insert({
       source_url: url,
       outcome,
@@ -160,6 +210,7 @@ export async function runProgramCheck(read = readSource, retryAfterMs = 5_000): 
       fingerprint: reading.ok ? reading.fingerprint : null,
       body: reading.ok ? reading.text : null,
       detail: reading.detail?.slice(0, 200) ?? null,
+      ...(summary ? { summary } : {}),
     }), "the program check");
     if (!w.ok) return failed(w.error);
     tally.checked++;

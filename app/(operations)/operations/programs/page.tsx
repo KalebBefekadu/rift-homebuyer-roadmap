@@ -98,6 +98,13 @@ export default async function ProgramsReview() {
                     <a href={f.check.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn btn-s btn-sm">Open the official page<Ico.arrowUpR size={12} /></a>
                   </div>
 
+                  {f.check.summary ? (
+                    <div className="card p-3 mt-3" style={{ background: "var(--sunk)" }}>
+                      <div className="t-xs w6 c-3">What the automatic comparison found (check it on the page)</div>
+                      <p className="t-xs c-2 mt-1" style={{ lineHeight: 1.6, whiteSpace: "pre-line" }}>{f.check.summary}</p>
+                    </div>
+                  ) : null}
+
                   {f.check.outcome === "changed" ? (
                     f.check.text === null ? (
                       <p className="t-sm c-3 mt-3">This source is a PDF, so there is no text to compare. Open it and check the amounts, limits and dates against the record.</p>

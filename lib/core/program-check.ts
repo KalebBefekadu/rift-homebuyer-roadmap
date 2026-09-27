@@ -39,6 +39,8 @@ export interface SourceCheck {
   /** The page's readable text, kept so a reviewer can see what changed. Null for a PDF. */
   text: string | null;
   detail: string | null;
+  /** What the AI comparison found, for a changed page. Null when none ran. */
+  summary?: string | null;
 }
 
 export interface SourceReview {
@@ -190,4 +192,43 @@ export function textDiff(before: string | null, after: string | null, limit = 40
     removed: a.filter((l) => !inB.has(l)).slice(0, limit),
     added: b.filter((l) => !inA.has(l)).slice(0, limit),
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * The AI comparison (§6.5: "AI compares old/new"; D16: Haiku)
+ * ------------------------------------------------------------------ */
+
+export const COMPARE_PROMPT_VERSION = "program-compare-2026-09-27";
+
+export const COMPARE_INSTRUCTIONS = `An official web page for a home-buying assistance program changed. You are given the facts Rift's record holds for the program, the page's text before, and after. Say which of the record's facts the change affects: amounts, limits, dates, eligibility, funding, or whether the program still exists. For each, give the fact, what the record says, and the new wording from the page. If the change touches none of the record's facts (a new menu, a news item, a date stamp), say so. Only report what the texts say; never guess.`;
+
+export const COMPARE_SCHEMA = {
+  type: "object",
+  properties: {
+    recordAffected: { type: "boolean" },
+    changes: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { fact: { type: "string" }, record: { type: "string" }, page: { type: "string" } },
+        required: ["fact", "record", "page"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["recordAffected", "changes"],
+  additionalProperties: false,
+} as const;
+
+/** The comparison as a few lines for the reviewer, or null when the answer is unusable. */
+export function compareSummary(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as { recordAffected?: unknown; changes?: unknown };
+  if (typeof r.recordAffected !== "boolean" || !Array.isArray(r.changes)) return null;
+  if (!r.recordAffected) return "None of the record's facts appear to be affected.";
+  const lines = (r.changes as { fact?: unknown; record?: unknown; page?: unknown }[])
+    .filter((c) => typeof c.fact === "string" && typeof c.page === "string")
+    .slice(0, 8)
+    .map((c) => `${String(c.fact)}: the record says "${String(c.record ?? "")}"; the page now says "${String(c.page)}".`);
+  return lines.length ? lines.join("\n").slice(0, 2000) : null;
 }

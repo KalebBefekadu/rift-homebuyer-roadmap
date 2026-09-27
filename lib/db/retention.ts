@@ -35,6 +35,8 @@ export const WINDOWS = {
   abandoned: { days: 30, rule: "abandoned" },
   /** Funnel measurement: question ids and dwell, never answers. */
   analytics: { days: 24 * 30, rule: "analytics" },
+  /** An offer submitted through /offer, with its PDF. */
+  offer: { days: 24 * 30, rule: "offer" },
 } as const;
 
 export interface SweepResult {
@@ -46,6 +48,8 @@ export interface SweepResult {
   leads: number;
   /** Marked abandoned rather than deleted: still recoverable. */
   marked: number;
+  /** Offers submitted through /offer, with their PDFs. */
+  offers: number;
   /** Anything the job deliberately did not touch, and why. */
   held: string[];
 }
@@ -194,6 +198,29 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       if (error) return failed(error.message);
     }
 
+    /* Offers that came in through /offer (Blueprint v5 §5.9). The promise
+       was "24 months" from the day /offer shipped, and nothing deleted them
+       until the PDF made the gap impossible to ignore. The file goes first:
+       a row deleted with its file left behind is a document nobody can find
+       to delete. An inbound offer has no seller lead, so no offer room can
+       hold it. */
+    const { data: oldOffers, error: offErr } = await db
+      .from("rift_offers").select("id,document_path")
+      .eq("agent_id", agent_id).eq("source", "inbound")
+      .lte("created_at", ago(WINDOWS.offer.days)).limit(500);
+    /* Before the PDF migration there is no document_path to read. */
+    if (offErr && !/document_path/.test(offErr.message)) return failed(offErr.message);
+    const expiredOffers = ((oldOffers ?? []) as { id: string; document_path: string | null }[]);
+    const files = expiredOffers.map((o) => o.document_path).filter((p): p is string => Boolean(p));
+    if (files.length) {
+      const gone = await boundedWrite(db.storage.from("rift-documents").remove(files), "the expired offer PDFs");
+      if (!gone.ok) return failed(gone.error);
+    }
+    if (expiredOffers.length) {
+      const { error } = await db.from("rift_offers").delete().in("id", expiredOffers.map((o) => o.id));
+      if (error) return failed(error.message);
+    }
+
     held.push(
       "Leads with a recorded reply, a live sequence or a journey are untouched. Those are relationships, not expired records.",
       "Client records are untouched. The period has a legal floor and is the broker's to set.",
@@ -207,6 +234,7 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       events: evCount ?? 0,
       attributions: atCount ?? 0,
       marked,
+      offers: expiredOffers.length,
       held,
     });
   } catch (e) {

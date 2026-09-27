@@ -4,6 +4,9 @@ import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { captureLead } from "./leads";
 import type { Submission } from "@/lib/core/offer-intake";
+import type { Candidates } from "@/lib/core/offer-extract";
+import { attachOfferPdf } from "./offer-read";
+import { captureOpError } from "@/lib/monitoring/capture";
 
 /**
  * Storing an offer that arrived from outside.
@@ -51,6 +54,8 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
         repair_credit_cents: Math.round(s.repairCredit * 100),
         earnest_cents: Math.round(s.earnest * 100),
         financing: s.financing,
+        financing_other: s.financingOther,
+        due_diligence_days: s.dueDiligenceDays,
         close_on: s.closeOn,
         contingencies: s.contingencies,
         preapproval: s.preapproval,
@@ -66,6 +71,20 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
 
     if (!offer.ok) return offer;
     const offerId = ("data" in offer ? (offer.data as { id: string } | null)?.id : null) ?? null;
+
+    /* The PDF, if there was one, joins the offer it belongs to, with what the
+       automatic read proposed kept beside what the sender actually sent. A
+       failure here never fails the offer: the terms are what was delivered. */
+    if (offerId && s.documentToken) {
+      const att = await attachOfferPdf(s.documentToken, offerId);
+      if (att) {
+        const u = await boundedWrite(
+          db.from("rift_offers").update({ document_path: att.path, read_candidates: att.candidates }).eq("id", offerId),
+          "the offer PDF",
+        );
+        if (!u.ok) captureOpError(new Error(u.error), { op: "offer.attach.row" });
+      }
+    }
 
     /**
      * The relationship.
@@ -149,6 +168,13 @@ export interface InboundOffer {
   note: string | null;
   submitterLeadId: string | null;
   at: string;
+  /* Blueprint v5 §5.9. Null on offers sent before the PDF upload existed. */
+  financingOther: string | null;
+  dueDiligenceDays: number | null;
+  /** A short-lived link to the PDF the sender uploaded. */
+  pdfUrl: string | null;
+  /** What the automatic read proposed, to set beside what was sent. */
+  read: Candidates | null;
 }
 
 export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]>> {
@@ -157,16 +183,26 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("not signed in");
 
-  const r = await boundedRead(
-    db.from("rift_offers")
-      .select("id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at")
+  const BASE = "id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at";
+  const query = (cols: string) => boundedRead(
+    db.from("rift_offers").select(cols)
       .eq("agent_id", agent_id).eq("source", "inbound")
       .order("created_at", { ascending: false }).limit(limit),
     "the offers that came in",
   );
+  /* The PDF columns arrive with migration 20260927000000. Until it is
+     applied, read what exists rather than showing no offers at all. */
+  let r = await query(`${BASE},financing_other,due_diligence_days,document_path,read_candidates`);
+  if (!r.ok && /financing_other|due_diligence_days|document_path|read_candidates|column/.test(r.error)) r = await query(BASE);
   if (!r.ok) return r;
 
-  const rows = ("data" in r ? r.data : []) as Record<string, unknown>[];
+  const rows = ("data" in r ? r.data : []) as unknown as Record<string, unknown>[];
+  /* Ten minutes: long enough to open, short enough that a copied link does not become a way in. */
+  const links = new Map<string, string>();
+  await Promise.all(rows.filter((o) => typeof o.document_path === "string").map(async (o) => {
+    const l = await boundedWrite(db.storage.from("rift-documents").createSignedUrl(o.document_path as string, 600), "the offer PDF link");
+    if (l.ok && "data" in l && l.data) links.set(o.id as string, (l.data as { signedUrl: string }).signedUrl);
+  }));
   return done(rows.map((o) => ({
     id: o.id as string,
     address: (o.property_address as string | null) ?? null,
@@ -187,5 +223,9 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
     note: (o.note as string | null) ?? null,
     submitterLeadId: (o.submitter_lead_id as string | null) ?? null,
     at: o.created_at as string,
+    financingOther: (o.financing_other as string | null) ?? null,
+    dueDiligenceDays: typeof o.due_diligence_days === "number" ? o.due_diligence_days : null,
+    pdfUrl: links.get(o.id as string) ?? null,
+    read: (o.read_candidates as Candidates | null) ?? null,
   })));
 }

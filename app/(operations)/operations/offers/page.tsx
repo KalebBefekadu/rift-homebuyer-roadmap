@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../Unavailable";
 import { StudioHeader } from "../StudioHeader";
-import { inboundOffers } from "@/lib/db/offer-intake";
+import { inboundOffers, type InboundOffer } from "@/lib/db/offer-intake";
 import { read, type Submission } from "@/lib/core/offer-intake";
 import { Ico } from "@/components/rift/icons";
 
@@ -87,10 +87,11 @@ export default async function OffersInPage() {
               const r = read({
                 address: o.address ?? "", price: o.price, concessions: o.concessions,
                 repairCredit: o.repairCredit, earnest: o.earnest,
-                financing: o.financing as Submission["financing"],
-                closeOn: o.closeOn, contingencies: o.contingencies,
+                financing: o.financing as Submission["financing"], financingOther: o.financingOther,
+                closeOn: o.closeOn, dueDiligenceDays: o.dueDiligenceDays, documentToken: null,
+                contingencies: o.contingencies,
                 preapproval: o.preapproval, proofOfFunds: o.proofOfFunds,
-                from: o.from, email: o.email ?? "", phone: o.phone, firm: o.firm,
+                from: o.from, email: o.email ?? "", phone: o.phone ?? "", firm: o.firm,
                 note: o.note, representing: (o.representing as "self" | "buyer") ?? "buyer",
               });
 
@@ -123,11 +124,14 @@ export default async function OffersInPage() {
                   ) : null}
 
                   <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-                    <span className="chip">{o.financing}</span>
+                    <span className="chip">{o.financing === "other" && o.financingOther ? `Other: ${o.financingOther}` : o.financing}</span>
                     {o.closeOn ? <span className="chip">Close {o.closeOn}</span> : null}
+                    {o.dueDiligenceDays !== null ? <span className="chip">{o.dueDiligenceDays} days due diligence</span> : null}
                     {o.earnest > 0 ? <span className="chip">{money(o.earnest)} earnest</span> : null}
                     {o.contingencies.map((c) => <span key={c} className="chip">{c}</span>)}
                   </div>
+
+                  {o.pdfUrl || o.read ? <PdfRead o={o} /> : null}
 
                   {r.gaps.length ? (
                     <ul className="t-xs c-warn" style={{ marginTop: 10, paddingLeft: 16, lineHeight: 1.6 }}>
@@ -155,5 +159,36 @@ export default async function OffersInPage() {
         )}
       </main>
     </>
+  );
+}
+
+/**
+ * The PDF the sender uploaded, and where what they sent differs from what the
+ * automatic read found in it (Blueprint v5 §5.9, §8.8). The sender checked
+ * the boxes; this is Kaleb's check that the PDF and the terms agree.
+ */
+function PdfRead({ o }: { o: InboundOffer }) {
+  const sent: Partial<Record<keyof NonNullable<InboundOffer["read"]>, string>> = {
+    address: o.address ?? "", price: String(o.price), earnest: String(o.earnest), concessions: String(o.concessions),
+    financing: o.financing, financingOther: o.financingOther ?? "", closeOn: o.closeOn ?? "",
+    dueDiligenceDays: o.dueDiligenceDays === null ? "" : String(o.dueDiligenceDays), contingencies: o.contingencies.join(", "),
+  };
+  const differs = Object.entries(o.read ?? {}).filter(([k, c]) => c && String(sent[k as keyof typeof sent] ?? "") !== c.value);
+  return (
+    <div className="card p-3" style={{ marginTop: 12, background: "var(--sunk)" }}>
+      <div className="between wrap gap-2">
+        <span className="t-xs w6">Sent with a PDF</span>
+        {o.pdfUrl ? <a href={o.pdfUrl} target="_blank" rel="noopener noreferrer" className="btn btn-g btn-sm">Open the PDF</a> : <span className="t-2xs c-4">The PDF link did not load</span>}
+      </div>
+      {o.read ? (
+        differs.length ? (
+          <ul className="t-xs c-warn" style={{ marginTop: 8, paddingLeft: 16, lineHeight: 1.6 }}>
+            {differs.map(([k, c]) => (
+              <li key={k}>{k}: sent &ldquo;{sent[k as keyof typeof sent] || "blank"}&rdquo;, the PDF says &ldquo;{c!.value}&rdquo; (page {c!.page}: &ldquo;{c!.quote}&rdquo;)</li>
+            ))}
+          </ul>
+        ) : <p className="t-2xs c-3" style={{ marginTop: 6 }}>Every box the automatic read found matches what was sent.</p>
+      ) : <p className="t-2xs c-4" style={{ marginTop: 6 }}>Not read automatically; check the terms against the PDF.</p>}
+    </div>
   );
 }

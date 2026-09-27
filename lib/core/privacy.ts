@@ -89,10 +89,10 @@ export const RETENTION: RetentionRule[] = [
        submitter is not the subject would be the same selection this file
        already refuses once. */
     id: "offer",
-    what: "An offer you submitted, and the address it was on",
+    what: "An offer you submitted, the PDF if you uploaded one, and the address it was on",
     keptFor: "While it is live, then 24 months",
     why: "An offer is a document somebody may act on, and the record of what was sent is the only protection either side has if the terms are later disputed. The address belongs to a property, not to you. We do not treat it as yours to delete, and we do not attach it to anybody who has not asked us to.",
-    thenWhat: "Deleted outright. A phone number given to deliver an offer is passed on with it and never stored.",
+    thenWhat: "Deleted outright, with the PDF. The name, phone and email you sent it with are kept only with the offer, so Kaleb can reply, and never used for marketing.",
   },
 ];
 
@@ -110,7 +110,10 @@ export const RETENTION: RetentionRule[] = [
  * Which is also why the phone number is optional here. Email costs nothing to
  * offer and carries none of this.
  */
-export const CONSENT_VERSION = "2026-09-01";
+/* 2026-09-27: the email note stopped promising "your readout", which the
+   values replaced (Blueprint v5 §5.1). Consent records keep the wording they
+   were given under, so the version moves with the words. */
+export const CONSENT_VERSION = "2026-09-27";
 
 export const PHONE_CONSENT =
   "I agree that Kaleb Befekadu and Rift may call and text me at this number about my " +
@@ -119,7 +122,7 @@ export const PHONE_CONSENT =
   "and data rates may apply, and that I can stop it any time by replying STOP.";
 
 export const EMAIL_NOTE =
-  "We email you your readout and tell you when something in it changes. No newsletter, " +
+  "We email you what you worked out here and tell you when something in it changes. No newsletter, " +
   "no list, and nothing sold on. One click unsubscribes.";
 
 

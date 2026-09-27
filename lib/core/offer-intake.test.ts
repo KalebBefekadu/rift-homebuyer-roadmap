@@ -169,3 +169,45 @@ describe("the shape the rest of the product already speaks", () => {
     expect(o.releasedAt).toBeNull();
   });
 });
+
+describe("sending is required, and says who is sending (Blueprint v5 §5.9)", () => {
+  const errs = (over: Record<string, unknown>) => {
+    const r = readSubmission({ ...RAW, ...over });
+    return r.ok ? [] : r.errors;
+  };
+
+  it("needs a phone number with its area code", () => {
+    expect(errs({ phone: "" }).join(" ")).toMatch(/phone/i);
+    expect(errs({ phone: "555-0199" }).join(" ")).toMatch(/phone/i);
+    expect(errs({ phone: "(404) 555-0199" })).toEqual([]);
+  });
+
+  it("never assumes whether it is the buyer or an agent", () => {
+    expect(errs({ representing: undefined }).join(" ")).toMatch(/buyer or a real estate agent/);
+    expect(errs({ representing: "self" })).toEqual([]);
+  });
+
+  it("'other' financing has to say what it is, and is kept only for other", () => {
+    expect(errs({ financing: "other", financingOther: "" }).join(" ")).toMatch(/other/i);
+    const ok = readSubmission({ ...RAW, financing: "other", financingOther: "Seller financing" });
+    expect(ok.ok && ok.value.financingOther).toBe("Seller financing");
+    const conv = readSubmission({ ...RAW, financing: "conventional", financingOther: "ignored" });
+    expect(conv.ok && conv.value.financingOther).toBeNull();
+  });
+
+  it("due diligence is whole days from 0 to 60, or not given", () => {
+    expect(errs({ dueDiligenceDays: "90" }).join(" ")).toMatch(/due diligence/i);
+    expect(errs({ dueDiligenceDays: "7.5" }).join(" ")).toMatch(/due diligence/i);
+    const r = readSubmission({ ...RAW, dueDiligenceDays: "10" });
+    expect(r.ok && r.value.dueDiligenceDays).toBe(10);
+    const none = readSubmission({ ...RAW });
+    expect(none.ok && none.value.dueDiligenceDays).toBeNull();
+  });
+
+  it("carries a PDF token only in the shape the reader makes", () => {
+    const good = readSubmission({ ...RAW, documentToken: "0f8fad5b-d9cb-469f-a165-70867728950e" });
+    expect(good.ok && good.value.documentToken).toBe("0f8fad5b-d9cb-469f-a165-70867728950e");
+    const bad = readSubmission({ ...RAW, documentToken: "../../etc/passwd" });
+    expect(bad.ok && bad.value.documentToken).toBeNull();
+  });
+});

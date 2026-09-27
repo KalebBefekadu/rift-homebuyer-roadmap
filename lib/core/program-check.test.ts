@@ -127,3 +127,14 @@ describe("flags for a person", () => {
     expect(textDiff(null, "x")).toEqual({ removed: [], added: [] });
   });
 });
+
+describe("the AI comparison, for the reviewer only (§6.5, D16)", () => {
+  it("turns a usable answer into lines, and anything else into nothing", async () => {
+    const { compareSummary } = await import("./program-check");
+    expect(compareSummary({ recordAffected: false, changes: [] })).toMatch(/none of the record/i);
+    expect(compareSummary({ recordAffected: true, changes: [{ fact: "Maximum amount", record: "$10,000", page: "Up to $12,500" }] }))
+      .toBe('Maximum amount: the record says "$10,000"; the page now says "Up to $12,500".');
+    expect(compareSummary("changed")).toBeNull();
+    expect(compareSummary({ recordAffected: true })).toBeNull();
+  });
+});

@@ -145,6 +145,8 @@ describe("the windows it applies", () => {
     expect(filters).toContain(`lte:first_at=${ago(WINDOWS.analytics.days)}`);
     /* A lead lives by the unconverted window, not the abandoned one. */
     expect(filters).toContain(`lte:created_at=${ago(WINDOWS.unconverted.days)}`);
+    /* Offers from /offer, and their PDFs: the 24 months the list promises. */
+    expect(filters).toContain(`lte:created_at=${ago(WINDOWS.offer.days)}`);
   });
 
   it("keeps the unconverted window well past a stated eighteen-month timeline", async () => {

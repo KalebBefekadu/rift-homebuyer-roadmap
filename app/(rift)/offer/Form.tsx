@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
+import { SiteHeader } from "@/components/rift/site/SiteHeader";
+import { SiteFooter } from "@/components/rift/site/SiteFooter";
+import type { Candidates, Field } from "@/lib/core/offer-extract";
 import {
   readSubmission, read, ASSUMED_COMMISSION_PCT,
   MIN_COMMISSION_PCT, MAX_COMMISSION_PCT,
@@ -26,15 +29,22 @@ const CONTINGENCIES = ["Inspection", "Appraisal", "Financing", "Sale of buyer's 
  * keeps saying it whether or not the submitter ever presses send, which is
  * the product's central bargain, applied to the one funnel that did not have
  * a front end at all.
+ *
+ * Blueprint v5 §5.9 (Kaleb R2): it starts with the PDF. Rift reads it and
+ * fills the boxes, each marked with the page it came from until the sender
+ * changes or confirms it; a read that is off, over its limit or failed says
+ * so and leaves the boxes to fill by hand. Sending is the point of the page,
+ * so who is sending and a phone number are required.
  */
 export function Form() {
   const [address, setAddress] = useState("");
   const [price, setPrice] = useState("");
   const [concessions, setConcessions] = useState("");
-  const [repairCredit, setRepairCredit] = useState("");
   const [earnest, setEarnest] = useState("");
   const [financing, setFinancing] = useState<string>("conventional");
+  const [financingOther, setFinancingOther] = useState("");
   const [closeOn, setCloseOn] = useState("");
+  const [dueDiligenceDays, setDueDiligenceDays] = useState("");
   const [contingencies, setContingencies] = useState<string[]>(["Inspection", "Appraisal"]);
   const [preapproval, setPreapproval] = useState(false);
   const [proofOfFunds, setProofOfFunds] = useState(false);
@@ -43,9 +53,17 @@ export function Form() {
   const [from, setFrom] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [firm, setFirm] = useState("");
   const [note, setNote] = useState("");
-  const [representing, setRepresenting] = useState<"self" | "buyer">("buyer");
+  /* No default: "a real estate agent or the buyer" is theirs to say (§5.9). */
+  const [representing, setRepresenting] = useState<"self" | "buyer" | null>(null);
+
+  /* The PDF, and what reading it proposed. A box stays marked "from your
+     PDF" until the sender edits it, so nothing read is mistaken for typed. */
+  const [reading_, setReading] = useState<"idle" | "reading" | "done">("idle");
+  const [readSay, setReadSay] = useState<string | null>(null);
+  const [documentToken, setDocumentToken] = useState<string | null>(null);
+  const [fromPdf, setFromPdf] = useState<Candidates>({});
+  const touched = (f: Field) => setFromPdf((c) => { const n = { ...c }; delete n[f]; return n; });
 
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -64,13 +82,13 @@ export function Form() {
      form that agreed by coincidence. */
   const draft = useMemo(() => ({
     address: address || "placeholder address",
-    price: num(price), concessions: num(concessions), repairCredit: num(repairCredit),
-    earnest: num(earnest), financing, closeOn, contingencies,
-    preapproval, proofOfFunds,
+    price: num(price), concessions: num(concessions),
+    earnest: num(earnest), financing, financingOther, closeOn, dueDiligenceDays, contingencies,
+    preapproval, proofOfFunds, documentToken,
     from: from || "Someone", email: email || "someone@example.com",
-    phone, firm, note, representing,
-  }), [address, price, concessions, repairCredit, earnest, financing, closeOn,
-       contingencies, preapproval, proofOfFunds, from, email, phone, firm, note, representing]);
+    phone: phone || "000 000 0000", note, representing: representing ?? "buyer",
+  }), [address, price, concessions, earnest, financing, financingOther, closeOn, dueDiligenceDays,
+       contingencies, preapproval, proofOfFunds, documentToken, from, email, phone, note, representing]);
 
   const parsed = readSubmission(draft);
   const reading = parsed.ok && num(price) > 0 ? read(parsed.value, commissionPct) : null;
@@ -78,8 +96,37 @@ export function Form() {
   const toggle = (c: string) =>
     setContingencies((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
 
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setReading("reading");
+    setReadSay(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/offer/read", { method: "POST", body });
+      const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; token?: string | null; candidates?: Candidates };
+      if (!j?.ok) { setReadSay(j?.error ?? "That file could not be read. Fill in the boxes instead."); setReading("done"); return; }
+      setDocumentToken(j.token ?? null);
+      const c = j.candidates ?? {};
+      if (c.address) setAddress(c.address.value);
+      if (c.price) setPrice(c.price.value);
+      if (c.earnest) setEarnest(c.earnest.value);
+      if (c.concessions) setConcessions(c.concessions.value);
+      if (c.financing) setFinancing(c.financing.value);
+      if (c.financingOther) setFinancingOther(c.financingOther.value);
+      if (c.closeOn) setCloseOn(c.closeOn.value);
+      if (c.dueDiligenceDays) setDueDiligenceDays(c.dueDiligenceDays.value);
+      if (c.contingencies) setContingencies(c.contingencies.value.split(", "));
+      setFromPdf(c);
+      setReadSay(j.say ?? null);
+    } catch {
+      setReadSay("That file could not be sent. Fill in the boxes instead.");
+    }
+    setReading("done");
+  };
+
   const send = async () => {
-    const real = readSubmission({ ...draft, address, from, email });
+    const real = readSubmission({ ...draft, address, from, email, phone, representing });
     if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
     setErrors([]);
     setFailedToSend(false);
@@ -103,78 +150,85 @@ export function Form() {
 
   return (
     <>
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href="/" className="row gap-2">
-            <Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span>
-          </Link>
-          <Link href="/sell" className="t-sm c-3 hide-sm">Selling instead?</Link>
-        </div>
-      </header>
+      <SiteHeader side="home" current="/offer" />
 
       <main className="shell-w sec" style={{ maxWidth: 720 }}>
-        <h1 className="serif" style={{ fontSize: "clamp(26px,3.6vw,42px)", lineHeight: 1.12, letterSpacing: "-0.025em" }}>
-          Submit an offer on any Georgia address
-        </h1>
-        <p className="lede" style={{ marginTop: 14, maxWidth: 620 }}>
-          And see what it is actually worth to the seller before you send it. No account,
-          nothing to install, and the arithmetic is yours whether or not you press send.
-        </p>
+        <h1 className="serif d2">Submit an offer</h1>
+
+        <section className="card p-5" style={{ marginTop: 24, background: "var(--brand-wash)", borderColor: "var(--brand-line)" }}>
+          <div className="t-md w6">Upload your offer in PDF</div>
+          <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
+            We read it and fill in the boxes below for you to check. Or skip this and type them.
+          </p>
+          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
+            <Ico.doc size={15} />{reading_ === "reading" ? "Reading your offer…" : documentToken ? "Choose a different PDF" : "Choose the PDF"}
+            <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
+              onChange={(e) => upload(e.target.files?.[0])} />
+          </label>
+          {readSay ? <p className="t-sm c-2" role="status" style={{ marginTop: 10, lineHeight: 1.6 }}>{readSay}</p> : null}
+        </section>
 
         <section className="card p-5" style={{ marginTop: 24 }}>
           <div className="t-sm w6">The offer</div>
 
           <label className="field" style={{ marginTop: 14 }}>
-            <span className="label">Property address</span>
-            <input className="input" value={address} onChange={(e) => setAddress(e.target.value)}
+            <span className="label">Property address<FromPdf c={fromPdf.address} /></span>
+            <input className="input" value={address} onChange={(e) => { setAddress(e.target.value); touched("address"); }}
               placeholder="119 Peachtree Way, Atlanta, GA 30309" />
           </label>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
-              <span className="label">Offer price</span>
+              <span className="label">Offer price<FromPdf c={fromPdf.price} /></span>
               <input className="input" inputMode="numeric" value={price}
-                onChange={(e) => setPrice(e.target.value)} placeholder="410,000" />
+                onChange={(e) => { setPrice(e.target.value); touched("price"); }} placeholder="410,000" />
             </label>
             <label className="field">
-              <span className="label">Earnest money</span>
+              <span className="label">Earnest money<FromPdf c={fromPdf.earnest} /></span>
               <input className="input" inputMode="numeric" value={earnest}
-                onChange={(e) => setEarnest(e.target.value)} placeholder="5,000" />
+                onChange={(e) => { setEarnest(e.target.value); touched("earnest"); }} placeholder="5,000" />
             </label>
           </div>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
-              <span className="label">Seller concessions asked</span>
+              <span className="label">Seller concessions asked<FromPdf c={fromPdf.concessions} /></span>
               <input className="input" inputMode="numeric" value={concessions}
-                onChange={(e) => setConcessions(e.target.value)} placeholder="0" />
+                onChange={(e) => { setConcessions(e.target.value); touched("concessions"); }} placeholder="0" />
             </label>
             <label className="field">
-              <span className="label">Repair credit asked</span>
-              <input className="input" inputMode="numeric" value={repairCredit}
-                onChange={(e) => setRepairCredit(e.target.value)} placeholder="0" />
+              <span className="label">Due diligence days<FromPdf c={fromPdf.dueDiligenceDays} /></span>
+              <input className="input" inputMode="numeric" value={dueDiligenceDays}
+                onChange={(e) => { setDueDiligenceDays(e.target.value.replace(/[^0-9]/g, "")); touched("dueDiligenceDays"); }} placeholder="10" />
             </label>
           </div>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
-              <span className="label">Financing</span>
-              <select className="input" value={financing} onChange={(e) => setFinancing(e.target.value)}>
+              <span className="label">Financing<FromPdf c={fromPdf.financing} /></span>
+              <select className="input" value={financing} onChange={(e) => { setFinancing(e.target.value); touched("financing"); }}>
                 {FINANCING.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
             <label className="field">
-              <span className="label">Target closing date</span>
-              <input className="input" type="date" value={closeOn} onChange={(e) => setCloseOn(e.target.value)} />
+              <span className="label">Target closing date<FromPdf c={fromPdf.closeOn} /></span>
+              <input className="input" type="date" value={closeOn} onChange={(e) => { setCloseOn(e.target.value); touched("closeOn"); }} />
             </label>
           </div>
+          {financing === "other" ? (
+            <label className="field" style={{ marginTop: 12 }}>
+              <span className="label">What kind of financing?<FromPdf c={fromPdf.financingOther} /></span>
+              <input className="input" value={financingOther} maxLength={80}
+                onChange={(e) => { setFinancingOther(e.target.value); touched("financingOther"); }} placeholder="For example, seller financing" />
+            </label>
+          ) : null}
 
           <div style={{ marginTop: 14 }}>
-            <span className="label">Contingencies</span>
+            <span className="label">Contingencies<FromPdf c={fromPdf.contingencies} /></span>
             <div className="row gap-2 wrap" style={{ marginTop: 6 }}>
               {CONTINGENCIES.map((c) => (
                 <button key={c} type="button" className={`chip ${contingencies.includes(c) ? "chip-brand" : ""}`}
-                  aria-pressed={contingencies.includes(c)} onClick={() => toggle(c)}>
+                  aria-pressed={contingencies.includes(c)} onClick={() => { toggle(c); touched("contingencies"); }}>
                   {c}
                 </button>
               ))}
@@ -260,39 +314,33 @@ export function Form() {
         ) : null}
 
         <section className="card p-5" style={{ marginTop: 16 }}>
-          <div className="t-sm w6">Send it to Kaleb</div>
-          <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            Optional. The arithmetic above is yours either way.
-          </p>
+          <div className="t-md w6">Send it to Kaleb</div>
 
-          <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-            {([["buyer", "I represent the buyer"], ["self", "I am the buyer"]] as const).map(([v, l]) => (
-              <button key={v} type="button" className={`btn btn-sm ${representing === v ? "btn-p" : "btn-g"}`}
-                aria-pressed={representing === v} onClick={() => setRepresenting(v)}>{l}</button>
-            ))}
-          </div>
+          <fieldset style={{ marginTop: 12, border: 0, padding: 0 }}>
+            <legend className="label">You are</legend>
+            <div className="row gap-2 wrap" style={{ marginTop: 6 }}>
+              {([["buyer", "A real estate agent"], ["self", "The buyer"]] as const).map(([v, l]) => (
+                <button key={v} type="button" className={`btn btn-sm ${representing === v ? "btn-p" : "btn-g"}`}
+                  aria-pressed={representing === v} onClick={() => setRepresenting(v)}>{l}</button>
+              ))}
+            </div>
+          </fieldset>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
               <span className="label">Your name</span>
-              <input className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <input className="input" autoComplete="name" value={from} onChange={(e) => setFrom(e.target.value)} />
             </label>
             <label className="field">
-              <span className="label">Email</span>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <span className="label">Phone</span>
+              <input className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </label>
           </div>
 
-          <div className="g2 gap-2" style={{ marginTop: 12 }}>
-            <label className="field">
-              <span className="label">Phone <span className="c-4">(optional)</span></span>
-              <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="label">Brokerage <span className="c-4">(optional)</span></span>
-              <input className="input" value={firm} onChange={(e) => setFirm(e.target.value)} />
-            </label>
-          </div>
+          <label className="field" style={{ marginTop: 12 }}>
+            <span className="label">Email</span>
+            <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
 
           <label className="field" style={{ marginTop: 12 }}>
             <span className="label">Anything else <span className="c-4">(optional)</span></span>
@@ -303,8 +351,8 @@ export function Form() {
               deliver an offer is not consent to be called about anything else,
               and nothing here stores one. */}
           <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.6 }}>
-            We keep the offer and your name and email so somebody can reply to it. A phone
-            number is passed on with the offer and not stored for marketing.{" "}
+            We keep the offer, the PDF if you uploaded one, and your name, phone and email so Kaleb
+            can reply. None of it is used for marketing.{" "}
             <Link href="/privacy" className="u">What we keep</Link>.
           </p>
 
@@ -348,6 +396,17 @@ export function Form() {
           )}
         </section>
       </main>
+      <SiteFooter />
     </>
+  );
+}
+
+/** "From your PDF, page 3", with the words it was read from on hover and for a screen reader. */
+function FromPdf({ c }: { c?: { page: number; quote: string } }) {
+  if (!c) return null;
+  return (
+    <span className="chip chip-brand t-2xs" style={{ marginLeft: 6, height: 20 }} title={`“${c.quote}”`}>
+      From your PDF, page {c.page}<span className="sr-only">: “{c.quote}”. Check it.</span>
+    </span>
   );
 }

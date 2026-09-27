@@ -93,6 +93,9 @@ export const LIMITS = {
      every one of them is something a person is expected to read: the cost of
      abuse here is Kaleb's attention, which does not rate-limit itself. */
   offer: { max: 4, windowMs: 60_000 },
+  /* Reading an offer PDF costs money (lib/core/ai.ts). The monthly limit is
+     the hard stop; this keeps one visitor from spending it in an afternoon. */
+  offerRead: { max: 3, windowMs: 600_000 },
   /* Per plan link, not per address. A seller chooses once; the headroom is
      for a double tap and a retry on a bad signal, and nothing else. */
   choose: { max: 6, windowMs: 60_000 },

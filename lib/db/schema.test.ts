@@ -625,3 +625,28 @@ describe("program checks (Blueprint v5 §6.5)", () => {
     await c.query("insert into rift_job_runs (job) values ('program-check')");
   });
 });
+
+describe("offer PDFs and the AI record (Blueprint v5 §5.9, §10.2)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  const offer = (extra: string, values: unknown[]) =>
+    `insert into rift_offers (agent_id, lead_id, source, property_address, offered_by, price_cents, financing${extra ? `, ${extra}` : ""})
+     values ('${AGENT}', null, 'inbound', '1 Test St, Atlanta, GA 30303', 'A buyer', 41000000, ${values.map((_, i) => `$${i + 1}`).join(", ") || "'cash'"})`;
+
+  test("an AI call is recorded once and never edited", async (c) => {
+    const { rows } = await c.query(
+      "insert into rift_ai_usage (workflow, model, prompt_version, input_tokens, output_tokens, cost_cents, outcome) values ('offer-extraction','claude-opus-5','offer-extract-test',30000,1000,18,'ok') returning id");
+    await rejects(c, "update rift_ai_usage set cost_cents = 0 where id = $1", [rows[0].id], /history/);
+    await rejects(c, "delete from rift_ai_usage where id = $1", [rows[0].id], /history/);
+    await rejects(c, "insert into rift_ai_usage (workflow, model, prompt_version, outcome) values ('chat','claude-opus-5','offer-extract-test','ok')", [], /check/);
+  });
+
+  test("'other' financing is described only when it is other, and due diligence is 0 to 60 days", async (c) => {
+    await c.query(offer("financing_other", ["other", "Seller financing"]), ["other", "Seller financing"]);
+    await rejects(c, offer("financing_other", ["cash", "Seller financing"]), ["cash", "Seller financing"], /financing_other_said/);
+    await rejects(c, offer("due_diligence_days", ["cash", 90]), ["cash", 90], /due_diligence_days/);
+  });
+
+  test("a PDF can only be kept at an offer's own path", async (c) => {
+    await rejects(c, offer("document_path", ["cash", "offers/incoming/../../x.pdf"]), ["cash", "offers/incoming/../../x.pdf"], /document_path/);
+  });
+});

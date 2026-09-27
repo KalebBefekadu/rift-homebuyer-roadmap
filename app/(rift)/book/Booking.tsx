@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Ico, Mark } from "@/components/rift/icons";
+import { Ico } from "@/components/rift/icons";
+import { SiteHeader } from "@/components/rift/site/SiteHeader";
+import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { track, useTrack, flush } from "@/lib/rift/track";
 import { translator, ETHIOPIC_STACK, isLocale } from "@/lib/core/i18n";
 import { sessionId } from "@/lib/rift/session";
@@ -23,6 +25,10 @@ import { sessionId } from "@/lib/rift/session";
  *   3. The phone consent box is unticked, specific, separate from everything
  *      else, and blocks submission while a phone number is present. Consent
  *      bundled into a "by continuing you agree" line is not consent.
+ *
+ * Blueprint v5 §5.9 (Kaleb R2): the form is centred; the fields run name,
+ * phone, email, then the time; the phone is required, because a call is what
+ * is being booked; and the question is "What time works best for you?".
  */
 export function Booking({ phoneConsent, emailNote, slots, source }: {
   phoneConsent: string;
@@ -47,8 +53,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   const script: React.CSSProperties = am ? { fontFamily: ETHIOPIC_STACK } : {};
   const lang = am ? "?lang=am" : "";
 
-  const home = abroad ? `/abroad${lang}` : side === "sell" ? "/sell" : "/buy";
-  const backLabel = am ? t("book.back") : abroad ? "Back to my numbers" : "Back to my readout";
+  const backLabel = am ? t("book.back") : "Back";
   const backHref = abroad ? `/abroad${lang}` : side === "sell" ? "/sell" : "/buy";
 
   const [name, setName] = useState("");
@@ -68,7 +73,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   const live = source === "calendar" && slots.length > 0;
 
   const blocked = Boolean(phone) && !consent;
-  const ready = (email || phone) && (live ? slot : true) && !blocked;
+  const phoneOk = phone.replace(/\D/g, "").length >= 10;
+  const ready = phoneOk && (live ? slot : true) && !blocked;
 
   const submit = async () => {
     if (!ready) return;
@@ -109,7 +115,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   if (state === "done") {
     return (
       <main className={`shell-w sec ${side}`}>
-        <div className="card p-5" style={{ maxWidth: 560 }}>
+        <div className="card p-5" style={{ maxWidth: 560, margin: "0 auto" }}>
           <div className="row gap-2">
             <Ico.checkCircle size={18} className="c-pos" />
             <span className="t-md w6">
@@ -119,7 +125,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             </span>
           </div>
           <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            Kaleb confirms by {email ? "email" : "phone"}, usually within a few hours, and
+            Kaleb confirms by phone{email ? " or email" : ""}, usually within a few hours, and
             always the same day. If it stops working, say so and it moves; there is nothing to
             cancel and no deposit.
           </p>
@@ -133,37 +139,35 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
 
   return (
     <div className={side}>
-      <header style={{ borderBottom: "1px solid var(--line-2)" }}>
-        <div className="shell-w between" style={{ height: 56 }}>
-          <Link href={home} className="row gap-2"><Mark size={19} /><span className="mark-name" style={{ fontSize: 18 }}>Rift</span></Link>
-          <Link href={backHref} className="t-xs c-3" style={script}>{backLabel}</Link>
-        </div>
-      </header>
+      <SiteHeader side={abroad ? "abroad" : side} current="/book" />
 
-      <main className="shell-w sec">
+      <main className="shell-w sec" style={{ maxWidth: 600 }}>
+        <Link href={backHref} className="row gap-1 t-sm c-3" style={{ marginBottom: 16, ...script }}>
+          <Ico.chevL size={13} />{backLabel}
+        </Link>
         {am ? (
-          <div className="card p-4" style={{ maxWidth: 620, marginBottom: 22, background: "var(--brand-wash)", borderColor: "var(--line-2)" }}>
+          <div className="card p-4" style={{ marginBottom: 22, background: "var(--brand-wash)", borderColor: "var(--line-2)" }}>
             <div className="t-md w6" style={script}>{t("book.band.h")}</div>
             <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.85, ...script }}>
               {t("book.band.b")}
             </p>
           </div>
         ) : null}
-        <h1 className="serif" style={{ fontSize: "clamp(24px,3.4vw,38px)", lineHeight: 1.14, letterSpacing: "-0.02em", maxWidth: 620 }}>
+        <h1 className="serif" style={{ fontSize: "clamp(24px,3.4vw,38px)", lineHeight: 1.14, letterSpacing: "-0.02em" }}>
           {abroad ? "Fifteen minutes, at a time that works where you are" : `Twenty minutes about ${topic.toLowerCase()}`}
         </h1>
         {abroad ? (
-          <p className="t-sm c-3" style={{ marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
+          <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>
             Times below are Atlanta time (Eastern). Tell us your city and Kaleb will work
             around it. He speaks English and Amharic.
           </p>
         ) : null}
-        <p className="lede" style={{ marginTop: 14, maxWidth: 560 }}>
+        <p className="lede" style={{ marginTop: 14 }}>
           Not a pitch, not a tour of houses, and not a credit check. One conversation about the
           thing standing between you and a date.
         </p>
 
-        <div className="card p-4" style={{ marginTop: 20, maxWidth: 560, background: "var(--sunk)" }}>
+        <div className="card p-4" style={{ marginTop: 20, background: "var(--sunk)" }}>
           <div className="t-sm w6" style={{ marginBottom: 8 }}>What this call is not</div>
           <div className="col gap-1">
             {[
@@ -179,13 +183,40 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           </div>
         </div>
 
-        <div className="card p-5" style={{ marginTop: 20, maxWidth: 560 }}>
-          <div className="field">
-            <span className="label">When suits you?</span>
+        <div className="card p-5" style={{ marginTop: 20 }}>
+          <label className="field">
+            <span className="label">Your name</span>
+            <input className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+
+          <label className="field" style={{ marginTop: 12 }}>
+            <span className="label">Phone</span>
+            <input className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(404) 555-0100" />
+          </label>
+
+          {/* The gate. Unticked, specific, separate, and it blocks the button.
+              Only shown when there is a number for it to govern: an unticked
+              box next to an empty field is noise that teaches people to ignore
+              the box that matters. */}
+          {phone ? (
+            <label className="opt fade-in" data-on={consent} style={{ marginTop: 12, alignItems: "flex-start" }}>
+              <input type="checkbox" checked={consent} onChange={() => setConsent(!consent)} style={{ marginTop: 3 }} />
+              <span className="t-xs c-2" style={{ lineHeight: 1.55 }}>{phoneConsent}</span>
+            </label>
+          ) : null}
+
+          <label className="field" style={{ marginTop: 12 }}>
+            <span className="label">Email <span className="c-4 w5">(optional)</span></span>
+            <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <span className="t-2xs c-4" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>{emailNote}</span>
+          </label>
+
+          <div className="field" style={{ marginTop: 16 }}>
+            <span className="label">What time works best for you?</span>
             {live ? (
               <>
                 <div className="col gap-2" style={{ marginTop: 6 }}
-                  role="radiogroup" aria-label="When suits you?">
+                  role="radiogroup" aria-label="What time works best for you?">
                   {slots.map((s) => (
                     <label key={s.start} className="opt" data-on={slot === s.start}>
                       <input type="radio" name="slot" checked={slot === s.start} onChange={() => setSlot(s.start)} />
@@ -216,33 +247,6 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             )}
           </div>
 
-          <label className="field" style={{ marginTop: 16 }}>
-            <span className="label">Your name</span>
-            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Optional" />
-          </label>
-
-          <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Email</span>
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-            <span className="t-2xs c-4" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>{emailNote}</span>
-          </label>
-
-          <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Phone <span className="c-4 w5">(optional)</span></span>
-            <input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(404) 555-0100" />
-          </label>
-
-          {/* The gate. Unticked, specific, separate, and it blocks the button.
-              Only shown when there is a number for it to govern: an unticked
-              box next to an empty field is noise that teaches people to ignore
-              the box that matters. */}
-          {phone ? (
-            <label className="opt fade-in" data-on={consent} style={{ marginTop: 12, alignItems: "flex-start" }}>
-              <input type="checkbox" checked={consent} onChange={() => setConsent(!consent)} style={{ marginTop: 3 }} />
-              <span className="t-xs c-2" style={{ lineHeight: 1.55 }}>{phoneConsent}</span>
-            </label>
-          ) : null}
-
           {error ? (
             <p className="t-xs c-neg row gap-2" style={{ marginTop: 12 }}>
               <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{error}
@@ -250,13 +254,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           ) : null}
 
           <button className="btn btn-p" style={{ width: "100%", marginTop: 16 }} disabled={!ready || state === "sending"} onClick={submit}>
-            {state === "sending" ? "Sending…" : blocked ? "Tick the box to use a phone number" : "Ask for this time"}
+            {state === "sending" ? "Sending…" : !phoneOk ? "Add your phone number" : blocked ? "Tick the box so Kaleb can call you" : live ? "Book this time" : "Ask for a call"}
           </button>
           <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.5 }}>
-            Your readout stays yours either way, and works whether or not you book anything.
+            Your answers stay yours either way, whether or not you book anything.
           </p>
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }
