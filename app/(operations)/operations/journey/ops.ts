@@ -17,6 +17,9 @@ import { addDeadline, recordAmendment, reviseDeadline, type Revise } from "@/lib
 import type { AmendmentChange, DeadlineInput, DeadlineKind } from "@/lib/core/deadline";
 import { recordCheck } from "@/lib/db/pilot";
 import { recordFact } from "@/lib/db/money";
+import { recordFigure, recordOpinion } from "@/lib/db/seller";
+import type { PricingInput } from "@/lib/core/pricing";
+import type { FigureInput } from "@/lib/core/proceeds";
 import { recordDependency, recordDependencyEvent } from "@/lib/db/dependencies";
 import type { DependencyEvent } from "@/lib/core/dependency";
 import type { CheckResult } from "@/lib/core/pilot";
@@ -385,6 +388,26 @@ export async function dependencyHappened(journeyId: string, dependencyId: string
   if ("error" in g) return { ok: false as const, error: g.error };
   if (![journeyId, dependencyId, requestId].every(isUuid)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordDependencyEvent({ dependencyId, state, evidence, by: g.name, requestId });
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r);
+}
+
+/** The agent's approved value opinion for a sale, as a new version (S04). */
+export async function recordPricing(journeyId: string, input: PricingInput, expectedVersion: number, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId) || !Number.isInteger(expectedVersion) || expectedVersion < 0) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordOpinion(journeyId, input, expectedVersion, g.name, requestId);
+  revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r, (d) => ({ version: d.version }));
+}
+
+/** A version of the seller's net, from planning to official (S16). */
+export async function recordProceeds(journeyId: string, input: FigureInput, requestId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
+  const r = await recordFigure(journeyId, input, g.name, requestId);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }

@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { clientMoney } from "@/lib/db/money";
+import { sellerMoney } from "@/lib/db/seller";
+import { scenarios as pricingScenarios } from "@/lib/core/pricing";
+import { proceedsLine, viewFigures, FIGURE_LABEL, OWED_LABEL } from "@/lib/core/proceeds";
+import { ClientPricing } from "./ClientPricing";
+import { money as usd } from "@/lib/core/compute";
 import { dependenciesFor } from "@/lib/db/dependencies";
 import { lineFor, stateOf } from "@/lib/core/dependency";
 import { LedgerView } from "@/components/rift/money/LedgerView";
@@ -61,7 +66,8 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   const member = m.data;
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
-  const [brief, homes, tours, prog, offers, moneyRead, depsRead] = await Promise.all([
+  const sellerMoneyOn = member.side === "sell" && member.scopes.includes("money");
+  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
@@ -69,7 +75,13 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     member.side === "buy" && member.scopes.includes("money") ? clientBids(member) : Promise.resolve(null),
     clientMoney(member),
     dependenciesFor(member.journeyId, member.agentId),
+    sellerMoneyOn ? sellerMoney(member.journeyId, member.agentId) : Promise.resolve(null),
   ]);
+  /* A sale's pricing and proceeds (S04, S16), only with price and fees. */
+  const sale = sellerRead && sellerRead.ok && "data" in sellerRead ? sellerRead.data : null;
+  const saleViews = viewFigures(sale?.figures ?? []);
+  const latestOpinion = sale?.opinions.at(-1) ?? null;
+  const lastSaleFigure = saleViews.at(-1) ?? null;
   /* STATE-07: what this move depends on in the household's other one, as the
      agent recorded it, with who owns it. Only the line and the owner leave
      the server, never the agent's note. */
@@ -155,6 +167,8 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     { id: "pri-h", label: "Priorities", on: member.side === "buy" && member.scopes.includes("search") },
     { id: "homes-h", label: "Homes", on: member.side === "buy" && member.scopes.includes("homes") },
     { id: "money-h", label: "Money", on: moneyOn },
+    { id: "pricing-h", label: "Pricing", on: sellerMoneyOn && Boolean(latestOpinion) },
+    { id: "proceeds-h", label: "Proceeds", on: sellerMoneyOn && saleViews.length > 0 },
     { id: "docs-h", label: "Documents", on: documents.length > 0 },
     { id: "help-h", label: "Help", on: true },
   ].filter((x) => x.on);
@@ -339,6 +353,38 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
           ) : (
             <p className="t-sm c-3" style={{ marginTop: 8 }}>The homes did not load. That is not the same as an empty list; reload in a moment.</p>
           )}
+        </section>
+      ) : null}
+
+      {sellerMoneyOn && latestOpinion ? (
+        <section id="pricing" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pricing-h">
+          <h2 id="pricing-h" className="t-md w6">Pricing</h2>
+          <div style={{ marginTop: 8 }}>
+            <ClientPricing
+              journeyId={member.journeyId}
+              opinion={{ ...latestOpinion, responses: [] }}
+              scenarios={lastSaleFigure ? pricingScenarios(latestOpinion, { owed: lastSaleFigure.owed, commissionPct: lastSaleFigure.commissionPct, credits: lastSaleFigure.credits }) : null}
+              mine={latestOpinion.responses.find((r) => r.memberId === member.memberId) ?? null}
+              canAnswer={respond}
+              agentFirst={agentFirst}
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {sellerMoneyOn && saleViews.length ? (
+        <section id="proceeds" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="proceeds-h">
+          <h2 id="proceeds-h" className="t-md w6">What you would keep</h2>
+          <p className="t-sm w6" style={{ marginTop: 6 }}>{proceedsLine(saleViews)}</p>
+          <ul className="t-sm" style={{ marginTop: 8, display: "grid", gap: 4 }}>
+            {[...saleViews].reverse().map((v) => (
+              <li key={v.at}>
+                <span className="w6">{FIGURE_LABEL[v.kind]}</span>: {v.net < 0 ? `${usd(-v.net)} short` : usd(v.net)} on a {usd(v.price)} sale, owed {usd(v.owed)} ({OWED_LABEL[v.owedSource]}){v.commissionPct === null ? ", commission not agreed yet" : `, ${v.commissionPct}% commission`}.
+                <span className="t-xs c-4"> {v.source}.</span>
+              </li>
+            ))}
+          </ul>
+          <p className="t-xs c-4" style={{ marginTop: 8 }}>Until the settlement statement, these are plans, not money in hand.</p>
         </section>
       ) : null}
 

@@ -785,3 +785,30 @@ describe("seller stages, as stored (STATE-03)", () => {
     await ev(buy, "search");
   });
 });
+
+describe("seller pricing and proceeds, as stored (S04, S16)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("only on a selling journey; a range that holds the price; an official net only with a payoff statement", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'sell','pricing-person@example.com',50,'soon') returning id", [AGENT]);
+    const j = async (side: string) => (await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,$3,$4) returning id", [AGENT, lead.id, side, `Money ${side}`])).rows[0].id as string;
+    const sell = await j("sell"), buy = await j("buy");
+    const op = (journey: string, list: number, low: number, high: number, v = 1) => c.query(
+      `insert into rift_pricing_opinions (agent_id, journey_id, version, list_price_cents, low_cents, high_cents, comps, rationale, review_on, actor_label, request_id)
+       values ($1,$2,$3,$4,$5,$6,'[{"address":"14 Oak St","price":418000,"status":"sold","on":"2026-08-30","note":"Same street"}]'::jsonb,
+               'Three sales on the street since June.', current_date + 14, 'Kaleb', gen_random_uuid()) returning id`, [AGENT, journey, v, list, low, high]);
+    await expect(op(buy, 42500000, 41000000, 44000000)).rejects.toThrow(/selling journeys/);
+    await expect(op(sell, 45000000, 41000000, 44000000)).rejects.toThrow(/range/);
+    const { rows: [o] } = await op(sell, 42500000, 41000000, 44000000);
+    await expect(op(sell, 42500000, 41000000, 44000000)).rejects.toThrow(/version/);
+    await rejects(c, "update rift_pricing_opinions set list_price_cents = 1 where id = $1", [o.id], /history/);
+    const fig = (kind: string, owedSource: string, officialNet: number | null) => c.query(
+      `insert into rift_seller_figures (agent_id, journey_id, kind, price_cents, owed_cents, owed_source, commission_pct, official_net_cents, source, as_of, actor_label, request_id)
+       values ($1,$2,$3,42500000,20000000,$4,5,$5,'Settlement statement',current_date,'Kaleb',gen_random_uuid())`, [AGENT, sell, kind, owedSource, officialNet]);
+    await expect(fig("official", "balance", 18000000)).rejects.toThrow(/payoff/);
+    await expect(fig("official", "payoff-statement", null)).rejects.toThrow(/official/);
+    await expect(fig("planning", "balance", 18000000)).rejects.toThrow(/official/);
+    await fig("official", "payoff-statement", 18000000);
+  });
+});

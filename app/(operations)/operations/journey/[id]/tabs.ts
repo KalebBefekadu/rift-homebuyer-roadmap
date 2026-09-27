@@ -4,7 +4,7 @@
  * and back returns to it.
  */
 
-export type Tab = "overview" | "search" | "homes" | "offers" | "contract" | "money" | "household" | "history" | "property";
+export type Tab = "overview" | "search" | "homes" | "offers" | "contract" | "money" | "household" | "history" | "property" | "pricing" | "proceeds";
 
 export const TAB_LABEL: Record<Tab, string> = {
   overview: "Overview",
@@ -14,6 +14,8 @@ export const TAB_LABEL: Record<Tab, string> = {
   contract: "Contract",
   money: "Money",
   property: "The property",
+  pricing: "Pricing",
+  proceeds: "Proceeds",
   household: "Household",
   history: "History",
 };
@@ -22,7 +24,7 @@ export const TAB_LABEL: Record<Tab, string> = {
 export function tabsFor(buying: boolean): Tab[] {
   return buying
     ? ["overview", "search", "homes", "offers", "contract", "money", "household", "history"]
-    : ["overview", "property", "contract", "household", "history"];
+    : ["overview", "property", "pricing", "contract", "proceeds", "household", "history"];
 }
 
 export function tabFrom(raw: string | undefined, buying: boolean): Tab {

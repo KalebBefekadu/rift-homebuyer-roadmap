@@ -31,6 +31,11 @@ import { LedgerView } from "@/components/rift/money/LedgerView";
 import { MoneyFacts } from "./MoneyFacts";
 import { Linked } from "./Linked";
 import { SellerProperty } from "./SellerProperty";
+import { SellerPricing } from "./SellerPricing";
+import { SellerProceeds } from "./SellerProceeds";
+import { sellerMoneyFor } from "@/lib/db/seller";
+import { scenarios } from "@/lib/core/pricing";
+import { proceedsLine, viewFigures } from "@/lib/core/proceeds";
 import { dependenciesFor } from "@/lib/db/dependencies";
 import { journeysFor } from "@/lib/db/journeys";
 import { stateOf } from "@/lib/core/dependency";
@@ -92,7 +97,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
-  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings] = await Promise.all([
+  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
     progressFor(id),
@@ -107,7 +112,11 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     settled(buyerNeeds("money") ? moneyFor(id) : null),
     dependenciesFor(id),
     settled(tab === "overview" ? journeysFor(journey.leadId) : null),
+    settled(!buying && needs("pricing", "proceeds") ? sellerMoneyFor(id) : null),
   ]);
+  const seller = sellerRead && sellerRead.ok && "data" in sellerRead ? sellerRead.data : null;
+  const figureViews = viewFigures(seller?.figures ?? []);
+  const lastFigure = figureViews.at(-1) ?? null;
   const deps = depsRead.ok && "data" in depsRead ? depsRead.data : null;
   const openDeps = (deps ?? []).filter((d) => stateOf(d) === "open");
   const candidates = siblings && siblings.ok && "data" in siblings ? siblings.data.filter((x) => x.side !== journey.side).map((x) => ({ id: x.id, label: x.label })) : [];
@@ -352,6 +361,23 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
                 return <SellerProperty journeyId={id} property={p ? { id: p.id, address: p.address, facts: p.facts, factsSource: p.factsSource, factsAsOf: p.factsAsOf } : null} />;
               })() : <p className="t-xs c-neg">The property did not load. That is not the same as none being recorded.</p>}
             </div>
+          </section>
+        ) : null}
+
+        {tab === "pricing" || tab === "proceeds" ? (
+          <section className="card p-4" aria-labelledby="seller-money-h">
+            <h2 id="seller-money-h" className="t-md w6">{tab === "pricing" ? "Pricing strategy" : "Proceeds"}</h2>
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
+              {tab === "pricing"
+                ? "Your approved opinion and the comparables you chose. The seller sees it with their net at each end of the range, and answers on their page."
+                : "The seller's net from planning to official, each version from a named source. The seller sees these on their page."}
+            </div>
+            {!sellerRead || !sellerRead.ok ? <p className="t-xs c-neg">This did not load. That is not the same as there being none.</p>
+              : !seller ? <p className="t-xs c-warn">Pricing and proceeds need database update 20260928040000.</p>
+              : tab === "pricing"
+                ? <SellerPricing journeyId={id} opinions={seller.opinions}
+                    scenarios={seller.opinions.length && lastFigure ? scenarios(seller.opinions.at(-1)!, { owed: lastFigure.owed, commissionPct: lastFigure.commissionPct, credits: lastFigure.credits }) : null} />
+                : <SellerProceeds journeyId={id} views={figureViews} line={proceedsLine(figureViews)} />}
           </section>
         ) : null}
 

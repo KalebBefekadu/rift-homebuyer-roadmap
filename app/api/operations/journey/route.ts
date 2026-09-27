@@ -7,7 +7,7 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
@@ -252,6 +252,26 @@ export async function POST(req: Request) {
         deadlineId: str(c.deadlineId, 40), remove: c.remove === true, input: c.remove === true ? null : dateInput(c.input), expectedSeq: num(c.expectedSeq),
       }));
       return json(await amendDates(journeyId, str(b.reference, 200), changes, str(b.requestId, 40)));
+    }
+    case "pricing": {
+      const p = (b.pricing ?? {}) as Body;
+      const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+      const comps = Array.isArray(p.comps) ? (p.comps as Body[]).slice(0, 12).map((c) => ({
+        address: str(c.address, 200), price: n(c.price), status: str(c.status, 10) as "sold" | "pending" | "active", on: str(c.on, 10), note: str(c.note, 300),
+      })) : [];
+      return json(await recordPricing(journeyId, {
+        listPrice: n(p.listPrice), low: n(p.low), high: n(p.high), comps, rationale: str(p.rationale, 1600), reviewOn: str(p.reviewOn, 10),
+      }, num(b.expectedVersion), str(b.requestId, 40)));
+    }
+    case "proceeds": {
+      const f = (b.figure ?? {}) as Body;
+      const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+      return json(await recordProceeds(journeyId, {
+        kind: str(f.kind, 10) as "planning", price: n(f.price), owed: n(f.owed), owedSource: str(f.owedSource, 20) as "balance",
+        commissionPct: f.commissionPct === null || f.commissionPct === undefined || f.commissionPct === "" ? null : n(f.commissionPct),
+        credits: n(f.credits ?? 0), officialNet: f.officialNet === null || f.officialNet === undefined || f.officialNet === "" ? null : n(f.officialNet),
+        source: str(f.source, 200), asOf: str(f.asOf, 10), note: str(f.note, 500) || null,
+      }, str(b.requestId, 40)));
     }
     case "link-journeys":
       return json(await linkJourneys(journeyId, str(b.saleJourneyId, 40), str(b.purchaseJourneyId, 40), str(b.kind, 20), str(b.note, 400), str(b.owner, 200), str(b.requestId, 40)));

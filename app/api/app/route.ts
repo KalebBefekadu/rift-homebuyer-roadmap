@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { respondToPricing } from "@/lib/db/seller";
 import { limited, readJson } from "@/lib/db/guard";
 import { createClient } from "@/lib/supabase/server";
 import { siteUrl } from "@/lib/core/site";
@@ -118,6 +119,13 @@ export async function POST(req: Request) {
       const revisionId = str(b.revisionId, 40);
       if (!isUuid(revisionId)) return json({ ok: false, error: "That page is out of date. Reload it." }, 400);
       r = await respondToBrief(member, revisionId, str(b.response, 20) as never, str(b.note, 1000) || null);
+      break;
+    }
+    case "pricing-answer": {
+      const opinionId = str(b.opinionId, 40);
+      const response = str(b.response, 10);
+      if (!isUuid(opinionId) || (response !== "agree" && response !== "discuss")) return json({ ok: false, error: "That page is out of date. Reload it." }, 400);
+      r = await respondToPricing(member, opinionId, response, str(b.note, 500) || null);
       break;
     }
     case "propose": {

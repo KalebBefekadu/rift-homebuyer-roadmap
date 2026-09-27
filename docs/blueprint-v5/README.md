@@ -905,9 +905,13 @@ agreement. The workspace has the property (S02: address and facts from a named s
 the journey's one home so contracts work unchanged), the contract with its dates and workstreams
 (S12 to S17, the buyer's side named as owner where it is theirs), the household and history; the
 seller's journey page shows Today and the stage strip. A sale links to a purchase (STATE-07).
-Next slices: pricing strategy with the agent's approved opinion (S04), preparation (S05),
+Built since: pricing strategy (S04: the agent's approved opinion in versions, a range holding the list
+price, chosen comparables with why, a review date, the seller's net at each end on their terms,
+and the seller's answer from their page) and final proceeds (S16: planning, offer, revised and
+official versions from named sources, a balance never passed off as a payoff, the statement's net
+beside the estimate). Next slices: preparation (S05),
 listing and launch (S06, S07), showings with honest denominators (S08), weekly reviews (S09),
-offers on the journey (S10, S11) and final proceeds reconciled to the official statement (S16).
+offers on the journey (S10, S11).
 
 ---
 
@@ -1073,6 +1077,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Seller pricing strategy (S04) and final proceeds (S16) |
 | 28 Sep 2026 | Seller journey, first slice (§9, STATE-03, D28): seller stages, the property, the shared contract, the seller's Today |
 | 28 Sep 2026 | A sale linked to a purchase (STATE-07) |
 | 28 Sep 2026 | Homes side by side (SEARCH-05) for the agent and the household |

@@ -457,6 +457,12 @@ await check("dependenciesFor", () => db.from("rift_dependencies").select("id,sal
   .eq("agent_id", NIL).or(`sale_journey_id.eq.${NIL},purchase_journey_id.eq.${NIL}`).order("created_at").limit(1));
 await check("dependency events", () => db.from("rift_dependency_events").select("dependency_id,state,evidence,actor_label,created_at")
   .eq("agent_id", NIL).in("dependency_id", [NIL]).order("created_at").limit(1));
+await check("sellerMoney: opinions", () => db.from("rift_pricing_opinions").select("id,version,list_price_cents,low_cents,high_cents,comps,rationale,review_on,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("version").limit(1));
+await check("sellerMoney: figures", () => db.from("rift_seller_figures").select("kind,price_cents,owed_cents,owed_source,commission_pct,credits_cents,official_net_cents,source,as_of,note,actor_label,created_at")
+  .eq("journey_id", NIL).eq("agent_id", NIL).order("created_at").limit(1));
+await check("sellerMoney: answers", () => db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", NIL).in("opinion_id", [NIL]).limit(1));
+await check("sellerMoney: who answered", () => db.from("rift_journey_members").select("id,display_name,email").in("id", [NIL]));
 await check("journeysMatching", () => db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
   .eq("agent_id", NIL).ilike("label", "%a%").order("created_at", { ascending: false }).limit(6));
 
