@@ -5,6 +5,7 @@ import { clientRecords, clientSession, memberOf } from "@/lib/db/client";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { ClientShell } from "../../../ClientShell";
+import { Help } from "../../../Help";
 import { PrintButton } from "@/components/rift/PrintButton";
 
 export const metadata: Metadata = { title: "Your records", robots: { index: false } };
@@ -75,6 +76,7 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       )}
+      <div className="no-print"><Help agentName={member.agentName} agentEmail={member.agentEmail} /></div>
     </ClientShell>
   );
 }

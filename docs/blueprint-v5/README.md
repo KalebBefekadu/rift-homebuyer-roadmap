@@ -721,6 +721,16 @@ printable records page. Stage contracts B00 to B20 are in [journey-contracts.md]
 - **Side-by-side home comparison** (SEARCH-05) once W10 provides monthly scenarios.
 - **Check the no-match state** (SEARCH-09).
 
+**Status (27 Sep 2026).** Built: the client journey page lists its parts at the top (Today,
+Moving in, Offers, Priorities, Homes, Documents, Help: only what this person can see); a
+Documents section gathers every file shared with the household; Help (how to reach the agent,
+what happens next) is on every client page; after a recorded closing, "Moving in" lists what a
+new owner does, each with the official page it came from (`lib/core/movein.ts`; the homestead
+rules were read from the Department of Revenue: ownership on January 1, apply by April 1 or the
+end of the 45-day appeal window). §7.3 was already built. Waiting: the money area (W10, after
+the pilot starts), read-only summary links, a sale linked to a purchase (§9), ownership records,
+side-by-side comparison (W10).
+
 ### 7.3 Signing in (Kaleb, R2)
 - Kaleb could not get into the buyer portal: no email came. Cause: no invitation existed, and
   the sign-in page sends nothing to an uninvited address without saying so.
@@ -1001,6 +1011,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Submit an offer from a PDF, book-a-call order and wording, AI limits and records, AI comparison of changed program pages (§5.9, §6.5, §10.2) |
 | 27 Sep 2026 | Abroad split into values; phone with consent on the return page (§5.4) |
 | 27 Sep 2026 | Lead summary in Operations, saved plan into the search brief, my assistance plan, program alerts (§5.5, D14) |
+| 27 Sep 2026 | Client side: page navigation, Documents, Help on every page, moving in (§7.2) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

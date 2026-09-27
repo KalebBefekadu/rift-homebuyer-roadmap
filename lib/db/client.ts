@@ -79,6 +79,8 @@ export interface Membership {
   journeyLabel: string;
   side: Side;
   agentName: string;
+  /** How to reach the agent, for Help on every page (Blueprint v5 §7.2). */
+  agentEmail: string | null;
 }
 
 const MEMBERSHIP_SELECT = "id,journey_id,agent_id,role,scopes,display_name,email,accepted_at,revoked_at,invite_expires_at";
@@ -93,10 +95,12 @@ async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
   if (live.length === 0) return [];
   const [journeys, agents] = await Promise.all([
     boundedRead(db.from("rift_journeys").select("id,label,side").in("id", live.map((r) => r.journey_id as string)), "your journeys"),
-    boundedRead(db.from("rift_agents").select("id,name").in("id", [...new Set(live.map((r) => r.agent_id as string))]), "your agent"),
+    boundedRead(db.from("rift_agents").select("id,name,email").in("id", [...new Set(live.map((r) => r.agent_id as string))]), "your agent"),
   ]);
   const j = new Map(((journeys.ok && "data" in journeys ? journeys.data : []) as { id: string; label: string; side: Side }[]).map((x) => [x.id, x]));
-  const a = new Map(((agents.ok && "data" in agents ? agents.data : []) as { id: string; name: string | null }[]).map((x) => [x.id, x.name ?? "Your agent"]));
+  const agentRows = (agents.ok && "data" in agents ? agents.data : []) as { id: string; name: string | null; email: string | null }[];
+  const a = new Map(agentRows.map((x) => [x.id, x.name ?? "Your agent"]));
+  const mail = new Map(agentRows.map((x) => [x.id, x.email ?? null]));
   return live.filter((r) => j.has(r.journey_id as string)).map((r) => ({
     memberId: r.id as string,
     journeyId: r.journey_id as string,
@@ -107,6 +111,7 @@ async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
     journeyLabel: j.get(r.journey_id as string)!.label,
     side: j.get(r.journey_id as string)!.side,
     agentName: a.get(r.agent_id as string) ?? "Your agent",
+    agentEmail: mail.get(r.agent_id as string) ?? null,
   }));
 }
 

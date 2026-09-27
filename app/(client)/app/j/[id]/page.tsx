@@ -12,6 +12,9 @@ import { ClientBrief } from "./ClientBrief";
 import { ClientHomes } from "./ClientHomes";
 import { Today, type BuyerWork } from "./Today";
 import { ClientOffers } from "./ClientOffers";
+import { Help } from "../../Help";
+import { FAMILY_LABEL, type Family } from "@/lib/core/document";
+import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -123,6 +126,22 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     })),
   } : null;
 
+  /* Every document shared with this household, in one place (§7.2), from
+     the offers they were shared with. */
+  const documents: { id: string; label: string; family: string; with: string }[] = [];
+  for (const x of buyerBids) for (const d of x.asked?.documents ?? []) {
+    if (!documents.some((y) => y.id === d.id)) documents.push({ ...d, with: x.address });
+  }
+  const sections = [
+    { id: "today-h", label: "Today", on: member.side === "buy" },
+    { id: "movein-h", label: "Moving in", on: member.side === "buy" && Boolean(p?.closed) },
+    { id: "offers-h", label: "Offers", on: member.side === "buy" && offers && (!o || o.unavailable || buyerBids.length > 0) },
+    { id: "pri-h", label: "Priorities", on: member.side === "buy" && member.scopes.includes("search") },
+    { id: "homes-h", label: "Homes", on: member.side === "buy" && member.scopes.includes("homes") },
+    { id: "docs-h", label: "Documents", on: documents.length > 0 },
+    { id: "help-h", label: "Help", on: true },
+  ].filter((x) => x.on);
+
   return (
     <ClientShell agentName={member.agentName}>
       <Link href="/app" className="t-sm c-3">← Your move</Link>
@@ -131,6 +150,14 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
         With {member.agentName} · you are signed in as {member.name} ({ROLE_LABEL[member.role].toLowerCase()})
         {" · "}<Link className="u" href={`/app/j/${member.journeyId}/records`}>Your records</Link>
       </p>
+      {/* One page, so the parts are places on it rather than separate
+          screens (Blueprint v5 §7.2 navigation); only what this person can
+          see is listed. Money joins when money v2 does (§10.1). */}
+      <nav aria-label="On this page" className="row gap-1 wrap" style={{ marginTop: 12 }}>
+        {sections.map((x) => (
+          <a key={x.id} href={`#${x.id}`} className="chip" style={{ height: 30, padding: "0 12px" }}>{x.label}</a>
+        ))}
+      </nav>
 
       {member.side !== "buy" ? (
         <p className="t-sm c-3" style={{ marginTop: 16, lineHeight: 1.6 }}>
@@ -170,6 +197,24 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
               agentFirst={agentFirst}
             />
           )}
+        </section>
+      ) : null}
+
+      {/* Blueprint v5 §7.2, B19: once the closing is recorded, what a new
+          owner does next, each with the office that runs it. */}
+      {member.side === "buy" && p?.closed ? (
+        <section id="moving-in" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="movein-h">
+          <h2 id="movein-h" className="t-md w6">Moving in</h2>
+          <ul style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            {MOVE_IN.map((m) => (
+              <li key={m.id}>
+                <div className="between gap-2 wrap"><span className="t-sm w6">{m.title}</span><span className="chip t-2xs">{m.who === "you" ? "You" : m.who === "your agent" ? agentFirst : "Your lender"}</span></div>
+                <p className="t-sm c-3" style={{ marginTop: 2, lineHeight: 1.6 }}>{m.body}</p>
+                {m.source ? <a className="t-xs u" href={m.source.url} target="_blank" rel="noopener noreferrer">{m.source.name}</a> : null}
+              </li>
+            ))}
+          </ul>
+          <p className="t-2xs c-4" style={{ marginTop: 10 }}>Checked against the official pages on {new Date(`${MOVE_IN_CHECKED}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.</p>
         </section>
       ) : null}
 
@@ -273,6 +318,23 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
           )}
         </section>
       ) : null}
+
+      {documents.length ? (
+        <section id="documents" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="docs-h">
+          <h2 id="docs-h" className="t-md w6">Documents</h2>
+          <p className="t-xs c-4" style={{ marginTop: 2 }}>Everything {agentFirst} has shared with you, in one place.</p>
+          <ul style={{ marginTop: 10, display: "grid", gap: 6 }}>
+            {documents.map((d) => (
+              <li key={d.id} className="between gap-2 wrap t-sm">
+                <a className="u" href={`/api/app/document?journeyId=${member.journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>
+                <span className="t-xs c-4">{FAMILY_LABEL[d.family as Family] ?? "Document"} · {d.with}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <Help agentName={member.agentName} agentEmail={member.agentEmail} next={today?.where ?? null} />
 
       <p className="t-2xs c-4" style={{ marginTop: 24, lineHeight: 1.6 }}>
         Only people {agentFirst} invited can see this page, and only the parts shared with them. Nothing here is a

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { clientSession, myJourneys } from "@/lib/db/client";
 import { buyerSearchOn, SIDE_LABEL } from "@/lib/core/journey";
 import { ClientShell } from "./ClientShell";
+import { Help } from "./Help";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -62,6 +63,7 @@ export default async function ClientHome() {
           ))}
         </ul>
       )}
+      {list[0] ? <Help agentName={list[0].agentName} agentEmail={list[0].agentEmail} /> : null}
     </ClientShell>
   );
 }
