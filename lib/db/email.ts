@@ -236,3 +236,48 @@ export async function forgetAtBrevo(email: string): Promise<{ ok: true; skipped?
     return { ok: false, error: error instanceof Error ? error.message : "Brevo could not be reached" };
   }
 }
+
+/**
+ * A message the agent approved in the outbox (Blueprint v5 §10.2), sent as
+ * he approved it: his words as plain paragraphs, nothing added.
+ *
+ * A timeout is not a failure. The provider may have accepted the message
+ * before the answer was lost, so it comes back `unknown`, and the outbox
+ * waits for a person rather than sending it twice (AUTO-02, AT13).
+ */
+export type OutboxSend =
+  | { ok: true; messageId?: string }
+  | { ok: true; skipped: true; reason: string }
+  | { ok: false; error: string; unknown: boolean };
+
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+export async function sendApproved(m: { to: string; name: string | null; subject: string; text: string; tag: string }): Promise<OutboxSend> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return { ok: true, skipped: true, reason: "BREVO_API_KEY not set, so nothing was sent" };
+  if (!FROM_EMAIL) return { ok: true, skipped: true, reason: "BREVO_FROM_EMAIL not set; Brevo rejects any send without a verified sender" };
+  const html = m.text.split(/\n{2,}/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`).join("");
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json", "api-key": apiKey },
+      body: JSON.stringify({
+        sender: FROM, replyTo: { email: FROM_EMAIL },
+        to: [{ email: m.to, ...(m.name ? { name: m.name } : {}) }],
+        subject: m.subject, htmlContent: html, textContent: m.text, tags: [m.tag],
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      const body = (await res.text()).slice(0, 200);
+      /* A 5xx after the request arrived may still have queued it. */
+      return { ok: false, error: `Brevo ${res.status}: ${body}`, unknown: res.status >= 500 };
+    }
+    const data = (await res.json().catch(() => ({}))) as { messageId?: string };
+    return { ok: true, messageId: data.messageId };
+  } catch (error) {
+    captureOpError(error, { op: "email.outbox" });
+    const msg = error instanceof Error ? error.message : "send failed";
+    return { ok: false, error: msg, unknown: /timeout|abort|network|fetch failed/i.test(msg) };
+  }
+}

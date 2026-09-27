@@ -74,16 +74,16 @@ export async function savedPlanFor(leadId: string): Promise<DbResult<{ plan: Sav
  * Leads who asked to hear about program changes (D14), with the answers to
  * check a program against. Read for the agent, who writes to them (D04).
  */
-export async function alertSubscribers(): Promise<DbResult<{ leadId: string; name: string | null; plan: SavedPlan }[]>> {
+export async function alertSubscribers(): Promise<DbResult<{ leadId: string; name: string | null; email: string | null; token: string | null; plan: SavedPlan }[]>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
   const r = await boundedRead(
-    db.from("rift_leads").select("id, name, plan").eq("agent_id", agentId).eq("plan->>alerts", "true").limit(500),
+    db.from("rift_leads").select("id, name, email, plan, plan_token").eq("agent_id", agentId).eq("plan->>alerts", "true").limit(500),
     "who asked for program alerts",
   );
   if (!r.ok) return /plan/.test(r.error) ? done([]) : r;
-  const rows = ("data" in r ? r.data : []) as { id: string; name: string | null; plan: SavedPlan }[];
-  return done(rows.filter((x) => x.plan).map((x) => ({ leadId: x.id, name: x.name, plan: x.plan })));
+  const rows = ("data" in r ? r.data : []) as { id: string; name: string | null; email: string | null; plan: SavedPlan; plan_token: string | null }[];
+  return done(rows.filter((x) => x.plan).map((x) => ({ leadId: x.id, name: x.name, email: x.email, token: x.plan_token, plan: x.plan })));
 }

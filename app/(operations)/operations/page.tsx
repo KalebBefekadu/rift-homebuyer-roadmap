@@ -8,6 +8,7 @@ import { board, dueActions, lapsingAgreements } from "@/lib/db/clients";
 import { recentChoices } from "@/lib/db/offer-room";
 import { STALL_CHIP } from "@/lib/core/pipeline";
 import { programsToday, programFlags } from "@/lib/db/program-checks";
+import { outbox } from "@/lib/db/outbox";
 import { done } from "@/lib/db/result";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { openItems } from "@/lib/db/review";
@@ -84,7 +85,7 @@ export default async function StudioToday() {
   const recheckDays = rules.registryDays.value;
   const undecidedCount = agentRules.undecided.length;
 
-  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead, datesRead, jobsRead, flagsRead] =
+  const [leadsRead, reportRead, sellReportRead, boardRead, owedRead, staleRead, reviewRead, dueRead, abandonedRead, rate, lapsingRead, choicesRead, datesRead, jobsRead, flagsRead, outboxRead] =
     await Promise.all([
       rankedLeads(50),
       funnelReport("buy"),
@@ -103,12 +104,17 @@ export default async function StudioToday() {
       datesNeedingAttention(),
       jobsHealth(),
       programFlags(),
+      outbox(agent.agentId),
     ]);
   /* Null means not tracked yet (the tables are not there); a failed read is
      shown as one, never as nothing to do. */
   const dates = datesRead.ok && "data" in datesRead ? datesRead.data : null;
   const datesFailed = !datesRead.ok;
   const flags = flagsRead.ok && "data" in flagsRead ? flagsRead.data : null;
+  /* Prepared messages waiting on him (§10.2), and any that may have sent. */
+  const drafts = outboxRead.ok && "data" in outboxRead && outboxRead.data ? outboxRead.data : [];
+  const toApprove = drafts.filter((d) => d.state === "prepared" || d.state === "approved" || d.state === "failed");
+  const maybeSent = drafts.filter((d) => d.state === "unknown");
   const jobProblems = jobsRead.ok && "data" in jobsRead && jobsRead.data ? jobsRead.data.filter((j) => j.problem) : [];
 
   const partial = abandonedRead.ok && "data" in abandonedRead ? abandonedRead.data : [];
@@ -245,6 +251,23 @@ export default async function StudioToday() {
               of the last check. <Link href="/operations/settings" className="c-brand">Change either</Link>.
             </p>
           </div>
+        ) : null}
+
+        {toApprove.length || maybeSent.length ? (
+          <Link href="/operations/outbox" className="card p-4" style={{ display: "block", marginTop: 16, ...(maybeSent.length ? { borderColor: "var(--neg, #b3261e)" } : {}) }}>
+            <div className="between wrap gap-2">
+              <div className="row gap-2">
+                <Ico.mail size={15} className="c-3" />
+                <span className="t-sm w6">
+                  {toApprove.length ? `${toApprove.length} message${toApprove.length === 1 ? "" : "s"} waiting for your approval` : ""}
+                  {toApprove.length && maybeSent.length ? "; " : ""}
+                  {maybeSent.length ? `${maybeSent.length} may have sent and need checking` : ""}
+                </span>
+              </div>
+              <span className={`chip ${maybeSent.length ? "chip-neg" : "chip-warn"}`}>{maybeSent.length ? "Check" : "Needs your approval"}</span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 6 }}>Nothing leaves until you approve it, exactly as shown.</p>
+          </Link>
         ) : null}
 
         {/* Flagged program pages (Blueprint v5 §6.5, §8.4 "needs your

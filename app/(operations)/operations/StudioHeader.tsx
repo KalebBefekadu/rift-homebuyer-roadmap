@@ -20,7 +20,7 @@ import { signOut } from "./actions";
 export function StudioHeader({ agentName, undecided = 0, current }: {
   agentName: string;
   undecided?: number;
-  current: "today" | "clients" | "search" | "calendar" | "offers" | "referrals" | "pilot" | "programs" | "questions" | "settings" | "add";
+  current: "today" | "clients" | "search" | "calendar" | "offers" | "referrals" | "pilot" | "programs" | "outbox" | "questions" | "settings" | "add";
 }) {
   const nav = [
     { key: "today", href: "/operations", label: "Today" },
@@ -30,6 +30,7 @@ export function StudioHeader({ agentName, undecided = 0, current }: {
     { key: "calendar", href: "/operations/calendar", label: "Calendar" },
     { key: "referrals", href: "/operations/referrals", label: "Advocacy" },
     { key: "programs", href: "/operations/programs", label: "Programs" },
+    { key: "outbox", href: "/operations/outbox", label: "Outbox" },
     { key: "pilot", href: "/operations/pilot", label: "Pilot" },
   ] as const;
 

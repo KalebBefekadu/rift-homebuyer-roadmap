@@ -147,6 +147,23 @@ describe("one agent cannot reach another's book", () => {
   });
 });
 
+describe("the outbox is one agent's (Blueprint v5 §10.2)", () => {
+  test("an agent sees only their own drafts, and cannot plant one for another", async (c) => {
+    const H = "c".repeat(64);
+    await c.query(
+      `insert into rift_outbox (agent_id, channel, purpose, to_address, subject, body, content_hash)
+       values ($1,'email','program-alert','b@example.com','B draft','Body',$2)`, [B_AGENT, H]);
+    await asAgent(c, A_USER, async () => {
+      const r = await c.query("select count(*)::int n from rift_outbox where subject = 'B draft'");
+      expect(r.rows[0].n).toBe(0);
+      await expect(c.query(
+        `insert into rift_outbox (agent_id, channel, purpose, to_address, subject, body, content_hash)
+         values ($1,'email','program-alert','x@example.com','Forged','Body',$2)`, [B_AGENT, H],
+      )).rejects.toThrow(/row-level security/i);
+    });
+  });
+});
+
 describe("what an anonymous visitor can reach", () => {
   test("nothing belonging to anybody", async (c) => {
     await asAgent(c, null, async () => {

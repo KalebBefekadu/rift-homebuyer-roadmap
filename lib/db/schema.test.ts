@@ -650,3 +650,31 @@ describe("offer PDFs and the AI record (Blueprint v5 §5.9, §10.2)", () => {
     await rejects(c, offer("document_path", ["cash", "offers/incoming/../../x.pdf"]), ["cash", "offers/incoming/../../x.pdf"], /document_path/);
   });
 });
+
+describe("the outbox, as stored (Blueprint v5 §10.2)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  const H = "e".repeat(64);
+
+  test("a draft and its steps are history, and an approval must name the content it covers", async (c) => {
+    const { rows } = await c.query(
+      `insert into rift_outbox (agent_id, channel, purpose, to_address, subject, body, content_hash)
+       values ($1,'email','program-alert','a@example.com','Subject','Body',$2) returning id`, [AGENT, H]);
+    const id = rows[0].id;
+    await rejects(c, "update rift_outbox set body = 'Changed' where id = $1", [id], /history/);
+    await rejects(c, "insert into rift_outbox_events (agent_id, outbox_id, state, by_name) values ($1,$2,'approved','Kaleb')", [AGENT, id], /approval_names_content/);
+    const e = await c.query("insert into rift_outbox_events (agent_id, outbox_id, state, by_name, hash) values ($1,$2,'approved','Kaleb',$3) returning id", [AGENT, id, H]);
+    await rejects(c, "update rift_outbox_events set state = 'succeeded' where id = $1", [e.rows[0].id], /history/);
+    await rejects(c, "insert into rift_outbox_events (agent_id, outbox_id, state, by_name) values ($1,$2,'approved','  ')", [AGENT, id], /check/);
+  });
+
+  test("deleting a person deletes their drafts", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'buy','outbox-person@example.com',50,'soon') returning id", [AGENT]);
+    await c.query(
+      `insert into rift_outbox (agent_id, lead_id, channel, purpose, to_address, subject, body, content_hash)
+       values ($1,$2,'email','program-alert','outbox-person@example.com','S','B',$3)`, [AGENT, lead.id, H]);
+    await c.query("delete from rift_leads where id = $1", [lead.id]);
+    const { rows } = await c.query("select count(*)::int n from rift_outbox where to_address = 'outbox-person@example.com'");
+    expect(rows[0].n).toBe(0);
+  });
+});

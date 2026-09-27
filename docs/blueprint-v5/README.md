@@ -385,8 +385,8 @@ from the saved plan's price and county, UNDECIDED, with "saved plan of <date>" a
 (the older readout is the fallback). From the D14 table: **My assistance plan** is on the saved
 plan page (steps per program, what the answers could not settle first, the kind of lender, the
 documents to gather, printable); **Program alerts** is an unticked box on Save my plan, and a
-changed program page on `/operations/programs` lists who asked and may fit, for Kaleb to write
-to (Rift sends nothing, D04); **Email me my plan as a PDF** is the plan link by email plus "Print
+changed program page on `/operations/programs` lists who asked and may fit, and prepares an
+email to each in the outbox for Kaleb to approve (D04); **Email me my plan as a PDF** is the plan link by email plus "Print
 or save as PDF" on the page, not a generated attachment. Anonymous progress (LEAD-06) keeps its
 thirty-day device lifetime; claiming it on another device is the saved plan's link.
 
@@ -913,8 +913,13 @@ Needed before any integration writes or any AI draft is used:
   ready search).
 - **Status (27 Sep 2026).** Built: the monthly limit, per-call records and the degraded states
   (`lib/core/ai.ts`, `rift_ai_usage`, `docs/integrations.md` §6b); offer PDF extraction and the
-  program page comparison use them. Not built: the approval and outbox mechanism (AUTO-01,
-  AUTO-02), which waits for the first integration that writes anywhere.
+  program page comparison use them. The approval and outbox mechanism (AUTO-01 to AUTO-03) is
+  built too: `/operations/outbox` holds prepared messages; approval covers the exact recipient,
+  channel and words (a SHA-256 of them), an edit is a new draft, every step is kept, a timeout
+  after sending is "may have sent" and never retried on its own, and just before sending Rift
+  checks again that the person is still there, has not opted out and has not replied. Its first
+  use is program alerts: from a changed program page, "Prepare an email to each" drafts one per
+  person who asked and may fit, for Kaleb to approve.
 
 ### 10.3 Integrations
 
@@ -1037,6 +1042,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Client side: page navigation, Documents, Help on every page, moving in (§7.2) |
 | 27 Sep 2026 | Operations mock-up for Kaleb's click-through (§8, D15) |
 | 27 Sep 2026 | Affordability and lender questions values (§5.2) |
+| 27 Sep 2026 | Approval and outbox (§10.2); program alerts prepared as drafts |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |
