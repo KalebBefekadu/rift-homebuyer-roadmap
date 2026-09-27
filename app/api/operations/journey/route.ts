@@ -7,7 +7,7 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
@@ -251,6 +251,10 @@ export async function POST(req: Request) {
         deadlineId: str(c.deadlineId, 40), remove: c.remove === true, input: c.remove === true ? null : dateInput(c.input), expectedSeq: num(c.expectedSeq),
       }));
       return json(await amendDates(journeyId, str(b.reference, 200), changes, str(b.requestId, 40)));
+    }
+    case "record-money": {
+      const amount = typeof b.amount === "number" && Number.isFinite(b.amount) ? b.amount : NaN;
+      return json(await recordMoney(journeyId, str(b.kind, 40), amount, str(b.source, 200), str(b.asOf, 10), str(b.requestId, 40)));
     }
     case "reconcile": {
       const results = ["matches", "differs", "none"];
