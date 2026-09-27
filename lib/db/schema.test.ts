@@ -678,3 +678,24 @@ describe("the outbox, as stored (Blueprint v5 §10.2)", () => {
     expect(rows[0].n).toBe(0);
   });
 });
+
+describe("summary links, as stored (ACCESS-02)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  test("scopes are fixed to what may be shown, links end, and revoking is the only edit, once", async (c) => {
+    const { rows: [lead] } = await c.query(
+      "insert into rift_leads (agent_id, side, email, score, band) values ($1,'buy','summary-person@example.com',50,'soon') returning id", [AGENT]);
+    const { rows: [j] } = await c.query(
+      "insert into rift_journeys (agent_id, origin_lead_id, side, label) values ($1,$2,'buy','Summary test') returning id", [AGENT, lead.id]);
+    const ins = (scopes: string, days: string, h: string) => c.query(
+      `insert into rift_summary_links (agent_id, journey_id, token_hash, label, scopes, expires_at, created_by)
+       values ($1,$2,$3,'Mum',$4::text[], now() + $5::interval,'Kaleb') returning id`, [AGENT, j.id, h, scopes, days]);
+    await rejects(c, `insert into rift_summary_links (agent_id, journey_id, token_hash, label, scopes, expires_at, created_by)
+       values ($1,$2,$3,'Mum','{money}'::text[], now() + interval '30 days','Kaleb')`, [AGENT, j.id, "1".repeat(64)], /check/);
+    await expect(ins("{progress}", "200 days", "2".repeat(64))).rejects.toThrow(/expiry/);
+    const { rows: [l] } = await ins("{progress,dates}", "30 days", "3".repeat(64));
+    await rejects(c, "update rift_summary_links set scopes = '{progress}' where id = $1", [l.id], /only be revoked/);
+    await rejects(c, "update rift_summary_links set revoked_at = now() where id = $1", [l.id], /revoked_by_someone/);
+    await c.query("update rift_summary_links set revoked_at = now(), revoked_by = 'Kaleb' where id = $1", [l.id]);
+    await rejects(c, "update rift_summary_links set revoked_at = null, revoked_by = null where id = $1", [l.id], /only be revoked/);
+  });
+});

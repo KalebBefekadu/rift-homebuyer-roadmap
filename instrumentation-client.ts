@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubEvent } from "./lib/monitoring/redact";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -9,6 +10,9 @@ Sentry.init({
   // 100% in dev, 10% in production (Sentry Next.js skill default)
   tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
   enableLogs: true,
+  /* Link tokens and answers never leave in an error report (ACCESS-02). */
+  beforeSend: (event) => scrubEvent(event),
+  beforeSendTransaction: (event) => scrubEvent(event),
   /**
    * No Session Replay. Two reasons, and the second is the one that decides it.
    *

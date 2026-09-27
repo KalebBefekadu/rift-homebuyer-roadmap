@@ -13,7 +13,7 @@ import { PrintButton } from "@/components/rift/PrintButton";
 import { StudioHeader } from "../StudioHeader";
 import { Unavailable } from "../Unavailable";
 import { Check } from "./Check";
-import { ladderEvents } from "@/lib/db/events";
+import { ladderEvents, conversionCounts } from "@/lib/db/events";
 import { valueLadder } from "@/lib/core/ladder";
 import { valueById } from "@/lib/core/values";
 
@@ -77,7 +77,8 @@ export default async function PilotPage() {
   /* The public side's own figure (Blueprint v5 §5.1): of those who finish
      one value, how many take a second. Counted from events that carry the
      value's id and never an answer. */
-  const ladderRead = await ladderEvents(90);
+  const [ladderRead, convRead] = await Promise.all([ladderEvents(90), conversionCounts(90)]);
+  const conv = convRead.ok && "data" in convRead ? convRead.data : null;
   const ladder = ladderRead.ok && "data" in ladderRead ? valueLadder(ladderRead.data) : null;
 
   return (
@@ -109,6 +110,13 @@ export default async function PilotPage() {
                   <thead><tr><th scope="col">Value</th><th scope="col">Opened</th><th scope="col">Answered</th></tr></thead>
                   <tbody>{ladder.byValue.map((v) => <tr key={v.tool}><td>{valueById(v.tool)?.name ?? v.tool}</td><td className="num">{v.opened}</td><td className="num">{v.finished}</td></tr>)}</tbody>
                 </table>
+              ) : null}
+              {conv ? (
+                <p className="t-sm c-2" style={{ marginTop: 10 }}>
+                  Conversion, kept apart: {conv.savedPlans} plan{conv.savedPlans === 1 ? "" : "s"} saved
+                  {ladder.finishedOne ? ` (${Math.round((conv.savedPlans / ladder.finishedOne) * 100)}% of visitors who finished a value)` : ""}; {conv.callRequests} call{conv.callRequests === 1 ? "" : "s"} asked for.
+                  {" "}A call asked for is not a call confirmed; confirmations arrive with Cal.com.
+                </p>
               ) : null}
               <p className="t-2xs c-4" style={{ marginTop: 6 }}>A visitor is a browser session. Counts what was opened and answered, never what was answered with.</p>
             </>

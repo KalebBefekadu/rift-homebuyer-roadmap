@@ -742,9 +742,11 @@ Documents section gathers every file shared with the household; Help (how to rea
 what happens next) is on every client page; after a recorded closing, "Moving in" lists what a
 new owner does, each with the official page it came from (`lib/core/movein.ts`; the homestead
 rules were read from the Department of Revenue: ownership on January 1, apply by April 1 or the
-end of the 45-day appeal window). §7.3 was already built. Waiting: the money area (W10, after
-the pilot starts), read-only summary links, a sale linked to a purchase (§9), ownership records,
-side-by-side comparison (W10).
+end of the 45-day appeal window). §7.3 was already built. Read-only summary links followed (ACCESS-02): the agent makes one from
+the journey's Household section for someone outside it, choosing what it shows (where the move
+stands, contract dates), for 1 to 90 days, and can turn it off. Waiting: the money area (W10,
+after the pilot starts), a sale linked to a purchase (§9), ownership records, side-by-side
+comparison (W10).
 
 ### 7.3 Signing in (Kaleb, R2)
 - Kaleb could not get into the buyer portal: no email came. Cause: no invitation existed, and
@@ -1044,6 +1046,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Affordability and lender questions values (§5.2) |
 | 27 Sep 2026 | Approval and outbox (§10.2); program alerts prepared as drafts |
 | 27 Sep 2026 | Value ladder on the Pilot page; the empty homes list names its limits (SEARCH-09) |
+| 27 Sep 2026 | MONEY-07 disclosures; read-only summary links (ACCESS-02); tokens scrubbed from error reports; conversion on the Pilot page |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

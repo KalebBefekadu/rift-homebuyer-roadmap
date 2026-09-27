@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { scrubEvent } from "./lib/monitoring/redact";
 
 const dsn = process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -37,4 +38,7 @@ Sentry.init({
    */
   includeLocalVariables: process.env.NODE_ENV === "development",
   enableLogs: true,
+  /* Link tokens and answers never leave in an error report (ACCESS-02). */
+  beforeSend: (event) => scrubEvent(event),
+  beforeSendTransaction: (event) => scrubEvent(event),
 });

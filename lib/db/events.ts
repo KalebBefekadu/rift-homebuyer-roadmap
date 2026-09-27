@@ -162,3 +162,26 @@ export async function ladderEvents(days = 90): Promise<DbResult<LadderEvent[]>> 
   const rows = ("data" in r ? r.data : []) as { session_id: string; name: "value_view" | "value_answer"; payload: { tool?: unknown } }[];
   return done(rows.map((x) => ({ session: x.session_id, name: x.name, tool: typeof x.payload?.tool === "string" ? x.payload.tool : "" })));
 }
+
+/**
+ * Conversion, kept apart (requirements §12): plans saved, and calls asked
+ * for, in the last `days` days. A requested call is not a confirmed one, and
+ * the page says so; confirmations arrive with Cal.com.
+ */
+export async function conversionCounts(days = 90): Promise<DbResult<{ savedPlans: number; callRequests: number }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const [plans, calls] = await Promise.all([
+    boundedRead(db.from("rift_leads").select("id").eq("agent_id", agent_id).gte("plan_saved_at", since).limit(10_000), "saved plans"),
+    boundedRead(db.from("rift_events").select("session_id").eq("agent_id", agent_id).eq("name", "booking_complete").gte("at", since).limit(10_000), "call requests"),
+  ]);
+  /* Before the plan columns exist, no plan has been saved. */
+  if (!plans.ok && !/plan_saved_at/.test(plans.error)) return plans;
+  if (!calls.ok) return calls;
+  const savedPlans = plans.ok && "data" in plans ? (plans.data as unknown[]).length : 0;
+  const callRequests = "data" in calls ? new Set((calls.data as { session_id: string }[]).map((x) => x.session_id)).size : 0;
+  return done({ savedPlans, callRequests });
+}

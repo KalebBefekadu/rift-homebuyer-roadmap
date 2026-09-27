@@ -154,7 +154,7 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 | ID | Requirement | Status |
 | --- | --- | --- |
 | ACCESS-01 | Email sign-in proves an address, not membership. Invitations bind a verified address to a role. Revoking access is separate from deleting history. | Built |
-| ACCESS-02 | New share links use high-entropy tokens stored as hashes, explicit scopes, revocation, expiry, no referrer, no indexing and no shared caching. Old links keep their old limited view. Tokens and financial inputs never reach previews, analytics, logs or error reports. | Partly. Old links keep their scope; selected read-only summary shares are not built (v5 §7) |
+| ACCESS-02 | New share links use high-entropy tokens stored as hashes, explicit scopes, revocation, expiry, no referrer, no indexing and no shared caching. Old links keep their old limited view. Tokens and financial inputs never reach previews, analytics, logs or error reports. | Built 27 Sep. Read-only summary links (`/summary/<token>`): SHA-256 of the token stored, scopes fixed to progress and contract dates, 1 to 90 days, revocable once, no referrer, no indexing, no store. Link tokens and query strings are scrubbed from every Sentry event |
 | PRIV-01 | Product data, aggregate analytics and audit are separate. Answers, homes, reasons and documents are private product records; analytics never receives financial values or browsing history. | Built |
 | PRIV-02 | Published retention promises stand until a reviewed change updates policy, screens, jobs and tests together. Deletion is real; required holds have a basis and an end. | Built. The broker's hold rule (F16) is open |
 | PRIV-03 | Do not import lender files just to record preapproval status. | Built (nothing is imported) |
@@ -188,7 +188,7 @@ reused after contrast checks.
 | --- | --- | --- | --- |
 | Public value | Completed readouts / valid started assessments, by campaign and version | Completion never requires capture | Instrumented; no traffic yet |
 | Value ladder (new in v5) | Visitors who take a second value / visitors who finish a first | Counts questions answered, never the answers | Built 27 Sep: on the Pilot page, from value events that carry the value's id only |
-| Conversion | Saved plans and confirmed consultations / completed readouts, separately | A requested booking is not a confirmed one | Partly |
+| Conversion | Saved plans and confirmed consultations / completed readouts, separately | A requested booking is not a confirmed one | Built 27 Sep for saved plans and call requests on the Pilot page; confirmed consultations need Cal.com |
 | Search efficiency | Agent minutes per setup and per update; repeated data entry | Baseline before claiming savings | Pilot report (setup time) |
 | Buyer clarity | Buyers who can state their priorities and next step unaided / pilot participants | Record confusion and disagreement | Pilot |
 | Coordination | Status-chasing questions per active buyer-week; overdue unowned work | Never suppress questions to improve the number | Pilot report (same-day replies) |

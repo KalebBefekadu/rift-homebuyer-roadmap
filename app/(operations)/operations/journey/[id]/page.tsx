@@ -14,6 +14,8 @@ import { describe, diffBriefs, FIELDS, STRENGTH_LABEL } from "@/lib/core/search"
 import { AgentBrief } from "./AgentBrief";
 import { SearchSetup } from "./SearchSetup";
 import { Household } from "./Household";
+import { SummaryLinks } from "./SummaryLinks";
+import { summaryLinksFor } from "@/lib/db/summary-links";
 import { Homes } from "./Homes";
 import { Showings } from "./Showings";
 import { Progress } from "./Progress";
@@ -76,7 +78,7 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
   const buying = journey.side === "buy";
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
-  const [search, members, homes, lead, start, tours, progress, bids, docs, deadlines] = await Promise.all([
+  const [search, members, homes, lead, start, tours, progress, bids, docs, deadlines, summaryRead] = await Promise.all([
     buying ? searchState(id) : Promise.resolve(null),
     membersOf(id),
     homesOf(id),
@@ -87,7 +89,9 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
     buying ? bidsFor(id, agentFirst) : Promise.resolve(null),
     buying ? documentsFor(id) : Promise.resolve(null),
     buying ? deadlinesFor(id) : Promise.resolve(null),
+    summaryLinksFor(id),
   ]);
+  const summaryLinks = summaryRead.ok && "data" in summaryRead ? summaryRead.data : null;
 
   const s = search && search.ok && "data" in search ? search.data : null;
   const latest = s?.revisions[0] ?? null;
@@ -307,6 +311,10 @@ export default async function JourneyPage({ params }: { params: Promise<{ id: st
           ) : (
             <p className="t-xs c-neg">The household did not load. That is not the same as nobody being invited.</p>
           )}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line-3)" }}>
+            <div className="t-sm w6">Summary links</div>
+            {summaryRead.ok ? <SummaryLinks journeyId={id} links={summaryLinks} /> : <p className="t-xs c-neg">The summary links did not load.</p>}
+          </div>
         </section>
 
         {buying ? (
