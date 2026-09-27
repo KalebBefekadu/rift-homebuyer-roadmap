@@ -363,6 +363,18 @@ still says Georgia (ጆርጂያ); a native speaker should change it with the re
   checked programs, saved cash-to-close, no consultation booked" (v3 §46.7), built from recorded
   actions, never from browsing surveillance.
 
+**Status (27 Sep 2026).** Built: Save my plan and the plan taking shape (24 Sep); the lead page
+in Operations opens with "What they worked out" (the one-line summary, each value's figure as
+shown, and a link that reopens it today); a buying journey's first search brief is prefilled
+from the saved plan's price and county, UNDECIDED, with "saved plan of <date>" as the source
+(the older readout is the fallback). From the D14 table: **My assistance plan** is on the saved
+plan page (steps per program, what the answers could not settle first, the kind of lender, the
+documents to gather, printable); **Program alerts** is an unticked box on Save my plan, and a
+changed program page on `/operations/programs` lists who asked and may fit, for Kaleb to write
+to (Rift sends nothing, D04); **Email me my plan as a PDF** is the plan link by email plus "Print
+or save as PDF" on the page, not a generated attachment. Anonymous progress (LEAD-06) keeps its
+thirty-day device lifetime; claiming it on another device is the saved plan's link.
+
 ### 5.6 Buyer questions (`/buy/start`) (Kaleb, R2)
 
 - **The layout is bad.** The "So far" card on the left is wide, the question column on the right
@@ -988,6 +1000,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 | 27 Sep 2026 | Seller values, retired readouts and questionnaires forwarded, how-it-works rewritten (§5.3, §5.8) |
 | 27 Sep 2026 | Submit an offer from a PDF, book-a-call order and wording, AI limits and records, AI comparison of changed program pages (§5.9, §6.5, §10.2) |
 | 27 Sep 2026 | Abroad split into values; phone with consent on the return page (§5.4) |
+| 27 Sep 2026 | Lead summary in Operations, saved plan into the search brief, my assistance plan, program alerts (§5.5, D14) |
 | 24 Sep 2026 | D20 (first values and their order) and D21 (design and lead side first) settled; building starts |
 | 24 Sep 2026 | Decisions D07a, D13, D14, D15 and D16 settled; gating table added to §5.1 |
 | 24 Sep 2026 | v5 created from blueprint v4, the original v3 blueprint, and Kaleb's live review (R1, R2). v4 archived. Test feedback merged and the file deleted. Journey contracts moved into this folder; v4 requirements carried into requirements.md with their status |

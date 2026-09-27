@@ -323,10 +323,11 @@ export async function setSearchPaused(packageId: string, paused: boolean): Promi
 }
 
 /**
- * A starting point from the buyer's readout, so they are not asked again what
- * they already told the calculator (REQ-LEAD-04). Every item comes back
- * UNDECIDED with its source and date: a price used in a cost calculation is
- * not yet a search limit, and the buyer confirms which it is.
+ * A starting point from what the buyer already told us, so they are not
+ * asked again (REQ-LEAD-04, Blueprint v5 §5.5). A saved plan comes first, as
+ * the newer and more deliberate of the two; an older readout otherwise. Every
+ * item comes back UNDECIDED with its source and date: a price used in a cost
+ * calculation is not yet a search limit, and the buyer confirms which it is.
  */
 export async function readoutStart(leadId: string): Promise<DbResult<{ criteria: SearchCriterion[]; from: string } | null>> {
   const db = serviceClient();
@@ -334,13 +335,41 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
 
-  const lead = await boundedRead(
-    db.from("rift_leads").select("assessment_id,side").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
+  const read = (cols: string) => boundedRead(
+    db.from("rift_leads").select(cols).eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the relationship",
   );
+  /* The plan columns arrive with migration 20260926010000. */
+  let lead = await read("assessment_id,side,plan,plan_saved_at");
+  if (!lead.ok && /plan/.test(lead.error)) lead = await read("assessment_id,side");
   if (!lead.ok) return lead;
-  const row = ("data" in lead ? lead.data : null) as { assessment_id: string | null; side: string } | null;
-  if (!row?.assessment_id || row.side !== "buy") return done(null);
+  const row = ("data" in lead ? lead.data : null) as unknown as {
+    assessment_id: string | null; side: string;
+    plan?: { answers?: Record<string, unknown> } | null; plan_saved_at?: string | null;
+  } | null;
+  if (!row || row.side !== "buy") return done(null);
+
+  const fromAnswers = (answers: Record<string, unknown>, on: string, by: string, from: string, idPrefix: string) => {
+    const base = { strength: "undecided" as const, statedBy: by, statedAt: on, sourceRef: from };
+    const criteria: SearchCriterion[] = [];
+    const price = Number(answers.price);
+    if (Number.isFinite(price) && price > 0) {
+      criteria.push({ id: `${idPrefix}-price`, field: "price", operator: "atMost", value: Math.round(price), unit: "USD", ...base });
+    }
+    const county = typeof answers.county === "string" ? answers.county.trim() : "";
+    if (county && county.length <= 60) {
+      criteria.push({ id: `${idPrefix}-county`, field: "geography", operator: "oneOf", value: [`${county} County`], unit: null, ...base });
+    }
+    return criteria;
+  };
+
+  if (row.plan?.answers && row.plan_saved_at) {
+    const on = row.plan_saved_at.slice(0, 10);
+    const from = `saved plan of ${on}`;
+    const criteria = fromAnswers(row.plan.answers, on, "Their saved plan", from, "plan");
+    if (criteria.length) return done({ criteria, from });
+  }
+  if (!row.assessment_id) return done(null);
 
   const readout = await boundedRead(
     db.from("rift_readouts").select("inputs,created_at,side").eq("assessment_id", row.assessment_id).eq("agent_id", agentId)
@@ -353,16 +382,7 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
 
   const on = snap.created_at.slice(0, 10);
   const from = `readout of ${on}`;
-  const base = { strength: "undecided" as const, statedBy: "Their readout", statedAt: on, sourceRef: from };
-  const criteria: SearchCriterion[] = [];
-  const price = Number(snap.inputs.price);
-  if (Number.isFinite(price) && price > 0) {
-    criteria.push({ id: "readout-price", field: "price", operator: "atMost", value: Math.round(price), unit: "USD", ...base });
-  }
-  const county = typeof snap.inputs.county === "string" ? snap.inputs.county.trim() : "";
-  if (county && county.length <= 60) {
-    criteria.push({ id: "readout-county", field: "geography", operator: "oneOf", value: [`${county} County`], unit: null, ...base });
-  }
+  const criteria = fromAnswers(snap.inputs, on, "Their readout", from, "readout");
   return done(criteria.length ? { criteria, from } : null);
 }
 

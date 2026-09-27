@@ -28,6 +28,8 @@ export function SavePlan({ side, mode, plan, onClose }: {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneOk, setPhoneOk] = useState(false);
+  /* Unticked, and only on the buyer side, where programs are (D14). */
+  const [alerts, setAlerts] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [result, setResult] = useState<{ emailed: boolean; url: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export function SavePlan({ side, mode, plan, onClose }: {
           phone: phoneGiven ? phone.trim() : "", phoneConsent: phoneGiven && phoneOk,
           values: plan.map(({ tool, label, figure, href }) => ({ tool, label, figure, href })),
           answers: readAnswers(),
+          alerts: side === "buy" && alerts,
           sessionId: sessionId(),
         }),
       });
@@ -119,6 +122,15 @@ export function SavePlan({ side, mode, plan, onClose }: {
               <label className="opt mt-2" data-on={phoneOk} style={{ alignItems: "flex-start" }}>
                 <input type="checkbox" checked={phoneOk} onChange={() => setPhoneOk(!phoneOk)} />
                 <span className="t-xs c-2" style={{ lineHeight: 1.55 }}>{PHONE_CONSENT}</span>
+              </label>
+            ) : null}
+
+            {side === "buy" ? (
+              <label className="opt mt-3" data-on={alerts} style={{ alignItems: "flex-start" }}>
+                <input type="checkbox" checked={alerts} onChange={() => setAlerts(!alerts)} />
+                <span className="t-xs c-2" style={{ lineHeight: 1.55 }}>
+                  Tell me when a Georgia program I may fit opens, changes or runs out of funds. Kaleb writes to you himself.
+                </span>
               </label>
             ) : null}
 

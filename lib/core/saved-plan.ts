@@ -28,6 +28,9 @@ export interface SavedPlan {
   values: SavedValue[];
   answers: Answers;
   savedOn: string;
+  /** D14 "program alerts": asked to hear when a program they may fit opens,
+      changes or runs out of funds. Buyers only; never assumed. */
+  alerts?: boolean;
 }
 
 const cap = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
@@ -56,7 +59,7 @@ export function cleanPlan(body: Record<string, unknown>, today = new Date()): Sa
     values.push({ tool: def.id, label: def.name, figure: cap(v.figure, 60), href });
   }
 
-  return { mode, side, values, answers, savedOn: today.toISOString().slice(0, 10) };
+  return { mode, side, values, answers, savedOn: today.toISOString().slice(0, 10), alerts: side === "buy" && body.alerts === true };
 }
 
 /** The value's page with the saved answers, for a plan that was saved with none. */
@@ -74,6 +77,7 @@ export function hrefFor(tool: string, answers: Answers): string | null {
 export function planSummary(p: SavedPlan): string {
   if (!p.values.length) return p.mode === "review" ? "Asked for a review" : "Saved a plan";
   const parts = p.values.map((v) => `${v.label.toLowerCase()} ${v.figure}`);
-  const price = typeof p.answers.price === "number" ? ` on a $${Math.round(p.answers.price / 1000)}k plan` : "";
-  return `${p.mode === "review" ? "Asked for a review" : "Saved a plan"}${price}: ${parts.join(", ")}`;
+  const plan = typeof p.answers.price === "number" ? `a $${Math.round(p.answers.price / 1000)}k plan` : "a plan";
+  const alerts = p.alerts ? "; asked for program alerts" : "";
+  return `${p.mode === "review" ? `Asked for a review of ${plan}` : `Saved ${plan}`}: ${parts.join(", ")}${alerts}`;
 }

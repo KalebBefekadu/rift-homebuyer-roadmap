@@ -6,6 +6,15 @@ import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { Ico } from "@/components/rift/icons";
 import { hrefFor } from "@/lib/core/saved-plan";
+import { matchAssistance, KIND_LABEL, CAUTION, type Occupation } from "@/lib/core/assistance";
+import { assistancePlan } from "@/lib/core/assistance-plan";
+import { firstTimeFrom, type Ownership } from "@/lib/core/funnel";
+import { hasAll } from "@/lib/core/asks";
+import { currentPrograms } from "@/lib/db/program-checks";
+import { rulesOrDefaults } from "@/lib/db/settings";
+import { currentAgentId } from "@/lib/db/service";
+import { PrintButton } from "@/components/rift/PrintButton";
+import { money } from "@/lib/core/compute";
 
 export const metadata: Metadata = {
   title: "Your saved plan",
@@ -53,6 +62,22 @@ export default async function SavedPlanPage({ params }: { params: Promise<{ toke
   const known = new Set(Object.keys(plan.answers));
   const more = valuesFor(plan.side).filter((v) => !done.has(v.id));
 
+  /* My assistance plan (D14): worked out today from the saved answers, so a
+     program that closed or changed since is not in it. */
+  const a = plan.answers;
+  let assist: ReturnType<typeof assistancePlan> | null = null;
+  let combination: ReturnType<typeof matchAssistance>["combination"] = null;
+  if (plan.side === "buy" && hasAll(a, valueById("assistance")!.asks)) {
+    const [{ rules }, programs] = await Promise.all([rulesOrDefaults(await currentAgentId()), currentPrograms()]);
+    const profile = {
+      county: String(a.county), firstTime: firstTimeFrom(String(a.ownership) as Ownership), price: Number(a.price),
+      income: Number(a.income), household: Number(a.household), occupation: String(a.occupation) as Occupation | "other",
+    };
+    const r = matchAssistance(profile, { today: new Date(), windowDays: rules.registryDays.value, programs });
+    combination = r.combination;
+    assist = r.matches.length ? assistancePlan(r.matches, profile) : null;
+  }
+
   return (
     <div className={tone}>
       <SiteHeader side={plan.side} />
@@ -78,6 +103,49 @@ export default async function SavedPlanPage({ params }: { params: Promise<{ toke
             })}
           </div>
         </section>
+
+        {assist ? (
+          <section className="sec" aria-labelledby="assist-h">
+            <div className="between wrap gap-3">
+              <div>
+                <div className="kicker c-brand">My assistance plan</div>
+                <h2 id="assist-h" className="serif d3 mt-2">What to do about each program</h2>
+                <p className="t-sm c-3 mt-2 measure">Worked out today from your saved answers. Potential matches only: lenders and the programs decide.</p>
+              </div>
+              <span className="no-print"><PrintButton /></span>
+            </div>
+            {combination ? (
+              <div className="card p-4 mt-4" style={{ background: "var(--brand-wash)", borderColor: "var(--brand-line)" }}>
+                <div className="t-md w6">Potential combination: {combination.programs[0].program.name} + {combination.programs[1].program.name}</div>
+                <p className="t-sm c-2 mt-1">Up to {money(combination.total)} together, because both programs&apos; rules allow it. Compatibility and current availability must be verified.</p>
+              </div>
+            ) : null}
+            <div className="col gap-3 mt-4">
+              {assist.programs.map((p) => (
+                <article key={p.program.slug} className="card p-5">
+                  <div className="between wrap gap-2">
+                    <div>
+                      <h3 className="t-lg w6">{p.program.name}</h3>
+                      <div className="t-sm c-3">{KIND_LABEL[p.program.kind]} · up to {money(p.amount)}</div>
+                    </div>
+                    <a href={p.program.sourceUrl} target="_blank" rel="noopener noreferrer" className="btn btn-s btn-sm no-print">Official source<Ico.arrowUpR size={12} /></a>
+                  </div>
+                  <p className="t-sm c-2 mt-2"><strong>Lender:</strong> {p.lender}</p>
+                  <ol className="mt-2" style={{ paddingLeft: 20 }}>
+                    {p.steps.map((st) => <li key={st} className="t-sm c-2" style={{ lineHeight: 1.6, marginTop: 4 }}>{st}</li>)}
+                  </ol>
+                </article>
+              ))}
+            </div>
+            <div className="card p-5 mt-4">
+              <h3 className="t-lg w6">Documents to gather</h3>
+              <ul className="mt-2" style={{ paddingLeft: 20 }}>
+                {assist.documents.map((d) => <li key={d} className="t-sm c-2" style={{ lineHeight: 1.6, marginTop: 4 }}>{d}</li>)}
+              </ul>
+            </div>
+            <p className="t-xs c-4 mt-3 measure" style={{ lineHeight: 1.6 }}>{CAUTION}</p>
+          </section>
+        ) : null}
 
         {more.length ? (
           <section className="sec" aria-labelledby="more-h">

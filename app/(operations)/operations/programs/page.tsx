@@ -5,7 +5,10 @@ import { agentSession } from "@/lib/db/session";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { readChecks } from "@/lib/db/program-checks";
 import { jobsHealth } from "@/lib/db/jobs";
-import { GEORGIA_PROGRAMS, isCurrent, reviewDue } from "@/lib/core/assistance";
+import { GEORGIA_PROGRAMS, isCurrent, reviewDue, checkProgram, type Occupation, type ProgramRecord } from "@/lib/core/assistance";
+import { firstTimeFrom, type Ownership } from "@/lib/core/funnel";
+import { alertSubscribers } from "@/lib/db/saved-plan";
+import type { SavedPlan } from "@/lib/core/saved-plan";
 import { applyChecks, openFlags, textDiff, type CheckOutcome, type SourceCheck } from "@/lib/core/program-check";
 import { Ico } from "@/components/rift/icons";
 import { StudioHeader } from "../StudioHeader";
@@ -37,7 +40,8 @@ export default async function ProgramsReview() {
   if (session.state === "signed-out") redirect("/operations/sign-in");
   const agent = session.agent;
 
-  const [{ rules }, read, jobs] = await Promise.all([rulesOrDefaults(agent.agentId), readChecks({ withText: true }), jobsHealth()]);
+  const [{ rules }, read, jobs, subsRead] = await Promise.all([rulesOrDefaults(agent.agentId), readChecks({ withText: true }), jobsHealth(), alertSubscribers()]);
+  const subs = subsRead.ok && "data" in subsRead ? subsRead.data : [];
   const window = rules.registryDays.value;
   const today = new Date();
   const data = read.ok && "data" in read ? read.data : null;
@@ -84,6 +88,7 @@ export default async function ProgramsReview() {
           <div className="col gap-3 mt-3">
             {flags.map((f) => {
               const diff = textDiff(f.before?.text ?? null, f.check.text);
+              const asked = subs.filter((x) => f.programs.some((p) => mayFit(p, x.plan)));
               return (
                 <article key={f.check.id} className="card p-4">
                   <div className="between wrap gap-2">
@@ -122,6 +127,16 @@ export default async function ProgramsReview() {
                     ) : (
                       <p className="t-sm c-3 mt-3">Only the order or spacing of the text changed.</p>
                     )
+                  ) : null}
+
+                  {asked.length ? (
+                    <div className="card p-3 mt-3">
+                      <div className="t-xs w6">{asked.length === 1 ? "One person asked" : `${asked.length} people asked`} to hear when a program they may fit changes</div>
+                      <p className="t-2xs c-4 mt-1">Once you have reviewed it, write to them yourself; Rift does not (D04).</p>
+                      <ul className="row wrap gap-2 mt-2">
+                        {asked.map((x) => <li key={x.leadId}><Link href={`/operations/lead/${x.leadId}`} className="chip">{x.name ?? "Unnamed"}</Link></li>)}
+                      </ul>
+                    </div>
                   ) : null}
 
                   <form action={reviewProgramPage} className="col gap-2 mt-3" style={{ paddingTop: 12, borderTop: "1px solid var(--line-3)" }}>
@@ -186,4 +201,18 @@ export default async function ProgramsReview() {
       </main>
     </>
   );
+}
+
+/** Whether a saved plan's answers leave this program as a potential match. */
+function mayFit(p: ProgramRecord, plan: SavedPlan): boolean {
+  const a = plan.answers;
+  if (typeof a.county !== "string" || typeof a.price !== "number") return false;
+  return checkProgram(p, {
+    county: a.county,
+    firstTime: typeof a.ownership === "string" ? firstTimeFrom(a.ownership as Ownership) : null,
+    price: a.price,
+    income: typeof a.income === "number" ? a.income : undefined,
+    household: a.household !== undefined ? Number(a.household) : undefined,
+    occupation: typeof a.occupation === "string" ? (a.occupation as Occupation | "other") : undefined,
+  }).potential;
 }

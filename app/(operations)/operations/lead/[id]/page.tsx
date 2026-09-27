@@ -25,6 +25,8 @@ import { searchStatuses } from "@/lib/db/search";
 import { STATUS_LABEL } from "@/lib/core/search";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { Journeys, type JourneySummary } from "./Journeys";
+import { savedPlanFor } from "@/lib/db/saved-plan";
+import { SavedPlan } from "./SavedPlan";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -77,7 +79,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
   const searchOn = buyerSearchOn(process.env);
-  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
@@ -86,7 +88,9 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     decisionsFor(id),
     read.data.lead.side === "sell" ? roomFor(id) : Promise.resolve(null),
     searchOn ? journeysFor(id) : Promise.resolve(null),
+    savedPlanFor(id),
   ]);
+  const saved = savedRead.ok && "data" in savedRead ? savedRead.data : null;
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
   const offerList = offers.ok && "data" in offers ? offers.data.offers : [];
@@ -125,6 +129,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     <>
       <ClientRecord lead={read.data.lead} notes={read.data.notes} />
       <div className="shell-w" style={{ paddingBottom: 40 }}>
+        {saved ? <SavedPlan plan={saved.plan} savedAt={saved.savedAt} /> : null}
         <Journeys
           leadId={id}
           side={read.data.lead.side}
