@@ -28,6 +28,8 @@
  *   the exact false confidence this whole ladder exists to prevent.
  */
 
+import { georgiaDay } from "./day";
+
 /**
  * The four rungs.
  *
@@ -138,7 +140,7 @@ export function askReview(input: { who: string; whoId: string; kind: ReviewKind;
     ...input,
     state: "pending-review",
     raisedBy: "client",
-    raisedAt: new Date().toISOString().slice(0, 10),
+    raisedAt: georgiaDay(),
     waitingHours: 0,
     toAdvance:
       input.kind === "document" ? "Read it and confirm the figure it supports."

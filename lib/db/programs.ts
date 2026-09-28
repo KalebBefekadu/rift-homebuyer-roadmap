@@ -6,6 +6,7 @@ import { GEORGIA_PROGRAMS, legacyCanCheck as recordCanBeChecked, toLegacy } from
 import { currentPrograms } from "./program-checks";
 import { DEFAULT_RULES } from "@/lib/core/settings";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
+import { georgiaDay } from "@/lib/core/day";
 
 /**
  * The assistance registry, read from the database.
@@ -100,9 +101,7 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
   const windowDays = typeof overrideDays === "number" && Number.isFinite(overrideDays) && overrideDays > 0
     ? Math.round(overrideDays)
     : DEFAULT_RULES.registryDays.value;
-  const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() - windowDays);
-  const cutoffISO = cutoff.toISOString().slice(0, 10);
+  const cutoffISO = georgiaDay(today, -windowDays);
 
   const db = serviceClient();
   if (!db) {

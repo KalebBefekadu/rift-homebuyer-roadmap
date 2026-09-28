@@ -27,6 +27,8 @@
  *      had none, and has never sent an email), and it is gone.
  */
 
+import { georgiaDay } from "./day";
+
 export type MomentId =
   | "value_delivered" | "plan_published" | "financing_secured"
   | "under_contract" | "closing_day" | "day_30" | "month_6" | "anniversary";
@@ -222,7 +224,7 @@ export const MONTH_6 = 182;
 
 const dayOf = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
 const daysBetween = (fromIso: string, now: Date) =>
-  Math.floor((Date.parse(now.toISOString().slice(0, 10) + "T00:00:00Z") - dayOf(fromIso)) / DAY_MS);
+  Math.floor((Date.parse(`${georgiaDay(now)}T00:00:00Z`) - dayOf(fromIso)) / DAY_MS);
 
 /**
  * How many anniversaries have come round, and none until a full year has.

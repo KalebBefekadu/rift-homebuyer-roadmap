@@ -19,6 +19,7 @@
  */
 
 import type { AssistanceProgram } from "./registry";
+import { georgiaDay } from "./day";
 
 export type Occupation = "educator" | "safety" | "health" | "military";
 export type LoanType = "fha" | "conventional" | "va" | "usda";
@@ -458,7 +459,7 @@ export function reviewDue(p: ProgramRecord, windowDays: number): string {
   return d.toISOString().slice(0, 10);
 }
 export const isCurrent = (p: ProgramRecord, today: Date, windowDays: number) =>
-  p.status === "active" && reviewDue(p, windowDays) >= today.toISOString().slice(0, 10);
+  p.status === "active" && reviewDue(p, windowDays) >= georgiaDay(today);
 
 export function estimateAmount(p: ProgramRecord, profile: Pick<Profile, "price" | "occupation">): { amount: number; note: string | null } {
   const occ = p.amount.occupations;

@@ -5,6 +5,7 @@ import {
   approvalBlockers, criterionError, describe, FIELD_ORDER, FIELDS, PROPERTY_TYPES, STRENGTH_LABEL,
   type Field, type Operator, type PropertyType, type SearchCriterion, type Strength,
 } from "@/lib/core/search";
+import { georgiaDay } from "@/lib/core/day";
 
 export const OPERATOR_LABEL = (field: Field, op: Operator): string => {
   if (op === "atMost") return "At most";
@@ -75,7 +76,7 @@ export function BriefEditor({ latest, start, person, disagreement, onSave, mode 
   saveLabel?: string;
 }) {
   const client = mode === "client";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = georgiaDay();
   const blank = (): Draft => ({
     id: null, field: "price", operator: "atMost", raw: "", types: [], strength: "hard",
     statedBy: `${person.split(/\s+/)[0] ?? person} (buyer)`, statedAt: today, sourceRef: `call on ${today}`,

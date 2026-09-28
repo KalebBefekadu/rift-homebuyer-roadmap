@@ -13,6 +13,7 @@
 
 import { ASKS, parseAnswers, answersToQuery, type Answers } from "./asks";
 import { valueById, type InputKey } from "./values";
+import { georgiaDay } from "./day";
 
 export interface SavedValue {
   tool: string;
@@ -59,7 +60,7 @@ export function cleanPlan(body: Record<string, unknown>, today = new Date()): Sa
     values.push({ tool: def.id, label: def.name, figure: cap(v.figure, 60), href });
   }
 
-  return { mode, side, values, answers, savedOn: today.toISOString().slice(0, 10), alerts: side === "buy" && body.alerts === true };
+  return { mode, side, values, answers, savedOn: georgiaDay(today), alerts: side === "buy" && body.alerts === true };
 }
 
 /** The value's page with the saved answers, for a plan that was saved with none. */

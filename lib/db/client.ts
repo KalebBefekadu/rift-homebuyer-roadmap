@@ -31,6 +31,7 @@ import {
   briefErrors, FIELDS, statusOf, SEARCH_SCHEMA_VERSION,
   type Response, type SearchBrief, type SearchCriterion, type SearchStatus,
 } from "@/lib/core/search";
+import { georgiaDay } from "@/lib/core/day";
 
 /**
  * The client's side of a journey: who is signed in, which journeys they are a
@@ -384,7 +385,7 @@ export async function proposeRevision(
     return failed("The search changed since you opened this page. Reload to see the latest version, then make your change");
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = georgiaDay();
   const before = new Map((latest?.brief.criteria ?? []).map((c) => [c.id, c]));
   const canSeeMoney = m.scopes.includes("money");
   const visible: SearchCriterion[] = submitted.criteria

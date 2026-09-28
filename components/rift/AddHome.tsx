@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { EMPTY_FACTS, PROPERTY_TYPES, type PropertyFacts, type PropertyType } from "@/lib/core/search";
+import { georgiaDay } from "@/lib/core/day";
 
 export interface HomeInput {
   address: string;
@@ -30,7 +31,7 @@ export function AddHome({ onAdd, busy, sourceDefault }: {
   busy: boolean;
   sourceDefault: string;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = georgiaDay();
   const [v, setV] = useState({
     address: "", url: "", price: "", bedrooms: "", bathrooms: "", type: "", city: "", lot: "", hoa: "",
     basement: "", garage: "", source: sourceDefault, asOf: today,

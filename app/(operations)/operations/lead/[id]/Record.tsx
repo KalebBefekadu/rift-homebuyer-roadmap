@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { STAGE_NAMES, STALL_CHIP, type LeadNote, type ManagedLead, type NoteKind, type Stage } from "@/lib/core/pipeline";
 import { logContact, moveStage, archive, planNextAction } from "../../actions";
+import { georgiaDay } from "@/lib/core/day";
 
 const KINDS: { id: NoteKind; label: string }[] = [
   { id: "call", label: "Call" },
@@ -84,7 +85,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
 
   /* Compared as dates, not timestamps. An action due today is not overdue at
      nine in the morning because the row was written at five last night. */
-  const today = new Date().toISOString().slice(0, 10);
+  const today = georgiaDay();
   const overdue = Boolean(lead.nextDue && lead.nextDue < today);
   const dueLabel = !lead.nextDue
     ? ""

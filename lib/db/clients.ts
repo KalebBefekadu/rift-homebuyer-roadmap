@@ -17,6 +17,7 @@ import {
   standingOf, mayAdvance, STATUSES, STATUS_RULES, EXPIRY_WARNING_DAYS,
   type Representation, type Standing, type Status as RepStatus,
 } from "@/lib/core/representation";
+import { georgiaDay } from "@/lib/core/day";
 
 export { STAGE_NAMES };
 export type { Stage, NoteKind, LeadNote, ManagedLead, Finished };
@@ -428,7 +429,7 @@ export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead
 
   /* A week ahead: far enough to plan the week, near enough that the list is
      still a list of things to do rather than a calendar. */
-  const horizon = new Date(now.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const horizon = georgiaDay(now, 7);
 
   /* Nothing is due when the feature has not been migrated yet. Reported as
      skipped rather than failed: the agent sees an empty list, not an error
@@ -739,8 +740,7 @@ export async function lapsingAgreements(now = new Date()): Promise<DbResult<Laps
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const horizon = new Date(now.getTime() + EXPIRY_WARNING_DAYS * 86_400_000)
-    .toISOString().slice(0, 10);
+  const horizon = georgiaDay(now, EXPIRY_WARNING_DAYS);
 
   const res = await boundedRead(
     db.from("rift_leads")
