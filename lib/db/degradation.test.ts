@@ -98,11 +98,10 @@ describe("with nothing configured at all", () => {
   it("still serves the programme registry, from the seeded copy", async () => {
     /* Same rule: the seed is real verified data, and labelling it is what
        keeps the fallback honest rather than silent. */
-    const { readRegistry, readStale } = await import("./programs");
+    const { readRegistry } = await import("./programs");
     const r = await readRegistry(new Date("2026-09-20T12:00:00Z"));
     expect(contract("readRegistry", r)).toBe("done");
     expect((r as { data: { source: string } }).data.source).toBe("seed");
-    expect(contract("readStale", await readStale(new Date("2026-09-20T12:00:00Z")))).toBe("done");
   });
 
   it("degrades the cadence rather than pretending to send", async () => {
@@ -125,7 +124,6 @@ describe("with nothing configured at all", () => {
   it("degrades the agent's own surfaces", async () => {
     const c = await import("./clients");
     expect(contract("board", await c.board())).toBe("skipped");
-    expect(contract("dueActions", await c.dueActions())).toBe("skipped");
     expect(contract("readLead", await c.readLead("x"))).toBe("skipped");
 
     const s = await import("./settings");

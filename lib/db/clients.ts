@@ -414,52 +414,6 @@ export async function setNextAction(
   return done({ cleared: clearing });
 }
 
-/**
- * Everything owed, soonest first, overdue included.
- *
- * Not limited to today. An action that came due on Tuesday does not stop being
- * owed on Wednesday, and a list that silently drops it is worse than no list:
- * it reads as "nothing outstanding" to somebody who is in fact late.
- */
-export async function dueActions(now = new Date()): Promise<DbResult<ManagedLead[]>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  /* A week ahead: far enough to plan the week, near enough that the list is
-     still a list of things to do rather than a calendar. */
-  const horizon = georgiaDay(now, 7);
-
-  /* Nothing is due when the feature has not been migrated yet. Reported as
-     skipped rather than failed: the agent sees an empty list, not an error
-     about a column he has never heard of. */
-  if (hasFollowUp === false) return done([]);
-
-  /* No readLeads retry here: this query FILTERS on next_due, not merely
-     selects it, so a narrower select cannot rescue it. A missing column means
-     the feature is not migrated, which means nothing can be due: an empty
-     list is the truthful answer, not an error. */
-  const res = await boundedRead(
-    db.from("rift_leads").select(selectFor())
-      .eq("agent_id", agent_id)
-      .is("archived_at", null)
-      .not("next_due", "is", null)
-      .lte("next_due", horizon)
-      .order("next_due", { ascending: true })
-      .limit(100),
-    "reading what is due",
-  );
-
-  if (!res.ok) {
-    if (isMissingColumn(res.error)) { hasFollowUp = false; return done([]); }
-    return res as DbResult<ManagedLead[]>;
-  }
-  if (!("data" in res)) return res as DbResult<ManagedLead[]>;
-  hasFollowUp = true;
-  return done(((res.data ?? []) as unknown as Record<string, unknown>[]).map((r) => shape(r, now)));
-}
-
 /* ------------------------------------------------------------------ *
  * Everybody, findable by name
  * ------------------------------------------------------------------ */

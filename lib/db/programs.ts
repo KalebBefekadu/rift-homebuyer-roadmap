@@ -153,14 +153,3 @@ export async function readRegistry(today = new Date(), overrideDays?: number): P
   }
 }
 
-/**
- * Programmes needing re-verification. This is an agent task, not a report:
- * a suppression rule with nobody acting on it silently shrinks what customers
- * are shown until the registry is empty and nobody notices.
- */
-export async function readStale(today = new Date(), overrideDays?: number): Promise<DbResult<AssistanceProgram[]>> {
-  const r = await readRegistry(today, overrideDays);
-  if (!r.ok) return r;
-  if ("skipped" in r) return r;
-  return done(r.data.suppressed);
-}

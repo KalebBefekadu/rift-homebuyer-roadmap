@@ -245,45 +245,6 @@ export function gapLevers(i: BuyerInputs) {
     .sort((a, b) => b.saved - a.saved);
 }
 
-/** Rent versus buy crossover, in months, ignoring appreciation on purpose. */
-export function rentVsBuy(i: BuyerInputs) {
-  const m = monthlyCost(i);
-  const cash = cashToClose(i).total;
-  const principalYr1 = (() => {
-    const down = (i.price * i.downPct) / 100;
-    let bal = Math.max(i.price - down, 0);
-    const r = i.ratePct / 100 / 12;
-    let paid = 0;
-    for (let k = 0; k < 12; k++) {
-      const interest = bal * r;
-      const princ = m.pi - interest;
-      paid += princ;
-      bal -= princ;
-    }
-    return paid;
-  })();
-
-  const monthlyDelta = m.total - i.currentRent;
-  const equityPerMonth = principalYr1 / 12;
-  const netPerMonth = equityPerMonth - monthlyDelta;
-  const months = netPerMonth > 0 ? Math.ceil(cash / netPerMonth) : null;
-
-  return {
-    monthlyDelta,
-    equityPerMonth,
-    months,
-    assumptions: [
-      { label: "Your rent today", value: `${money(i.currentRent)} per month` },
-      { label: "All-in ownership cost", value: `${money(m.total)} per month` },
-      { label: "Equity built", value: `${money(equityPerMonth)} per month in year one` },
-      { label: "Upfront cash", value: money(cash) },
-      { label: "Appreciation", value: "Excluded on purpose" },
-    ],
-    couldBeWrong:
-      "This ignores home price appreciation, rent increases, maintenance, and the tax treatment of mortgage interest. It is a floor, not a forecast. Renting is often the right answer for a short horizon.",
-  };
-}
-
 /* ------------------------------------------------------------------ *
  * Seller
  * ------------------------------------------------------------------ */

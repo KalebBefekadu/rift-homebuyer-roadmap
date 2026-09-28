@@ -211,7 +211,7 @@ await check("offersFor (inbound offer columns)", () => db.from("rift_offers")
   .select("id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at")
   .limit(5));
 
-await check("dueActions follow-up columns", () => db.from("rift_leads")
+await check("lead follow-up columns", () => db.from("rift_leads")
   .select("id,name,side,next_action,next_due,client_token").limit(5));
 
 await check("planItemsDue", () => db.from("rift_plan_items")
