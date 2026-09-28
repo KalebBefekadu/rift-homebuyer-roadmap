@@ -151,10 +151,12 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
        largest population in the funnel, so it is worth the query. */
     const progress = new Map<string, number>();
     if (assessmentIds.length) {
-      const { data: ans } = await db
+      const { data: ans, error: ansErr } = await db
         .from("rift_answers")
         .select("assessment_id")
         .in("assessment_id", assessmentIds);
+      /* A failed read is a failed queue, not "answered nothing". */
+      if (ansErr) return failed(ansErr.message);
       for (const a of (ans ?? []) as { assessment_id: string }[]) {
         progress.set(a.assessment_id, (progress.get(a.assessment_id) ?? 0) + 1);
       }
@@ -162,11 +164,15 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 
     const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null }>();
     if (assessmentIds.length) {
-      const { data: reads } = await db
+      const { data: reads, error: readErr } = await db
         .from("rift_readouts")
         .select("assessment_id,figures,share_token,created_at,rift_assessments(county)")
         .in("assessment_id", assessmentIds)
         .order("created_at", { ascending: false });
+      /* This one decides which email a person gets. Read as empty, everybody
+         who finished would have been sent the "pick up where you left off"
+         touch, telling them they had not finished what they had. */
+      if (readErr) return failed(readErr.message);
       for (const r of (reads ?? []) as unknown as {
         assessment_id: string; figures: Record<string, string | number>; share_token: string;
         rift_assessments: { county: string | null } | null;
