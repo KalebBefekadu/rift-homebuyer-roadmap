@@ -77,6 +77,31 @@ describe("sending once", () => {
     expect(sendApproved).not.toHaveBeenCalled();
   });
 
+  it("keeps why a send was held back, on the approval, so a reload can say so", async () => {
+    build({
+      "select rift_outbox": { data: [{ ...row, lead_id: "lead-1" }] },
+      "select rift_outbox_events": { data: prepared },
+      "select rift_leads": { data: [] },
+    });
+    const r = await approveAndSend("agent-1", ID, "Kaleb");
+    expect(r.ok && "data" in r && r.data.blockers).toEqual(["the person has been deleted"]);
+    expect(inserts()).toHaveLength(1);
+    expect(inserts()[0]).toMatchObject({ state: "approved", seq: 2, detail: "Held back: the person has been deleted" });
+    expect(sendApproved).not.toHaveBeenCalled();
+  });
+
+  it("does not approve a second time when an approved message is held again", async () => {
+    /* A second approval would restart the "replied since approval" clock and
+       let the next press send past it. */
+    build({
+      "select rift_outbox": { data: [{ ...row, lead_id: "lead-1" }] },
+      "select rift_outbox_events": { data: approved },
+      "select rift_leads": { data: [] },
+    });
+    await approveAndSend("agent-1", ID, "Kaleb");
+    expect(inserts()).toHaveLength(0);
+  });
+
   it("reads the one message by its id, and only its own history", async () => {
     build({ "select rift_outbox": { data: [row] }, "select rift_outbox_events": { data: approved } });
     await approveAndSend("agent-1", ID, "Kaleb");

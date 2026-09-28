@@ -189,10 +189,9 @@ export async function approveAndSend(agentId: string, id: string, by: string): P
   if (hashOf(item.draft) !== item.hash) return failed("This draft does not match its record. Prepare it again");
 
   let events = item.events;
-  if (currentState(events) !== "approved") {
+  const approving = currentState(events) !== "approved";
+  if (approving) {
     if (!canMove(currentState(events), "approved")) return failed(`It is ${currentState(events)} and cannot be approved`);
-    const a = await event(agentId, id, "approved", by, seq++, { hash: item.hash });
-    if (!a.ok) return a;
     events = [...events, { state: "approved", at: new Date().toISOString(), by, hash: item.hash, detail: null }];
   }
   const approvedAt = events.filter((e) => e.state === "approved").at(-1)!.at;
@@ -210,6 +209,17 @@ export async function approveAndSend(agentId: string, id: string, by: string): P
   const optedOut = blocks.ok && "codes" in blocks ? blocks.codes.has(item.draft.to.trim().toLowerCase()) : false;
 
   const blockers = sendBlockers({ hash: item.hash, events, leadExists, optedOut, repliedSinceApproval: replied });
+  /* The approval is written after the checks, so it can carry why the send
+     was held. The reasons used to be returned and never kept, and after a
+     reload the message said "Approved, not sent yet" with nothing about why.
+     A message already approved gets no second approval: that would restart
+     the "replied since approval" clock and let a second press send past it. */
+  if (approving) {
+    const a = await event(agentId, id, "approved", by, seq++, {
+      hash: item.hash, detail: blockers.length ? `Held back: ${blockers.join("; ")}` : undefined,
+    });
+    if (!a.ok) return a;
+  }
   if (blockers.length) return done({ state: "approved", detail: null, blockers });
 
   /* The claim. Of two presses that got this far, only one records "running",
