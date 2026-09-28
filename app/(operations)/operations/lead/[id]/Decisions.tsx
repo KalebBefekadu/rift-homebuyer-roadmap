@@ -30,11 +30,14 @@ export function Decisions({
   leadId,
   decisions,
   agentFirst,
+  unavailable = null,
 }: {
   leadId: string;
   decisions: Decision[];
   /** His own name, because the preview must read exactly as the client's does. */
   agentFirst: string;
+  /** Why the rooms could not be read. `decisions` is then empty, which is not "none yet". */
+  unavailable?: string | null;
 }) {
   const [adding, setAdding] = useState(false);
 
@@ -51,7 +54,9 @@ export function Decisions({
 
       {adding ? <NewRoom leadId={leadId} onDone={() => setAdding(false)} /> : null}
 
-      {decisions.length === 0 && !adding ? (
+      {unavailable ? (
+        <p role="status" className="card p-4 t-sm c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>⚠ {unavailable}</p>
+      ) : decisions.length === 0 && !adding ? (
         <div className="card p-4" style={{ marginTop: 10 }}>
           <p className="t-sm c-3" style={{ lineHeight: 1.6, maxWidth: 560 }}>
             Nothing here yet. A decision room is for the moments somebody actually stalls:
@@ -238,7 +243,9 @@ function Room({ leadId, decision, agentFirst }: { leadId: string; decision: Deci
 
         {status === "draft" ? (
           <button type="button" className="btn btn-g btn-sm" disabled={pending}
-            onClick={() => run(() => deleteDecision(leadId, decision.id))}>
+            onClick={() => {
+              if (window.confirm(`Delete "${decision.question}" and its options? It cannot be brought back.`)) run(() => deleteDecision(leadId, decision.id));
+            }}>
             Delete
           </button>
         ) : null}

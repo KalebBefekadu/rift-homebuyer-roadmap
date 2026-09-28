@@ -28,6 +28,7 @@ import { Journeys, type JourneySummary } from "./Journeys";
 import { savedPlanFor } from "@/lib/db/saved-plan";
 import { SavedPlan } from "./SavedPlan";
 import { isUuid } from "@/lib/core/ids";
+import type { DbResult } from "@/lib/db/result";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -114,6 +115,19 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      "no choice yet" over a seller who may well have chosen. */
   const room = offerRoom && offerRoom.ok && "data" in offerRoom ? offerRoom.data : null;
 
+  /* The panels below fall back to an empty list, and an empty list renders
+     as "No steps yet", "Nothing recorded yet" and "Nothing here yet". Over a
+     read that failed those are false, and the offers one invites recording
+     every offer a second time. Each panel is told instead, in words. */
+  const missing = (r: DbResult<unknown>, what: string) =>
+    !r.ok ? `${what} did not load (${r.error}). That is not the same as there being none: reload before changing anything.`
+      : "skipped" in r ? `${what} could not be read: ${r.reason}.`
+        : null;
+  const planUnavailable = missing(plan, "The steps");
+  const offersUnavailable = missing(offers, "The offers");
+  const decisionsUnavailable = missing(rooms, "The decisions");
+  const agreementUnavailable = agreement ? null : missing(rep, "The representation agreement");
+
   /* Journeys, with each buying journey's search status. A failed read says
      so in the panel rather than rendering "none yet" over journeys that exist. */
   const journeyList = journeyRead && journeyRead.ok && "data" in journeyRead ? journeyRead.data : [];
@@ -149,6 +163,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           origin={siteUrl()}
           agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
           clientFirst={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
+          unavailable={planUnavailable}
         />
         {/* Sellers only. A buyer has no offers ON them, and a panel that
             renders empty on every buyer record is a panel he learns to skip. */}
@@ -158,15 +173,20 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             offers={offerList}
             costs={sellerCosts}
             agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
+            unavailable={offersUnavailable}
           />
         ) : null}
-        {read.data.lead.side === "sell" ? (
+        {/* Not drawn over offers that did not load: with none to read it
+            would call an approved take hidden because "the offers changed",
+            which is false, and offer to draft from nothing. */}
+        {read.data.lead.side === "sell" && !offersUnavailable ? (
           <Take leadId={id} offers={offerList} costs={sellerCosts} room={room} />
         ) : null}
         <Decisions
           leadId={id}
           decisions={decisions}
           agentFirst={agent.name.trim().split(/\s+/)[0] ?? "your agent"}
+          unavailable={decisionsUnavailable}
         />
         {agreement ? (
           <Agreement
@@ -177,6 +197,11 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             expiresOn={agreement.expiresOn}
             standing={standingOf(agreement)}
           />
+        ) : agreementUnavailable ? (
+          <section style={{ marginTop: 28 }}>
+            <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>Representation</div>
+            <p role="status" className="card p-4 t-sm c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>⚠ {agreementUnavailable}</p>
+          </section>
         ) : null}
         <Referral
           leadId={id}

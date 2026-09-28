@@ -22,11 +22,13 @@ import { typedNumber } from "@/lib/core/typed";
  * driving; presenting it unreviewed is how somebody replies to a number before
  * anybody has read the terms under it.
  */
-export function Offers({ leadId, offers, costs, agentFirst }: {
+export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }: {
   leadId: string;
   offers: Offer[];
   costs: SellerCosts | null;
   agentFirst: string;
+  /** Why the offers could not be read. `offers` is then empty, which is not "none recorded". */
+  unavailable?: string | null;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +74,19 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
     ? ranked.map((n) => offers.find((o) => o.id === n.offerId)!)
     : offers;
 
+  /* Nothing to rank and no payoff to ask for: both would be asked again over
+     figures that may well be on file. */
+  if (unavailable) {
+    return (
+      <section className="card p-4" style={{ marginTop: 18 }}>
+        <div className="t-md w6">Offers</div>
+        <p role="status" className="t-xs c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>
+          ⚠ {unavailable} The offer room is hidden until they load.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section className="card p-4" style={{ marginTop: 18 }}>
       <div className="between gap-2 wrap">
@@ -88,7 +103,7 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
         ) : null}
       </div>
 
-      {error ? <p className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
+      {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
 
       {/* Without these two figures the comparison is not wrong, it is
           meaningless, and a net computed against an assumed payoff of zero
@@ -205,7 +220,10 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
                   </button>
                   <span className="spacer" />
                   <button className="t-2xs c-4" disabled={pending}
-                    onClick={() => run(() => deleteOffer(leadId, o.id))}>Remove</button>
+                    onClick={() => {
+                      /* A delete, not an archive: the offer and its terms are gone. */
+                      if (window.confirm(`Remove the offer from ${o.from}? It is deleted, not archived.`)) run(() => deleteOffer(leadId, o.id));
+                    }}>Remove</button>
                 </div>
               </div>
             );

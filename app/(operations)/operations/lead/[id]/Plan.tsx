@@ -22,9 +22,11 @@ import { money } from "@/lib/core/compute";
  * agent's record, including his judgement about somebody, and the moment those
  * two surfaces blur he stops writing honestly in either.
  */
-export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: {
+export function Plan({ leadId, items, token, origin, agentFirst, clientFirst, unavailable = null }: {
   leadId: string;
   items: PlanItem[];
+  /** Why the steps could not be read. `items` is then empty, which is not "no steps". */
+  unavailable?: string | null;
   token: string | null;
   /** Null when NEXT_PUBLIC_SITE_URL is unset: there is then no link to give out. */
   origin: string | null;
@@ -209,7 +211,9 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
       {/* The steps. Visible whether or not a link is open: writing the plan
           and deciding to share it are separate decisions. */}
       <div className="col gap-1" style={{ marginTop: 18 }}>
-        {items.length === 0 ? (
+        {unavailable ? (
+          <p role="status" className="t-xs c-warn">⚠ {unavailable}</p>
+        ) : items.length === 0 ? (
           <p className="t-xs c-4">No steps yet.</p>
         ) : items.map((item) => (
           <div key={item.id} className="between gap-2" style={{
