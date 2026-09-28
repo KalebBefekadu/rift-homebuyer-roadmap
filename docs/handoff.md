@@ -466,12 +466,12 @@ one disables. Nothing below is an engineer's default standing in for a business 
 | D12, F15 | Decided 23 Sep | Review requests stop depending on how the client felt: everyone who closes gets the same neutral request, and an unhappy client gets a separate follow-up that never decides whether they are asked (Google forbids review gating) |
 | F16 | Partly | "Delete all of it" removes a person's journeys with them, except a journey with a contract on it, which is held whole as the privacy page promises (W11). Which parts the broker requires, and for how long, is still the broker's answer |
 | W06 | Live 23 Sep | Tours, on today's representation gate until the broker's answer on when an agreement is required (D06). Migration `20260924000000` applied |
-| W07 | Live 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Migration `20260924010000` applied. Seller stages wait for D08 |
+| W07 | Live 23 Sep | Client Today, event-backed stages and the under-contract workstreams. Migration `20260924010000` applied. Seller stages followed on 28 Sep (D28, `20260928030000`) |
 | W08 | Live 24 Sep | Offers and documents, on today's rules; the broker's answers (D06) were deferred by the owner until after testing. Migration `20260924020000` applied |
 | W09 | Live 24 Sep | Contract dates and scheduled-job runs, on today's rules. Migration `20260924030000` applied |
-| W12 | Live 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40), the morning summary (D07), and the pilot report at `/studio/pilot` with its checks against Matrix and the documents. Migrations `20260924040000` and `20260925010000` applied. The evidence itself comes from the pilot |
+| W12 | Live 24 Sep | Sends rechecked and opt-outs honoured (AT37), manual work with no providers (AT38), phone, keyboard and zoom (AT39), the release switch drilled (AT40), the morning summary (D07), and the pilot report (now Reports, `/operations/reports`) with its checks against Matrix and the documents. Migrations `20260924040000` and `20260925010000` applied. The evidence itself comes from the pilot |
 | W11 | Live 24 Sep | Walkthrough and possession apart from closing, "You own your home" only after a confirmed closing, restart without inherited dates, the buyer's records page, deletion that holds a contract record and removes provider copies (AT34 to AT36). Migration `20260925000000` applied |
-| W10, W13 | Not started | W10 follows the pilot (D11); W13 waits for pilot results (D08) |
+| W10, W13 | Live 28 Sep | Built ahead of the pilot at the owner's request (blueprint D27 to D29): money v2 and the comparison (W10); the seller journey, S00 to S18, and the campaign composer (W13). Migrations `20260928000000` to `20260928070000` applied. Their order relative to the pilot is recorded in blueprint §11, not here |
 
 Switch: `RIFT_BUYER_SEARCH=off` turns off every page and write this release added, without
 deleting anything. Migrations `20260923010000` to `20260923040000` are additive.
