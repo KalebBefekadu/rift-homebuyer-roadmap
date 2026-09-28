@@ -346,7 +346,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
+      .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
       /* Inbound only. "Who to call" answers one question: who volunteered
          their details and has not been answered yet, and a person the agent
@@ -407,7 +407,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       /* From the row, not assumed. A lead with neither an email nor a phone
          number cannot be replied to, and counting it as a breach would make
          the agent look late for somebody unreachable. */
-      contactable: Boolean(r.email || r.name),
+      contactable: Boolean(r.email || r.phone),
       hoursSince: Math.max(0, (Date.now() - new Date(r.created_at as string).getTime()) / 3_600_000),
     })).sort((a, b) => b.score - a.score));
   } catch (e) {

@@ -27,7 +27,7 @@ vi.mock("./service", () => ({
 }));
 vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: vi.fn() }));
 
-const { captureLead } = await import("./leads");
+const { captureLead, rankedLeads } = await import("./leads");
 
 const LEAD: LeadInput = {
   side: "buy", timing: "In the next 3 months", county: "Fulton",
@@ -211,5 +211,26 @@ describe("before the session_id migration has run", () => {
     const r = await captureLead(base);
     expect(r.ok).toBe(false);
     expect(db.to("insert rift_leads")).toHaveLength(1);
+  });
+});
+
+describe("who can be replied to", () => {
+  it("is somebody with an email or a phone number, not somebody with only a name", async () => {
+    /* The speed-to-lead clock breaches only a contactable lead. This read the
+       NAME where the comment and /api/capture both say phone, so a person
+       who left a name and no way to reach them put the agent in breach. */
+    const lead = (id: string, over: Record<string, unknown>) => ({
+      id, name: null, email: null, phone: null, side: "buy", score: 50, band: "soon", signals: [], lead_input: null,
+      created_at: "2026-09-28T10:00:00Z", human_replied_at: null, assessment_id: null, rift_enrolments: [], ...over,
+    });
+    build({
+      "select rift_leads": { data: [lead("named", { name: "Sam" }), lead("phoned", { phone: "404-555-0100" }), lead("mailed", { email: "a@example.com" })] },
+    });
+    const r = await rankedLeads(10);
+    const by = new Map((r.ok && "data" in r ? r.data : []).map((l) => [l.id, l.contactable]));
+    expect(by.get("named")).toBe(false);
+    expect(by.get("phoned")).toBe(true);
+    expect(by.get("mailed")).toBe(true);
+    expect(db.to("select rift_leads")[0]!.filters.join(" ")).toContain("phone");
   });
 });
