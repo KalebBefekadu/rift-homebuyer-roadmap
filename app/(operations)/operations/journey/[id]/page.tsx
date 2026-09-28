@@ -201,7 +201,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
               <span className="chip">{STAGE_LABEL[prog.progress.stage]}</span>
               <span className={`chip ${prog.progress.status === "active" ? "chip-pos" : "chip-warn"}`}>{STATUS_LABEL[prog.progress.status]}</span>
             </div>
-          ) : buying ? <span className="chip chip-warn">Stage unknown: did not load</span> : null}
+          ) : <span className="chip chip-warn">⚠ Stage unknown: did not load</span>}
         </div>
         {openDeps.length ? (
           <p className="t-xs" style={{ marginTop: 6 }}>
@@ -226,19 +226,18 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
             <section className="card desk-card" aria-labelledby="ov-next">
               <h2 id="ov-next">Next actions and blockers</h2>
               <ul>
-                {nobodyInvited ? <li className="desk-row"><Link className="u" href={href("household")}>Invite the buyer</Link><div className="desk-meta">Nobody can sign in to this journey yet. Make an invitation link and send it yourself.</div></li> : null}
+                {nobodyInvited ? <li className="desk-row"><Link className="u" href={href("household")}>Invite the {buying ? "buyer" : "seller"}</Link><div className="desk-meta">Nobody can sign in to this journey yet. Make an invitation link and send it yourself.</div></li> : null}
                 {missed.map((d) => <li key={d.id} className="desk-row"><span className="chip chip-neg t-2xs">Passed</span> <Link className="u" href={href("contract")}>{d.label}</Link><div className="desk-meta">{d.view.when}. Record what actually happened.</div></li>)}
                 {blocked.map((w) => <li key={w.workstream} className="desk-row"><span className="chip chip-neg t-2xs">Blocked</span> <Link className="u" href={href("contract")}>{w.label}</Link>{w.note ? <div className="desk-meta">{w.note}</div> : null}</li>)}
                 {nudge ? <li className="desk-row">{nudge}</li> : null}
-                {unchecked.map((d) => <li key={d.id} className="desk-row"><span className="chip chip-warn t-2xs">Check</span> <Link className="u" href={href("contract")}>{d.label}</Link><div className="desk-meta">Not checked against the document, so the buyer does not see it.</div></li>)}
+                {unchecked.map((d) => <li key={d.id} className="desk-row"><span className="chip chip-warn t-2xs">Check</span> <Link className="u" href={href("contract")}>{d.label}</Link><div className="desk-meta">Not checked against the document, so the {buying ? "buyer" : "seller"} does not see it.</div></li>)}
                 {leadRow?.nextAction ? <li className="desk-row">{leadRow.nextAction}<div className="desk-meta">Your next action{leadRow.nextDue ? `, due ${leadRow.nextDue}` : ""}</div></li> : null}
               </ul>
               {!nobodyInvited && !missed.length && !blocked.length && !nudge && !unchecked.length && !leadRow?.nextAction ? <p className="t-sm c-4">Nothing is waiting on you here.</p> : null}
             </section>
             <section className="card desk-card" aria-labelledby="ov-dates">
               <h2 id="ov-dates">Key dates</h2>
-              {!buying ? <p className="t-sm c-4">Dates are tracked on buying journeys.</p>
-                : !prog?.open ? <p className="t-sm c-4">No contract yet.</p>
+              {!prog?.open ? <p className="t-sm c-4">No contract yet.</p>
                 : !dateData ? <p className="t-sm c-neg">The dates did not load; unknown, not none.</p>
                 : upcoming.length ? <ul>{upcoming.map((d) => <li key={d.id} className="desk-row">{d.label}<div className="desk-meta">{d.view.when}</div></li>)}</ul>
                 : <p className="t-sm c-4">No checked dates ahead.</p>}
@@ -453,7 +452,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
             <h2 id="household-h" className="t-md w6">Household</h2>
             <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>Who can sign in to this journey, and what each person sees.</div>
             {memberList ? (
-              <Household journeyId={id} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
+              <Household journeyId={id} side={journey.side} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
             ) : <p className="t-xs c-neg">The household did not load. That is not the same as nobody being invited.</p>}
             <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line-3)" }}>
               <div className="t-sm w6">Summary links</div>

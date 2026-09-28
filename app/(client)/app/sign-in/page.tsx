@@ -26,7 +26,7 @@ export default async function ClientSignIn({ searchParams }: { searchParams: Pro
       <div className="card p-5">
         <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Sign in to your move</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-          For buyers your agent has invited. We email you a link; there is no password to remember.
+          For buyers and sellers your agent has invited. We email you a link; there is no password to remember.
         </p>
         {reason ? <p className="t-xs c-3" style={{ marginTop: 10 }}>{reason}</p> : null}
         <SignInForm />

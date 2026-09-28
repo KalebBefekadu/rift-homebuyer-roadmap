@@ -256,7 +256,7 @@ function DateForm({ start, docs, busy, submitLabel, onSave, onCancel, disabled }
         <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} /> I checked this against the executed document
       </label>
       <p className={`t-xs ${r ? "" : "c-4"}`} style={{ marginTop: 6 }} aria-live="polite">
-        {r ? <>Due <span className="w6">{whenText(r)}</span>{!r.dueTime ? ". No time is stated, so none is assumed." : "."}{!verified ? " Not checked yet: the buyer will not see it." : ""}</> : bad}
+        {r ? <>Due <span className="w6">{whenText(r)}</span>{!r.dueTime ? ". No time is stated, so none is assumed." : "."}{!verified ? " Not checked yet: the client will not see it." : ""}</> : bad}
       </p>
       <div className="row gap-2" style={{ marginTop: 8 }}>
         <button className="btn btn-p btn-sm" disabled={busy || !r || disabled} onClick={() => onSave(input)}>{busy ? "Saving…" : submitLabel}</button>

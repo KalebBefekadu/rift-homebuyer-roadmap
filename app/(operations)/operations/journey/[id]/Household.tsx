@@ -35,7 +35,8 @@ const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: 
  * and pasting it into his own email is that approval. The person opening it
  * must sign in with the same address before it grants anything.
  */
-export function Household({ journeyId, members, defaultEmail, defaultName }: {
+export function Household({ journeyId, side, members, defaultEmail, defaultName }: {
+  side: "buy" | "sell";
   journeyId: string;
   members: MemberView[];
   defaultEmail: string;
@@ -98,7 +99,7 @@ export function Household({ journeyId, members, defaultEmail, defaultName }: {
           ))}
         </ul>
       ) : (
-        <p className="t-xs c-4">Nobody invited yet. Invite the buyer so they can confirm the brief and react to homes themselves.</p>
+        <p className="t-xs c-4">Nobody invited yet. {side === "buy" ? "Invite the buyer so they can confirm the brief and react to homes themselves." : "Invite the seller so they can see the pricing, the listing and the offers you release, and answer them."}</p>
       )}
 
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
