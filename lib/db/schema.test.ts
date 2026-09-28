@@ -667,6 +667,20 @@ describe("the outbox, as stored (Blueprint v5 §10.2)", () => {
     await rejects(c, "insert into rift_outbox_events (agent_id, outbox_id, state, by_name) values ($1,$2,'approved','  ')", [AGENT, id], /check/);
   });
 
+  test("two steps cannot claim the same place in a message's history, so a double press sends once", async (c) => {
+    const { rows } = await c.query(
+      `insert into rift_outbox (agent_id, channel, purpose, to_address, subject, body, content_hash)
+       values ($1,'email','program-alert','twice@example.com','Subject','Body',$2) returning id`, [AGENT, H]);
+    const id = rows[0].id;
+    const step = "insert into rift_outbox_events (agent_id, outbox_id, state, by_name, seq) values ($1,$2,'running','Kaleb',$3)";
+    await c.query(step, [AGENT, id, 3]);
+    await rejects(c, step, [AGENT, id, 3], /rift_outbox_events_seq_key/);
+    await rejects(c, step, [AGENT, id, 0], /seq_check/);
+    /* Steps written before the column existed have none, and never collide. */
+    await c.query("insert into rift_outbox_events (agent_id, outbox_id, state, by_name) values ($1,$2,'prepared','Kaleb')", [AGENT, id]);
+    await c.query("insert into rift_outbox_events (agent_id, outbox_id, state, by_name) values ($1,$2,'cancelled','Kaleb')", [AGENT, id]);
+  });
+
   test("deleting a person deletes their drafts", async (c) => {
     const { rows: [lead] } = await c.query(
       "insert into rift_leads (agent_id, side, email, score, band) values ($1,'buy','outbox-person@example.com',50,'soon') returning id", [AGENT]);
