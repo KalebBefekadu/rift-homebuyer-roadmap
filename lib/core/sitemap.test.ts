@@ -41,7 +41,12 @@ function routes(dir: string, prefix = ""): { route: string; source: string }[] {
   return out;
 }
 
-const all = routes(ROOT);
+/* The group's own page is "/": the walk below only looks inside folders, and
+   the home page was missing from the sitemap for exactly that reason. */
+const all = [
+  ...(readdirSync(ROOT).includes("page.tsx") ? [{ route: "/", source: readFileSync(join(ROOT, "page.tsx"), "utf8") }] : []),
+  ...routes(ROOT),
+];
 
 /** Pages that ask not to be indexed say so in their own metadata. */
 const noindex = (src: string) => /index:\s*false|noindex/.test(src);
@@ -71,8 +76,8 @@ describe("every public page is findable", () => {
     const missing = all
       .filter((r) => !noindex(r.source))
       .filter((r) => !refused(r.route))
-      .filter((r) => r.route !== "/")
-      .filter((r) => !SITEMAP.includes(`\${base}${r.route}\``))
+      /* Matched with the closing backtick, so "/" means the home page exactly. */
+      .filter((r) => !SITEMAP.includes(`\${base}${r.route === "/" ? "/" : r.route}\``))
       .map((r) => r.route);
 
     expect(missing, `not in app/sitemap.ts: ${missing.join(", ")}`).toEqual([]);

@@ -17,6 +17,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const now = new Date();
   return [
+    /* The front door. Missing until the drift guard below was taught that the
+       route group's own page is "/". */
+    { url: `${base}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/buy`, lastModified: now, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/abroad`, lastModified: now, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/abroad/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
