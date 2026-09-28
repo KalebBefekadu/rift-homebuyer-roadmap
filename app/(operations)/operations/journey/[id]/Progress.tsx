@@ -210,7 +210,7 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
             <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
               <label className="field" style={{ flex: "2 1 220px" }}><span className="label">Home</span>
                 <select className="input" value={homeId} onChange={(e) => setHomeId(e.target.value)}>
-                  <option value="">{side === "sell" ? "The property" : "Choose a home on the list"}</option>
+                  <option value="">{side === "sell" ? "Choose the property" : "Choose a home on the list"}</option>
                   {homes.map((h) => <option key={h.id} value={h.id}>{h.address}</option>)}
                 </select></label>
               <label className="field" style={{ flex: "1 1 140px" }}><span className="label">Paying by</span>
@@ -235,7 +235,13 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
             </p>
           </div>
         ) : !finished && progress.stage !== TERMINAL[side] ? (
-          <button className="btn btn-s btn-sm" disabled={!homes.length} onClick={() => setForm("contract")}>Record a contract</button>
+          <button className="btn btn-s btn-sm" disabled={!homes.length} onClick={() => {
+            /* A sale has one property. The empty first option read "The
+               property", so it looked chosen while the button stayed off
+               with nothing to say why. A purchase still picks its home. */
+            if (side === "sell" && homes.length === 1) setHomeId(homes[0]!.id);
+            setForm("contract");
+          }}>Record a contract</button>
         ) : null}
         {!open && !homes.length && !finished && progress.stage !== TERMINAL[side] ? <p className="t-2xs c-4" style={{ marginTop: 6 }}>{side === "sell" ? "Record the property first, on the Property tab." : "Add the home to the list first."}</p> : null}
       </div>

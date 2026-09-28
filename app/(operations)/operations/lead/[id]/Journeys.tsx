@@ -32,7 +32,8 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
   const go = useGo();
   const [open, setOpen] = useState(false);
   const [newSide, setNewSide] = useState<Side>(side);
-  const [label, setLabel] = useState(side === "buy" ? "Buying a home" : "Selling a home");
+  const suggested = (s: Side) => (s === "buy" ? "Buying a home" : "Selling a home");
+  const [label, setLabel] = useState(suggested(side));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -90,7 +91,13 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
           <div className="row gap-2 wrap">
             <label className="field" style={{ flex: "0 0 140px" }}>
               <span className="label">Goal</span>
-              <select className="input" value={newSide} onChange={(e) => setNewSide(e.target.value as Side)}>
+              <select className="input" value={newSide} onChange={(e) => {
+                const next = e.target.value as Side;
+                /* The suggested name follows the goal until he writes his
+                   own: switching to Selling left "Buying a home" in place. */
+                if (label === suggested(newSide)) setLabel(suggested(next));
+                setNewSide(next);
+              }}>
                 <option value="buy">Buying</option>
                 <option value="sell">Selling</option>
               </select>
@@ -109,7 +116,7 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
           </div>
           {newSide === "sell" ? (
             <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.6 }}>
-              Selling journeys hold the household for now. The seller workflow comes after the buyer release.
+              A selling journey holds the property, pricing, preparation, the listing, the contract and the seller&apos;s proceeds.
             </p>
           ) : null}
         </div>

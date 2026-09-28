@@ -9,6 +9,7 @@ import { siteUrl } from "@/lib/core/site";
 import { aiConfigured } from "@/lib/db/ai";
 import { Unavailable } from "../../Unavailable";
 import { Composer } from "./Composer";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Campaign" };
 export const dynamic = "force-dynamic";
@@ -18,6 +19,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
   const { id } = await params;
+  /* A mistyped link is not found, not a database failure to report. */
+  if (!isUuid(id)) notFound();
   const read = await campaignFor(id);
   if (!read.ok) return <main className="shell-w sec"><p className="t-sm c-neg">This campaign did not load ({read.error}).</p></main>;
   if ("skipped" in read) return <Unavailable reason={read.reason} />;
