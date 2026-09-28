@@ -63,7 +63,11 @@ export interface ProgramRecord {
     | { kind: "two-sizes"; upTo2: number; threePlus: number; upTo: boolean; note?: string }
     | { kind: "flat"; max: number; note?: string }
     | { kind: "not-stated" };
-  price: { max: number; upTo: boolean; note?: string } | null;
+  price: {
+    max: number; upTo: boolean; note?: string;
+    /** A higher cap for a newly built home. Not asked, so a price between the two is "needs checking". */
+    newBuildMax?: number;
+  } | null;
   minCredit: { score: number; note?: string } | null;
   loanTypes: LoanType[] | null;
   /** Only for people in these jobs. */
@@ -226,7 +230,7 @@ export const GEORGIA_PROGRAMS: ProgramRecord[] = [
     firstTime: "required",
     firstTimeNote: "Not owned a home in the last 3 years.",
     income: { kind: "ami", pct: 80 },
-    price: { max: 347_000, upTo: false, note: "$367,000 for a newly built home." },
+    price: { max: 347_000, upTo: false, newBuildMax: 367_000, note: "$367,000 for a newly built home." },
     minCredit: { score: 600, note: "The county recommends 600; the lender sets the minimum." },
     loanTypes: null,
     combines: "unknown",
@@ -257,7 +261,7 @@ export const GEORGIA_PROGRAMS: ProgramRecord[] = [
     firstTime: "required",
     firstTimeNote: "Not owned a home for 3 years or more.",
     income: { kind: "ami", pct: 80 },
-    price: { max: 371_000, upTo: false, note: "$425,000 for a newly built home, effective December 1, 2025." },
+    price: { max: 371_000, upTo: false, newBuildMax: 425_000, note: "$425,000 for a newly built home, effective December 1, 2025." },
     minCredit: { score: 580, note: "At least one score above 580." },
     loanTypes: null,
     combines: "unknown",
@@ -545,7 +549,12 @@ export function checkProgram(p: ProgramRecord, profile: Profile): Match {
   /* Price. */
   if (p.price) {
     const note = `Up to ${money(p.price.max)}${p.price.note ? `. ${p.price.note}` : ""}`;
-    if (profile.price > p.price.max) checks.push({ label: "Price", state: "no", note });
+    /* Nobody is asked whether the home is new. Above the ordinary cap but
+       inside the new-build one, the answers cannot settle it, and a rule the
+       answers cannot settle is "needs checking", never a "no": a $360,000
+       new build in Fulton was told HOP did not fit. */
+    if (profile.price > (p.price.newBuildMax ?? p.price.max)) checks.push({ label: "Price", state: "no", note });
+    else if (profile.price > p.price.max) checks.push({ label: "Price", state: "check", note: `Only if the home is newly built. ${note}` });
     else checks.push({ label: "Price", state: p.price.upTo ? "check" : "fits", note });
   }
 

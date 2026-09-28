@@ -26,6 +26,23 @@ describe("the records (Blueprint v5 §6.2, §6.6)", () => {
 });
 
 describe("matching (§6.3)", () => {
+  it("leaves a price between the ordinary and the new-build cap as needs checking, never a no", () => {
+    /* Fulton's HOP allows $347,000, or $367,000 for a newly built home, and
+       nobody is asked whether the home is new. */
+    const hop = (price: number) => checkProgram(bySlug("fulton-hop"), {
+      county: "Fulton", firstTime: true, price, income: 50_000, household: 2, occupation: "other",
+    }).checks.find((c) => c.label === "Price")!;
+    expect(hop(340_000).state).toBe("fits");
+    expect(hop(360_000).state).toBe("check");
+    expect(hop(360_000).note).toMatch(/^Only if the home is newly built/);
+    expect(hop(370_000).state).toBe("no");
+    const gwinnett = checkProgram(bySlug("gwinnett-homestretch"), {
+      county: "Gwinnett", firstTime: true, price: 400_000, income: 50_000, household: 2, occupation: "other",
+    });
+    expect(gwinnett.checks.find((c) => c.label === "Price")!.state).toBe("check");
+    expect(gwinnett.potential).toBe(true);
+  });
+
   it("a first-time DeKalb buyer sees Georgia Dream, the FHLBank product and the Atlanta programs, each with what still needs checking", () => {
     const r = run({});
     expect(slugs(r)).toEqual(expect.arrayContaining(["ga-dream", "fhlb-first-time", "atl-homenow"]));
