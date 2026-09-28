@@ -22,7 +22,7 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 | --- | --- | --- | --- |
 | **Supabase** | Auth, Postgres, RLS, file storage | Project live, schema is the retired MVP's | `lib/supabase/*`, `lib/auth/*`, `supabase/migrations/` |
 | **Sentry** | Errors, tracing, source maps | Wired and deployed | `next.config.ts`, `instrumentation*.ts`, `lib/monitoring/capture.ts` |
-| **Brevo** | Transactional email, contact attributes | Client written, one caller | `lib/brevo/sync.ts`, `app/actions/brevo.ts` |
+| **Brevo** | Transactional email, contact attributes | Client written, no caller yet (the unauthenticated server action that wrapped it was removed, 28 Sep) | `lib/brevo/sync.ts` |
 | **Vercel** | Hosting, edge, cron | Project linked (`rift-homebuyer-roadmap`) | `.vercel/project.json` |
 | **Anthropic (Claude API)** | Reading an uploaded offer PDF into the form; comparing a changed program page with its record | Built, off until `ANTHROPIC_API_KEY` is set (Blueprint v5 §10.2, D16) | `lib/core/ai.ts`, `lib/db/ai.ts`, `lib/db/offer-read.ts`, `lib/db/program-checks.ts` |
 

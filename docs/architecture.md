@@ -94,7 +94,7 @@ built against.
 | Agent surface | `app/(studio)` | Studio |
 | Specification prototype | `app/prototype`, `components/rift`, `lib/prototype` | The agreed product, running |
 | Auth | `lib/auth`, `lib/supabase`, `app/auth/callback` | Supabase Auth with a localStorage fallback |
-| Messaging | `lib/brevo/sync.ts`, `app/actions/brevo.ts` | Contact upsert and event projection |
+| Messaging | `lib/brevo/sync.ts` | Contact upsert and event projection (no caller yet) |
 | Observability | `lib/monitoring`, `instrumentation*.ts`, `sentry.*.config.ts` | Capture failures without PII |
 | Domain | `lib/core` | The compute engine and every product rule, pure and tested |
 | Data access | `lib/db` | Server-only reads and writes. Every call returns `DbResult` |

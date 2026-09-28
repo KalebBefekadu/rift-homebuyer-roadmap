@@ -114,7 +114,8 @@ export async function respondToPricing(m: Membership, opinionId: string, respons
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   if (m.side !== "sell") return failed("Pricing belongs to a sale");
-  if (!canRespond(m.role)) return failed("Your access lets you see this, not answer it");
+  /* The pricing is shown only with "Price and fees", so answering it needs the same. */
+  if (!canRespond(m.role) || !m.scopes.includes("money")) return failed("Your access lets you see this, not answer it");
   const o = await boundedRead(db.from("rift_pricing_opinions").select("id,version,journey_id").eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("version", { ascending: false }).limit(1), "the pricing");
   if (!o.ok) return o;
   const latest = rows(o)[0];
