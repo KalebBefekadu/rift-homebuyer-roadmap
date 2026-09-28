@@ -11,7 +11,7 @@ import { alertSubscribers } from "@/lib/db/saved-plan";
 import { applyChecks, openFlags, textDiff, type CheckOutcome, type SourceCheck } from "@/lib/core/program-check";
 import { Ico } from "@/components/rift/icons";
 import { Unavailable } from "../Unavailable";
-import { reviewProgramPage, prepareProgramAlerts } from "./actions";
+import { ReviewForm, PrepareAlerts } from "./Review";
 import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Programs" };
@@ -134,25 +134,11 @@ export default async function ProgramsReview() {
                       <ul className="row wrap gap-2 mt-2">
                         {asked.map((x) => <li key={x.leadId}><Link href={`/operations/lead/${x.leadId}`} className="chip">{x.name ?? "Unnamed"}</Link></li>)}
                       </ul>
-                      <form action={prepareProgramAlerts} className="mt-2">
-                        <input type="hidden" name="checkId" value={f.check.id} />
-                        <button className="btn btn-g btn-sm" type="submit">Prepare an email to each, for my approval</button>
-                      </form>
+                      <PrepareAlerts checkId={f.check.id} />
                     </div>
                   ) : null}
 
-                  <form action={reviewProgramPage} className="col gap-2 mt-3" style={{ paddingTop: 12, borderTop: "1px solid var(--line-3)" }}>
-                    <input type="hidden" name="checkId" value={f.check.id} />
-                    <label className="field">
-                      <span className="label">Note (optional)</span>
-                      <input className="input" name="note" maxLength={500} placeholder="What you checked, or what needs changing" />
-                    </label>
-                    <div className="row gap-2 wrap">
-                      <button className="btn btn-p btn-sm" type="submit" name="outcome" value="still-right"><Ico.check size={13} />The record is still right</button>
-                      <button className="btn btn-g btn-sm" type="submit" name="outcome" value="needs-update"><Ico.alert size={13} />It needs updating: stop showing it</button>
-                    </div>
-                    <span className="t-2xs c-4">Recorded as reviewed by {agent.name}. &ldquo;Needs updating&rdquo; withholds the program from buyers until its record is edited.</span>
-                  </form>
+                  <ReviewForm checkId={f.check.id} agentName={agent.name} />
                 </article>
               );
             })}
