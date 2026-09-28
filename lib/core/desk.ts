@@ -104,7 +104,6 @@ export interface DeskInput {
   dependencies?: { id: string; purchaseJourneyId: string; purchaseLabel: string; line: string; owner: string; note: string }[];
 }
 
-const DAY = 86_400_000;
 const daysFrom = daysBetween;
 const short = (day: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
 const lead = (id: string, label: string) => ({ label, href: `/operations/lead/${id}` });
