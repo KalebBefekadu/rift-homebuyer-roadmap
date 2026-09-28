@@ -164,6 +164,41 @@ describe("the outbox is one agent's (Blueprint v5 §10.2)", () => {
   });
 });
 
+describe("nobody signs themselves in as the agent", () => {
+  /* A login that is not an agent: an invited buyer, or anybody who signed up
+     against the public anon key. Both exist in production, because invitations
+     need sign-ups switched on. */
+  const C_USER = "c0000000-0000-4000-8000-00000000000c";
+
+  test("a signed-in stranger cannot create an agent row for their own login", async (c) => {
+    /* Every other policy trusts rift_agents to say who the agent is, and
+       lib/db/session.ts turns any row here into a Studio session. The policy
+       used to be `for all ... with check (auth_user_id = auth.uid())`, which
+       let any login write the row that makes it an agent. */
+    await c.query("insert into auth.users (id) values ($1) on conflict do nothing", [C_USER]);
+    await asAgent(c, C_USER, async () => {
+      await expect(
+        c.query("insert into rift_agents (auth_user_id, name, email) values ($1,'Stranger','s@example.com')", [C_USER]),
+      ).rejects.toThrow(/row-level security|permission denied/i);
+    });
+  });
+
+  test("an agent cannot move their row to another login", async (c) => {
+    await asAgent(c, A_USER, async () => {
+      const r = await c.query("update rift_agents set auth_user_id = $1 where id = $2", [C_USER, A_AGENT])
+        .then((x) => x.rowCount, (e: Error) => e.message);
+      expect(r === 0 || /row-level security|permission denied/i.test(String(r))).toBe(true);
+    });
+  });
+
+  test("but an agent still reads their own row", async (c) => {
+    await asAgent(c, A_USER, async () => {
+      const r = await c.query("select count(*)::int n from rift_agents");
+      expect(r.rows[0].n).toBe(1);
+    });
+  });
+});
+
 describe("what an anonymous visitor can reach", () => {
   test("nothing belonging to anybody", async (c) => {
     await asAgent(c, null, async () => {
