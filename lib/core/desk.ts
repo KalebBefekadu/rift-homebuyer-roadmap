@@ -30,6 +30,7 @@
 import type { Commitment } from "./agenda";
 import type { ContractSummary, DateAttention, Waiting } from "./transactions";
 import { LATE_DAYS, type CadenceDue, type PricingAnswer } from "./seller-cadence";
+import { activityLine, type Activity as ClientActivity } from "./summary";
 
 export type Group = "attention" | "approval" | "today" | "waiting" | "upcoming";
 export const GROUPS: Group[] = ["attention", "approval", "today", "waiting", "upcoming"];
@@ -321,6 +322,8 @@ export function activity(input: {
   sent: { subject: string; to: string; at: string }[];
   choices: { leadId: string; name: string; from: string; at: string }[];
   answers?: PricingAnswer[];
+  /** What household members did on their journeys, in the morning summary's words. */
+  clients?: ClientActivity[];
 }, now: Date, days = 3): Activity[] {
   const since = new Date(now.getTime() - days * 86_400_000).toISOString();
   const out: Activity[] = [];
@@ -335,6 +338,10 @@ export function activity(input: {
   for (const c of input.choices) {
     if (c.at < since) continue;
     out.push({ at: c.at, text: `${c.name} chose ${c.from}`, href: `/operations/lead/${c.leadId}`, auto: false });
+  }
+  for (const c of input.clients ?? []) {
+    if (c.at < since) continue;
+    out.push({ at: c.at, text: `${c.journey}: ${activityLine(c)}`, href: `/operations/journey/${c.journeyId}`, auto: false });
   }
   for (const a of input.answers ?? []) {
     if (a.at < since || a.response !== "agree") continue;

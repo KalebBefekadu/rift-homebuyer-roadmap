@@ -1104,6 +1104,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Today's recent activity includes what households did (reactions, showing requests, offer and brief answers, work reported done), in the morning summary's words |
 | 28 Sep 2026 | A seller's "let's discuss" on the pricing reaches the agent's Today until a new version answers it; an agreement shows in recent activity |
 | 28 Sep 2026 | A sale's pricing review day and weekly listing review come to Today when due (S04, S09); seller journeys' shared screens stop speaking only to buyers; one day helper for every zone |
 | 28 Sep 2026 | The v4 questionnaire's unused routes, component and wording editor retired (D31); Questions shows what visitors read; health reports the Amharic review |

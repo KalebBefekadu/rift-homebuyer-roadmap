@@ -32,6 +32,7 @@ import { LeadRow } from "./LeadRow";
 import { DeskRow } from "./DeskRow";
 import { saleCadences } from "@/lib/db/listing";
 import { cadenceDue, pricingAnswers } from "@/lib/core/seller-cadence";
+import { householdActivity } from "@/lib/db/summary";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -86,7 +87,7 @@ export default async function OperationsToday() {
 
   /* One round. None of these depends on another, and Today's latency is the
      product's felt speed. */
-  const [leadsRead, reviewRead, dueRead, rate, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, programsRead, eventsRead, marksRead, depsRead, salesRead] =
+  const [leadsRead, reviewRead, dueRead, rate, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, programsRead, eventsRead, marksRead, depsRead, salesRead, clientsRead] =
     await Promise.all([
       rankedLeads(50),
       openItems(),
@@ -104,11 +105,13 @@ export default async function OperationsToday() {
       readMarks(agent.agentId, now),
       dependenciesFor(null, agent.agentId),
       saleCadences(agent.agentId),
+      /* What households did, read the way the morning summary reads it. */
+      householdActivity(new Date(now.getTime() - 3 * 86_400_000)),
     ]);
 
   /* Three states, not two: a query that FAILED is neither "nothing to do"
      nor "nothing recorded", and must not render as either. */
-  const reads: DbResult<unknown>[] = [leadsRead, reviewRead, dueRead, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, eventsRead, marksRead, depsRead, salesRead];
+  const reads: DbResult<unknown>[] = [leadsRead, reviewRead, dueRead, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, eventsRead, marksRead, depsRead, salesRead, clientsRead];
   const notRecording = reads.some((r) => "skipped" in r);
   const failures = reads.flatMap((r) => (r.ok ? [] : [r.error]));
   for (const error of failures) captureOpError(new Error(error), { op: "operations.today" });
@@ -160,6 +163,7 @@ export default async function OperationsToday() {
     sent: drafts.filter((d) => d.state === "succeeded").map((d) => ({ subject: d.draft.subject, to: d.draft.name ?? d.draft.to, at: d.events.at(-1)?.at ?? d.createdAt })),
     choices: choices.map((c) => ({ leadId: c.leadId, name: c.name, from: c.seen.from, at: c.chosenAt })),
     answers: pricingAnswers(list(salesRead)),
+    clients: list(clientsRead),
   }, now);
   const autoTouches = touches.filter((t) => t.auto).length;
 

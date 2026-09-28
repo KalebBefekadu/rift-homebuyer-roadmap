@@ -130,6 +130,15 @@ describe("a sale's promised reviews on Today (S04, S09)", () => {
     const news = activity({ leads: [], events: [], jobs: [], sent: [], choices: [], answers }, NOW);
     expect(news.map((n) => n.text)).toEqual(["Ann agreed to pricing version 1 for Sale of 3 Elm Rd"]);
   });
+
+  it("shows what households did, in the morning summary's words, linked to the journey", () => {
+    const news = activity({
+      leads: [], events: [], jobs: [], sent: [], choices: [],
+      clients: [{ kind: "tour-request", journeyId: "j9", journey: "Buying in Decatur", person: "Maya", who: "Maya", home: "4 Pine Ct", at: "2026-09-28T11:00:00Z" }],
+    }, NOW);
+    expect(news[0]).toMatchObject({ href: "/operations/journey/j9", auto: false });
+    expect(news[0]!.text).toBe("Buying in Decatur: Maya asked to see 4 Pine Ct. Nothing is booked until you arrange it.");
+  });
 });
 
 describe("snooze, pin and delegate (OPS-02)", () => {

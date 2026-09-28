@@ -32,12 +32,39 @@ export async function summaryParts(since: Date, now = new Date()): Promise<DbRes
   if (!db) return skipped("no database configured");
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
+  const [activity, leads, dates, jobs] = await Promise.all([
+    householdActivity(since),
+    boundedRead(db.from("rift_leads").select("name,side,band").eq("agent_id", agentId).gte("created_at", since.toISOString()).limit(500), "the summary"),
+    datesNeedingAttention(now),
+    jobsHealth(now),
+  ]);
+  if (!activity.ok || !("data" in activity)) return activity as DbResult<never>;
+  if (!leads.ok) return leads;
+  if (!dates.ok) return dates;
+  if (!jobs.ok) return jobs;
+
+  return done({
+    activity: activity.data,
+    dates: ("data" in dates && dates.data ? dates.data : []).map((d) => ({ person: d.person, label: d.label, when: d.when, why: d.why })),
+    jobs: ("data" in jobs && jobs.data ? jobs.data : []).flatMap((j) => (j.problem ? [j.problem] : [])),
+    leads: rows(leads).map((l) => ({ name: (l.name as string | null) ?? null, side: l.side as "buy" | "sell", band: (l.band as Band | null) ?? "nurture" })),
+  });
+}
+
+/**
+ * What household members did since `since`: the summary's news, and the
+ * client half of Today's recent activity.
+ */
+export async function householdActivity(since: Date): Promise<DbResult<Activity[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agentId = await currentAgentId();
+  if (!agentId) return skipped("no agent row exists yet");
   const from = since.toISOString();
   const mine = (table: string, cols: string) =>
     boundedRead(db.from(table).select(cols).eq("agent_id", agentId).gte("created_at", from).limit(500), "the summary");
 
-  const [leads, journeys, members, reactions, homesAdded, tours, feedback, answers, briefAnswers, proposals, work] = await Promise.all([
-    mine("rift_leads", "name,side,band"),
+  const [journeys, members, reactions, homesAdded, tours, feedback, answers, briefAnswers, proposals, work] = await Promise.all([
     boundedRead(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).limit(1000), "the summary"),
     boundedRead(db.from("rift_journey_members").select("id,journey_id,display_name,email,accepted_at").eq("agent_id", agentId).limit(2000), "the summary"),
     mine("rift_home_reactions", "journey_id,home_id,member_id,reaction,reason,created_at"),
@@ -49,7 +76,6 @@ export async function summaryParts(since: Date, now = new Date()): Promise<DbRes
     mine("rift_search_revisions", "journey_id,author_member_id,created_at"),
     mine("rift_workstream_updates", "journey_id,member_id,workstream,created_at"),
   ]);
-  if (!leads.ok) return leads;
   /* Before a journey migration the tables are simply not there: that is no
      activity, not a failure. Anything else fails the run, so a summary that
      could not be read shows on the job's health rather than going out empty. */
@@ -94,14 +120,5 @@ export async function summaryParts(since: Date, now = new Date()): Promise<DbRes
   for (const r of rows(proposals)) push(r, r.author_member_id, { kind: "brief-proposal" });
   for (const r of rows(work)) push(r, r.member_id, { kind: "work", workstream: r.workstream });
 
-  const [dates, jobs] = await Promise.all([datesNeedingAttention(now), jobsHealth(now)]);
-  if (!dates.ok) return dates;
-  if (!jobs.ok) return jobs;
-
-  return done({
-    activity,
-    dates: ("data" in dates && dates.data ? dates.data : []).map((d) => ({ person: d.person, label: d.label, when: d.when, why: d.why })),
-    jobs: ("data" in jobs && jobs.data ? jobs.data : []).flatMap((j) => (j.problem ? [j.problem] : [])),
-    leads: rows(leads).map((l) => ({ name: (l.name as string | null) ?? null, side: l.side as "buy" | "sell", band: (l.band as Band | null) ?? "nurture" })),
-  });
+  return done(activity);
 }
