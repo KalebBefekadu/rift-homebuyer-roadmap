@@ -30,6 +30,9 @@ export type SendResult =
 const FROM_EMAIL = process.env.BREVO_FROM_EMAIL;
 const FROM = { name: "Rift", email: FROM_EMAIL ?? "" };
 
+/** Long enough for Brevo on a bad day, short enough to leave a request its answer. */
+export const SEND_DEADLINE_MS = 10_000;
+
 async function send(payload: Record<string, unknown>, op: string): Promise<SendResult> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) return { ok: true, skipped: true, reason: "BREVO_API_KEY not set, so nothing was sent" };
@@ -46,6 +49,14 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
          to an @brevosend.com address; without this, a client's reply would
          go there instead of to the agent. */
       body: JSON.stringify({ sender: FROM, replyTo: { email: FROM_EMAIL }, ...payload }),
+      /* On a deadline, like every other call to Brevo in this file. This one
+         had none, and it sits behind a visitor's Save button and inside the
+         nurture run: a hung connection held the visitor until the platform
+         killed the request (after their lead had been stored, so a retry
+         stored them twice) and stopped a run partway, with every touch after
+         it never attempted. A timeout is reported as a failure; nothing here
+         retries on its own, so it cannot send twice. */
+      signal: AbortSignal.timeout(SEND_DEADLINE_MS),
     });
     if (!res.ok) {
       const body = await res.text();
