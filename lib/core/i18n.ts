@@ -503,11 +503,17 @@ const DICTS: Record<Locale, Dict> = { en, am };
 export function translator(locale: Locale) {
   const d = DICTS[locale] ?? en;
   return (key: string, vars?: Record<string, string | number>) => {
-    const raw = d[key] ?? en[key] ?? key;
+    /* A string known to say something false (WRONG_IN_AM) is served in
+       English until it is retranslated: a true sentence in the wrong script
+       is the lesser harm than a false one in the right script. */
+    const raw = (locale === "am" && WRONG_IN_AM.includes(key) ? en[key] : d[key]) ?? en[key] ?? key;
     if (!vars) return raw;
     return raw.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
   };
 }
+
+/** The language a key is actually served in, for the element's lang attribute. */
+export const servedIn = (locale: Locale, key: string): Locale => (locale === "am" && WRONG_IN_AM.includes(key) ? "en" : locale);
 
 export const isLocale = (v: unknown): v is Locale => v === "en" || v === "am";
 

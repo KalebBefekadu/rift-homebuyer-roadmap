@@ -7,7 +7,7 @@ import {
 } from "@/lib/core/abroad";
 import { money } from "@/lib/core/compute";
 import { FALLBACK_RATE } from "@/lib/core/rate";
-import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
+import { translator, servedIn, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { Ico, Mark } from "@/components/rift/icons";
 import { Keep } from "./Keep";
 
@@ -350,7 +350,7 @@ export default async function AbroadResults({
           cashIn={r.cashIn}
         />
 
-        <p className="t-xs c-4 sec" style={{ maxWidth: 720, lineHeight: 1.6, paddingBottom: 60, ...body }}>
+        <p lang={servedIn(locale, "res.disc")} className="t-xs c-4 sec" style={{ maxWidth: 720, lineHeight: 1.6, paddingBottom: 60, ...body }}>
           {t("res.disc")}
         </p>
       </main>

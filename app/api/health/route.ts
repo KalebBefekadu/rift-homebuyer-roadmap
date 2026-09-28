@@ -168,7 +168,7 @@ export async function GET(req: Request) {
        lib/core/i18n.ts): how many strings a native reader has not yet
        approved, and how many are known to say something the English no
        longer says. Counts of dictionary keys; nothing about anybody. */
-    amharic: `${unreviewedAm().length} of ${KEYS.length} unreviewed${WRONG_IN_AM.length ? `, ${WRONG_IN_AM.length} known wrong` : ""}`,
+    amharic: `${unreviewedAm().length} of ${KEYS.length} unreviewed${WRONG_IN_AM.length ? `, ${WRONG_IN_AM.length} known wrong (served in English until retranslated)` : ""}`,
   };
 
   if (db && agent) {

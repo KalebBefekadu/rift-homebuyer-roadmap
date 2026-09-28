@@ -7,7 +7,7 @@ import { Tibeb, Distance, ReturnBars } from "@/components/rift/art";
 import { LocaleToggle } from "@/components/rift/LocaleToggle";
 import { FaqSchema } from "@/components/rift/Agent";
 import { Announce } from "@/components/rift/Live";
-import { translator, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
+import { translator, servedIn, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
 import {
@@ -229,7 +229,7 @@ export function Landing({ initial, initialLocale, localePinned }: {
               </Link>
             ))}
           </div>
-          <p className="t-xs c-4" style={{ marginTop: 14, maxWidth: 700, lineHeight: am ? 1.85 : 1.6, ...script }}>
+          <p lang={servedIn(locale, "disc.hero")} className="t-xs c-4" style={{ marginTop: 14, maxWidth: 700, lineHeight: am ? 1.85 : 1.6, ...script }}>
             {t("disc.hero")}
           </p>
         </section>

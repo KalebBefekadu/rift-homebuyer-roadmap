@@ -55,6 +55,12 @@ describe("Amharic strings that are now wrong rather than merely unreviewed", () 
     }
   });
 
+  it("serves the corrected English for them rather than the false Amharic", () => {
+    const am = translator("am");
+    const en = translator("en");
+    for (const key of WRONG_IN_AM) expect(am(key), key).toBe(en(key));
+  });
+
   it("does not let a key be called both reviewed and wrong", () => {
     for (const key of WRONG_IN_AM) {
       expect(REVIEWED_AM, `${key} cannot be reviewed and wrong at the same time`).not.toContain(key);
