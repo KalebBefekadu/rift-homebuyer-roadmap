@@ -41,6 +41,14 @@ describe("authorising a scheduled run", () => {
   it("admits the scheduler's credential", () => {
     expect(authoriseCron(`Bearer ${SECRET}`, SECRET)).toEqual({ ok: true });
   });
+
+  it("refuses a credential that differs only by a prefix, a suffix or one character", () => {
+    /* The constant-time comparison loops over the expected header only, so
+       the length has to be part of the answer on its own. */
+    for (const header of [`Bearer ${SECRET}x`, `Bearer ${SECRET.slice(0, -1)}`, `Bearer ${SECRET.slice(0, -1)}T`, `Bearer ${SECRET}\u0000`]) {
+      expect(authoriseCron(header, SECRET), header).toMatchObject({ ok: false, status: 401 });
+    }
+  });
 });
 
 describe("the scheduled routes answer the scheduler", () => {

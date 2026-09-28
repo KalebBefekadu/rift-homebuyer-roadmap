@@ -39,12 +39,22 @@ export function authoriseCron(authorization: string | null, secret: string | und
   if (!secret) {
     return { ok: false, status: 503, error: "CRON_SECRET is not set, refusing to run" };
   }
-  /* Constant-time comparison is not worth reaching for here: the comparand is
-     a whole header, the endpoint is rate-limited by the platform, and a timing
-     oracle over a 256-bit secret across the public internet is not the way in.
-     Said out loud so the omission is a decision rather than an oversight. */
-  if (authorization !== `Bearer ${secret}`) {
+  /* Constant time. This used to argue that a timing oracle over a whole
+     header across the internet is not the way in, which is probably true; but
+     the comparison is one loop, it now also guards /api/health's deep check,
+     and a secret compared with `!==` is the first thing any review flags. One
+     comparison, done the careful way, rather than a paragraph defending it. */
+  if (!sameSecret(authorization ?? "", `Bearer ${secret}`)) {
     return { ok: false, status: 401, error: "unauthorized" };
   }
   return { ok: true };
+}
+
+/** Whether two strings are equal, in time that depends only on the expected one. */
+function sameSecret(given: string, expected: string): boolean {
+  let diff = given.length ^ expected.length;
+  /* charCodeAt past the end is NaN, which `^` reads as 0; the length term
+     above has already made a shorter string unequal. */
+  for (let i = 0; i < expected.length; i++) diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
 }

@@ -5,6 +5,7 @@ import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { currentRate } from "@/lib/db/rates";
 import { overdue } from "@/lib/db/retention";
 import { KEYS, WRONG_IN_AM, unreviewedAm } from "@/lib/core/i18n";
+import { authoriseCron } from "@/lib/core/cron";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,8 +145,9 @@ async function databaseProbe(db: NonNullable<ReturnType<typeof serviceClient>>):
 }
 
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  const deep = Boolean(secret) && req.headers.get("authorization") === `Bearer ${secret}`;
+  /* The scheduled jobs' rule, so there is one comparison of this secret and
+     it is the constant-time one. */
+  const deep = authoriseCron(req.headers.get("authorization"), process.env.CRON_SECRET).ok;
   const db = serviceClient();
   const reachable = db ? await databaseProbe(db) : false;
   const agent = db && reachable ? await currentAgentId() : null;
