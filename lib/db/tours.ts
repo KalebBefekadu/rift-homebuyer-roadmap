@@ -17,7 +17,7 @@ import {
  * touches is matched on that agent and on the journey, so a stop id posted
  * from a page is never authority on its own. The agent's pages reach it
  * through `toursOf` and the step functions below; a buyer's through
- * lib/db/client.ts, which has already checked the membership.
+ * lib/db/portal.ts, which has already checked the membership.
  */
 
 export interface TourFeedback {
@@ -128,7 +128,7 @@ export function shapeTours(
   });
 }
 
-/** Every stop on a journey with its steps and answers. For the agent, or for a member via lib/db/client.ts. */
+/** Every stop on a journey with its steps and answers. For the agent, or for a member via lib/db/portal.ts. */
 export async function readTours(journeyId: string, agentId: string): Promise<DbResult<Tours>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
@@ -185,7 +185,7 @@ type Actor = { kind: "agent"; label: string } | { kind: "client"; memberId: stri
 
 /**
  * Ask to see a home. Creates the stop and its first step ("requested"). Also
- * written by lib/db/client.ts for a member, which passes its own actor.
+ * written by lib/db/portal.ts for a member, which passes its own actor.
  *
  * One open request per home: a second click, or the co-buyer asking too,
  * finds the one already there rather than making a second showing to arrange.

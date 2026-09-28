@@ -5,7 +5,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { currentRate } from "./rates";
 import { marketDay } from "@/lib/core/progress";
 import { currentFacts, factError, ledger, planInputs, type Fact, type FactKind, type Ledger } from "@/lib/core/ledger";
-import type { Membership } from "./client";
+import type { Membership } from "./portal";
 import type { BuyerInputs } from "@/lib/core/compute";
 
 /**

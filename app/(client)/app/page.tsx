@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { clientSession, myJourneys } from "@/lib/db/client";
+import { clientSession, myJourneys } from "@/lib/db/portal";
 import { buyerSearchOn, SIDE_LABEL } from "@/lib/core/journey";
 import { ClientShell } from "./ClientShell";
 import { Help } from "./Help";

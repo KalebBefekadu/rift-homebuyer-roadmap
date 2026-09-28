@@ -213,7 +213,7 @@ describe("the calendar with no credentials", () => {
  * over rows) and the few with their own shapes are named and checked apart.
  */
 describe("the journey layer with nothing configured (AT38)", () => {
-  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "jobs", "retention", "summary", "pilot"] as const;
+  const MODULES = ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "portal", "jobs", "retention", "summary", "pilot"] as const;
   const OWN_SHAPE = new Set([
     "journeyTablesMissing", "inviteTokenHash", "trackedCron", "clientSession",
     "shapeRevision", "shapeHomes", "shapeEvents", "shapeUpdates", "shapeSteps", "shapeTours", "newHomeError", "maskEmail",
@@ -233,7 +233,7 @@ describe("the journey layer with nothing configured (AT38)", () => {
       let walked = 0;
       for (const [name, fn] of Object.entries(m)) {
         if (typeof fn !== "function" || OWN_SHAPE.has(name) || /^[A-Z]/.test(name)) continue;
-        const args = Array.from({ length: Math.max(fn.length, 1) }, (_, i) => (i === 0 && mod === "client" && !/^(myJourneys|memberOf|invitationByToken|acceptInvitation|mayReceiveSignIn)$/.test(name) ? member : ID));
+        const args = Array.from({ length: Math.max(fn.length, 1) }, (_, i) => (i === 0 && mod === "portal" && !/^(myJourneys|memberOf|invitationByToken|acceptInvitation|mayReceiveSignIn)$/.test(name) ? member : ID));
         let r: unknown;
         try {
           r = await (fn as (...a: unknown[]) => unknown)(...args);
@@ -249,7 +249,7 @@ describe("the journey layer with nothing configured (AT38)", () => {
   }
 
   it("the client's session reads as unknown or signed out, never signed in", async () => {
-    const { clientSession } = await import("./client");
+    const { clientSession } = await import("./portal");
     const s = await clientSession().catch(() => ({ state: "threw" }));
     expect(["unknown", "signed-out"]).toContain((s as { state: string }).state);
   });
@@ -262,7 +262,7 @@ describe("the journey layer with nothing configured (AT38)", () => {
  * brief, homes, showings, offers, documents and dates by hand.
  */
 describe("manual journey work depends on no provider (AT38)", () => {
-  for (const mod of ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "client", "pilot"]) {
+  for (const mod of ["journeys", "search", "shortlist", "tours", "progress", "bids", "documents", "deadlines", "portal", "pilot"]) {
     it(`${mod} imports no email, calendar or outside call`, () => {
       const src = readFileSync(resolve(__dirname, `${mod}.ts`), "utf8");
       expect(src).not.toMatch(/from "\.\/(email|calendar)"|brevo|api\.cal\.com|anthropic|openai/i);

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { clientBrief, clientHomes, clientSession, memberOf } from "@/lib/db/client";
+import { clientBrief, clientHomes, clientSession, memberOf } from "@/lib/db/portal";
 import { clientMoney } from "@/lib/db/money";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { CompareTable, chosen } from "@/components/rift/money/CompareTable";

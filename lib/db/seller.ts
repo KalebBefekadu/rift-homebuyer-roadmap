@@ -5,7 +5,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { marketDay } from "@/lib/core/progress";
 import { pricingError, type Comp, type Opinion, type PricingInput } from "@/lib/core/pricing";
 import { figureError, type Figure, type FigureInput, type FigureKind, type OwedSource } from "@/lib/core/proceeds";
-import type { Membership } from "./client";
+import type { Membership } from "./portal";
 import { canRespond } from "@/lib/core/journey";
 
 /**

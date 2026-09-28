@@ -73,7 +73,7 @@ export function shapeHomes(homes: Record<string, unknown>[], reactions: Record<s
   });
 }
 
-/** Homes on a journey with reactions. Read for the agent, or for a member via lib/db/client.ts. */
+/** Homes on a journey with reactions. Read for the agent, or for a member via lib/db/portal.ts. */
 export async function readHomes(journeyId: string, agentId: string): Promise<DbResult<Home[]>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
@@ -119,7 +119,7 @@ export function newHomeError(h: NewHome): string | null {
   return factsError(h.facts);
 }
 
-/** Written by lib/db/client.ts for a member too, which passes its own actor. */
+/** Written by lib/db/portal.ts for a member too, which passes its own actor. */
 export async function insertHome(
   journeyId: string, agentId: string, h: NewHome,
   actor: { kind: "agent"; label: string } | { kind: "client"; memberId: string; label: string },

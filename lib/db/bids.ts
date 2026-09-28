@@ -15,7 +15,7 @@ import {
  * rift_bid_steps and rift_bid_responses; the rules are lib/core/bid.ts.
  *
  * Every read and write names the agent and the journey. A member's answer
- * comes through lib/db/client.ts, which has checked the membership; this file
+ * comes through lib/db/portal.ts, which has checked the membership; this file
  * checks that the answer is to the version being asked about now, from
  * somebody whose say was asked for.
  */

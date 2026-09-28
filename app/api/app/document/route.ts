@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clientDocumentLink, clientSession, memberOf } from "@/lib/db/client";
+import { clientDocumentLink, clientSession, memberOf } from "@/lib/db/portal";
 import { buyerSearchOn } from "@/lib/core/journey";
 
 export const runtime = "nodejs";
@@ -10,7 +10,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * Open a document, for a household member: only one attached to a version of
  * an offer they were asked about, and only with the money scope
- * (lib/db/client.ts `clientDocumentLink`). The link it sends them to works
+ * (lib/db/portal.ts `clientDocumentLink`). The link it sends them to works
  * for one minute.
  */
 export async function GET(req: Request) {

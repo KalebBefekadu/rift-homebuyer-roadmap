@@ -11,7 +11,7 @@ import {
 
 /**
  * Journeys and their members, on the agent's side. The rules are in
- * lib/core/journey.ts; the client's side of membership is lib/db/client.ts.
+ * lib/core/journey.ts; the client's side of membership is lib/db/portal.ts.
  *
  * Every function here resolves the agent itself and scopes every query by it.
  * The service-role client bypasses RLS, so a bare journey id from a form is

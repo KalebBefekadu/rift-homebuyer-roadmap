@@ -421,7 +421,7 @@ export function buyerBidLine(view: BidView, agentFirst: string): string {
   }
 }
 
-/** An offer as a household member may see it (lib/db/client.ts `clientBids`). */
+/** An offer as a household member may see it (lib/db/portal.ts `clientBids`). */
 export interface BuyerBid {
   id: string;
   address: string;

@@ -35,7 +35,8 @@ import { georgiaDay } from "@/lib/core/day";
 
 /**
  * The client's side of a journey: who is signed in, which journeys they are a
- * member of, and what they may read and write there.
+ * member of, and what they may read and write there. (Named portal, not
+ * client, so it is never confused with lib/db/clients.ts, the agent's people.)
  *
  * AUTHORISATION IS MEMBERSHIP, CHECKED EVERY TIME. A session proves an
  * address; `memberOf` turns it into access only if a live, accepted,

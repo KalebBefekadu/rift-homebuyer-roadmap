@@ -21,7 +21,7 @@ import {
  *
  * Every read and write names the agent and the journey, so an id posted from
  * a page is never authority on its own. The agent's pages come through
- * `progressFor` and the writers below; a member's through lib/db/client.ts,
+ * `progressFor` and the writers below; a member's through lib/db/portal.ts,
  * which has already checked the membership.
  */
 
@@ -318,7 +318,7 @@ type WorkActor = { kind: "agent"; label: string } | { kind: "client"; memberId: 
 
 /**
  * Record an update to one workstream of the open contract. Also called by
- * lib/db/client.ts for a member, who can only report their own part done.
+ * lib/db/portal.ts for a member, who can only report their own part done.
  */
 export async function recordWork(
   journeyId: string, agentId: string, contractId: string, workstream: Workstream, input: WorkInput,

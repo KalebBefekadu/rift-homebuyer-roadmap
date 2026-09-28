@@ -64,7 +64,7 @@ function fromCriterion(c: SearchCriterion): Draft {
  *
  * For the buyer (`mode="client"`) the who/when/where fields are hidden: the
  * server stamps their name, today, and "client page" on anything they changed,
- * whatever the browser sends (lib/db/client.ts proposeRevision).
+ * whatever the browser sends (lib/db/portal.ts proposeRevision).
  */
 export function BriefEditor({ latest, start, person, disagreement, onSave, mode = "agent", saveLabel }: {
   latest: { revision: number; criteria: SearchCriterion[]; questions: string[] } | null;

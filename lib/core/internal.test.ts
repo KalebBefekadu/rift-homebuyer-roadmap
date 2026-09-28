@@ -66,7 +66,7 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     "/plan/": "the token IS the credential: app/(rift)/plan/[token]/page.tsx",
     "/saved/": "the token IS the credential: app/(rift)/saved/[token]/page.tsx",
     "/summary/": "the token IS the credential, hashed, scoped and expiring: app/(rift)/summary/[token]/page.tsx",
-    "/app": "behind Supabase auth AND a journey membership: lib/db/client.ts memberOf",
+    "/app": "behind Supabase auth AND a journey membership: lib/db/portal.ts memberOf",
   };
 
   for (const path of disallow) {

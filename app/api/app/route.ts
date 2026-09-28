@@ -8,7 +8,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
   proposeRevision, reactAsMember, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
-} from "@/lib/db/client";
+} from "@/lib/db/portal";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
 import { WORKSTREAMS, type Workstream } from "@/lib/core/progress";
@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
  *   not the address is known, so it does not reveal who is a client.
  *
  *   EVERYTHING ELSE requires a session and resolves the membership from
- *   scratch for the journey named in the request (lib/db/client.ts). The
+ *   scratch for the journey named in the request (lib/db/portal.ts). The
  *   browser supplies ids and words, never identity or permission.
  */
 

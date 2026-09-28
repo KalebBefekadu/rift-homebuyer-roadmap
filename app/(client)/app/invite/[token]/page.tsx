@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Mark } from "@/components/rift/icons";
-import { clientSession, invitationByToken } from "@/lib/db/client";
+import { clientSession, invitationByToken } from "@/lib/db/portal";
 import { acceptError, buyerSearchOn } from "@/lib/core/journey";
 import { InviteActions } from "./InviteActions";
 

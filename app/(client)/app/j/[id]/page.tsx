@@ -12,7 +12,7 @@ import { lineFor, stateOf } from "@/lib/core/dependency";
 import { LedgerView } from "@/components/rift/money/LedgerView";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { clientBids, clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/client";
+import { clientBids, clientBrief, clientHomes, clientProgress, clientSession, clientTours, memberOf } from "@/lib/db/portal";
 import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
 import { todayFor } from "@/lib/core/today";
 import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";

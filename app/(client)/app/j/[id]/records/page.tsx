@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { clientRecords, clientSession, memberOf } from "@/lib/db/client";
+import { clientRecords, clientSession, memberOf } from "@/lib/db/portal";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { ClientShell } from "../../../ClientShell";
