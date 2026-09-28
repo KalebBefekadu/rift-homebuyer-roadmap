@@ -127,8 +127,8 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
       ) : null}
 
       {error ? (
-        <div className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg)" }}>
-          <div className="t-sm w6">That did not save.</div>
+        <div role="alert" className="card p-4" style={{ marginTop: 16, borderColor: "var(--neg)" }}>
+          <div className="t-sm w6">✕ That did not save.</div>
           <p className="t-sm c-3" style={{ marginTop: 4 }}>{error}</p>
         </div>
       ) : null}
@@ -156,6 +156,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
                 <button
                   key={s}
                   className={`btn btn-sm ${s === lead.stage ? "btn-p" : "btn-s"}`}
+                  aria-pressed={s === lead.stage}
                   disabled={pending || Boolean(lead.archivedAt)}
                   onClick={() => move(s as Stage)}
                 >
@@ -255,6 +256,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
                 <button
                   key={k.id}
                   className={`btn btn-sm ${kind === k.id ? "btn-p" : "btn-s"}`}
+                  aria-pressed={kind === k.id}
                   onClick={() => setKind(k.id)}
                   disabled={pending}
                 >
@@ -265,6 +267,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
             <textarea
               className="input"
               rows={5}
+              aria-label="What happened"
               style={{ marginTop: 12, resize: "vertical", lineHeight: 1.55 }}
               placeholder="Pre-approved to 340. Wants Decatur, needs to be in before the school year. Wife is the decider."
               value={body}
@@ -303,6 +306,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
                     className="input"
                     style={{ marginTop: 8 }}
                     placeholder="Bought with another agent"
+                    aria-label="Why you are archiving them"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />

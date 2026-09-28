@@ -68,8 +68,8 @@ export function AddLead() {
       </p>
 
       {error ? (
-        <div className="card p-4" style={{ marginTop: 18, borderColor: "var(--neg)" }}>
-          <div className="t-sm w6">That did not save.</div>
+        <div role="alert" className="card p-4" style={{ marginTop: 18, borderColor: "var(--neg)" }}>
+          <div className="t-sm w6">✕ That did not save.</div>
           <p className="t-sm c-3" style={{ marginTop: 4 }}>{error}</p>
         </div>
       ) : null}
@@ -98,7 +98,7 @@ export function AddLead() {
           <span className="t-sm c-3">Buying or selling?</span>
           <div className="row gap-2" style={{ marginTop: 8 }}>
             {(["buy", "sell"] as const).map((s) => (
-              <button key={s} className={`btn btn-sm ${side === s ? "btn-p" : "btn-s"}`} onClick={() => setSide(s)}>
+              <button key={s} type="button" className={`btn btn-sm ${side === s ? "btn-p" : "btn-s"}`} aria-pressed={side === s} onClick={() => setSide(s)}>
                 {s === "buy" ? "Buying" : "Selling"}
               </button>
             ))}
@@ -109,7 +109,7 @@ export function AddLead() {
           <span className="t-sm c-3">Where are they now?</span>
           <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
             {STAGE_NAMES.map((s) => (
-              <button key={s} className={`btn btn-sm ${stage === s ? "btn-p" : "btn-s"}`} onClick={() => setStage(s as Stage)}>
+              <button key={s} type="button" className={`btn btn-sm ${stage === s ? "btn-p" : "btn-s"}`} aria-pressed={stage === s} onClick={() => setStage(s as Stage)}>
                 {s}
               </button>
             ))}
@@ -120,7 +120,7 @@ export function AddLead() {
           <span className="t-sm c-3">Why can you contact them?</span>
           <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
             {BASIS.map((b) => (
-              <button key={b} className={`btn btn-sm ${basis === b ? "btn-p" : "btn-s"}`} onClick={() => setBasis(b)}>
+              <button key={b} type="button" className={`btn btn-sm ${basis === b ? "btn-p" : "btn-s"}`} aria-pressed={basis === b} onClick={() => setBasis(b)}>
                 {b}
               </button>
             ))}
@@ -129,6 +129,7 @@ export function AddLead() {
             className="input"
             style={{ marginTop: 10 }}
             placeholder="Or write it in your own words"
+            aria-label="Why you can contact them, in your own words"
             value={BASIS.includes(basis) ? "" : basis}
             onChange={(e) => setBasis(e.target.value)}
           />
