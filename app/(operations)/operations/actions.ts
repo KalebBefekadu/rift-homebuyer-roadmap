@@ -21,6 +21,8 @@ import { recordMood, recordMoment, recordClosing } from "@/lib/db/referral";
 import { journeysMatching } from "@/lib/db/journeys";
 import { recordMark } from "@/lib/db/desk";
 import { campaignFor, createCampaign, publish, saveRevision } from "@/lib/db/campaigns";
+import { draftCampaign } from "@/lib/db/campaign-draft";
+import { briefError } from "@/lib/core/campaign-draft";
 import { assistanceRecipe, cleanRecipe, type PublicationAction } from "@/lib/core/campaign";
 import type { MarkKind } from "@/lib/core/desk";
 import { compareToSnapshot } from "@/lib/db/seam";
@@ -823,6 +825,18 @@ export async function saveCampaign(input: { id: string; recipe: unknown; expecte
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const, version: r.data.version };
+}
+
+/** A draft for the editor, never saved here: the agent reads it and saves it themselves (CAMP-01). */
+export async function draftCampaignRecipe(input: { id: string; brief: string }) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const why = briefError(input.brief);
+  if (why) return { ok: false as const, error: why };
+  const mine = await campaignFor(input.id);
+  if (!mine.ok || !("data" in mine) || !mine.data) return { ok: false as const, error: "That campaign is not yours" };
+  const r = await draftCampaign(input.brief.slice(0, 600));
+  return { ok: true as const, status: r.status, say: r.say, draft: r.draft };
 }
 
 export async function publishCampaign(input: { id: string; action: PublicationAction; version: number | null; requestId: string }) {

@@ -12,15 +12,23 @@
  * cost, and nothing about the person: the record is how the limit is kept,
  * not a log of what anybody sent.
  *
- * AI never produces a customer-facing number (AGENTS.md rule 1). The two
- * workflows here read a document for a person to check, or compare two
- * official pages for a person to review.
+ * AI never produces a customer-facing number (AGENTS.md rule 1). The three
+ * workflows here read a document for a person to check, compare two official
+ * pages for a person to review, or draft a campaign's words for the agent to
+ * edit and save (a drafted digit is dropped: lib/core/campaign-draft.ts).
  *
  * Pure: no I/O.
  */
 
-export type AiWorkflow = "offer-extraction" | "program-compare";
-export const AI_WORKFLOWS: AiWorkflow[] = ["offer-extraction", "program-compare"];
+export type AiWorkflow = "offer-extraction" | "program-compare" | "campaign-draft";
+export const AI_WORKFLOWS: AiWorkflow[] = ["offer-extraction", "program-compare", "campaign-draft"];
+
+/** What each workflow is called when it says it is unavailable. */
+export const AI_LABEL: Record<AiWorkflow, string> = {
+  "offer-extraction": "Automatic reading",
+  "program-compare": "Automatic comparison",
+  "campaign-draft": "Drafting with AI",
+};
 
 /** D16: $50 a month across all AI for the pilot. Raised by Kaleb, in code, on purpose. */
 export const MONTHLY_LIMIT_CENTS = 5_000;
@@ -41,12 +49,14 @@ export const PRICE_CENTS_PER_MTOK: Record<string, { input: number; output: numbe
 export const MODEL_FOR: Record<AiWorkflow, string> = {
   "offer-extraction": "claude-opus-5",
   "program-compare": "claude-haiku-4-5",
+  "campaign-draft": "claude-haiku-4-5",
 };
 
 /** Held back before a call, since its cost is only known afterwards. Generous on purpose. */
 export const RESERVE_CENTS: Record<AiWorkflow, number> = {
   "offer-extraction": 150,
   "program-compare": 20,
+  "campaign-draft": 10,
 };
 
 export interface Usage {
@@ -71,10 +81,11 @@ export type Allowance =
 
 /** Whether a call may be made now. */
 export function allowance(opts: { configured: boolean; spentCents: number; workflow: AiWorkflow; limitCents?: number }): Allowance {
-  if (!opts.configured) return { ok: false, reason: "not-configured", say: "Automatic reading is not switched on yet." };
+  const label = AI_LABEL[opts.workflow];
+  if (!opts.configured) return { ok: false, reason: "not-configured", say: `${label} is not switched on yet.` };
   const limit = opts.limitCents ?? MONTHLY_LIMIT_CENTS;
   if (opts.spentCents + RESERVE_CENTS[opts.workflow] > limit) {
-    return { ok: false, reason: "over-limit", say: "Automatic reading has reached this month's limit." };
+    return { ok: false, reason: "over-limit", say: `${label} has reached this month's limit.` };
   }
   return { ok: true };
 }

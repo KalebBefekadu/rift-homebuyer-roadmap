@@ -3,7 +3,7 @@ import { serviceClient } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, skipped, type DbResult } from "./result";
 import { captureOpError } from "@/lib/monitoring/capture";
-import { allowance, costCents, monthStart, type AiWorkflow, type Allowance, type Usage } from "@/lib/core/ai";
+import { AI_LABEL, allowance, costCents, monthStart, type AiWorkflow, type Allowance, type Usage } from "@/lib/core/ai";
 
 /**
  * The only reader and writer of rift_ai_usage (Blueprint v5 §10.2). The
@@ -35,7 +35,7 @@ export async function mayCall(workflow: AiWorkflow): Promise<Allowance> {
   if (!aiConfigured()) return allowance({ configured: false, spentCents: 0, workflow });
   const spent = await spentThisMonth();
   if (!spent.ok || "skipped" in spent) {
-    return { ok: false, reason: "over-limit", say: "Automatic reading is unavailable because this month's AI spend could not be checked." };
+    return { ok: false, reason: "over-limit", say: `${AI_LABEL[workflow]} is unavailable because this month's AI spend could not be checked.` };
   }
   return allowance({ configured: true, spentCents: spent.data, workflow });
 }

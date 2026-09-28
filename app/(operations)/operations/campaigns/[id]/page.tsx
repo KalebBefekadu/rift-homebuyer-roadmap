@@ -6,6 +6,7 @@ import { campaignFor } from "@/lib/db/campaigns";
 import { programsToday } from "@/lib/db/program-checks";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { siteUrl } from "@/lib/core/site";
+import { aiConfigured } from "@/lib/db/ai";
 import { Unavailable } from "../../Unavailable";
 import { Composer } from "./Composer";
 
@@ -30,7 +31,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
       <Link href="/operations/campaigns" className="t-sm c-3">← Campaigns</Link>
       <h1 className="serif" style={{ marginTop: 6 }}>{c.name}</h1>
       <div style={{ marginTop: 12 }}>
-        <Composer id={c.id} slug={c.slug} live={c.live} revisions={c.revisions} history={c.history} programs={programs} origin={siteUrl()} />
+        <Composer id={c.id} slug={c.slug} live={c.live} revisions={c.revisions} history={c.history} programs={programs} origin={siteUrl()} aiReady={aiConfigured()} />
       </div>
     </main>
   );

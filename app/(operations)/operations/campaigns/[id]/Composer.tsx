@@ -7,7 +7,8 @@ import { GA_COUNTIES } from "@/lib/core/registry";
 import { BLOCK_LABEL, MAX_BLOCKS, recipeErrors, type Block, type BlockType, type Publication, type Recipe } from "@/lib/core/campaign";
 import type { ProgramRecord } from "@/lib/core/assistance";
 import { CampaignBlocks } from "@/components/rift/campaign/CampaignBlocks";
-import { publishCampaign, saveCampaign } from "../../actions";
+import { BRIEF_MAX, briefError } from "@/lib/core/campaign-draft";
+import { draftCampaignRecipe, publishCampaign, saveCampaign } from "../../actions";
 
 const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
 const LIVE_VALUES = VALUES.filter((v) => v.live);
@@ -25,8 +26,12 @@ const blank = (t: BlockType): Block =>
  * is typed and again when saved and when published. Saving makes a new
  * version; publishing points the page at a version; rolling back points it
  * at an earlier one. The preview is the public page's own renderer.
+ *
+ * An AI draft replaces what is in the editor and is not saved: it is read,
+ * edited and saved like anything typed, and "Undo changes" puts back the
+ * last saved version.
  */
-export function Composer({ id, slug, live, revisions, history, programs, origin }: {
+export function Composer({ id, slug, live, revisions, history, programs, origin, aiReady }: {
   id: string;
   slug: string;
   live: number | null;
@@ -34,6 +39,8 @@ export function Composer({ id, slug, live, revisions, history, programs, origin 
   history: Publication[];
   programs: ProgramRecord[];
   origin: string | null;
+  /** Whether an Anthropic key is present; without one drafting says so rather than failing on press. */
+  aiReady: boolean;
 }) {
   const router = useRouter();
   const latest = revisions.at(-1)!;
@@ -42,6 +49,9 @@ export function Composer({ id, slug, live, revisions, history, programs, origin 
   const [width, setWidth] = useState<"phone" | "desktop">("phone");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [brief, setBrief] = useState("");
+  const [drafted, setDrafted] = useState<{ say: string; dropped: string[]; tone: "pos" | "warn" } | null>(null);
+  const [drafting, startDraft] = useTransition();
   const errors = useMemo(() => recipeErrors({ blocks }), [blocks]);
   const changed = JSON.stringify(blocks) !== JSON.stringify(latest.recipe.blocks);
 
@@ -59,8 +69,37 @@ export function Composer({ id, slug, live, revisions, history, programs, origin 
     setError(null); setNote(""); router.refresh();
   });
 
+  const draft = () => startDraft(async () => {
+    const r = await draftCampaignRecipe({ id, brief });
+    if (!r.ok) { setDrafted({ say: r.error, dropped: [], tone: "warn" }); return; }
+    if (r.draft) setBlocks(r.draft.recipe.blocks);
+    setDrafted({ say: r.say, dropped: r.draft?.dropped ?? [], tone: r.draft ? "pos" : "warn" });
+  });
+
   return (
     <div className="col gap-4">
+      <details className="card p-4">
+        <summary className="t-sm w6" style={{ cursor: "pointer" }}>Draft the blocks with AI</summary>
+        {aiReady ? (
+          <div className="col gap-2" style={{ marginTop: 8 }}>
+            <label className="col gap-1 t-xs">Who is the page for, and what should it help them do?
+              <textarea className="input" rows={2} maxLength={BRIEF_MAX} value={brief} onChange={(e) => setBrief(e.target.value)}
+                placeholder="First-time buyers in Clayton County who rent and are unsure whether they can afford to buy" /></label>
+            <div className="row gap-2 wrap" style={{ alignItems: "center" }}>
+              <button type="button" className="btn btn-g btn-sm" disabled={drafting || !!briefError(brief)} onClick={draft}>{drafting ? "Drafting…" : "Draft into the editor"}</button>
+              <span className="t-xs c-4">Words only: a drafted number, promise or link is left out. It replaces the editor&apos;s blocks and is not saved.</span>
+            </div>
+          </div>
+        ) : (
+          <p className="t-sm c-3" style={{ marginTop: 8 }}>⚠ Drafting with AI is not switched on for this deployment (it needs the Anthropic key). The blocks can be written by hand below.</p>
+        )}
+        {drafted ? (
+          <div role="status" className={`t-xs c-${drafted.tone}`} style={{ marginTop: 8 }}>
+            <p>{drafted.tone === "pos" ? "✓" : "⚠"} {drafted.say}</p>
+            {drafted.dropped.length ? <ul className="c-3" style={{ display: "grid", gap: 2, marginTop: 4 }}>{drafted.dropped.map((d) => <li key={d}>Left out: {d}</li>)}</ul> : null}
+          </div>
+        ) : null}
+      </details>
       <div className="ops-split" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)" }}>
         <section className="card p-4 col gap-3" aria-labelledby="compose-h">
           <h2 id="compose-h" className="t-md w6">Blocks</h2>

@@ -499,8 +499,10 @@ as "qualify" or "guaranteed" are refused as they are typed and again at save and
 preview is the public page's own renderer at phone and desktop width. Every save is a version,
 kept; publish, roll back and unpublish are recorded with who and when. The page lives at
 /c/<slug>, is kept out of search, pins a visitor to the version they started on, and carries the
-campaign and version into first-touch attribution and so into the lead summary. Not built: an AI
-draft of a recipe (needs the Anthropic key).
+campaign and version into first-touch attribution and so into the lead summary. An AI draft of
+the blocks from the agent's brief (D30) lands in the editor unsaved; a drafted block with a digit,
+a promise or a link is left out and named, and without the Anthropic key the composer says
+drafting is off.
 
 ---
 
@@ -1045,6 +1047,7 @@ change to reverse.
 | D27 | Money v2 (W10) was built before the pilot starts, instead of after (D11), because Kaleb asked for the build to run to the end. The public values are unchanged; the ledger is on the journey and the client's journey page only | Nothing in W10 needs pilot data; its rules (AT30 to AT33) are fixed | Hiding the Money tab and section until the pilot starts |
 | D28 | The seller journey is being built before pilot results (D08), because Kaleb asked for the build to run to the end. A seller's property is stored as the selling journey's one home record, so contracts, dates and workstreams work unchanged | Reuses the tested contract model rather than a second one | Hiding selling journeys' workspace until the pilot reports |
 | D29 | The campaign composer is built before pilot results (D08), because Kaleb asked for the build to run to the end; campaign pages are kept out of search | Built from the values already live, so it adds no new maths | Unpublishing every campaign; the composer stays |
+| D30 | AI may draft a campaign's blocks (CAMP-01) on `claude-haiku-4-5`, inside the $50 limit, with a 10-cent reserve per draft. A drafted block containing any digit is dropped, not repaired, so no model-written number reaches a page | The smallest model (D16); campaign figures come only from the values (CAMP-04) | Removing the draft panel; the composer works without it |
 
 ### Open
 
@@ -1099,6 +1102,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | AI draft of a campaign's blocks (CAMP-01, D30), migration 20260928070000 |
 | 28 Sep 2026 | Requirement statuses brought up to date (MONEY-01, MONEY-04, UX-01, pins, Today's groups); mortgage insurance says it is a conventional-loan estimate; a campaign page that cannot load says so |
 | 28 Sep 2026 | Campaign composer (§5.10, CAMP-01 to CAMP-03, D29) |
 | 28 Sep 2026 | Seller preparation and offers on the journey; the offer room's net now matches the seller's own figures |

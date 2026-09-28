@@ -241,6 +241,7 @@ Blueprint v5 §10.2 and D16. Two uses, neither of which produces a number a cust
 | --- | --- | --- |
 | Reading an uploaded offer PDF | `claude-opus-5` | Checks each box it filled, each marked with the page and words it came from, before sending |
 | Comparing a changed program page with its record | `claude-haiku-4-5` | Reads the summary beside the changed lines, then says whether the record is still right |
+| Drafting a campaign's blocks from a brief | `claude-haiku-4-5` | Reads and edits the draft in the composer, then saves it; a drafted number, promise or link is left out and named |
 
 **The limit is in code.** `MONTHLY_LIMIT_CENTS` in `lib/core/ai.ts` is $50 across all AI. Every
 call is recorded in `rift_ai_usage` (workflow, model, prompt version, tokens, cost; nothing about
@@ -249,7 +250,8 @@ the call stays under the limit. A model with no price in `PRICE_CENTS_PER_MTOK` 
 
 **What happens without it.** No key, the limit reached, the spend unreadable, a refusal or an
 error: each is a named state, and the manual path carries on. The offer form says "Fill in the
-boxes below from your offer"; the program reviewer has the lines that left and arrived. Nothing
+boxes below from your offer"; the program reviewer has the lines that left and arrived; the campaign composer says drafting is
+off and the blocks are written by hand. Nothing
 fails because AI is off.
 
 **Environment.** `ANTHROPIC_API_KEY`, server only (never `NEXT_PUBLIC_`). The offer read asks for
