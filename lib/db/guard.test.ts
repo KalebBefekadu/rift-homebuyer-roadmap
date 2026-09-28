@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { visitorSession } from "./guard";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { ownLink, visitorSession } from "./guard";
 
 /**
  * The handles the public endpoints accept from a browser.
@@ -25,6 +25,27 @@ describe("a visitor's session id", () => {
   it("refuses anything that is not a string of that shape", () => {
     for (const v of [undefined, null, 42, {}, "", "s-", "s--", "S-ABC-DEF", "s-abc-def-ghi", "s-abc-d%ef", `s-${"a".repeat(40)}-b`]) {
       expect(visitorSession(v), String(v)).toBeUndefined();
+    }
+  });
+});
+
+describe("a link a browser asks us to email", () => {
+  const req = new Request("https://rift-preview.vercel.app/api/capture", { method: "POST" });
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it("accepts the origin the request arrived on, and the configured site", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://rift.example");
+    expect(ownLink("https://rift-preview.vercel.app/r/abc", req)).toBe("https://rift-preview.vercel.app/r/abc");
+    expect(ownLink("https://rift.example/abroad/results?p=1", req)).toBe("https://rift.example/abroad/results?p=1");
+  });
+
+  it("refuses every other origin, including ones that only look like ours", () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://rift.example");
+    for (const v of [
+      "https://evil.example/r/abc", "https://rift.example.evil.example/r/abc", "http://rift.example/r/abc",
+      "https://rift.example@evil.example/r/abc", "javascript:alert(1)", "/r/abc", "", 42, null,
+    ]) {
+      expect(ownLink(v, req), String(v)).toBeUndefined();
     }
   });
 });

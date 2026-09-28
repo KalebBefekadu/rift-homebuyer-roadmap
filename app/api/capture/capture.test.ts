@@ -46,4 +46,45 @@ describe("POST /api/capture: the session a lead is filed under", () => {
     expect((await res.json()).stored).toBe(true);
     expect(seen.captured[0]!.sessionId).toBeUndefined();
   });
+
+  it("files a lead whose assessment id is malformed without one, rather than losing it", async () => {
+    /* /book copies `?a=` from its own URL. Postgres refusing a uuid it cannot
+       parse failed the whole insert. */
+    await post({ assessmentId: "not-a-uuid" });
+    expect(seen.captured[0]!.assessmentId).toBeNull();
+    await post({ assessmentId: "0b6f3c1e-8a2d-4c5e-9f10-2b3c4d5e6f70" });
+    expect(seen.captured[1]!.assessmentId).toBe("0b6f3c1e-8a2d-4c5e-9f10-2b3c4d5e6f70");
+  });
+});
+
+describe("POST /api/capture: the readout email", () => {
+  const deliver = (shareUrl: string) => ({ deliver: { shareUrl, county: "DeKalb", cashToClose: 21_000, gap: 0 } });
+
+  it("sends a link to this site, rebuilt from its parsed parts", async () => {
+    const res = await post(deliver("https://rift.test/abroad/results?p=300000&lang=en#top"));
+    expect((await res.json()).delivery).toBe("sent");
+    expect(seen.readouts[0]!.shareUrl).toBe("https://rift.test/abroad/results?p=300000&lang=en");
+  });
+
+  it("refuses to email a stranger a link to anywhere else, and still stores the lead", async () => {
+    for (const link of [
+      "https://evil.example/login",
+      "https://rift.test.evil.example/abroad/results",
+      "javascript:alert(1)",
+      "/abroad/results",
+    ]) {
+      const res = await post(deliver(link));
+      const body = await res.json();
+      expect(body.stored, link).toBe(true);
+      expect(body.delivery, link).toBe("refused");
+    }
+    expect(seen.readouts).toEqual([]);
+  });
+
+  it("never lets a quote from the link reach the email's markup", async () => {
+    await post(deliver('https://rift.test/r/abc"><img src=x onerror=alert(1)>'));
+    const sent = String(seen.readouts[0]!.shareUrl);
+    expect(sent).not.toContain('"');
+    expect(sent).not.toContain("<");
+  });
 });
