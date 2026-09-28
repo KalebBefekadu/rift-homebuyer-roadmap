@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { publicCampaign } from "@/lib/db/campaigns";
 import { programsToday } from "@/lib/db/program-checks";
@@ -7,6 +8,7 @@ import { currentAgentId } from "@/lib/db/service";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { CampaignBlocks } from "@/components/rift/campaign/CampaignBlocks";
+import { captureOpError } from "@/lib/monitoring/capture";
 import { KeepVersion } from "./KeepVersion";
 
 export const dynamic = "force-dynamic";
@@ -24,14 +26,31 @@ export async function generateMetadata({ params, searchParams }: { params: Promi
 
 /**
  * A published campaign at /c/<slug> (Blueprint v5 §5.10). The revision in
- * the address when the visitor started, or the live one. Nothing when it is
- * not published or the database cannot be reached: a campaign page never
- * renders a half-page.
+ * the address when the visitor started, or the live one. Not found when it
+ * is not published. When the database cannot be reached it says so and
+ * points at the free tools, which do not need it: a failure is not "this
+ * page does not exist" (UX-01), and a campaign page never renders a half-page.
  */
 export default async function CampaignPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }) {
   const [{ slug }, { v }] = await Promise.all([params, searchParams]);
   const read = await publicCampaign(slug, v);
-  const page = read.ok && "data" in read ? read.data : null;
+  if (!read.ok) {
+    captureOpError(new Error(read.error), { op: "campaign.public", extra: { slug } });
+    return (
+      <div className="buy">
+        <SiteHeader side="buy" />
+        <main className="shell-w">
+          <section className="sec-sm measure">
+            <h1 className="serif d3">This page did not load</h1>
+            <p className="lede mt-3">Something on our side failed, and it has been reported. The free tools do not depend on it and work now.</p>
+            <Link href="/" className="btn btn-brand mt-4" style={{ display: "inline-flex" }}>See what Rift can work out for you</Link>
+          </section>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+  const page = "data" in read ? read.data : null;
   if (!page) notFound();
 
   const { rules } = await rulesOrDefaults(await currentAgentId());

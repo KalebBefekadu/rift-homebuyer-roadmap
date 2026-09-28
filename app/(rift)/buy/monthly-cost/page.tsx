@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BUYER_DEFAULTS, monthlyComputed, money } from "@/lib/core/compute";
+import { BUYER_DEFAULTS, PMI_NOTE, monthlyComputed, money } from "@/lib/core/compute";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
@@ -47,7 +47,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
     { label: "Principal and interest", amount: m.parts.pi, note: `${inputs.termYears}-year loan at ${rate.pct.toFixed(2)}%` },
     { label: "Property tax", amount: m.parts.tax, note: `About ${inputs.taxPct}% of the price a year, before any homestead exemption` },
     { label: "Home insurance", amount: m.parts.insurance, note: `${money(inputs.insuranceYr)} a year` },
-    { label: "Mortgage insurance", amount: m.parts.pmi, note: inputs.downPct < 20 ? "Charged when less than 20% is put down" : "None at 20% down" },
+    { label: "Mortgage insurance", amount: m.parts.pmi, note: inputs.downPct < 20 ? `Charged when less than 20% is put down. ${PMI_NOTE}` : "None at 20% down" },
     { label: "HOA", amount: m.parts.hoa, note: "None assumed; add it if the home has one" },
   ];
 

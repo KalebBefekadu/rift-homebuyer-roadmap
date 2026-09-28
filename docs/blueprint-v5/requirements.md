@@ -62,7 +62,7 @@ kept so tests and commits that cite them stay traceable.
 | SEARCH-07 | A tour request is a request, not an appointment. Requested, awaiting, confirmed, changed, cancelled and completed are distinct; changed times and representation are rechecked. | Built |
 | SEARCH-08 | After a showing, a short reaction and "Would you consider an offer?" or "What should change in the search?". No long ratings. | Built |
 | SEARCH-09 | When nothing fits, show which hard requirements limit the search; never silently widen it. Withdrawn listings leave the active shortlist and stay in history. | Built 27 Sep. An empty client list names the must-haves that limit it and says nothing is widened without them; withdrawn homes leave the list and stay in history |
-| Pilot targets | A reviewed search package from an existing brief in five minutes; priorities found without asking again; feedback recorded in under a minute; an update without re-entering unchanged information. Measured against the agent's current process. | Open: measured in the pilot (`/studio/pilot` counts setup time) |
+| Pilot targets | A reviewed search package from an existing brief in five minutes; priorities found without asking again; feedback recorded in under a minute; an update without re-entering unchanged information. Measured against the agent's current process. | Open: measured in the pilot (Reports, `/operations/reports`, counts setup time) |
 
 ## 5. Client Today and journey
 
@@ -76,11 +76,13 @@ task; (4) work that belongs to someone else, with owner, last update and expecte
 (5) if nothing is owed, say so without implying every third party is on track. **Built.**
 
 Agent pinning of a client item, with a reason and expiry, that can never hide critical
-obligations. Client priority never depends on commission or lead score. **Not built** (v5 §8).
+obligations. Client priority never depends on commission or lead score. **Built 28 Sep** on the
+agent's Today (`lib/core/desk.ts`): a pin needs a reason and an end, in code and in the database;
+a pinned item leads its own group and never moves another item out of Needs attention.
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| UX-01 | Empty, loading, partial, waiting, blocked, overdue, failed, offline, revoked and completed states each have words and a next step. An outage is never "nothing to do". | Built for the journey screens; redo for redesigned pages |
+| UX-01 | Empty, loading, partial, waiting, blocked, overdue, failed, offline, revoked and completed states each have words and a next step. An outage is never "nothing to do". | Built. Rechecked 28 Sep on the redesigned pages (Today, Relationships, Transactions, Reports, Campaigns, the journey's seller tabs): a failed read says it failed and is never drawn as an empty list; an unconfigured deployment says nothing is recorded; a public campaign page that cannot load says so and points at the free tools |
 | UX-02 | A client's "done" is a claim, not proof of funds, approval, signature or another professional's work. | Built |
 | UX-03 | Milestones reached are distinct from possibilities. No success percentage; counts name what is pending. | Built |
 | UX-04 | "Rift is watching" needs a live monitor with scope, last success and failure state. "Your agent recommends" needs approved text. "Lender confirmed" needs the lender and dated evidence. | Built for what exists; no monitors exist yet, so no "watching" copy is shown |
@@ -93,10 +95,10 @@ author a number or choose an assumption.
 
 | ID | Requirement | Status |
 | --- | --- | --- |
-| MONEY-01 | Every figure carries amount, unit, assumptions, source and date, engine version, failure explanation and review state. Unknown is not zero; estimates and official figures never share a label. | Partly (readouts); completed in W10 |
+| MONEY-01 | Every figure carries amount, unit, assumptions, source and date, engine version, failure explanation and review state. Unknown is not zero; estimates and official figures never share a label. | Built 28 Sep with money v2: the ledger's lines say whether each is Rift's estimate, the buyer's answer or recorded by the agent from a named source on a stated day; savings nobody gave leave a figure unknown, not zero; the closing disclosure's figure stands apart from the estimate (AT30 to AT33) |
 | MONEY-02 | The public buyer headline counts assistance as 0; programs are conditional upside; presence is not approval; stale programs are withheld with an explanation; overlapping amounts are never added without validated combination rules. | Built. **Extended by v5 §6:** combinations are shown only as "potential", with the stacking rules recorded per program |
 | MONEY-03 | A versioned breakdown: estimated total buying budget; needed before closing; estimated remaining funds at settlement; suggested reserve; official cash to close (from the closing document). Earnest money is timing, not a second cost; nothing is paid twice; negative amounts keep their meaning. Old snapshots keep their labels. | Built 28 Sep (money v2, `lib/core/ledger.ts`, AT30 to AT33): before closing, at the table, total budget, left at closing and a suggested reserve, each line with its provenance; the closing disclosure's figure stands apart. Moving costs left the public cash figure earlier (Kaleb, R1) |
-| MONEY-04 | Monthly payment separates principal and interest, mortgage insurance, taxes, insurance, HOA and optional reserves; missing property costs are visible; the generic PMI rule is never presented as FHA, VA or USDA underwriting. | Partly (readout); completed in W10 |
+| MONEY-04 | Monthly payment separates principal and interest, mortgage insurance, taxes, insurance, HOA and optional reserves; missing property costs are visible; the generic PMI rule is never presented as FHA, VA or USDA underwriting. | Built 28 Sep: the monthly cost value, the comfort range and the comparison show principal and interest, property tax, insurance, mortgage insurance and HOA separately; an HOA nobody recorded is said to be left out; the suggested reserve is the ledger's own line; mortgage insurance says it is a generic conventional-loan estimate that FHA, VA and USDA loans charge differently (`PMI_NOTE`) |
 | MONEY-05 | A comfort range is a planning scenario, never a lending decision. An "how much can I afford" solver needs its own bounds, tests and disclosures before release. | Built 27 Sep: `/buy/afford` on `lib/core/afford.ts`, with its bounds, tests and disclosures |
 | MONEY-06 | Seller net is price minus uniquely classified costs and payoff. Commission is negotiated, never a "standard rate". No double counting of credits; negative net is a shortfall to resolve; no generated repair ROI, valuation or equity figure. | Built 27 Sep in the seller values: commission asked, moving and unagreed concessions excluded, shortfall said as one, no repair returns (v5 §5.3) |
 | MONEY-07 | Keep the 3% material drift guard; also disclose sign changes, newly missing inputs and changed authority. Publishing never promotes verification. | Built 27 Sep: `drift()` also makes a sign change, a figure that can no longer be worked out, and a change of who stands behind it material at any size (`lib/core/seam.ts`); the publish check names which. The plan's seam passes all three: a confirmed figure recomputed as an estimate is an authority change |
@@ -105,8 +107,9 @@ author a number or choose an assumption.
 review (preliminary, pending-review, reviewed, verified, with the existing ceilings and named
 verifier); freshness (current, stale, superseded, unknown); authority (who can confirm it);
 provenance (source, version, page, dates, assumptions). "Calculated" describes origin, not
-certainty. New inputs make a new figure; verification is never inherited. **Partly** (the trust
-ladder and program freshness exist; the full contract lands with W10 and the assistance engine).
+certainty. New inputs make a new figure; verification is never inherited. **Partly**: the trust
+ladder, program freshness and money v2's per-line provenance exist; one shared evidence record
+across figures, documents and programs waits on the assistance engine (v5 §6).
 
 ## 7. Documents, decisions, dates and funds
 
@@ -127,7 +130,9 @@ ladder and program freshness exist; the full contract lands with W10 and the ass
 - Operations groups work into **Needs attention, Today, Waiting and Upcoming**. Each item says why
   it exists, who owns it, what it relates to, the evidence, the due time, the next action and how
   it resolves. Filters persist; returning from a detail page keeps the queue position.
-  **Not built as specified** (v5 §8 redesign).
+  **Built 28 Sep** (v5 §8.2): Today groups work into Needs attention, Needs approval, Today,
+  Waiting and Upcoming, each item with why, owner, what it relates to, evidence, due time and
+  next action; Relationships' filters persist and the detail panel keeps the list's place.
 
 | ID | Requirement | Status |
 | --- | --- | --- |

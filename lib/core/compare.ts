@@ -16,7 +16,7 @@
  * Pure: no I/O.
  */
 
-import { cashToClose, money, monthlyCost, type BuyerInputs } from "./compute";
+import { PMI_NOTE, cashToClose, money, monthlyCost, type BuyerInputs } from "./compute";
 import { describe, fitOf, FIELDS, type Fit, type PropertyFacts, type SearchCriterion } from "./search";
 
 /** More than this and the columns stop being readable on a laptop. */
@@ -49,7 +49,7 @@ export function compareHomes(homes: CompareHome[], criteria: SearchCriterion[], 
       }),
     });
     rows.push({
-      label: "Of which mortgage insurance", group: "money",
+      label: "Of which mortgage insurance", group: "money", note: PMI_NOTE,
       cells: priced.map((i) => (i ? { text: money(monthlyCost(i).pmi) } : UNKNOWN)),
     });
     rows.push({

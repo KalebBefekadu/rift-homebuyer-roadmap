@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  BUYER_DEFAULTS, monthlyPI, monthlyCost, cashToClose, cashGap,
+  BUYER_DEFAULTS, PMI_NOTE, monthlyPI, monthlyCost, monthlyComputed, cashToClose, cashGap,
   type BuyerInputs,
 } from "./compute";
 
@@ -91,6 +91,13 @@ describe("PMI", () => {
 
   it("is charged below twenty percent down", () => {
     expect(monthlyCost(buyer({ downPct: 3.5 })).pmi).toBeGreaterThan(0);
+  });
+
+  it("says it is a generic conventional rule, never FHA, VA or USDA underwriting (MONEY-04)", () => {
+    const pmi = monthlyComputed(buyer({ downPct: 3.5 })).assumptions.find((a) => a.label === "PMI");
+    expect(pmi?.value).toContain(PMI_NOTE);
+    expect(PMI_NOTE).toMatch(/conventional/);
+    expect(PMI_NOTE).toMatch(/FHA, VA and USDA/);
   });
 });
 

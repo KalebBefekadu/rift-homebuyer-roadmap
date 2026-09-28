@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { money } from "@/lib/core/compute";
+import { PMI_NOTE, money } from "@/lib/core/compute";
 import { affordability } from "@/lib/core/afford";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
@@ -81,7 +81,7 @@ export default async function Afford({ searchParams }: { searchParams: Promise<R
             { label: "Principal and interest", amount: money(Math.round(m.pi)) },
             { label: "Property tax", amount: money(Math.round(m.tax)) },
             { label: "Home insurance", amount: money(Math.round(m.insurance)) },
-            ...(m.pmi > 0 ? [{ label: "Mortgage insurance", note: "Until you reach 20% equity", amount: money(Math.round(m.pmi)) }] : []),
+            ...(m.pmi > 0 ? [{ label: "Mortgage insurance", note: `Until you reach 20% equity. ${PMI_NOTE}`, amount: money(Math.round(m.pmi)) }] : []),
           ]}
         />
       ) : null}

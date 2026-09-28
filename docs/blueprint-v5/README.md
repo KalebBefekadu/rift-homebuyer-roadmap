@@ -71,8 +71,8 @@ https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
 | Operations | A sidebar and quick switcher on every page; Today in five groups with new leads and recent activity, snooze, pin and delegate; Relationships with a detail panel; person records with plan, decisions, agreement, journeys; the journey workspace (overview, search, homes and showings, offers and documents, contract, household, history); Transactions; Offers; Calendar; Outbox; Advocacy; Programs; Reports; funnel question editor; settings; morning summary email |
 | Platform | Supabase with row-level security on every table, history-only tables, idempotent writes, job-run tracking and health checks, release switch `RIFT_BUYER_SEARCH`, Brevo email, Sentry |
 
-Blueprint v4 packages built: W00 to W09, W11 and W12. Not started: W10 (money v2) and W13 (seller
-journey and campaigns). Details and dates: `docs/handoff.md` §8.2.
+Blueprint v4 packages built: W00 to W13. W10 (money v2) and W13 (seller journey and campaigns)
+were built 28 Sep (D27 to D29). Details and dates: `docs/handoff.md` §8.2 and §14 below.
 
 ### What the live review found (Kaleb, R2)
 
@@ -1099,6 +1099,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Requirement statuses brought up to date (MONEY-01, MONEY-04, UX-01, pins, Today's groups); mortgage insurance says it is a conventional-loan estimate; a campaign page that cannot load says so |
 | 28 Sep 2026 | Campaign composer (§5.10, CAMP-01 to CAMP-03, D29) |
 | 28 Sep 2026 | Seller preparation and offers on the journey; the offer room's net now matches the seller's own figures |
 | 28 Sep 2026 | Seller listing and launch, showings and weekly reviews (S06 to S09) |

@@ -82,6 +82,13 @@ export function monthlyPI(loan: number, ratePct: number, termYears: number) {
   return (loan * r * g) / (g - 1);
 }
 
+/**
+ * The mortgage insurance here is a generic conventional-loan rule (MONEY-04).
+ * FHA, VA and USDA loans charge it differently or not at all, and saying so
+ * next to the figure is what keeps it from reading as underwriting.
+ */
+export const PMI_NOTE = "A generic conventional-loan estimate; FHA, VA and USDA loans charge it differently";
+
 export interface MonthlyBreakdown {
   pi: number;
   tax: number;
@@ -114,7 +121,7 @@ export function monthlyComputed(i: BuyerInputs): Computed & { parts: MonthlyBrea
       { label: "Term", value: `${i.termYears} years` },
       { label: "Property tax", value: `${pct(i.taxPct)} of price per year` },
       { label: "Insurance", value: `${money(i.insuranceYr)} per year` },
-      { label: "PMI", value: i.downPct < 20 ? `${pct(i.pmiPct, 2)} of loan per year` : "None, 20% or more down" },
+      { label: "PMI", value: i.downPct < 20 ? `${pct(i.pmiPct, 2)} of loan per year. ${PMI_NOTE}` : "None, 20% or more down" },
       { label: "HOA", value: i.hoaMo > 0 ? `${money(i.hoaMo)} per month` : "None assumed" },
     ],
     couldBeWrong:
