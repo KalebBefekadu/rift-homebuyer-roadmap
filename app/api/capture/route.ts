@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clientIp, limited, readJson } from "@/lib/db/guard";
+import { clientIp, limited, readJson, visitorSession } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -80,12 +80,13 @@ export async function POST(req: Request) {
      
      Without it a lead captured from the abroad readout or from /book has no
      link to anything a delete request can key on, and "delete all of it"
-     silently spares exactly the row that holds their email address. */
-  const sessionId = typeof b.sessionId === "string" ? b.sessionId.trim().slice(0, 64) : "";
+     silently spares exactly the row that holds their email address. Only a
+     session the browser minted for itself: see visitorSession. */
+  const sessionId = visitorSession(b.sessionId);
 
   const r = await captureLead({
     assessmentId,
-    sessionId: sessionId || undefined,
+    sessionId,
     side: scored.side,
     name: name || undefined,
     email: email || undefined,

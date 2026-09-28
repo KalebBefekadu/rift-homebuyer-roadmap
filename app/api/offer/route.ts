@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clientIp, limited, readJson } from "@/lib/db/guard";
+import { clientIp, limited, readJson, visitorSession } from "@/lib/db/guard";
 import { readSubmission } from "@/lib/core/offer-intake";
 import { submitOffer } from "@/lib/db/offer-intake";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
   const raw = body.body as Record<string, unknown>;
   const r = await submitOffer(parsed.value, {
-    sessionId: typeof raw.sessionId === "string" && raw.sessionId.trim() ? raw.sessionId.trim().slice(0, 64) : undefined,
+    sessionId: visitorSession(raw.sessionId),
     ip: clientIp(req),
     userAgent: req.headers.get("user-agent") ?? undefined,
   });

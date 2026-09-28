@@ -28,6 +28,26 @@ export function clientIp(req: Request): string | undefined {
   return fwd || req.headers.get("x-real-ip")?.trim() || undefined;
 }
 
+/* What lib/rift/session.ts mints: `s-<time>-<random>`, both base36. */
+const VISITOR_SESSION = /^s-[0-9a-z]{1,16}-[0-9a-z]{1,16}$/;
+
+/**
+ * A session id a browser minted for itself, or nothing.
+ *
+ * lib/rift/session.ts falls back to the constant "anon" when sessionStorage
+ * is blocked (and "ssr" on the server). A constant is not a session: it is
+ * one id shared by every visitor in that situation. Stored against a lead it
+ * links strangers together, and /api/forget accepted it, so anybody could
+ * post `{ "sessionId": "anon" }` and erase every lead ever captured from a
+ * browser with storage switched off. Only an id shaped like one this product
+ * mints is a handle on one person; anything else is treated as no session.
+ */
+export function visitorSession(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const s = v.trim();
+  return VISITOR_SESSION.test(s) ? s : undefined;
+}
+
 
 /**
  * Reads a JSON body, refusing anything oversized.
