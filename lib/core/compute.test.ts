@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
-  BUYER_DEFAULTS, PMI_NOTE, monthlyPI, monthlyCost, monthlyComputed, cashToClose, cashGap,
-  type BuyerInputs,
+  BUYER_DEFAULTS, PMI_NOTE, SELLER_DEFAULTS, monthlyPI, monthlyCost, monthlyComputed, cashToClose, cashGap,
+  unclaimedValue, type BuyerInputs, type SellerInputs,
 } from "./compute";
+import { sellerReadout } from "./results";
 
 /**
  * The executable half of docs/calculations.md.
@@ -180,5 +181,39 @@ describe("timing tension", () => {
        Assistance may appear in the body as conditional upside: never above. */
     const t = readout({ savings: 9_000, monthlySaving: 650 }, "In the next 3 months").tension;
     expect(t?.headline).toContain("On savings alone");
+  });
+});
+
+describe("the assessment line in the unclaimed-value check", () => {
+  const owner = (over: Partial<SellerInputs> = {}): SellerInputs => ({ ...SELLER_DEFAULTS, homesteadFiled: true, ...over });
+  const assessment = (s: SellerInputs) => unclaimedValue(s).find((u) => /assessment/i.test(u.title));
+
+  it("never states a county figure nobody gave", () => {
+    /* The public page spreads the defaults and moves only the price. With a
+       $392,000 default a $300,000 home was told the county had it at
+       $392,000: a number from nowhere, presented as the county's. */
+    const items = unclaimedValue(owner({ price: 300_000 }));
+    expect(items.map((u) => `${u.estimate} ${u.detail}`).join(" ")).not.toContain("$392,000");
+    expect(assessment(owner({ price: 300_000 }))?.detail).not.toMatch(/county has this parcel/i);
+  });
+
+  it("still points at the appeal window when the assessment is unknown", () => {
+    const u = assessment(owner());
+    expect(u?.title).toBe("Your assessment may be worth checking");
+    expect(u?.estimate).toBe("Varies");
+    expect(u?.urgency).toMatch(/appeal windows/i);
+  });
+
+  it("says the assessment looks high only when the county's figure is known and above the price", () => {
+    const high = assessment(owner({ price: 400_000, assessedValue: 430_000 }));
+    expect(high?.title).toMatch(/looks high/);
+    expect(high?.detail).toContain("$430,000");
+    expect(assessment(owner({ price: 400_000, assessedValue: 350_000 }))).toBeUndefined();
+  });
+
+  it("keeps the readout's blocker and plan off an appeal nobody can support", () => {
+    const r = sellerReadout(owner({ price: 300_000 }), "3 to 9 months", true);
+    expect(r.blocker.who).toBe("Your lender");
+    expect(r.steps.some((s) => /appeal/i.test(s.label))).toBe(false);
   });
 });

@@ -12,7 +12,7 @@
  */
 
 import {
-  cashGap, cashToClose, gapLevers, money, netProceeds, range,
+  assessmentLooksHigh, cashGap, cashToClose, gapLevers, money, netProceeds, range,
   type BuyerInputs, type SellerInputs,
 } from "./compute";
 import type { MatchResult } from "./registry";
@@ -420,7 +420,7 @@ export function sellerReadout(
         body: "Our records question suggests no homestead exemption on this parcel. If this is your primary residence, that is money going out annually whether or not you sell, and it is worth fixing before anything else on this page.",
         who: "Your county tax commissioner",
       }
-    : s.assessedValue > s.price * 0.96
+    : assessmentLooksHigh(s)
     ? {
         title: "Your assessment looks high against a realistic sale price",
         body: `The county has this parcel at ${money(s.assessedValue)} while the market suggests nearer ${money(s.price)}. Appeal windows are short and strictly enforced, and a successful appeal helps you whether or not you end up selling.`,
@@ -457,7 +457,7 @@ export function sellerReadout(
       owner: "You" as const,
       when: "Next two weeks",
     },
-    s.assessedValue > s.price * 0.96 && {
+    assessmentLooksHigh(s) && {
       label: "Find your appeal deadline before it passes",
       detail: "The window runs from the annual notice date and is not extended for any reason.",
       owner: "Your county" as const,

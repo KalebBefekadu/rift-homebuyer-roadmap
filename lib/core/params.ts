@@ -218,10 +218,11 @@ export function parseSellerParams(get: (key: string) => string | undefined): Sel
       payoff,
       yearsOwned,
       homesteadFiled: (get("h") ?? "") === "1",
-      /* The assessed value is not asked for. Defaulting it to the price is a
-         closer guess than a fixed figure from another home, and every line it
-         feeds is labelled an estimate. */
-      assessedValue: price,
+      /* The assessed value is not asked for, so it is not known. It used to
+         default to the price, which is always above 96% of the price: every
+         seller was told their assessment looked high, with the county's figure
+         and the likely sale shown as the same number. */
+      assessedValue: null,
     },
     timing,
     timingStated: TIMINGS.includes(rawTiming as (typeof TIMINGS)[number]),
