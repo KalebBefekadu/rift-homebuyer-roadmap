@@ -127,6 +127,9 @@ describe("what the top line says", () => {
        only reports the client's own failings is a page with an opinion. */
     const s = summarise([item({ owner: "agent", dueOn: "2026-01-01" })], TODAY);
     expect(headline(s)).toMatch(/past its date/);
+    /* Plural in both halves: "2 are past its date" was the client's page. */
+    const two = summarise([item({ owner: "agent", dueOn: "2026-01-01" }), item({ owner: "agent", dueOn: "2026-01-02" })], TODAY);
+    expect(headline(two)).toBe("Nothing is waiting on you, but 2 are past their dates.");
   });
 
   it("says so plainly when everything is finished", () => {
