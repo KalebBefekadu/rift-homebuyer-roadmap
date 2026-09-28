@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { outbox } from "@/lib/db/outbox";
 import { STATE_LABEL, type OutboxState } from "@/lib/core/outbox";
 import { Unavailable } from "../Unavailable";
-import { outboxAction } from "./actions";
+import { OutboxItem } from "./Item";
 import { showTime } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Outbox" };
@@ -48,33 +47,10 @@ export default async function Outbox() {
             {waiting.map((x) => {
               const last = x.events.at(-1);
               return (
-                <article key={x.id} className="card p-4">
-                  <div className="between wrap gap-2">
-                    <div className="t-sm">To <strong>{x.draft.name ? `${x.draft.name} <${x.draft.to}>` : x.draft.to}</strong>{x.leadId ? <> · <Link className="u" href={`/operations/lead/${x.leadId}`}>their record</Link></> : null}</div>
-                    <span className={`chip t-2xs ${CHIP[x.state]}`}>{STATE_LABEL[x.state]}</span>
-                  </div>
-                  {last?.detail && (x.state === "failed" || x.state === "unknown") ? <p className="t-xs c-neg mt-1">{last.detail}</p> : null}
-                  {x.state === "unknown" ? (
-                    <form action={outboxAction} className="row gap-2 wrap mt-2">
-                      <input type="hidden" name="id" value={x.id} />
-                      <span className="t-xs c-3">Check the Brevo log, then say what happened. It is not sent again on its own.</span>
-                      <button className="btn btn-g btn-sm" name="what" value="sent">It was sent</button>
-                      <button className="btn btn-g btn-sm" name="what" value="not-sent">It was not sent</button>
-                    </form>
-                  ) : (
-                    <form action={outboxAction} className="col gap-2 mt-3">
-                      <input type="hidden" name="id" value={x.id} />
-                      <label className="field"><span className="label">Subject</span><input className="input" name="subject" defaultValue={x.draft.subject} maxLength={200} /></label>
-                      <label className="field"><span className="label">Message</span><textarea className="input" name="body" rows={9} defaultValue={x.draft.body} maxLength={5000} /></label>
-                      <div className="row gap-2 wrap">
-                        <button className="btn btn-p btn-sm" name="what" value="send">Approve and send as it was prepared</button>
-                        <button className="btn btn-g btn-sm" name="what" value="edit">Save my changes as a new draft</button>
-                        <button className="btn btn-g btn-sm" name="what" value="discard">Discard</button>
-                      </div>
-                      <span className="t-2xs c-4">Approving sends the prepared words, not unsaved edits: save changes first, then approve the new draft.</span>
-                    </form>
-                  )}
-                </article>
+                <OutboxItem key={x.id} id={x.id} state={x.state} stateLabel={STATE_LABEL[x.state]} chip={CHIP[x.state]}
+                  to={x.draft.name ? `${x.draft.name} <${x.draft.to}>` : x.draft.to} leadId={x.leadId}
+                  subject={x.draft.subject} body={x.draft.body}
+                  problem={last?.detail && (x.state === "failed" || x.state === "unknown") ? last.detail : null} />
               );
             })}
           </div>
