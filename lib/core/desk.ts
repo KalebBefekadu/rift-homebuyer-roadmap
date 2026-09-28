@@ -29,6 +29,7 @@
 
 import type { Commitment } from "./agenda";
 import type { ContractSummary, DateAttention, Waiting } from "./transactions";
+import { LATE_DAYS, type CadenceDue } from "./seller-cadence";
 
 export type Group = "attention" | "approval" | "today" | "waiting" | "upcoming";
 export const GROUPS: Group[] = ["attention", "approval", "today", "waiting", "upcoming"];
@@ -93,6 +94,8 @@ export interface DeskInput {
   lapsing: { id: string; name: string; covered: boolean; note: string }[];
   choices: { leadId: string; name: string; from: string; note: string | null }[];
   rate: { stale: boolean; pct: number; age: string };
+  /** A sale's pricing review or weekly listing review that has come due (S04, S09). */
+  sales?: CadenceDue[];
   /** Open links between a sale and a purchase (STATE-07). */
   dependencies?: { id: string; purchaseJourneyId: string; purchaseLabel: string; line: string; owner: string; note: string }[];
 }
@@ -108,6 +111,18 @@ export function deskItems(input: DeskInput): DeskItem[] {
   const me = input.agentFirst;
   const push = (i: Omit<DeskItem, "snoozable"> & { snoozable?: boolean }) => out.push({ snoozable: true, ...i });
 
+  /* A sale's promised reviews: due today, or a whole cycle missed. */
+  for (const d of input.sales ?? []) {
+    const missed = d.late >= LATE_DAYS;
+    const about = journey(d.journeyId, `${d.person}, ${d.label}`);
+    const evidence = d.late ? `Due ${short(d.due)}, ${d.late} day${d.late === 1 ? "" : "s"} ago` : "Due today";
+    if (d.kind === "weekly-review") {
+      push({ key: `sale-week:${d.journeyId}:${d.due}`, group: missed ? "attention" : "today", title: `Weekly review: ${d.label}`, why: "The listing is live, and the seller hears from you every week", owner: me, about, evidence, due: d.due, next: "Record the week's numbers, and ask whether to keep or change course", href: `/operations/journey/${d.journeyId}?tab=listing`, tone: missed ? "neg" : "warn", order: 20 - d.late });
+    } else {
+      push({ key: `sale-price:${d.journeyId}:${d.version ?? 0}`, group: missed ? "attention" : "today", title: `Review pricing with ${d.person}`, why: `The day pricing version ${d.version} said it would be reviewed with them`, owner: me, about, evidence, due: d.due, next: "Go through it with them, then record the next version with its own review day", href: `/operations/journey/${d.journeyId}?tab=pricing`, tone: missed ? "neg" : "warn", order: 20 - d.late });
+    }
+  }
+
   /* Contract dates: missed and unchecked need him now; checked ones are upcoming. */
   for (const d of input.dates) {
     const about = journey(d.journeyId, `${d.person}, ${d.address}`);
@@ -115,7 +130,7 @@ export function deskItems(input: DeskInput): DeskItem[] {
     if (d.why === "missed") {
       push({ ...base, group: "attention", title: `${d.label} passed`, why: "Contract date, not recorded as met", evidence: d.when, due: d.when, next: "Record what actually happened: met, extended or released", tone: "neg", order: 0 });
     } else if (d.why === "unchecked") {
-      push({ ...base, group: "approval", title: `Check ${d.label} against the contract`, why: "Entered, not yet checked against the document, so the buyer does not see it", evidence: d.when, due: d.when, next: "Open the document and confirm the date", tone: "warn", order: 10 + (d.days ?? 0) });
+      push({ ...base, group: "approval", title: `Check ${d.label} against the contract`, why: "Entered, not yet checked against the document, so the client does not see it", evidence: d.when, due: d.when, next: "Open the document and confirm the date", tone: "warn", order: 10 + (d.days ?? 0) });
     } else {
       const today = d.days === 0;
       push({ ...base, group: today ? "today" : "upcoming", title: d.label, why: "Checked contract date", evidence: d.when, due: d.when, next: "Make sure whoever owns it is on track", tone: today ? "warn" : "none", order: d.days ?? 99 });

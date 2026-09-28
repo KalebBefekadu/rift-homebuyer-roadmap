@@ -924,7 +924,8 @@ beside the estimate); listing and launch (S06, S07: a checklist of what is done,
 only with its link, syndication a separate fact whose absence is a delay, access recorded as
 arranged and never as a code), showings (S08: feedback counted over showings done with the
 denominator said) and weekly reviews (S09: the agent's reading and the seller's keep-or-change
-decision, never "price is the reason"). Preparation (S05) and offers (S10, S11) are on the journey
+decision, never "price is the reason"; both the pricing review day and each week's review come
+to the agent's Today when due, and to Needs attention a week late). Preparation (S05) and offers (S10, S11) are on the journey
 too, read as they stand from the plan and the offer room on the person's record, where they are
 worked. So every seller contract now has a place: S00 and S01 are the seller values and the record;
 S02 the property; S03 the listing agreement on the record and disclosures on the checklist; S04
@@ -1103,6 +1104,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | A sale's pricing review day and weekly listing review come to Today when due (S04, S09); seller journeys' shared screens stop speaking only to buyers; one day helper for every zone |
 | 28 Sep 2026 | The v4 questionnaire's unused routes, component and wording editor retired (D31); Questions shows what visitors read; health reports the Amharic review |
 | 28 Sep 2026 | A contract recorded closed starts the Advocacy moments (the closing date had no writer); the date is on the person's record to correct. Dates taken from the clock are Georgia's day, not UTC's (DATE-01). Operations' server actions moved beside the pages that use them; one unused action removed |
 | 28 Sep 2026 | "Delete all of it" under every value's answer and on the saved plan's page; it now clears the values' answers and plan on the device (LEAD-06) |

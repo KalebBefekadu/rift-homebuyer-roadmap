@@ -35,11 +35,12 @@
  */
 
 import { TOUR_TIMEZONE } from "./tour";
+import { dayIn } from "./day";
 
 /** Today's date where the agent works, as YYYY-MM-DD. At 9pm in Georgia it is
  *  already tomorrow in UTC, and "confirmed tomorrow" must not be recordable. */
 export function marketDay(now = new Date(), timeZone = TOUR_TIMEZONE): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  return dayIn(now, timeZone);
 }
 
 /* ------------------------------------------------------------------ *

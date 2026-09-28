@@ -30,6 +30,8 @@ import { Ico } from "@/components/rift/icons";
 import { ReviewRow } from "./ReviewRow";
 import { LeadRow } from "./LeadRow";
 import { DeskRow } from "./DeskRow";
+import { saleCadences } from "@/lib/db/listing";
+import { cadenceDue } from "@/lib/core/seller-cadence";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -84,7 +86,7 @@ export default async function OperationsToday() {
 
   /* One round. None of these depends on another, and Today's latency is the
      product's felt speed. */
-  const [leadsRead, reviewRead, dueRead, rate, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, programsRead, eventsRead, marksRead, depsRead] =
+  const [leadsRead, reviewRead, dueRead, rate, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, programsRead, eventsRead, marksRead, depsRead, salesRead] =
     await Promise.all([
       rankedLeads(50),
       openItems(),
@@ -101,11 +103,12 @@ export default async function OperationsToday() {
       recentJourneyEvents(agent.agentId, 3, now),
       readMarks(agent.agentId, now),
       dependenciesFor(null, agent.agentId),
+      saleCadences(agent.agentId),
     ]);
 
   /* Three states, not two: a query that FAILED is neither "nothing to do"
      nor "nothing recorded", and must not render as either. */
-  const reads: DbResult<unknown>[] = [leadsRead, reviewRead, dueRead, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, eventsRead, marksRead, depsRead];
+  const reads: DbResult<unknown>[] = [leadsRead, reviewRead, dueRead, lapsingRead, choicesRead, contractsRead, jobsRead, flagsRead, outboxRead, commitmentsRead, eventsRead, marksRead, depsRead, salesRead];
   const notRecording = reads.some((r) => "skipped" in r);
   const failures = reads.flatMap((r) => (r.ok ? [] : [r.error]));
   for (const error of failures) captureOpError(new Error(error), { op: "operations.today" });
@@ -138,6 +141,7 @@ export default async function OperationsToday() {
     rate: { stale: rate.freshness !== "fresh", pct: rate.pct, age: rate.asOf ? `${rate.ageDays} days old` : "Never recorded" },
     dependencies: list(depsRead).filter((d) => stateOf(d) === "open")
       .map((d) => ({ id: d.id, purchaseJourneyId: d.purchaseJourneyId, purchaseLabel: d.purchaseLabel, line: lineFor(d, "buy"), owner: d.owner, note: d.note })),
+    sales: cadenceDue(list(salesRead), today),
   });
   const groups = arrange(items, marks ?? [], now);
 

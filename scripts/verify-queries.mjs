@@ -461,6 +461,12 @@ await check("campaign revisions", () => db.from("rift_campaign_revisions").selec
 await check("campaign publications", () => db.from("rift_campaign_publications").select("action,version,actor_label,created_at").eq("campaign_id", NIL).order("created_at").limit(1));
 await check("journeysMatching", () => db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
   .eq("agent_id", NIL).ilike("label", "%a%").order("created_at", { ascending: false }).limit(6));
+await check("saleCadences: sales", () => db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", NIL).eq("side", "sell").limit(1));
+await check("saleCadences: listings", () => db.from("rift_listing_events").select("journey_id,kind,detail,url,price_cents,actor_label,created_at").eq("agent_id", NIL).in("journey_id", [NIL]).order("created_at").limit(1));
+await check("saleCadences: reviews", () => db.from("rift_listing_reviews").select("journey_id,created_at").eq("agent_id", NIL).in("journey_id", [NIL]).order("created_at").limit(1));
+await check("saleCadences: pricing", () => db.from("rift_pricing_opinions").select("journey_id,version,review_on").eq("agent_id", NIL).in("journey_id", [NIL]).order("version").limit(1));
+await check("saleCadences: stages", () => db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", NIL).eq("kind", "stage").in("journey_id", [NIL]).order("seq").limit(1));
+await check("saleCadences: sellers", () => db.from("rift_leads").select("id,name,email").eq("agent_id", NIL).in("id", [NIL]));
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);

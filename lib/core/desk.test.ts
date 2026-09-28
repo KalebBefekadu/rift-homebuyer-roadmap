@@ -103,6 +103,23 @@ describe("Today in five groups (§8.4)", () => {
   });
 });
 
+describe("a sale's promised reviews on Today (S04, S09)", () => {
+  it("brings a review due today to Today, and a missed week to Needs attention, each linked to its tab", () => {
+    const items = deskItems(base({
+      sales: [
+        { journeyId: "j1", person: "Sam", label: "Sale of 12 Oak St", kind: "weekly-review", due: TODAY, late: 0 },
+        { journeyId: "j2", person: "Ann", label: "Sale of 3 Elm Rd", kind: "pricing-review", due: "2026-09-18", late: 10, version: 2 },
+      ],
+    }));
+    const week = items.find((i) => i.key.startsWith("sale-week:j1"));
+    const price = items.find((i) => i.key.startsWith("sale-price:j2"));
+    expect(week).toMatchObject({ group: "today", href: "/operations/journey/j1?tab=listing", evidence: "Due today" });
+    expect(price).toMatchObject({ group: "attention", tone: "neg", href: "/operations/journey/j2?tab=pricing", title: "Review pricing with Ann" });
+    expect(price?.why).toContain("pricing version 2");
+    expect(price?.evidence).toContain("10 days ago");
+  });
+});
+
 describe("snooze, pin and delegate (OPS-02)", () => {
   const m = (kind: Mark["kind"], at: string, extra: Partial<Mark> = {}): Mark => ({ key: "action:l3", kind, until: null, person: null, reason: null, by: "Kaleb", at, ...extra });
 

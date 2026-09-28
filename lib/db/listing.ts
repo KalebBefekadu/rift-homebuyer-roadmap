@@ -8,6 +8,8 @@ import {
   listingError, reviewError, showingError, showingsFrom,
   type Interest, type ListingEvent, type ListingKind, type Review, type Showing, type ShowingRow, type ShowingState,
 } from "@/lib/core/listing";
+import type { SaleCadence } from "@/lib/core/seller-cadence";
+import type { Stage } from "@/lib/core/progress";
 
 /**
  * The only reader and writer of a sale's listing events, showings and weekly
@@ -15,8 +17,13 @@ import {
  * are not there yet (migration 20260928050000).
  */
 
-const MISSING = /rift_listing|does not exist|schema cache/;
+const MISSING = /rift_listing|rift_pricing|does not exist|schema cache/;
 const rows = (r: DbResult<unknown>) => (r.ok && "data" in r ? (r.data as Record<string, unknown>[]) : []);
+
+const shapeEvent = (e: Record<string, unknown>): ListingEvent => ({
+  kind: e.kind as ListingKind, detail: e.detail as string, url: (e.url as string | null) ?? null,
+  price: e.price_cents === null ? null : Number(e.price_cents) / 100, by: e.actor_label as string, at: e.created_at as string,
+});
 
 export interface Listing { events: ListingEvent[]; showings: Showing[]; reviews: Review[] }
 
@@ -30,10 +37,7 @@ export async function listingOf(journeyId: string, agentId: string): Promise<DbR
   ]);
   for (const r of [ev, sh, rv]) if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   return done({
-    events: rows(ev).map((e) => ({
-      kind: e.kind as ListingKind, detail: e.detail as string, url: (e.url as string | null) ?? null,
-      price: e.price_cents === null ? null : Number(e.price_cents) / 100, by: e.actor_label as string, at: e.created_at as string,
-    })),
+    events: rows(ev).map(shapeEvent),
     showings: showingsFrom(rows(sh).map((s): ShowingRow => ({
       key: s.showing_key as string, startsAt: s.starts_at as string, state: s.state as ShowingState,
       showingAgent: (s.showing_agent as string | null) ?? null, feedback: (s.feedback as string | null) ?? null,
@@ -44,6 +48,50 @@ export async function listingOf(journeyId: string, agentId: string): Promise<DbR
       decision: r.decision as Review["decision"], decisionNote: (r.decision_note as string | null) ?? null, by: r.actor_label as string, at: r.created_at as string,
     })),
   });
+}
+
+/**
+ * Every sale being marketed, with what its schedule needs: the listing's
+ * events, when it was last reviewed, and the latest pricing opinion's review
+ * day. For Today (lib/core/seller-cadence.ts). Null when the seller tables
+ * are not there yet.
+ */
+export async function saleCadences(agentId: string): Promise<DbResult<SaleCadence[] | null>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const j = await boundedRead(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).eq("side", "sell").limit(300), "the sales");
+  if (!j.ok) return MISSING.test(j.error) ? done(null) : j;
+  const sales = rows(j);
+  if (!sales.length) return done([]);
+  const ids = sales.map((x) => x.id as string);
+  const leadIds = [...new Set(sales.map((x) => x.origin_lead_id as string))];
+  const [ev, rv, op, st, ld] = await Promise.all([
+    boundedRead(db.from("rift_listing_events").select("journey_id,kind,detail,url,price_cents,actor_label,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the listings"),
+    boundedRead(db.from("rift_listing_reviews").select("journey_id,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the weekly reviews"),
+    boundedRead(db.from("rift_pricing_opinions").select("journey_id,version,review_on").eq("agent_id", agentId).in("journey_id", ids).order("version").limit(3000), "the pricing"),
+    boundedRead(db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", agentId).eq("kind", "stage").in("journey_id", ids).order("seq").limit(8000), "the sales' stages"),
+    boundedRead(db.from("rift_leads").select("id,name,email").eq("agent_id", agentId).in("id", leadIds), "the sellers"),
+  ]);
+  for (const r of [ev, rv, op, st, ld]) if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
+  const group = <T,>(list: Record<string, unknown>[], f: (x: Record<string, unknown>) => T) => {
+    const m = new Map<string, T[]>();
+    for (const x of list) m.set(x.journey_id as string, [...(m.get(x.journey_id as string) ?? []), f(x)]);
+    return m;
+  };
+  const events = group(rows(ev), shapeEvent);
+  const reviews = group(rows(rv), (x) => x.created_at as string);
+  const opinions = group(rows(op), (x) => ({ version: x.version as number, reviewOn: x.review_on as string }));
+  const stages = group(rows(st), (x) => x.to_value as Stage);
+  const nameOf = new Map(rows(ld).map((l) => [l.id as string, ((l.name as string | null) ?? "").trim() || (l.email as string | null) || "A seller"]));
+  return done(sales.map((x) => {
+    const id = x.id as string;
+    return {
+      journeyId: id, label: x.label as string, person: nameOf.get(x.origin_lead_id as string) ?? "A seller",
+      /* No stage event yet is the first stage; a sale is never hidden for lack of one. */
+      stage: stages.get(id)?.at(-1) ?? "prepare",
+      listing: events.get(id) ?? [], lastReviewAt: reviews.get(id)?.at(-1) ?? null, latestOpinion: opinions.get(id)?.at(-1) ?? null,
+    };
+  }));
 }
 
 async function scope() {
