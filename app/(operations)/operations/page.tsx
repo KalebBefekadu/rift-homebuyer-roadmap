@@ -31,7 +31,7 @@ import { ReviewRow } from "./ReviewRow";
 import { LeadRow } from "./LeadRow";
 import { DeskRow } from "./DeskRow";
 import { saleCadences } from "@/lib/db/listing";
-import { cadenceDue } from "@/lib/core/seller-cadence";
+import { cadenceDue, pricingAnswers } from "@/lib/core/seller-cadence";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -142,6 +142,7 @@ export default async function OperationsToday() {
     dependencies: list(depsRead).filter((d) => stateOf(d) === "open")
       .map((d) => ({ id: d.id, purchaseJourneyId: d.purchaseJourneyId, purchaseLabel: d.purchaseLabel, line: lineFor(d, "buy"), owner: d.owner, note: d.note })),
     sales: cadenceDue(list(salesRead), today),
+    pricingAnswers: pricingAnswers(list(salesRead)),
   });
   const groups = arrange(items, marks ?? [], now);
 
@@ -158,6 +159,7 @@ export default async function OperationsToday() {
     jobs,
     sent: drafts.filter((d) => d.state === "succeeded").map((d) => ({ subject: d.draft.subject, to: d.draft.name ?? d.draft.to, at: d.events.at(-1)?.at ?? d.createdAt })),
     choices: choices.map((c) => ({ leadId: c.leadId, name: c.name, from: c.seen.from, at: c.chosenAt })),
+    answers: pricingAnswers(list(salesRead)),
   }, now);
   const autoTouches = touches.filter((t) => t.auto).length;
 

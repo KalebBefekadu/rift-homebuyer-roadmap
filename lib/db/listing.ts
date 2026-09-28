@@ -68,7 +68,7 @@ export async function saleCadences(agentId: string): Promise<DbResult<SaleCadenc
   const [ev, rv, op, st, ld] = await Promise.all([
     boundedRead(db.from("rift_listing_events").select("journey_id,kind,detail,url,price_cents,actor_label,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the listings"),
     boundedRead(db.from("rift_listing_reviews").select("journey_id,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the weekly reviews"),
-    boundedRead(db.from("rift_pricing_opinions").select("journey_id,version,review_on").eq("agent_id", agentId).in("journey_id", ids).order("version").limit(3000), "the pricing"),
+    boundedRead(db.from("rift_pricing_opinions").select("id,journey_id,version,review_on").eq("agent_id", agentId).in("journey_id", ids).order("version").limit(3000), "the pricing"),
     boundedRead(db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", agentId).eq("kind", "stage").in("journey_id", ids).order("seq").limit(8000), "the sales' stages"),
     boundedRead(db.from("rift_leads").select("id,name,email").eq("agent_id", agentId).in("id", leadIds), "the sellers"),
   ]);
@@ -80,16 +80,37 @@ export async function saleCadences(agentId: string): Promise<DbResult<SaleCadenc
   };
   const events = group(rows(ev), shapeEvent);
   const reviews = group(rows(rv), (x) => x.created_at as string);
-  const opinions = group(rows(op), (x) => ({ version: x.version as number, reviewOn: x.review_on as string }));
+  const opinions = group(rows(op), (x) => ({ id: x.id as string, version: x.version as number, reviewOn: x.review_on as string }));
+  /* The seller's answers to each sale's current version only: an answer to a superseded one has been answered. */
+  const latestIds = [...opinions.values()].flatMap((l) => (l.length ? [l.at(-1)!.id] : []));
+  const ans = latestIds.length
+    ? await boundedRead(db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", agentId).in("opinion_id", latestIds).order("created_at").limit(1000), "the sellers' answers")
+    : null;
+  if (ans && !ans.ok) return MISSING.test(ans.error) ? done(null) : ans;
+  const answerRows = ans ? rows(ans) : [];
+  const memberIds = [...new Set(answerRows.map((a) => a.member_id as string))];
+  const mem = memberIds.length ? await boundedRead(db.from("rift_journey_members").select("id,display_name,email").in("id", memberIds), "who answered") : null;
+  if (mem && !mem.ok) return mem;
+  const memberName = new Map((mem ? rows(mem) : []).map((m) => [m.id as string, ((m.display_name as string | null) ?? "").trim() || (m.email as string | null) || "The seller"]));
+  const answerOf = new Map<string, SaleCadence["answer"]>();
+  for (const a of answerRows) {
+    answerOf.set(a.opinion_id as string, {
+      response: a.response as "agree" | "discuss", note: (a.note as string | null) ?? null,
+      by: memberName.get(a.member_id as string) ?? "The seller", at: a.created_at as string,
+    });
+  }
   const stages = group(rows(st), (x) => x.to_value as Stage);
   const nameOf = new Map(rows(ld).map((l) => [l.id as string, ((l.name as string | null) ?? "").trim() || (l.email as string | null) || "A seller"]));
   return done(sales.map((x) => {
     const id = x.id as string;
+    const latest = opinions.get(id)?.at(-1) ?? null;
     return {
       journeyId: id, label: x.label as string, person: nameOf.get(x.origin_lead_id as string) ?? "A seller",
       /* No stage event yet is the first stage; a sale is never hidden for lack of one. */
       stage: stages.get(id)?.at(-1) ?? "prepare",
-      listing: events.get(id) ?? [], lastReviewAt: reviews.get(id)?.at(-1) ?? null, latestOpinion: opinions.get(id)?.at(-1) ?? null,
+      listing: events.get(id) ?? [], lastReviewAt: reviews.get(id)?.at(-1) ?? null,
+      latestOpinion: latest ? { version: latest.version, reviewOn: latest.reviewOn } : null,
+      answer: latest ? answerOf.get(latest.id) ?? null : null,
     };
   }));
 }

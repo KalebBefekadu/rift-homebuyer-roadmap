@@ -29,7 +29,7 @@
 
 import type { Commitment } from "./agenda";
 import type { ContractSummary, DateAttention, Waiting } from "./transactions";
-import { LATE_DAYS, type CadenceDue } from "./seller-cadence";
+import { LATE_DAYS, type CadenceDue, type PricingAnswer } from "./seller-cadence";
 
 export type Group = "attention" | "approval" | "today" | "waiting" | "upcoming";
 export const GROUPS: Group[] = ["attention", "approval", "today", "waiting", "upcoming"];
@@ -96,6 +96,8 @@ export interface DeskInput {
   rate: { stale: boolean; pct: number; age: string };
   /** A sale's pricing review or weekly listing review that has come due (S04, S09). */
   sales?: CadenceDue[];
+  /** Sellers' answers to the current pricing, from their page. */
+  pricingAnswers?: PricingAnswer[];
   /** Open links between a sale and a purchase (STATE-07). */
   dependencies?: { id: string; purchaseJourneyId: string; purchaseLabel: string; line: string; owner: string; note: string }[];
 }
@@ -110,6 +112,11 @@ export function deskItems(input: DeskInput): DeskItem[] {
   const out: DeskItem[] = [];
   const me = input.agentFirst;
   const push = (i: Omit<DeskItem, "snoozable"> & { snoozable?: boolean }) => out.push({ snoozable: true, ...i });
+
+  /* A seller asking to talk about the price is asking the agent for something. */
+  for (const a of (input.pricingAnswers ?? []).filter((x) => x.response === "discuss")) {
+    push({ key: `sale-discuss:${a.journeyId}:${a.version}`, group: "approval", title: `${a.by} wants to talk about the price`, why: `Their answer to pricing version ${a.version}, from their page`, owner: me, about: journey(a.journeyId, `${a.person}, ${a.label}`), evidence: a.note ? `“${a.note}”` : null, due: null, next: "Talk it through; a new pricing version answers it", href: `/operations/journey/${a.journeyId}?tab=pricing`, tone: "warn", order: 6 });
+  }
 
   /* A sale's promised reviews: due today, or a whole cycle missed. */
   for (const d of input.sales ?? []) {
@@ -313,6 +320,7 @@ export function activity(input: {
   jobs: { label: string; lastRun: { ok: boolean; detail: string | null; finishedAt: string | null; startedAt: string } | null }[];
   sent: { subject: string; to: string; at: string }[];
   choices: { leadId: string; name: string; from: string; at: string }[];
+  answers?: PricingAnswer[];
 }, now: Date, days = 3): Activity[] {
   const since = new Date(now.getTime() - days * 86_400_000).toISOString();
   const out: Activity[] = [];
@@ -327,6 +335,10 @@ export function activity(input: {
   for (const c of input.choices) {
     if (c.at < since) continue;
     out.push({ at: c.at, text: `${c.name} chose ${c.from}`, href: `/operations/lead/${c.leadId}`, auto: false });
+  }
+  for (const a of input.answers ?? []) {
+    if (a.at < since || a.response !== "agree") continue;
+    out.push({ at: a.at, text: `${a.by} agreed to pricing version ${a.version} for ${a.label}`, href: `/operations/journey/${a.journeyId}?tab=pricing`, auto: false });
   }
   for (const s of input.sent) {
     if (s.at < since) continue;

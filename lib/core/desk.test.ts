@@ -118,6 +118,18 @@ describe("a sale's promised reviews on Today (S04, S09)", () => {
     expect(price?.why).toContain("pricing version 2");
     expect(price?.evidence).toContain("10 days ago");
   });
+
+  it("asks the agent to talk when a seller wants to discuss the price, and reports an agreement as news", () => {
+    const answers = [
+      { journeyId: "j1", person: "Sam", label: "Sale of 12 Oak St", version: 3, response: "discuss" as const, note: "Feels high", by: "Sam", at: "2026-09-28T12:00:00Z" },
+      { journeyId: "j2", person: "Ann", label: "Sale of 3 Elm Rd", version: 1, response: "agree" as const, note: null, by: "Ann", at: "2026-09-28T13:00:00Z" },
+    ];
+    const items = deskItems(base({ pricingAnswers: answers }));
+    expect(items.find((i) => i.key === "sale-discuss:j1:3")).toMatchObject({ group: "approval", evidence: "“Feels high”", title: "Sam wants to talk about the price" });
+    expect(items.some((i) => i.key.includes("j2"))).toBe(false);
+    const news = activity({ leads: [], events: [], jobs: [], sent: [], choices: [], answers }, NOW);
+    expect(news.map((n) => n.text)).toEqual(["Ann agreed to pricing version 1 for Sale of 3 Elm Rd"]);
+  });
 });
 
 describe("snooze, pin and delegate (OPS-02)", () => {

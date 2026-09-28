@@ -35,6 +35,31 @@ export interface SaleCadence {
   /** When the last weekly review was recorded, or null. */
   lastReviewAt: string | null;
   latestOpinion: { version: number; reviewOn: string } | null;
+  /** The seller's latest answer to the latest pricing version, from their page. */
+  answer?: { response: "agree" | "discuss"; note: string | null; by: string; at: string } | null;
+}
+
+export interface PricingAnswer {
+  journeyId: string;
+  person: string;
+  label: string;
+  version: number;
+  response: "agree" | "discuss";
+  note: string | null;
+  by: string;
+  at: string;
+}
+
+/**
+ * The seller's answers to the current pricing. "Let's discuss" is a request
+ * for the agent and stays on Today until a new version answers it (answers
+ * belong to a version, so recording one clears it); "agree" is news for
+ * recent activity.
+ */
+export function pricingAnswers(sales: SaleCadence[]): PricingAnswer[] {
+  return sales.flatMap((s) => (s.answer && s.latestOpinion
+    ? [{ journeyId: s.journeyId, person: s.person, label: s.label, version: s.latestOpinion.version, ...s.answer }]
+    : []));
 }
 
 export interface CadenceDue {

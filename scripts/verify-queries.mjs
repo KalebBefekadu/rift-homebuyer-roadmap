@@ -464,7 +464,7 @@ await check("journeysMatching", () => db.from("rift_journeys").select("id,origin
 await check("saleCadences: sales", () => db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", NIL).eq("side", "sell").limit(1));
 await check("saleCadences: listings", () => db.from("rift_listing_events").select("journey_id,kind,detail,url,price_cents,actor_label,created_at").eq("agent_id", NIL).in("journey_id", [NIL]).order("created_at").limit(1));
 await check("saleCadences: reviews", () => db.from("rift_listing_reviews").select("journey_id,created_at").eq("agent_id", NIL).in("journey_id", [NIL]).order("created_at").limit(1));
-await check("saleCadences: pricing", () => db.from("rift_pricing_opinions").select("journey_id,version,review_on").eq("agent_id", NIL).in("journey_id", [NIL]).order("version").limit(1));
+await check("saleCadences: pricing", () => db.from("rift_pricing_opinions").select("id,journey_id,version,review_on").eq("agent_id", NIL).in("journey_id", [NIL]).order("version").limit(1));
 await check("saleCadences: stages", () => db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", NIL).eq("kind", "stage").in("journey_id", [NIL]).order("seq").limit(1));
 await check("saleCadences: sellers", () => db.from("rift_leads").select("id,name,email").eq("agent_id", NIL).in("id", [NIL]));
 
