@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { STAGE_NAMES, STALL_CHIP, type LeadNote, type ManagedLead, type NoteKind, type Stage } from "@/lib/core/pipeline";
 import { logContact, moveStage, archive, planNextAction } from "./actions";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay, showTime } from "@/lib/core/day";
 
 const KINDS: { id: NoteKind; label: string }[] = [
   { id: "call", label: "Call" },
@@ -19,7 +19,7 @@ const KIND_LABEL: Record<NoteKind, string> = {
 };
 
 const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  showTime(iso, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 const daysSince = (iso: string | null) =>
   iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : null;
@@ -92,8 +92,8 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
     : lead.nextDue === today
       ? "today"
       : overdue
-        ? `overdue since ${new Date(lead.nextDue + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-        : new Date(lead.nextDue + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        ? `overdue since ${showDay(lead.nextDue, { month: "short", day: "numeric" })}`
+        : showDay(lead.nextDue, { month: "short", day: "numeric" });
 
   return (
     <main className="shell-w" style={{ paddingTop: 26, paddingBottom: 80 }}>

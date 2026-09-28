@@ -33,3 +33,22 @@ export function georgiaDay(at: Date = new Date(), plusDays = 0): string {
   /* Noon UTC is the same calendar day everywhere, so adding days never slips one. */
   return new Date(Date.parse(`${day}T12:00:00Z`) + plusDays * 86_400_000).toISOString().slice(0, 10);
 }
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * A day for people to read. A date-only value ("2026-09-28") is that
+ * calendar day wherever it is shown; a timestamp is the day it was in
+ * Georgia. Without this, `new Date("2026-09-28")` is midnight in London and
+ * reads as 27 September in any American browser, and a server in UTC dates
+ * an evening event in Georgia the next day.
+ */
+export function showDay(value: string, opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }): string {
+  const dateOnly = DATE_ONLY.test(value);
+  return new Date(dateOnly ? `${value}T12:00:00Z` : value).toLocaleDateString("en-US", { ...opts, timeZone: dateOnly ? "UTC" : GEORGIA_TZ });
+}
+
+/** A moment for people to read, in Georgia's time, on the server and in the browser alike. */
+export function showTime(iso: string, opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }): string {
+  return new Date(iso).toLocaleString("en-US", { ...opts, timeZone: GEORGIA_TZ });
+}

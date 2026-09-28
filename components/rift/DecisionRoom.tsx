@@ -1,6 +1,7 @@
 import { compare, spreadOf, chosen, daysLeft, KIND_LABEL, type Decision } from "@/lib/core/decision";
 import { money } from "@/lib/core/compute";
 import { Ico } from "@/components/rift/icons";
+import { showDay } from "@/lib/core/day";
 
 /**
  * A decision, as the client reads it.
@@ -137,7 +138,7 @@ export function DecisionRoom({
         {picked ? (
           <p className="t-xs c-3" style={{ lineHeight: 1.6 }}>
             <span className="w6">{picked.label}</span> was chosen
-            {decision.decidedAt ? ` on ${new Date(decision.decidedAt).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : ""}.
+            {decision.decidedAt ? ` on ${showDay(decision.decidedAt, { month: "long", day: "numeric" })}` : ""}.
             {decision.outcomeNote ? ` ${decision.outcomeNote}` : ""}
           </p>
         ) : decision.chosenOptionId ? (

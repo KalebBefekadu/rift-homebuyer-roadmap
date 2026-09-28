@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { georgiaDay } from "./day";
+import { georgiaDay, showDay, showTime } from "./day";
 import { cleanPlan } from "./saved-plan";
 
 describe("the day in Georgia (DATE-01)", () => {
@@ -19,5 +19,18 @@ describe("the day in Georgia (DATE-01)", () => {
   it("dates a plan saved after dinner on the day it was saved", () => {
     const plan = cleanPlan({ side: "buy", values: [], answers: {} }, new Date("2026-09-28T01:30:00Z"));
     expect(plan.savedOn).toBe("2026-09-27");
+  });
+});
+
+describe("days and times for people to read", () => {
+  it("shows a date-only value as that calendar day, never the day before", () => {
+    expect(showDay("2026-09-28")).toBe("Sep 28");
+    expect(showDay("2026-01-01", { month: "long", day: "numeric", year: "numeric" })).toBe("January 1, 2026");
+  });
+
+  it("shows a timestamp as the day and time it was in Georgia", () => {
+    /* 01:30 UTC on 28 Sep is 9:30pm on 27 Sep in Atlanta. */
+    expect(showDay("2026-09-28T01:30:00Z")).toBe("Sep 27");
+    expect(showTime("2026-09-28T01:30:00Z")).toBe("Sep 27, 9:30 PM");
   });
 });

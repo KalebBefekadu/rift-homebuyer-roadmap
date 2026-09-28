@@ -5,8 +5,9 @@ import { useRefresh } from "@/components/rift/useRefresh";
 import { BriefEditor } from "@/components/rift/BriefEditor";
 import type { Response, SearchCriterion } from "@/lib/core/search";
 import { post } from "../../post";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "long", day: "numeric" });
 
 /**
  * The buyer's answer to their priorities: "that is right", "something should

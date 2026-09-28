@@ -46,12 +46,13 @@ import { journeyHistory } from "@/lib/core/journey-history";
 import { dependenciesFor } from "@/lib/db/dependencies";
 import { journeysFor } from "@/lib/db/journeys";
 import { stateOf } from "@/lib/core/dependency";
+import { showDay, showTime } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
+const WHEN = (iso: string) => showTime(iso, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
 const settled = <T,>(p: Promise<T> | null) => p ?? Promise.resolve(null);
 
 /**

@@ -7,8 +7,9 @@ import {
   type Cadence, type SearchBrief, type SearchPackage, type SearchStatus,
 } from "@/lib/core/search";
 import { useWrite } from "./useWrite";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
 
 export interface PackageView {
   id: string;

@@ -16,6 +16,7 @@ import { currentAgentId } from "@/lib/db/service";
 import { PrintButton } from "@/components/rift/PrintButton";
 import { ForgetMe } from "@/components/rift/Forget";
 import { money } from "@/lib/core/compute";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = {
   title: "Your saved plan",
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const DAY = (iso: string) => (iso ? new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "");
+const DAY = (iso: string) => (iso ? showDay(iso, { month: "long", day: "numeric", year: "numeric" }) : "");
 
 /**
  * A saved plan, reopened by its private link (Blueprint v5 §5.5).

@@ -7,6 +7,7 @@ import {
   type OfferInterest, type TourStatus, type TourStep, type TourView,
 } from "@/lib/core/tour";
 import { useWrite } from "./useWrite";
+import { showDay } from "@/lib/core/day";
 
 export interface ShowingView {
   id: string;
@@ -25,7 +26,7 @@ const newRequest = () =>
     : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
         (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 const CHIP: Record<TourStatus, string> = {
   requested: "chip-warn", "awaiting-confirmation": "chip-warn", confirmed: "chip-pos",
   changed: "chip-warn", cancelled: "", completed: "",

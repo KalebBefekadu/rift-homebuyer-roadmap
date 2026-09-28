@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { DEPENDENCY_KINDS, KIND_LABEL, STATE_LABEL, lineFor, stateOf, type Dependency, type DependencyKind } from "@/lib/core/dependency";
 import { useWrite } from "./useWrite";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
 /**
  * A sale linked to a purchase (STATE-07), on the journey's Overview: what

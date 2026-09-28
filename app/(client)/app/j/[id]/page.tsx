@@ -26,11 +26,12 @@ import { ClientOffers } from "./ClientOffers";
 import { Help } from "../../Help";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "long", day: "numeric" });
 
 /** What the search status means to the buyer, in words that never overclaim. */
 const FOR_BUYER: Record<SearchStatus, (agent: string, since: string | null) => string> = {

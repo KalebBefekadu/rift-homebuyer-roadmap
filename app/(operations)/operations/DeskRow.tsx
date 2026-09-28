@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Ico } from "@/components/rift/icons";
 import type { DeskItem, ItemMark, MarkKind, Tone } from "@/lib/core/desk";
 import { markItem } from "./actions";
+import { showTime } from "@/lib/core/day";
 
 const TONE: Record<Tone, { chip: string; word: string }> = {
   neg: { chip: "chip-neg", word: "Urgent" },
@@ -14,7 +15,7 @@ const TONE: Record<Tone, { chip: string; word: string }> = {
   none: { chip: "chip-out", word: "Open" },
 };
 
-const when = (iso: string) => new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const when = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /** A local datetime-local value `days` from now at `hour`:00. */
 function at(days: number, hour: number) {

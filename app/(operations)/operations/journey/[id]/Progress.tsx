@@ -9,6 +9,7 @@ import {
   type Stage, type WorkState, type WorkUpdate, type Workstream, type WorkstreamView,
 } from "@/lib/core/progress";
 import { useWrite } from "./useWrite";
+import { showDay } from "@/lib/core/day";
 
 export interface ContractView {
   id: string;
@@ -28,7 +29,7 @@ const newRequest = () =>
     : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
         (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
-const DAY = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 const today = () => marketDay();
 const CHIP: Record<WorkState, string> = {
   "not-started": "", "in-progress": "", waiting: "chip-warn", blocked: "chip-neg",

@@ -3,8 +3,9 @@ import { readLead } from "@/lib/db/clients";
 import { journeysFor } from "@/lib/db/journeys";
 import { SIDE_LABEL } from "@/lib/core/journey";
 import { BAND_LABEL, type Band } from "@/lib/core/lead";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
 
 /**
  * One person beside the list (Blueprint v5 §8.5), so the agent keeps his

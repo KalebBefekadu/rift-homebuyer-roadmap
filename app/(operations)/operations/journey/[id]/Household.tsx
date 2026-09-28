@@ -6,6 +6,7 @@ import {
 } from "@/lib/core/journey";
 import { useWrite } from "./useWrite";
 import type { Sent } from "../send";
+import { showDay } from "@/lib/core/day";
 
 export interface MemberView {
   id: string;
@@ -25,7 +26,7 @@ const STATE_LABEL: Record<MemberState, string> = {
   revoked: "Access withdrawn",
 };
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
 /**
  * Who can see this journey, and how much.

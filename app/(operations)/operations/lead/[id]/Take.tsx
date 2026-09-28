@@ -9,8 +9,9 @@ import {
   type OfferRoom,
 } from "@/lib/core/offer-room";
 import { approveOfferTake, withdrawOfferTake, reopenOfferChoice } from "./actions";
+import { showTime } from "@/lib/core/day";
 
-const AT = (iso: string) => new Date(iso).toLocaleString("en-US", {
+const AT = (iso: string) => showTime(iso, {
   month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
 });
 

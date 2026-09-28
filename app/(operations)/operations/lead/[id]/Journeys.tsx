@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useGo } from "@/components/rift/useRefresh";
 import { SIDE_LABEL, type Side } from "@/lib/core/journey";
 import { send } from "../../journey/send";
+import { showDay } from "@/lib/core/day";
 
 export interface JourneySummary {
   id: string;
@@ -77,7 +78,7 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
                   <span className="chip t-2xs">{SIDE_LABEL[j.side]}</span>
                   <span className="t-sm w6">{j.label}</span>
                 </span>
-                <span className="t-2xs c-4">{j.statusLabel ?? `Started ${new Date(j.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}</span>
+                <span className="t-2xs c-4">{j.statusLabel ?? `Started ${showDay(j.createdAt, { month: "short", day: "numeric" })}`}</span>
               </Link>
             </li>
           ))}

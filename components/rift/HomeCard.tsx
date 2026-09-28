@@ -1,5 +1,6 @@
 import { money } from "@/lib/core/compute";
 import { fitOf, PROPERTY_TYPES, REACTION_LABEL, type PropertyFacts, type Reaction, type SearchCriterion } from "@/lib/core/search";
+import { showDay } from "@/lib/core/day";
 
 export interface HomeCardData {
   id: string;
@@ -15,8 +16,7 @@ export interface HomeCardData {
   historyCount: number;
 }
 
-const DAY = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00` : iso)
-  .toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
 const FIT_MARK = { meets: "✓", misses: "✗", unknown: "?", manual: "check" } as const;
 

@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { SCOPES, SCOPE_LABEL, DEFAULT_DAYS, MAX_DAYS, linkState, type SummaryLink } from "@/lib/core/summary-link";
 import { makeSummaryLink, revokeLink } from "./summary-actions";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
 /**
  * Read-only summary links for someone outside the household (§7.2,

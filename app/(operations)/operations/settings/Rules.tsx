@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, type BusinessRules, type StoredRule } from "@/lib/core/settings";
 import { decideRule, undecideRule } from "./actions";
+import { showDay } from "@/lib/core/day";
 
 /**
  * Editing a decision, one at a time.
@@ -112,7 +113,7 @@ function Row({ k, value, isDefault, provenance }: {
           {provenance?.decidedBy ? (
             <p className="t-2xs c-4" style={{ marginTop: 5 }}>
               Set by {provenance.decidedBy}
-              {provenance.decidedAt ? ` on ${new Date(provenance.decidedAt).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}` : ""}
+              {provenance.decidedAt ? ` on ${showDay(provenance.decidedAt, { day: "numeric", month: "long", year: "numeric" })}` : ""}
             </p>
           ) : null}
         </div>

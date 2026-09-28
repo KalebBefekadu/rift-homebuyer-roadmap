@@ -10,6 +10,7 @@ import { FAMILIES, FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { zonedToUtc } from "@/lib/core/tour";
 import { useWrite } from "./useWrite";
 import { send } from "../send";
+import { showDay } from "@/lib/core/day";
 
 export interface OfferView {
   id: string;
@@ -29,7 +30,7 @@ const newRequest = () =>
         (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
 const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 const WHEN = (iso: string) => new Intl.DateTimeFormat("en-US", {
   timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
 }).format(new Date(iso));

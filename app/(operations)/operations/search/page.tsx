@@ -7,6 +7,7 @@ import { buyingJourneys } from "@/lib/db/journeys";
 import { searchStatuses, type SearchRow } from "@/lib/db/search";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { STATUS_LABEL, type SearchStatus } from "@/lib/core/search";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Search" };
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ const WHAT_NEXT: Record<SearchStatus, string> = {
   "active-confirmed": "Nothing to do",
 };
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
 /**
  * Every buyer's search, in the order they need him.

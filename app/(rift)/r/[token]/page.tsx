@@ -5,6 +5,7 @@ import { refFrom } from "@/lib/core/attribution";
 import { money } from "@/lib/core/compute";
 import { Trust } from "@/components/rift/Trust";
 import { Ico, Mark } from "@/components/rift/icons";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = {
   title: "A shared readout",
@@ -119,7 +120,7 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
             </span>
           </div>
           <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            This is the document as it was on {created.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.
+            This is the document as it was on {showDay(created.toISOString(), { month: "long", day: "numeric", year: "numeric" })}.
             Rates and program terms move; it is shown unchanged on purpose, because it is what
             they were actually told rather than what we would say today.
           </p>
