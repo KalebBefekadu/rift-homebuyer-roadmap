@@ -12,6 +12,7 @@
  */
 
 import { DEFAULT_RULES } from "./settings";
+import { daysBetween, georgiaDay } from "./day";
 
 export type ProgramType = "grant" | "forgivable" | "deferred" | "second-lien" | "assistance";
 export type FundingState = "open" | "closed" | "waitlist" | "confirm";
@@ -217,13 +218,17 @@ export const PROGRAMS: AssistanceProgram[] = [
   },
 ];
 
+/* Counted from Georgia's day, like the registry read's own cutoff
+   (lib/db/programs.ts). Measured in hours from noon UTC it lagged by one
+   between midnight and eight in the morning in Georgia, so on its last day a
+   program stayed on customer pages for eight hours the read had already
+   withdrawn it for. */
 export function daysSinceVerified(p: AssistanceProgram, today = PROTO_TODAY) {
-  const then = new Date(`${p.verifiedOn}T12:00:00Z`).getTime();
-  return Math.floor((today.getTime() - then) / 86_400_000);
+  return daysBetween(p.verifiedOn, georgiaDay(today));
 }
 
-export function isStale(p: AssistanceProgram, today = PROTO_TODAY) {
-  return daysSinceVerified(p, today) > STALE_AFTER_DAYS;
+export function isStale(p: AssistanceProgram, today = PROTO_TODAY, windowDays = STALE_AFTER_DAYS) {
+  return daysSinceVerified(p, today) > windowDays;
 }
 
 export interface MatchInput {
@@ -242,6 +247,13 @@ export interface MatchInput {
   programs?: AssistanceProgram[];
   /** Defaults to the prototype's fixed date so the specification stays deterministic. */
   today?: Date;
+  /**
+   * The suppression window in days. Defaults to the business rule's default;
+   * production passes the agent's own setting. Without it an agent who set a
+   * longer window than the default had programs the registry read kept as
+   * current suppressed again here, at the default.
+   */
+  windowDays?: number;
 }
 
 export interface MatchResult {
@@ -259,13 +271,13 @@ export interface MatchResult {
  * Closed and waitlisted programs are shown WITH their state, never hidden:
  * "funding exhaustion is a first-class state".
  */
-export function matchPrograms({ county, firstTimeBuyer, programs = PROGRAMS, today = PROTO_TODAY }: MatchInput): MatchResult {
+export function matchPrograms({ county, firstTimeBuyer, programs = PROGRAMS, today = PROTO_TODAY, windowDays = STALE_AFTER_DAYS }: MatchInput): MatchResult {
   const geoFit = (p: AssistanceProgram) => p.county === null || p.county === county;
   const statusFit = (p: AssistanceProgram) => (p.firstTimeOnly ? firstTimeBuyer : true);
 
   const eligible = programs.filter((p) => geoFit(p) && statusFit(p));
-  const matched = eligible.filter((p) => !isStale(p, today));
-  const suppressed = eligible.filter((p) => isStale(p, today));
+  const matched = eligible.filter((p) => !isStale(p, today, windowDays));
+  const suppressed = eligible.filter((p) => isStale(p, today, windowDays));
   const open = matched.filter((p) => p.funding === "open");
 
   return {

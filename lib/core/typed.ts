@@ -15,10 +15,33 @@ export function typedNumber(value: unknown): number | null {
   return /^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN;
 }
 
-/** The first of these form fields that holds something that is not a number, or null when all read. */
-export function unreadableField(form: FormData, fields: Record<string, string>): string | null {
+/**
+ * The same, for an amount that can honestly be below zero: a decision option
+ * that costs money rather than saving it. A leading minus is read, whether
+ * typed as "-$5,000", "$-5,000" or pasted with the typographic minus sign;
+ * everything else is refused exactly as `typedNumber` refuses it, so "about
+ * -5k" is still NaN rather than -5.
+ */
+export function typedSignedNumber(value: unknown): number | null {
+  const t = String(value ?? "").replace(/[$,\s]/g, "").replace(/^−/, "-");
+  if (!t) return null;
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return NaN;
+  /* "-0" is zero, not a negative zero that formats as "-$0". */
+  return Number(t) || 0;
+}
+
+/**
+ * The first of these form fields that holds something that is not a number,
+ * or null when all read. `read` is `typedSignedNumber` for fields that may be
+ * negative.
+ */
+export function unreadableField(
+  form: FormData,
+  fields: Record<string, string>,
+  read: (value: unknown) => number | null = typedNumber,
+): string | null {
   for (const [name, label] of Object.entries(fields)) {
-    if (Number.isNaN(typedNumber(form.get(name)))) return label;
+    if (Number.isNaN(read(form.get(name)))) return label;
   }
   return null;
 }

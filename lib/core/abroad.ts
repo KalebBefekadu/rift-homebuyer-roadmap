@@ -94,7 +94,12 @@ export function parseAbroadParams(
   counties: readonly string[],
 ): AbroadInputs & { downPct: number } {
   const num = (k: string, lo: number, hi: number, fallback: number) => {
-    const n = Number(get(k));
+    /* Blank is missing, not zero. `Number("")` is 0, which clamped up to the
+       floor: a link ending "&p=" quoted a $60,000 home rather than the
+       default, and "&d=" a down payment nobody chose. */
+    const raw = (get(k) ?? "").trim();
+    if (!raw) return fallback;
+    const n = Number(raw);
     return Number.isFinite(n) ? Math.min(Math.max(n, lo), hi) : fallback;
   };
   const status = STATUSES.find((x) => x.id === get("s"))?.id ?? ABROAD_DEFAULTS.status;

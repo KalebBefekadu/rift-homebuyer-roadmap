@@ -29,7 +29,7 @@
  */
 
 import { money } from "./compute";
-import { rankOffers, headlineTrap, gapsIn, FINANCING_LABEL, type Offer, type SellerCosts } from "./offers";
+import { rankOffers, headlineTrap, highestPriced, gapsIn, FINANCING_LABEL, type Offer, type SellerCosts } from "./offers";
 
 /** Where the agent's own recommendation goes. Approval is refused while it is still here. */
 export const RECOMMENDATION_MARKER = "[What you would do, and why, in your own words]";
@@ -73,9 +73,11 @@ export function draftTake(released: Offer[], costs: SellerCosts | null): string 
     const o = released[0]!;
     lines.push(`There is one offer in front of you: ${o.from} at ${money(o.price)}.`);
   } else {
-    const byPrice = [...released].sort((a, b) => b.price - a.price);
+    /* The same pick as the trap below, so "It is also the one that leaves
+       you most" is about the offer this sentence just named. */
+    const highest = highestPriced(released, costs)!;
     lines.push(
-      `There are ${released.length} offers in front of you. The highest price is ${byPrice[0]!.from} at ${money(byPrice[0]!.price)}.`,
+      `There are ${released.length} offers in front of you. The highest price is ${highest.from} at ${money(highest.price)}.`,
     );
   }
 

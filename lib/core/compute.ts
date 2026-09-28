@@ -260,7 +260,17 @@ export interface SellerInputs {
   yearsOwned: number;
   ageOver65: boolean;
   homesteadFiled: boolean;
-  assessedValue: number;
+  /**
+   * The fair market value on the county's assessment notice. Null: nobody
+   * has told us it.
+   *
+   * It was a number with a default of $392,000, and no page asks for it. The
+   * unclaimed-value check spreads the defaults and lets the visitor move only
+   * the price, so a $300,000 home was told "The county has this parcel at
+   * $392,000" and that an appeal looked worthwhile: a county figure nobody
+   * gave, stated as fact, on the public page. Unknown is now unknown.
+   */
+  assessedValue: number | null;
 }
 
 export const SELLER_DEFAULTS: SellerInputs = {
@@ -274,8 +284,18 @@ export const SELLER_DEFAULTS: SellerInputs = {
   yearsOwned: 11,
   ageOver65: false,
   homesteadFiled: false,
-  assessedValue: 392_000,
+  assessedValue: null,
 };
+
+/**
+ * Whether the county's figure sits above what the home would likely sell
+ * for. False when the assessment is not known: a comparison against a value
+ * nobody gave is not one. One rule for the unclaimed check and the readout,
+ * which each had their own copy of it.
+ */
+export function assessmentLooksHigh<T extends Pick<SellerInputs, "assessedValue" | "price">>(s: T): s is T & { assessedValue: number } {
+  return s.assessedValue !== null && s.assessedValue > s.price * 0.96;
+}
 
 export interface ProceedLine {
   label: string;
@@ -394,7 +414,19 @@ export function unclaimedValue(s: SellerInputs): UnclaimedItem[] {
     });
   }
 
-  if (s.assessedValue > s.price * 0.96) {
+  if (s.assessedValue === null) {
+    /* The appeal window is still worth knowing about; what we cannot say is
+       whether their assessment is high, so the item asks them to compare
+       rather than telling them the answer. */
+    out.push({
+      title: "Your assessment may be worth checking",
+      estimate: "Varies",
+      detail:
+        "Compare the fair market value on your annual assessment notice with what the home would realistically sell for. If the county has it higher, an appeal may lower the tax every year, whether or not you sell.",
+      decidedBy: "Your county board of assessors",
+      urgency: "Appeal windows after the annual notice are short and strictly enforced.",
+    });
+  } else if (assessmentLooksHigh(s)) {
     const over = s.assessedValue - s.price * 0.92;
     out.push({
       title: "Your assessment looks high relative to likely sale price",

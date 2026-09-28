@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import {
-  netOf, rankOffers, headlineTrap, gapsIn, anyReleased,
+  netOf, rankOffers, headlineTrap, highestPriced, gapsIn, anyReleased,
   fixedSellerCosts, type Offer, type SellerCosts,
 } from "./offers";
 import { GA_TRANSFER_TAX_RATE } from "./compute";
@@ -128,6 +128,25 @@ describe("the headline trap", () => {
   it("says nothing about a single offer", () => {
     expect(headlineTrap([offer()], costs)).toBeNull();
     expect(headlineTrap([], costs)).toBeNull();
+  });
+  it("does not say the better of two equal prices offered less", () => {
+    /* Two $400,000 offers, the first asking $5,000 back. Picking "the
+       highest" by input order named the first, and the trap then told the
+       seller the clean one "offered less". It offered the same. */
+    const asks = offer({ id: "asks", price: 400_000, concessions: 5_000 });
+    const clean = offer({ id: "clean", price: 400_000 });
+    expect(headlineTrap([asks, clean], costs)).toBeNull();
+    expect(highestPriced([asks, clean], costs)!.id).toBe("clean");
+    /* Without the seller's costs there is no net to break the tie on. */
+    expect(highestPriced([asks, clean], null)!.id).toBe("asks");
+  });
+
+  it("does not raise a trap worth $0", () => {
+    /* The higher price asks back exactly what it adds: the two leave the
+       same, so "would leave you about $0 more" was a sentence about nothing. */
+    const quiet = offer({ id: "quiet", price: 400_000 });
+    const loud = offer({ id: "loud", price: 410_000, concessions: 10_000 - 500 - 10_000 * GA_TRANSFER_TAX_RATE - (proratedTax(410_000) - proratedTax(400_000)) });
+    expect(headlineTrap([quiet, loud], costs)).toBeNull();
   });
 });
 

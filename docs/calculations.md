@@ -133,7 +133,9 @@ stops it.
 (**$1.00 per $1,000 of consideration — 0.1%**, O.C.G.A. § 48-6-1; it said 0.2% until September 2026, which understated every seller's net by 0.1% of the price), settlement, prorated tax, payoff admin,
 repairs, and moving from the price, then the mortgage payoff. `repairTriage()` ranks repairs
 by payback, and `unclaimedValue()` finds homestead and age-65 exemptions the owner has not
-filed.
+filed. It says an assessment looks high only against a county figure somebody gave
+(`assessedValue` is `null` when unknown, which is the default); otherwise it points at the
+appeal window and asks them to compare, without quoting a value.
 
 ---
 

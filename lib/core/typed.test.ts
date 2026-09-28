@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { typedNumber, unreadableField } from "./typed";
+import { typedNumber, typedSignedNumber, unreadableField } from "./typed";
 
 describe("a number a person typed", () => {
   it("reads dollars written the usual ways", () => {
@@ -27,5 +27,34 @@ describe("a number a person typed", () => {
     expect(unreadableField(f, { price: "The price", owed: "What is owed" })).toBe("What is owed");
     f.set("owed", "");
     expect(unreadableField(f, { price: "The price", owed: "What is owed" })).toBeNull();
+  });
+});
+
+describe("a number that may be below zero", () => {
+  it("reads a leading minus however it was typed", () => {
+    expect(typedSignedNumber("-$5,000")).toBe(-5000);
+    expect(typedSignedNumber("$-5,000")).toBe(-5000);
+    expect(typedSignedNumber("−5,000")).toBe(-5000);
+    expect(typedSignedNumber(" 1,250.50 ")).toBe(1250.5);
+  });
+
+  it("is null when nothing was typed, and zero is never negative", () => {
+    expect(typedSignedNumber("")).toBeNull();
+    expect(typedSignedNumber(undefined)).toBeNull();
+    expect(Object.is(typedSignedNumber("-0"), 0)).toBe(true);
+  });
+
+  it("refuses everything typedNumber refuses", () => {
+    expect(typedSignedNumber("about -5k")).toBeNaN();
+    expect(typedSignedNumber("5-")).toBeNaN();
+    expect(typedSignedNumber("--5")).toBeNaN();
+    expect(typedSignedNumber("-")).toBeNaN();
+  });
+
+  it("can be the reader a form's fields are checked with", () => {
+    const f = new FormData();
+    f.set("amount", "-2,500");
+    expect(unreadableField(f, { amount: "The amount" })).toBe("The amount");
+    expect(unreadableField(f, { amount: "The amount" }, typedSignedNumber)).toBeNull();
   });
 });

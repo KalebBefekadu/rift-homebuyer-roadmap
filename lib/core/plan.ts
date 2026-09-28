@@ -158,7 +158,7 @@ export function headline(s: PlanSummary): string {
   if (s.total === 0) return "Your plan is being written.";
   if (s.done === s.total) return "Everything on your plan is done.";
 
-  const late = s.overdue === 1 ? "one is past its date" : `${s.overdue} are past its date`;
+  const late = s.overdue === 1 ? "one is past its date" : `${s.overdue} are past their dates`;
 
   /* Nothing on them. Said without mentioning a count of zero: "0 things are
      waiting on you" is how a page tells somebody it is generated rather than

@@ -122,6 +122,22 @@ export function rankOffers(offers: Offer[], costs: SellerCosts): OfferNet[] {
 }
 
 /**
+ * The offer with the highest price. When several share it, the one that
+ * leaves the seller most (when their costs are known), then the first given.
+ *
+ * Which of two equal prices counted as "the highest" used to depend on the
+ * order they were entered, so the trap below could tell a seller that the
+ * better of two $400,000 offers "offered less".
+ */
+export function highestPriced(offers: Offer[], costs: SellerCosts | null): Offer | null {
+  if (offers.length === 0) return null;
+  const top = Math.max(...offers.map((o) => o.price));
+  const tied = offers.filter((o) => o.price === top);
+  if (!costs || tied.length === 1) return tied[0]!;
+  return tied.reduce((best, o) => (netOf(o, costs).net > netOf(best, costs).net ? o : best));
+}
+
+/**
  * Whether the highest-priced offer is also the one that nets most.
  *
  * Returns null when they agree, or when there is nothing to compare. When they
@@ -137,11 +153,17 @@ export function headlineTrap(offers: Offer[], costs: SellerCosts): {
   const byId = new Map(offers.map((o) => [o.id, o]));
 
   const bestNet = byId.get(ranked[0]!.offerId)!;
-  const highest = [...offers].sort((a, b) => b.price - a.price)[0]!;
+  const highest = highestPriced(offers, costs)!;
   if (highest.id === bestNet.id) return null;
 
   const highestNet = ranked.find((n) => n.offerId === highest.id)!;
-  return { highest, bestNet, difference: ranked[0]!.net - highestNet.net };
+  const difference = ranked[0]!.net - highestNet.net;
+  /* A tie on net is a tie, not a trap: "would leave you about $0 more" is a
+     sentence about nothing, and the lower offer does not leave them more.
+     Rounded to the dollar the seller reads it in, so floating-point dust
+     from the percentage lines cannot manufacture a difference either. */
+  if (Math.round(difference) <= 0) return null;
+  return { highest, bestNet, difference };
 }
 
 /**

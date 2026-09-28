@@ -46,6 +46,18 @@ describe("Rift drafts the facts and leaves the judgement blank", () => {
     expect(d).not.toMatch(/leaves you most/);
   });
 
+  it("names the same offer as highest that it then says leaves the most", () => {
+    /* Two offers at one price: the sentence after "the highest price is X"
+       reads "It is also the one that leaves you most", so X has to be the
+       one of the two that does. */
+    const asks = offer({ id: "a", from: "Asks", price: 400_000, concessions: 6_000 });
+    const clean = offer({ id: "c", from: "Clean", price: 400_000 });
+    const d = draftTake([asks, clean], costs)!;
+    expect(d).toMatch(/highest price is Clean/);
+    expect(d).toMatch(/also the one that leaves you most/);
+    expect(d).not.toMatch(/offered less/);
+  });
+
   it("has nothing to say about nothing", () => {
     expect(draftTake([], costs)).toBeNull();
   });
