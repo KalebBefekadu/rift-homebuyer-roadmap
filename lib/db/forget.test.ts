@@ -115,18 +115,21 @@ async function forget(c: Client, session: string) {
     "select id from rift_leads where agent_id=$1 and session_id=$2", [AGENT, session]);
   const leadIds = [...new Set([...byA, ...byS].map((r) => r.id as string))];
 
+  /* Consent by assessment BEFORE the assessment goes: the column is SET NULL
+     on delete, so afterwards this matches nothing. */
+  if (ids.length) {
+    await c.query("delete from rift_consents where agent_id=$1 and assessment_id = any($2)", [AGENT, ids]);
+  }
+  await c.query("delete from rift_consents where agent_id=$1 and session_id=$2", [AGENT, session]);
+  await c.query("delete from rift_events where agent_id=$1 and session_id=$2", [AGENT, session]);
+  await c.query("delete from rift_attributions where agent_id=$1 and session_id=$2", [AGENT, session]);
+
   if (leadIds.length) {
     /* Journeys first: origin_lead_id is RESTRICT, so the lead cannot go while one exists. */
     await c.query("delete from rift_journeys where agent_id=$1 and origin_lead_id = any($2)", [AGENT, leadIds]);
     await c.query("delete from rift_leads where id = any($1)", [leadIds]);
   }
   if (ids.length) await c.query("delete from rift_assessments where id = any($1)", [ids]);
-  if (ids.length) {
-    await c.query("delete from rift_consents where agent_id=$1 and assessment_id = any($2)", [AGENT, ids]);
-  }
-  await c.query("delete from rift_consents where agent_id=$1 and session_id=$2", [AGENT, session]);
-  await c.query("delete from rift_events where agent_id=$1 and session_id=$2", [AGENT, session]);
-  await c.query("delete from rift_attributions where session_id=$1", [session]);
 
   return ids.length + leadIds.length;
 }
@@ -222,6 +225,20 @@ describe("erasure, from a readout", () => {
     expect(await count(c, "rift_journey_members", "journey_id=$1", [j.id])).toBe(0);
   });
 
+  test("removes a consent record that only the assessment points at", async (c) => {
+    /* A consent saved before sessions were stored carries the assessment and
+       nothing else. Deleting it after the assessment matched nothing: the
+       foreign key had already set it to null, and the record of their IP and
+       browser outlived them. */
+    const { assessmentId } = await seed(c, "gone-7", { withAssessment: true });
+    await c.query("update rift_consents set session_id = null where assessment_id=$1", [assessmentId]);
+
+    await forget(c, "gone-7");
+
+    expect(await count(c, "rift_consents", "assessment_id=$1 or (assessment_id is null and wording=$2 and session_id is null)",
+      [assessmentId, "We email you your readout."])).toBe(0);
+  });
+
   test("counts the person, not only the paperwork", async (c) => {
     /* A session with a lead and no assessment used to return `deleted: 0`,
        which the route turns into "nothing was stored on our side to remove":
@@ -244,6 +261,15 @@ describe("the erasure code still does all of that", () => {
 
   it("deletes the consent record", () => {
     expect(forgetBody).toContain('from("rift_consents").delete()');
+  });
+
+  it("deletes consent by assessment before the assessment it points at", () => {
+    /* rift_consents.assessment_id is SET NULL on delete. After the assessment
+       goes, deleting "by assessment" matches nothing and the record stays. */
+    const consentByAssessment = forgetBody.indexOf('from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids)');
+    const assessmentDelete = forgetBody.indexOf('from("rift_assessments").delete()');
+    expect(consentByAssessment).toBeGreaterThan(-1);
+    expect(consentByAssessment).toBeLessThan(assessmentDelete);
   });
 
   it("collects the leads before deleting the assessments", () => {

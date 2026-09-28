@@ -201,3 +201,18 @@ describe("when something goes wrong halfway", () => {
     expect(db.to("delete rift_assessments")).toHaveLength(0);
   });
 });
+
+describe("a read that fails", () => {
+  it("fails the sweep instead of reporting that no lead was old enough", async () => {
+    build({ "select rift_leads": { error: { message: "statement timeout" } } });
+    const r = await sweep(NOW);
+    expect(r.ok, "a failed lead read was reported as a clean sweep").toBe(false);
+    expect(db.to("delete rift_leads")).toHaveLength(0);
+  });
+
+  it("fails the sweep when the quiet assessments cannot be read", async () => {
+    build({ "select rift_assessments": (_c, nth) => (nth === 1 ? { error: { message: "statement timeout" } } : { data: [] }) });
+    const r = await sweep(NOW);
+    expect(r.ok).toBe(false);
+  });
+});

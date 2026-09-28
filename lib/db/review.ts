@@ -3,6 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedWrite } from "./bounded";
 import { nextRung, ceilingNote, type ReviewItem, type TrustState, type ReviewKind } from "@/lib/core/review";
+import { georgiaDay } from "@/lib/core/day";
 
 /**
  * The review queue: the producer for `pending-review`.
@@ -68,7 +69,7 @@ export async function openItems(): Promise<DbResult<ReviewItemWithFigure[]>> {
       state: r.state as TrustState,
       ceiling: r.ceiling as TrustState,
       raisedBy: r.raised_by as "client" | "agent" | "system",
-      raisedAt: (r.raised_at as string).slice(0, 10),
+      raisedAt: georgiaDay(new Date(r.raised_at as string)),
       waitingHours: Math.floor((Date.now() - new Date(r.raised_at as string).getTime()) / 3_600_000),
       toAdvance: r.to_advance as string,
       ...(r.confirmed_by ? { confirmedBy: r.confirmed_by as string } : {}),

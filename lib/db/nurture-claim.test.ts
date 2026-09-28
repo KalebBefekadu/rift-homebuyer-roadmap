@@ -170,4 +170,36 @@ describe("rechecking just before the send (AT37)", async () => {
     const q = await due(new Date());
     expect(q.ok).toBe(true);
   });
+
+  it("fails the queue when the readouts cannot be read, rather than sending everyone the resume touch", async () => {
+    /* The snapshot decides which email a person gets. Read as empty, somebody
+       who finished would be told to pick up where they left off. */
+    build({
+      "select rift_enrolments": {
+        data: [{
+          id: "e1", lead_id: "l1", band: "now", entered_at: "2026-09-01T00:00:00Z", phone_consent: false,
+          rift_leads: { name: "Sam", email: "sam@example.com", assessment_id: "a1", side: "buy" }, rift_touches: [],
+        }],
+        error: null,
+      },
+      "select rift_readouts": { error: { message: "statement timeout" } },
+    });
+    const q = await due(new Date("2026-09-24T12:00:00Z"));
+    expect(q.ok).toBe(false);
+  });
+
+  it("fails the queue when the answers cannot be counted", async () => {
+    build({
+      "select rift_enrolments": {
+        data: [{
+          id: "e1", lead_id: "l1", band: "now", entered_at: "2026-09-01T00:00:00Z", phone_consent: false,
+          rift_leads: { name: "Sam", email: "sam@example.com", assessment_id: "a1", side: "buy" }, rift_touches: [],
+        }],
+        error: null,
+      },
+      "select rift_answers": { error: { message: "statement timeout" } },
+    });
+    const q = await due(new Date("2026-09-24T12:00:00Z"));
+    expect(q.ok).toBe(false);
+  });
 });

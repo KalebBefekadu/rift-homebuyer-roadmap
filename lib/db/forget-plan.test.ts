@@ -23,7 +23,7 @@ const forgetAtBrevo = vi.fn(async () => ({ ok: true }));
 vi.mock("./email", () => ({ forgetAtBrevo: (...a: unknown[]) => forgetAtBrevo(...(a as [])) }));
 vi.mock("./recovery", () => ({ markAbandoned: vi.fn() }));
 
-const { forgetByPlan } = await import("./retention");
+const { forget, forgetByPlan } = await import("./retention");
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -73,5 +73,57 @@ describe("deleting from the saved plan's link", () => {
     build(saved(null));
     await forgetByPlan("short");
     expect(db.calls).toHaveLength(0);
+  });
+});
+
+describe("what is checked, and in which order", () => {
+  it("removes consent by assessment before the assessment, whose delete would orphan it", async () => {
+    /* rift_consents.assessment_id is SET NULL on delete: once the assessment
+       goes, a delete keyed on it matches nothing. */
+    build(saved({ id: "l1", session_id: null, assessment_id: "a1" }));
+    const r = await forgetByPlan(TOKEN);
+    expect(r.ok).toBe(true);
+    const consent = db.calls.findIndex((c) => c.verb === "delete" && c.table === "rift_consents" && c.filters.includes("in:assessment_id=[a1]"));
+    const assessment = db.calls.findIndex((c) => c.verb === "delete" && c.table === "rift_assessments");
+    expect(consent).toBeGreaterThan(-1);
+    expect(consent).toBeLessThan(assessment);
+  });
+
+  it("does not answer Deleted when the consent record could not be removed", async () => {
+    build({ ...saved({ id: "l1", session_id: "s-old", assessment_id: "a1" }), "delete rift_consents": { error: { message: "permission denied" } } });
+    const r = await forgetByPlan(TOKEN);
+    expect(r.ok).toBe(false);
+    /* Stopped before the lead went, so the plan link still finds it on a retry. */
+    expect(db.to("delete rift_leads")).toHaveLength(0);
+  });
+
+  it("does not answer Deleted when the events could not be removed", async () => {
+    build({ ...saved({ id: "l1", session_id: "s-old", assessment_id: null }), "delete rift_events": { error: { message: "timeout" } } });
+    const r = await forgetByPlan(TOKEN);
+    expect(r.ok).toBe(false);
+    expect(db.to("delete rift_leads")).toHaveLength(0);
+  });
+
+  it("never erases by a session every storage-blocked browser shared", async () => {
+    /* The lead's own row goes; nothing keyed by "anon" does, because that
+       session belongs to every visitor who ever sent it. */
+    build(saved({ id: "l1", session_id: "anon", assessment_id: null }));
+    const r = await forgetByPlan(TOKEN);
+    expect(r.ok && "data" in r && r.data.deleted).toBe(1);
+    expect(db.to("delete rift_leads")[0]!.filters).toContain("in:id=[l1]");
+    expect(db.calls.some((c) => c.filters.includes("eq:session_id=anon"))).toBe(false);
+  });
+
+  it("refuses a delete request keyed by a shared session, instead of deleting everyone under it", async () => {
+    build(saved(null));
+    const r = await forget("anon");
+    expect(r.ok).toBe(false);
+    expect(db.calls).toHaveLength(0);
+  });
+
+  it("scopes the first-touch delete to this agent", async () => {
+    build(saved({ id: "l1", session_id: "s-old", assessment_id: null }));
+    await forgetByPlan(TOKEN);
+    expect(db.to("delete rift_attributions")[0]!.filters).toEqual(expect.arrayContaining(["eq:agent_id=agent-1", "eq:session_id=s-old"]));
   });
 });

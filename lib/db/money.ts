@@ -4,6 +4,7 @@ import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { currentRate } from "./rates";
 import { marketDay } from "@/lib/core/progress";
+import { georgiaDay } from "@/lib/core/day";
 import { currentFacts, factError, ledger, planInputs, type Fact, type FactKind, type Ledger } from "@/lib/core/ledger";
 import type { Membership } from "./portal";
 import type { BuyerInputs } from "@/lib/core/compute";
@@ -86,7 +87,9 @@ export async function journeyMoney(journeyId: string, agentId: string): Promise<
     ledger: ledger(inputs, answered, currentFacts(list ?? [])),
     facts: list ?? [],
     recording: list !== null,
-    answersFrom: plan?.plan_saved_at ? plan.plan_saved_at.slice(0, 10) : null,
+    /* The day in Georgia: sliced from the timestamp, a plan saved after eight
+       in the evening said it was saved the next day. */
+    answersFrom: plan?.plan_saved_at ? georgiaDay(new Date(plan.plan_saved_at)) : null,
     rate: { pct: rate.pct, label: rate.label },
     plan: { inputs, savingsKnown: answered.savings },
   });

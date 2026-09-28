@@ -71,7 +71,9 @@ export async function availability(days = 7): Promise<Availability> {
     url.searchParams.set("endTime", to.toISOString());
     url.searchParams.set("timeZone", TZ);
 
-    const res = await fetch(url, { headers: { accept: "application/json" }, cache: "no-store" });
+    /* On a deadline: /book renders on this, and a hung calendar held the
+       page open instead of saying availability could not be read. */
+    const res = await fetch(url, { headers: { accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(8_000) });
     if (!res.ok) throw new Error(`Cal ${res.status}: ${(await res.text()).slice(0, 200)}`);
 
     const body = (await res.json()) as { slots?: Record<string, { time: string }[]> };
@@ -115,6 +117,9 @@ export async function book(input: BookInput): Promise<{ ok: true; id: string } |
 
   try {
     const res = await fetch(`https://api.cal.com/v1/bookings?apiKey=${encodeURIComponent(key)}`, {
+      /* The visitor is watching the button. A timeout is reported as a
+         failed booking, never as a held slot. */
+      signal: AbortSignal.timeout(15_000),
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

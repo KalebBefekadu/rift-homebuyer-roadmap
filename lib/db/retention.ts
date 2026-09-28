@@ -8,6 +8,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { RETENTION } from "@/lib/core/privacy";
 import { markAbandoned } from "./recovery";
 import { boundedWrite, boundedRead } from "./bounded";
+import { oneVisitor } from "./visitor-session";
 
 /**
  * Enforcing the retention schedule.
@@ -71,13 +72,14 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
        it: an abandonment deleted immediately destroys the recovery
        opportunity, and one never marked leaves the agent staring at a queue
        that never empties. */
-    const { data: quiet } = await db
+    const { data: quiet, error: quietErr } = await db
       .from("rift_assessments")
       .select("id")
       .eq("agent_id", agent_id)
       .is("completed_at", null)
       .is("abandoned_at", null)
       .lte("started_at", ago(1));
+    if (quietErr) return failed(quietErr.message);
 
     let marked = 0;
     for (const q of ((quiet ?? []) as { id: string }[])) {
@@ -165,12 +167,16 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
        Only leads with no reply and no live sequence: somebody the agent has
        spoken to, or is still following up, is a relationship rather than an
        expired record, whatever its age. */
-    const { data: coldLeads } = await db
+    /* Checked like every other read here. Unchecked, a failed read meant no
+       lead was ever old enough, and the job reported a clean night while
+       the promise on every readout went unkept. */
+    const { data: coldLeads, error: leadErr } = await db
       .from("rift_leads")
       .select("id,rift_enrolments(stopped_at)")
       .eq("agent_id", agent_id)
       .is("human_replied_at", null)
       .lte("created_at", ago(WINDOWS.unconverted.days));
+    if (leadErr) return failed(leadErr.message);
 
     const quietLeads = ((coldLeads ?? []) as unknown as {
       id: string; rift_enrolments: { stopped_at: string | null }[];
@@ -282,6 +288,10 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
   if (!db) return skipped("no database configured");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
+  /* A placeholder every storage-blocked browser used to send. Keyed on it,
+     this button deleted every visitor who shared it. Refused, and said so:
+     "nothing stored" would be untrue for somebody who left an address. */
+  if (!oneVisitor(sessionId)) return failed("this browser did not keep a session of its own, so its records cannot be told apart from anybody else's");
   try {
     return await erase(db, agent_id, { sessionId, leads: [], assessments: [] });
   } catch (e) {
@@ -328,7 +338,9 @@ async function erase(
   agent_id: string,
   h: { sessionId: string | null; leads: string[]; assessments: string[] },
 ): Promise<DbResult<{ deleted: number; held: number }>> {
-  const { sessionId } = h;
+  /* A lead saved under a shared placeholder keeps its own row, but that
+     session is not theirs alone: erasing by it would reach strangers. */
+  const sessionId = oneVisitor(h.sessionId) ? h.sessionId : null;
   /* Bounded, because a person waiting on "delete all of it" is entitled to
      an answer. A hang here reads as the request being ignored, which is the
      worst possible impression to leave on this particular button. */
@@ -382,6 +394,30 @@ async function erase(
   const rows = (r: { ok: boolean } | null) =>
     r && "data" in r ? (((r as { data?: { id: string }[] }).data ?? [])).map((x) => x.id) : [];
   const leadIds = [...new Set([...h.leads, ...rows(byAssessment), ...rows(bySession)])];
+
+  /* Consent, events and first touch: by both handles, BEFORE anything below
+     destroys a handle, and every result checked.
+
+     These ran last and unchecked. rift_consents.assessment_id is SET NULL
+     when the assessment goes, so deleting consent "by assessment" after the
+     assessment matched nothing, and a consent record carrying no session
+     (a plan saved before sessions were stored) outlived the person with its
+     IP address and browser on it. And a failed delete here still answered
+     "Deleted". Running them first also keeps a retry possible: until the
+     lead is gone, its plan link still finds everything that is left. */
+  if (ids.length) {
+    const c = await boundedWrite(
+      db.from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids),
+      "the consent record");
+    if (!c.ok) return c;
+  }
+  if (sessionId) {
+    for (const [table, what] of [["rift_consents", "the consent record"], ["rift_events", "the events"], ["rift_attributions", "the attribution"]] as const) {
+      const gone = await boundedWrite(
+        db.from(table).delete().eq("agent_id", agent_id).eq("session_id", sessionId), what);
+      if (!gone.ok) return gone;
+    }
+  }
 
   let heldCount = 0;
   let heldLeadCount = 0;
@@ -473,6 +509,7 @@ async function erase(
     const addresses = deletable.length
       ? await boundedRead(db.from("rift_leads").select("email").eq("agent_id", agent_id).in("id", deletable), "their addresses")
       : null;
+    if (addresses && !addresses.ok) captureOpError(new Error(addresses.error), { op: "retention.forget.brevo" });
     for (const a of addresses && addresses.ok && "data" in addresses ? (addresses.data as { email: string | null }[]) : []) {
       if (!a.email) continue;
       const logs = await forgetAtBrevo(a.email);
@@ -488,10 +525,13 @@ async function erase(
       if (!gone.ok) return gone;
     }
     if (heldLeads.size) {
-      await boundedWrite(
+      /* Checked: a person who asked to be forgotten and kept receiving the
+         cadence because this write failed would have been told otherwise. */
+      const stopped = await boundedWrite(
         db.from("rift_enrolments").update({ stopped_at: new Date().toISOString(), stop_reason: "unsubscribed" })
           .in("lead_id", [...heldLeads]).is("stopped_at", null),
         "stopping their follow-ups");
+      if (!stopped.ok) return stopped;
     }
     heldCount = held.size;
     heldLeadCount = heldLeads.size;
@@ -501,23 +541,6 @@ async function erase(
     const deleted = await boundedWrite(
       db.from("rift_assessments").delete().in("id", ids), "the deletion");
     if (!deleted.ok) return deleted;
-  }
-
-  /* Consent, by both handles, for the same reason as the lead. */
-  if (ids.length) {
-    await boundedWrite(
-      db.from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids),
-      "the consent record");
-  }
-  if (sessionId) {
-    await boundedWrite(
-      db.from("rift_consents").delete().eq("agent_id", agent_id).eq("session_id", sessionId),
-      "the consent record");
-
-    await boundedWrite(
-      db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId), "the events");
-    await boundedWrite(
-      db.from("rift_attributions").delete().eq("session_id", sessionId), "the attribution");
   }
 
   /* The retention promise names five categories. Four are cleared here; the
