@@ -14,6 +14,9 @@ import { sessionId } from "@/lib/rift/session";
 import { money } from "@/lib/core/compute";
 import { typedNumber } from "@/lib/core/typed";
 
+/* "Sent" replaces the button that was pressed; without this, focus drops to
+   the top of the page. Stable, so it runs once when the message appears. */
+const focusOnShow = (el: HTMLElement | null) => el?.focus();
 
 const FINANCING = [
   ["conventional", "Conventional"], ["cash", "Cash"], ["fha", "FHA"],
@@ -49,7 +52,15 @@ export function Form() {
   const [contingencies, setContingencies] = useState<string[]>(["Inspection", "Appraisal"]);
   const [preapproval, setPreapproval] = useState(false);
   const [proofOfFunds, setProofOfFunds] = useState(false);
-  const [commissionPct, setCommissionPct] = useState(ASSUMED_COMMISSION_PCT);
+  /* Kept as typed. It was stored as a clamped number, so the box re-rendered
+     "5." as "5" and a 5.5% commission could not be typed at all, and "25"
+     on the way to "2.5" jumped to 10. */
+  const [commissionText, setCommissionText] = useState(String(ASSUMED_COMMISSION_PCT));
+  /* Blank or unreadable is NaN here, and NaN is inside no range. A trailing
+     "%" or "." ("5." on the way to "5.5") is still the number before it. */
+  const typedPct = typedNumber(commissionText.trim().replace(/%$/, "").trim().replace(/\.$/, "")) ?? NaN;
+  const pctReads = typedPct >= MIN_COMMISSION_PCT && typedPct <= MAX_COMMISSION_PCT;
+  const commissionPct = pctReads ? typedPct : ASSUMED_COMMISSION_PCT;
 
   const [from, setFrom] = useState("");
   const [email, setEmail] = useState("");
@@ -170,9 +181,20 @@ export function Form() {
           <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
             <Ico.doc size={15} />{reading_ === "reading" ? "Reading your offer…" : documentToken ? "Choose a different PDF" : "Choose the PDF"}
             <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
-              onChange={(e) => upload(e.target.files?.[0])} />
+              onChange={(e) => {
+                /* Cleared once taken, so choosing the same file again after
+                   a failed read tries again instead of doing nothing. */
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                void upload(file);
+              }} />
           </label>
-          {readSay ? <p className="t-sm c-2" role="status" style={{ marginTop: 10, lineHeight: 1.6 }}>{readSay}</p> : null}
+          {/* Always in the page, so a screen reader is listening before the
+              answer arrives: a live region inserted with its text already
+              in it is often not read out at all. */}
+          <div role="status">
+            {readSay ? <p className="t-sm c-2" style={{ marginTop: 10, lineHeight: 1.6 }}>{readSay}</p> : null}
+          </div>
         </section>
 
         <section className="card p-5" style={{ marginTop: 24 }}>
@@ -294,15 +316,19 @@ export function Form() {
                 seller's private arrangement and this product does not know it. */}
             <div className="row gap-2 wrap" style={{ marginTop: 14, alignItems: "center" }}>
               <span className="t-xs c-3">Assuming the seller pays</span>
-              <input className="input" style={{ width: 72 }} inputMode="decimal"
+              <input className="input" style={{ width: 72 }} inputMode="decimal" maxLength={5}
                 aria-label="Assumed seller commission, percent"
-                value={String(commissionPct)}
-                onChange={(e) => {
-                  const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
-                  setCommissionPct(Number.isFinite(n) ? Math.min(MAX_COMMISSION_PCT, Math.max(MIN_COMMISSION_PCT, n)) : 0);
-                }} />
+                aria-invalid={!pctReads}
+                aria-describedby={pctReads ? undefined : "offer-pct-note"}
+                value={commissionText}
+                onChange={(e) => setCommissionText(e.target.value)} />
               <span className="t-xs c-3">% commission. We do not know their arrangement, so change it.</span>
             </div>
+            {pctReads ? null : (
+              <p id="offer-pct-note" role="status" className="t-xs c-3" style={{ marginTop: 6 }}>
+                Worked out at {ASSUMED_COMMISSION_PCT}% until the box holds a number from {MIN_COMMISSION_PCT} to {MAX_COMMISSION_PCT}.
+              </p>
+            )}
 
             {reading.gaps.length ? (
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line-2)" }}>
@@ -364,7 +390,7 @@ export function Form() {
           </p>
 
           {errors.length ? (
-            <div style={{ marginTop: 10 }}>
+            <div role="alert" style={{ marginTop: 10 }}>
               <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
                 {errors.map((e) => <li key={e}>{e}</li>)}
               </ul>
@@ -387,7 +413,7 @@ export function Form() {
           ) : null}
 
           {sent ? (
-            <div className="card p-4" style={{ marginTop: 12, background: "var(--pos-wash)", borderColor: "var(--pos-line)" }}>
+            <div role="status" tabIndex={-1} ref={focusOnShow} className="card p-4" style={{ marginTop: 12, background: "var(--pos-wash)", borderColor: "var(--pos-line)" }}>
               <div className="row gap-2">
                 <Ico.check size={15} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
                 <div className="t-sm c-2">
