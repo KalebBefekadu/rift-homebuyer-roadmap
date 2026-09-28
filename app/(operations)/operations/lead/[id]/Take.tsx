@@ -8,7 +8,7 @@ import {
   draftTake, canApprove, takeIsCurrent, wasEdited, RECOMMENDATION_MARKER, TAKE_MAX,
   type OfferRoom,
 } from "@/lib/core/offer-room";
-import { approveOfferTake, withdrawOfferTake, reopenOfferChoice } from "../../actions";
+import { approveOfferTake, withdrawOfferTake, reopenOfferChoice } from "./actions";
 
 const AT = (iso: string) => new Date(iso).toLocaleString("en-US", {
   month: "short", day: "numeric", hour: "numeric", minute: "2-digit",

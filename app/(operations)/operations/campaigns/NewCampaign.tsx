@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { newCampaign } from "../actions";
+import { newCampaign } from "./actions";
 
 /** A new campaign starts as the assistance recipe for one county (CAMP-02), then is composed. */
 export function NewCampaign({ counties }: { counties: string[] }) {

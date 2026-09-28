@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { STAGE_NAMES, STALL_CHIP, type LeadNote, type ManagedLead, type NoteKind, type Stage } from "@/lib/core/pipeline";
-import { logContact, moveStage, archive, planNextAction } from "../../actions";
+import { logContact, moveStage, archive, planNextAction } from "./actions";
 import { georgiaDay } from "@/lib/core/day";
 
 const KINDS: { id: NoteKind; label: string }[] = [

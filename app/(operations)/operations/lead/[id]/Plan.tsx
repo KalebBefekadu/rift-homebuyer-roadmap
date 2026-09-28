@@ -4,7 +4,7 @@ import { REASON_LABEL } from "@/lib/core/seam";
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { ownerLabel, type Owner, type PlanItem } from "@/lib/core/plan";
-import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep } from "../../actions";
+import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep } from "./actions";
 import type { Drift } from "@/lib/core/seam";
 
 /**

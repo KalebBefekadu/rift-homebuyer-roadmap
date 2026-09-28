@@ -7,7 +7,7 @@ import {
   rankOffers, headlineTrap, gapsIn, FINANCING_LABEL,
   type Financing, type Offer, type SellerCosts,
 } from "@/lib/core/offers";
-import { recordOffer, releaseOffer, deleteOffer, saveSellerCosts } from "../../actions";
+import { recordOffer, releaseOffer, deleteOffer, saveSellerCosts } from "./actions";
 
 /**
  * The offer table.

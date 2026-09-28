@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
+import { georgiaDay } from "@/lib/core/day";
 import {
   momentsFor, actionable, serviceCheck, MOMENTS,
   type Lifecycle, type Mood, type MomentId, type MomentState,
@@ -297,6 +298,8 @@ export async function recordClosing(leadId: string, closedOn: string | null): Pr
   if (closedOn !== null && !/^\d{4}-\d{2}-\d{2}$/.test(closedOn)) {
     return failed("a closing date must be a plain calendar date");
   }
+  /* A closing has happened by definition; a future date would schedule a "thank you for closing" before it. */
+  if (closedOn !== null && closedOn > georgiaDay()) return failed("A closing date cannot be in the future");
 
   const db = serviceClient();
   if (!db) return skipped("no database configured");
@@ -308,6 +311,30 @@ export async function recordClosing(leadId: string, closedOn: string | null): Pr
     "the closing date",
   );
   return r.ok ? done(null) : r;
+}
+
+/**
+ * A closing recorded on a journey's contract is the closing the Advocacy
+ * moments count from. They read this date, which only a form that no longer
+ * exists wrote, so no moment after a closing could ever come due. Set to the
+ * day the closing is recorded, and only when no date is recorded yet: a date
+ * the agent corrected on the person's record is never moved.
+ */
+export async function closedByContract(journeyId: string, agentId: string): Promise<DbResult<null>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const j = await boundedRead(
+    db.from("rift_journeys").select("origin_lead_id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(),
+    "the journey's person",
+  );
+  if (!j.ok) return j;
+  const leadId = ("data" in j ? (j.data as { origin_lead_id: string | null } | null) : null)?.origin_lead_id;
+  if (!leadId) return done(null);
+  const w = await boundedWrite(
+    db.from("rift_leads").update({ closed_on: georgiaDay() }).eq("id", leadId).eq("agent_id", agentId).is("closed_on", null),
+    "the closing date",
+  );
+  return w.ok ? done(null) : w;
 }
 
 /**

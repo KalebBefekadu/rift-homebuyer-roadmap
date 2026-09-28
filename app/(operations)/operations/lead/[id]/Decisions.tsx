@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import {
   newDecision, addDecisionOption, dropDecisionOption,
   releaseDecision, withdrawDecision, decide, reopenDecision, deleteDecision,
-} from "../../actions";
+} from "./actions";
 import {
   canRelease, statusOf, KIND_LABEL,
   type Decision, type Kind,

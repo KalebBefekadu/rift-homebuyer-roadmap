@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { Ico } from "@/components/rift/icons";
 import { applyWording, wordingChanges, type Funnel, type Wording } from "@/lib/core/funnel";
-import { publishQuestions } from "../actions";
+import { publishQuestions } from "./actions";
 
 /**
  * Editing the words, and nothing else.

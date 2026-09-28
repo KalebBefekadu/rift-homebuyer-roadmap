@@ -6,7 +6,7 @@ import { Unavailable } from "../../Unavailable";
 import { redirect } from "next/navigation";
 import { readLead } from "@/lib/db/clients";
 import { readPlanForAgent } from "@/lib/db/plan";
-import { referralTokenFor, referralLinks } from "@/lib/db/referral";
+import { referralTokenFor, referralLinks, momentsForLead } from "@/lib/db/referral";
 import { representationOf } from "@/lib/db/clients";
 import { standingOf } from "@/lib/core/representation";
 import { Agreement } from "./Agreement";
@@ -79,7 +79,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
   const searchOn = buyerSearchOn(process.env);
-  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead, lifeRead] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
@@ -89,7 +89,10 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     read.data.lead.side === "sell" ? roomFor(id) : Promise.resolve(null),
     searchOn ? journeysFor(id) : Promise.resolve(null),
     savedPlanFor(id),
+    momentsForLead(id),
   ]);
+  /* Undefined when it could not be read, which the field says rather than showing an empty date. */
+  const closedOn = lifeRead.ok && "data" in lifeRead ? (lifeRead.data?.life.closedOn ?? null) : undefined;
   const saved = savedRead.ok && "data" in savedRead ? savedRead.data : null;
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
@@ -173,6 +176,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           />
         ) : null}
         <Referral
+          leadId={id}
+          closedOn={closedOn}
           token={referralToken}
           origin={siteUrl()}
           firstName={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}

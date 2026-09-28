@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { recordRepresentation } from "../../actions";
+import { recordRepresentation } from "./actions";
 import { STATUSES, STATUS_RULES, GATE, type Status, type Standing } from "@/lib/core/representation";
 import { Ico } from "@/components/rift/icons";
 

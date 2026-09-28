@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { STATE_CHIP, serviceCheck, type MomentId, type MomentState, type Mood } from "@/lib/core/referral";
-import { decideMoment, setMood } from "../actions";
+import { decideMoment, setMood } from "./actions";
 
 /**
  * The private service check, and the moments.

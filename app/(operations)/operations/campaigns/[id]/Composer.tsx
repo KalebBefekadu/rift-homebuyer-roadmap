@@ -8,7 +8,7 @@ import { BLOCK_LABEL, MAX_BLOCKS, recipeErrors, type Block, type BlockType, type
 import type { ProgramRecord } from "@/lib/core/assistance";
 import { CampaignBlocks } from "@/components/rift/campaign/CampaignBlocks";
 import { BRIEF_MAX, briefError } from "@/lib/core/campaign-draft";
-import { draftCampaignRecipe, publishCampaign, saveCampaign } from "../../actions";
+import { draftCampaignRecipe, publishCampaign, saveCampaign } from "../actions";
 
 const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
 const LIVE_VALUES = VALUES.filter((v) => v.live);

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { STAGE_NAMES, type Stage } from "@/lib/core/pipeline";
-import { createLead } from "../actions";
+import { createLead } from "./actions";
 
 /**
  * Putting somebody in by hand.

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Ico } from "@/components/rift/icons";
 import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, type BusinessRules, type StoredRule } from "@/lib/core/settings";
-import { decideRule, undecideRule } from "../actions";
+import { decideRule, undecideRule } from "./actions";
 
 /**
  * Editing a decision, one at a time.

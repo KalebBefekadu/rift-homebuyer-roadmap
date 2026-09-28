@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { georgiaDay } from "@/lib/core/day";
+import { setClosingDate } from "./actions";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 
@@ -19,12 +21,17 @@ import { Ico } from "@/components/rift/icons";
  * Kaleb decides when to send this. The product does not decide for him.
  */
 export function Referral({
+  leadId,
+  closedOn,
   token,
   origin,
   firstName,
   sent,
   referrer,
 }: {
+  leadId: string;
+  /** The closing the Advocacy moments count from; undefined when it could not be read. */
+  closedOn: string | null | undefined;
   /** Null when nobody has asked for one yet. */
   token: string | null;
   origin: string | null;
@@ -56,6 +63,7 @@ export function Referral({
       </div>
 
       <div className="card p-4" style={{ marginTop: 10 }}>
+        <ClosedOn leadId={leadId} closedOn={closedOn} />
         {/* Who sent THEM. Read before who they sent, because it is the fact
             most likely to change how the agent treats the relationship. */}
         {referrer ? (
@@ -119,5 +127,41 @@ export function Referral({
         ) : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * The closing date the Advocacy moments count from: the closing itself,
+ * thirty days, six months and each anniversary. Set on its own when the
+ * journey's contract is recorded closed; corrected here when the real day
+ * differs, which moves every moment still to come.
+ */
+function ClosedOn({ leadId, closedOn }: { leadId: string; closedOn: string | null | undefined }) {
+  const [value, setValue] = useState(closedOn ?? "");
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  if (closedOn === undefined) {
+    return <p className="t-xs c-warn" style={{ marginBottom: 14 }}>⚠ The closing date did not load, so the moments after a closing cannot be shown or changed here right now.</p>;
+  }
+  const save = (next: string | null) => start(async () => {
+    const r = await setClosingDate(leadId, next);
+    if (!r.ok) { setMsg({ ok: false, text: r.error }); return; }
+    setValue(next ?? "");
+    setMsg({ ok: true, text: next ? "Saved. The moments after the closing count from this day." : "Cleared. No moment after a closing is due until a date is set." });
+  });
+  return (
+    <div style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--line-3)" }}>
+      <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
+        <label className="col gap-1 t-xs">Closed on
+          <input type="date" className="input input-sm" value={value} max={georgiaDay()} onChange={(e) => setValue(e.target.value)} />
+        </label>
+        <button type="button" className="btn btn-g btn-sm" disabled={pending || !value || value === (closedOn ?? "")} onClick={() => save(value)}>{pending ? "Saving…" : "Save"}</button>
+        {closedOn ? <button type="button" className="u t-xs" disabled={pending} onClick={() => save(null)}>Clear</button> : null}
+      </div>
+      <p className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55 }}>
+        {closedOn ? "The Advocacy moments after a closing count from this day." : "Not closed. Recording the contract as closed on the journey sets this; set it here for a closing handled before Rift."}
+      </p>
+      {msg ? <p role="status" className={`t-xs ${msg.ok ? "c-pos" : "c-neg"}`} style={{ marginTop: 4 }}>{msg.ok ? "✓" : "✕"} {msg.text}</p> : null}
+    </div>
   );
 }

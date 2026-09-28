@@ -5,6 +5,8 @@ import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { coverageFor } from "./tours";
+import { closedByContract } from "./referral";
+import { captureOpError } from "@/lib/monitoring/capture";
 import {
   AFTER_CLOSING, TERMINAL, WORKSTREAMS, afterClose, contractError, endContractError, initialWork, progressOf, stageError, statusError, workError, workstreamView,
   type Side,
@@ -302,8 +304,15 @@ export async function endContract(
     await boundedWrite(db.from("rift_transaction_outcomes").delete().eq("transaction_id", contractId).eq("agent_id", agentId), "how the contract ended");
     return seqConflict(moved.error) ? failed(CHANGED) : moved;
   }
+  if (outcome === "closed") {
+    /* The Advocacy moments count from the closing. Reported, not returned:
+       the contract has ended either way, and the date can be set by hand. */
+    const c = await closedByContract(journeyId, agentId);
+    if (!c.ok) captureOpError(new Error(c.error), { op: "progress.closedOn", extra: { journeyId } });
+  }
   return done({ seq: expectedSeq + 1 });
 }
+
 
 type WorkActor = { kind: "agent"; label: string } | { kind: "client"; memberId: string; label: string };
 
