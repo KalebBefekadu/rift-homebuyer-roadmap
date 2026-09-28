@@ -85,6 +85,14 @@ describe("parsing an abroad link", () => {
     expect(r.downPct).toBe(30);
   });
 
+  it("reads a blank price as missing, not as the cheapest home there is", async () => {
+    /* `Number("")` is 0, which clamped up to $60,000: a link cut off after
+       "&p=" quoted a different house from the one the default describes. */
+    const { parseAbroadParams, ABROAD_DEFAULTS } = await import("./abroad");
+    expect(parseAbroadParams((k) => ({ p: "" }[k]), ["DeKalb"]).price).toBe(ABROAD_DEFAULTS.price);
+    expect(parseAbroadParams((k) => ({ p: "  " }[k]), ["DeKalb"]).price).toBe(ABROAD_DEFAULTS.price);
+  });
+
   it("clamps an absurd price instead of rendering it", async () => {
     const { parseAbroadParams } = await import("./abroad");
     expect(parseAbroadParams((k) => ({ p: "-9999" }[k]), ["DeKalb"]).price).toBe(60_000);
