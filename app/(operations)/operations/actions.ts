@@ -55,13 +55,31 @@ export async function markRepliedTo(leadId: string) {
   const agent = await currentAgent();
   if (!agent) return { ok: false as const, error: "not signed in" };
 
-  const replied = await markReplied(leadId, agent.agentId);
-  /* A reply stops the sequence. Contract 4.11, and it is the same fact. */
-  await stop(leadId, "replied", agent.agentId);
-  revalidatePath("/operations");
+  /* A reply stops the sequence. Contract 4.11, and it is the same fact.
 
-  if (!replied.ok) return { ok: false as const, error: replied.error };
-  if ("skipped" in replied) return { ok: false as const, error: replied.reason };
+     Stopped first, and its answer read. It used to run second with its
+     result dropped, so a stop that failed reported success while the next
+     scheduled email stayed queued: the one outcome the contract exists to
+     prevent. And Today drops a lead once it is replied to or stopped, so an
+     error returned after the page refreshes lands on a row that is no longer
+     there. A failure therefore returns before anything is refreshed: the row
+     stays, says what did not happen, and pressing again is safe (both
+     writes do nothing the second time). */
+  const stopped = await stop(leadId, "replied", agent.agentId);
+  if (!stopped.ok || "skipped" in stopped) {
+    return {
+      ok: false as const,
+      error: `Nothing was recorded: the follow-up sequence could not be stopped (${stopped.ok ? stopped.reason : stopped.error}). Try again.`,
+    };
+  }
+  const replied = await markReplied(leadId, agent.agentId);
+  if (!replied.ok || "skipped" in replied) {
+    return {
+      ok: false as const,
+      error: `The sequence is stopped, but your reply time was not recorded (${replied.ok ? replied.reason : replied.error}). Try again.`,
+    };
+  }
+  revalidatePath("/operations");
   return { ok: true as const, repliedAt: replied.data.repliedAt };
 }
 
@@ -73,6 +91,9 @@ export async function stopSequence(leadId: string, reason: StopId) {
   revalidatePath("/operations");
 
   if (!r.ok) return { ok: false as const, error: r.error };
+  /* With no database nothing was stopped, and saying so is the difference
+     between a paused sequence and a button that only closed its menu. */
+  if ("skipped" in r) return { ok: false as const, error: `The sequence was not stopped: ${r.reason}` };
   return { ok: true as const };
 }
 

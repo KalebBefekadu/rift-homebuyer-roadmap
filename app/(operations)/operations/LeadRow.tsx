@@ -102,7 +102,7 @@ export function LeadRow({ lead, last, compact = false }: {
           ) : null}
         </span>
       </div>
-      {compact && error && !expanded ? <p className="t-xs c-neg" style={{ marginTop: 4 }}>{error}</p> : null}
+      {compact && error && !expanded ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 4 }}><Ico.alert size={12} style={{ marginRight: 4 }} />{error}</p> : null}
       {expanded ? <>
 
       {/* The arithmetic, on the row rather than in a tooltip. */}
@@ -148,8 +148,8 @@ export function LeadRow({ lead, last, compact = false }: {
       ) : null}
 
       {error ? (
-        <p className="t-xs c-neg row gap-2" style={{ marginTop: 8 }}>
-          <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{error}
+        <p role="alert" className="t-xs c-neg row gap-2" style={{ marginTop: 8 }}>
+          <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} /><span>{error}</span>
         </p>
       ) : null}
 

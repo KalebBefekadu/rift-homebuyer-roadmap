@@ -153,7 +153,12 @@ function Row({ k, value, isDefault, provenance }: {
               className="t-2xs c-4"
               style={{ background: "transparent", border: 0, cursor: "pointer" }}
               disabled={pending}
-              onClick={() => start(async () => { await undecideRule(k); })}
+              onClick={() => {
+                setError("");
+                /* Its answer was dropped, so a reset that failed left "Yours"
+                   on screen with nothing to say the default was not back. */
+                start(async () => { const r = await undecideRule(k); if (!r.ok) setError(r.error); });
+              }}
             >
               Back to the default ({String(rule.value)})
             </button>
@@ -162,7 +167,7 @@ function Row({ k, value, isDefault, provenance }: {
       </div>
 
       {error ? (
-        <p className="t-xs c-neg row-t gap-2" style={{ marginTop: 10 }}>
+        <p role="alert" className="t-xs c-neg row-t gap-2" style={{ marginTop: 10 }}>
           <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />
           <span>{error}</span>
         </p>
