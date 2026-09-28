@@ -104,15 +104,8 @@ await check("figures for a shared readout", () => db.from("rift_figures")
 await check("readByToken", () => db.from("rift_readouts")
   .select("assessment_id,side,inputs,figures,matched,created_at").eq("share_token", "none").maybeSingle());
 
-await check("published questions", () => db.from("rift_questions")
-  .select("*", { count: "exact", head: true })
-  .eq("funnel_version_id", "00000000-0000-4000-8000-000000000000"));
-
 await check("currentAgent", () => db.from("rift_agents")
   .select("id,name,email").eq("auth_user_id", "00000000-0000-4000-8000-000000000000").maybeSingle());
-
-await check("startAssessment lookup", () => db.from("rift_assessments")
-  .select("id").eq("session_id", "none").eq("side", "buy").is("completed_at", null).maybeSingle());
 
 await check("attribution lookup", () => db.from("rift_attributions")
   .select("session_id,visits").eq("session_id", "none").maybeSingle());
@@ -245,9 +238,6 @@ await check("stored figures", () => db.from("rift_figures")
 
 await check("business rules", () => db.from("rift_business_rules")
   .select("key,value,decided_at,decided_by").limit(5));
-
-await check("funnel wording", () => db.from("rift_questions")
-  .select("key,title,description,field_label,options").limit(5));
 
 await check("review promote", () => db.from("rift_review_items")
   .select("id,state,ceiling,kind,figure_id").eq("id", NIL).maybeSingle());

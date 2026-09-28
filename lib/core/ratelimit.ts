@@ -84,10 +84,8 @@ export function reset() { buckets.clear(); }
 export const LIMITS = {
   events: { max: 120, windowMs: 60_000 },
   attribution: { max: 20, windowMs: 60_000 },
-  assessment: { max: 90, windowMs: 60_000 },
   capture: { max: 8, windowMs: 60_000 },
   review: { max: 5, windowMs: 60_000 },
-  readout: { max: 10, windowMs: 60_000 },
   forget: { max: 10, windowMs: 60_000 },
   /* Tighter than capture. Each submission writes an offer AND a lead, and
      every one of them is something a person is expected to read: the cost of

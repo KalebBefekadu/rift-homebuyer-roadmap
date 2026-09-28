@@ -68,7 +68,7 @@ https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
 | --- | --- |
 | Lead side | Front door; buyer, seller and abroad landings, questionnaires and readouts (computed on the server, shareable, dated snapshots); Georgia programs list; how-it-works pages; unclaimed money page; public offer form; booking request; privacy page with "delete all of it"; first-touch attribution; answer-free telemetry; follow-up emails with consent and stop rules |
 | Client side | Email sign-in by invitation; household members with scopes; the buyer's Today, search priorities, homes and reactions, showings answers, offer answers, checked contract dates, "You own your home" after a confirmed closing, and a printable records page |
-| Operations | A sidebar and quick switcher on every page; Today in five groups with new leads and recent activity, snooze, pin and delegate; Relationships with a detail panel; person records with plan, decisions, agreement, journeys; the journey workspace (overview, search, homes and showings, offers and documents, contract, household, history); Transactions; Offers; Calendar; Outbox; Advocacy; Programs; Reports; funnel question editor; settings; morning summary email |
+| Operations | A sidebar and quick switcher on every page; Today in five groups with new leads and recent activity, snooze, pin and delegate; Relationships with a detail panel; person records with plan, decisions, agreement, journeys; the journey workspace (overview, search, homes and showings, offers and documents, contract, household, history); Transactions; Offers; Calendar; Outbox; Advocacy; Programs; Reports; the questions visitors read (D31); settings; morning summary email |
 | Platform | Supabase with row-level security on every table, history-only tables, idempotent writes, job-run tracking and health checks, release switch `RIFT_BUYER_SEARCH`, Brevo email, Sentry |
 
 Blueprint v4 packages built: W00 to W13. W10 (money v2) and W13 (seller journey and campaigns)
@@ -1048,6 +1048,7 @@ change to reverse.
 | D28 | The seller journey is being built before pilot results (D08), because Kaleb asked for the build to run to the end. A seller's property is stored as the selling journey's one home record, so contracts, dates and workstreams work unchanged | Reuses the tested contract model rather than a second one | Hiding selling journeys' workspace until the pilot reports |
 | D29 | The campaign composer is built before pilot results (D08), because Kaleb asked for the build to run to the end; campaign pages are kept out of search | Built from the values already live, so it adds no new maths | Unpublishing every campaign; the composer stays |
 | D30 | AI may draft a campaign's blocks (CAMP-01) on `claude-haiku-4-5`, inside the $50 limit, with a 10-cent reserve per draft. A drafted block containing any digit is dropped, not repaired, so no model-written number reaches a page | The smallest model (D16); campaign figures come only from the values (CAMP-04) | Removing the draft panel; the composer works without it |
+| D31 | The v4 questionnaire's leftovers are retired: its component and its four public write routes (`/api/assessment/*`, `/api/readout`) had no caller after the v5 values, and the question editor published wording no visitor saw. Questions now shows the values' questions word for word; new leads are no longer stamped with the retired funnel's version. Readouts already shared still open at `/r/<token>` | A page that saves words nobody reads, and write endpoints nobody uses, are worse than none (the settings rule, RULE_REACH) | A wording editor for the values' questions in `lib/core/asks.ts`, versioned, with each lead recording which wording it saw |
 
 ### Open
 
@@ -1102,6 +1103,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | The v4 questionnaire's unused routes, component and wording editor retired (D31); Questions shows what visitors read; health reports the Amharic review |
 | 28 Sep 2026 | A contract recorded closed starts the Advocacy moments (the closing date had no writer); the date is on the person's record to correct. Dates taken from the clock are Georgia's day, not UTC's (DATE-01). Operations' server actions moved beside the pages that use them; one unused action removed |
 | 28 Sep 2026 | "Delete all of it" under every value's answer and on the saved plan's page; it now clears the values' answers and plan on the device (LEAD-06) |
 | 28 Sep 2026 | AI draft of a campaign's blocks (CAMP-01, D30), migration 20260928070000 |

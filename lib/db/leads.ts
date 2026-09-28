@@ -7,7 +7,6 @@ import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { boundedWrite } from "./bounded";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
-import { currentVersionId } from "./funnel";
 import { firstRefFor, resolveReferrer } from "./attribution";
 
 /**
@@ -81,9 +80,10 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       score: score.score,
       band: score.band,
       signals: score.signals as never,
-      /* The same pin as the assessment. A lead outlives the assessment row
-         under some retention rules, so it carries its own. */
-      funnel_version_id: await currentVersionId(input.side),
+      /* No funnel pin: the v4 questionnaire it pointed at was retired (D31),
+         and stamping a v5 lead with its version would record that they were
+         asked questions they never saw. What they answered is in their plan. */
+      funnel_version_id: null,
       /* Kept so the score can be recomputed as recency decays. Without it a
          three-week-old lead keeps the urgency it earned on the day. */
       lead_input: input.lead as never,

@@ -89,27 +89,11 @@ describe("with nothing configured at all", () => {
     expect(contract("funnelReport", await funnelReport("buy"))).toBe("skipped");
   });
 
-  it("runs the assessment path without a database", async () => {
+  it("reads a shared readout without a database by saying so", async () => {
     const a = await import("./assessments");
-    expect(contract("startAssessment", await a.startAssessment({ sessionId: "s", side: "buy" }))).toBe("skipped");
-    expect(contract("saveAnswer", await a.saveAnswer("s", "k", 1))).toBe("skipped");
-    expect(contract("completeAssessment", await a.completeAssessment("s"))).toBe("skipped");
-    expect(contract("saveReadout", await a.saveReadout({
-      assessmentId: "s", side: "buy", inputs: {}, figures: {},
-    }))).toBe("skipped");
     expect(contract("readByToken", await a.readByToken("t"))).toBe("skipped");
   });
 
-  it("still serves the funnel, because the built-in one is the right answer", async () => {
-    /* The one place where `done` is correct with no database. The assessment
-       is the second most valuable page in the product and the fallback IS the
-       definition the compute engine was written against. */
-    const { readFunnel } = await import("./assessments");
-    const r = await readFunnel("buy");
-    expect(contract("readFunnel", r)).toBe("done");
-    expect((r as { data: { source: string } }).data.source).toBe("built-in");
-    expect((r as { data: { funnel: { questions: unknown[] } } }).data.funnel.questions.length).toBeGreaterThan(3);
-  });
 
   it("still serves the programme registry, from the seeded copy", async () => {
     /* Same rule: the seed is real verified data, and labelling it is what
@@ -166,14 +150,6 @@ describe("with nothing configured at all", () => {
     expect(r.decided).toEqual([]);
   });
 
-  it("degrades the funnel editor", async () => {
-    const f = await import("./funnel");
-    expect(await f.currentVersionId("buy")).toBeNull();
-    expect(contract("readWording", await f.readWording("buy"))).toBe("skipped");
-    expect(contract("publishWording", await f.publishWording("buy", {}, "me", "n"))).toBe("skipped");
-    /* And still returns a usable funnel, for the same reason readFunnel does. */
-    expect((await f.funnelWithWording("buy")).questions.length).toBeGreaterThan(3);
-  });
 });
 
 describe("email with no sender verified", () => {

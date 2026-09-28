@@ -82,7 +82,7 @@ describe("switched off, what existed before keeps working", () => {
      whatever state the release is in. */
   const MUST_NOT_DEPEND = [
     ...files("app/(rift)/plan"), ...files("app/(rift)/r"), ...files("app/(rift)/buy"), ...files("app/(rift)/sell"),
-    "app/api/plan/choose/route.ts", "app/api/readout/route.ts", "app/api/forget/route.ts", "app/api/capture/route.ts",
+    "app/api/plan/choose/route.ts", "app/api/forget/route.ts", "app/api/capture/route.ts",
     "app/api/nurture/run/route.ts", "app/api/retention/sweep/route.ts", "app/api/rates/refresh/route.ts",
     "lib/db/retention.ts", "lib/db/plan.ts", "lib/db/nurture.ts",
   ];

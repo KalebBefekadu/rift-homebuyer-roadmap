@@ -382,9 +382,7 @@ Every endpoint, against a completely frozen database:
 ```
 POST /api/events            200 in 6.0s   ok:false  "the events did not write in time"
 POST /api/attribution       200 in 2.0s
-POST /api/assessment/start  200 in 2.0s
 POST /api/capture           200 in 8.0s   ok:false  "we could not save that just now"
-POST /api/readout           200 in 6.0s
 POST /api/review            200 in 6.0s
 POST /api/forget            200 in 2.0s
 ```

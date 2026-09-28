@@ -81,7 +81,7 @@ built against.
 | `/r/[token]` | A shared readout, rendered exactly as it was saved |
 | `/studio` | The agent surface, behind a server-checked session |
 | `/api/events`, `/api/attribution` | Telemetry and attribution intake |
-| `/api/assessment/*`, `/api/capture`, `/api/readout`, `/api/review` | The capture path |
+| `/api/capture`, `/api/plan/save`, `/api/review` | The capture path (the v4 questionnaire's `/api/assessment/*` and `/api/readout` were retired with it, D31; `/r/<token>` still opens readouts already shared) |
 | `/api/nurture/run`, `/api/retention/sweep` | Scheduled jobs, secret-protected |
 | `/api/forget` | "Delete all of it" |
 

@@ -222,9 +222,9 @@ This is the main new page. Each section on it:
 - [ ] Sign-in and scheduled work counts are right.
 - [ ] Print: the menu and buttons are left off the printed copy.
 
-### Your questions `/operations/questions` and Your decisions `/operations/settings`
+### Questions `/operations/questions` and Your decisions `/operations/settings`
 
-- [ ] Edit a funnel question's wording and publish it; `/buy/start` shows the new wording.
+- [ ] Questions lists, for buyers, sellers and buying from abroad, each question a visitor reads, word for word, and which values ask it.
 - [ ] Each setting says what it changes, and changing one is saved.
 
 ### The morning summary (email)

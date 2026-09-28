@@ -25,7 +25,6 @@ vi.mock("./service", () => ({
   serviceClient: () => db,
   currentAgentId: async () => "agent-1",
 }));
-vi.mock("./funnel", () => ({ currentVersionId: async () => "fv-1" }));
 vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: vi.fn() }));
 
 const { captureLead } = await import("./leads");
@@ -123,13 +122,12 @@ describe("the consent record", () => {
 });
 
 describe("what it keeps for later", () => {
-  it("pins the funnel version the person actually answered", async () => {
-    /* A readout produced under v3 has to keep making sense after v5 ships,
-       or last Tuesday's answers get reinterpreted against questions that
-       person was never asked. */
+  it("never claims they answered a funnel version they were never shown (D31)", async () => {
+    /* The v4 questionnaire is retired; a v5 lead stamped with its version
+       would record questions that person was never asked. */
     build();
     await captureLead(base);
-    expect((db.to("insert rift_leads")[0]!.payload as Record<string, unknown>).funnel_version_id).toBe("fv-1");
+    expect((db.to("insert rift_leads")[0]!.payload as Record<string, unknown>).funnel_version_id).toBeNull();
   });
 
   it("keeps the raw answers so the score can decay with them", async () => {

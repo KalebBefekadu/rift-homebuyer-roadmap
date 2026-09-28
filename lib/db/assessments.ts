@@ -1,15 +1,14 @@
 import "server-only";
-import { randomBytes } from "node:crypto";
-import { serviceClient, currentAgentId } from "./service";
+import { serviceClient } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { BUY_FUNNEL, SELL_FUNNEL, applyWording, type Funnel } from "@/lib/core/funnel";
-import { captureOpError } from "@/lib/monitoring/capture";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
-import { boundedWrite, boundedRead } from "./bounded";
-import { currentVersionId, readWording } from "./funnel";
 
 /**
- * Assessments, answers, and the readout snapshot.
+ * The readout snapshot, read by its share link (/r/<token>).
+ *
+ * The v4 questionnaire that wrote assessments, answers and snapshots was
+ * retired for the v5 values (D31), and with it the routes that wrote them.
+ * What people were already given keeps opening: that is the promise below.
  *
  * The shape of this file is decided by one rule from docs/schema.md: a readout
  * is an immutable snapshot, not a view. `figures` stores what the person was
@@ -22,135 +21,9 @@ import { currentVersionId, readWording } from "./funnel";
  * the figures loses the ability to tell them what changed.
  */
 
-export interface StartInput {
-  sessionId: string;
-  side: "buy" | "sell";
-  county?: string;
-}
-
-export async function startAssessment(input: StartInput): Promise<DbResult<{ id: string }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured; the assessment runs but is not stored");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  try {
-    /* One assessment per session per side. A visitor who reloads is the same
-       attempt, not a new one: counting reloads as starts would inflate every
-       completion rate in the funnel report by an unknowable amount. */
-    const read = await boundedRead(
-      db.from("rift_assessments")
-        .select("id")
-        .eq("session_id", input.sessionId)
-        .eq("side", input.side)
-        .is("completed_at", null)
-        .maybeSingle(),
-      "the assessment lookup",
-    );
-    if (!read.ok) return read;
-    const existing = "data" in read ? read.data : null;
-    if (existing) return done({ id: existing.id as string });
-
-    /* Pinned to the version they are about to be asked. Contract 4.6, and it
-       has to be recorded now, because no later migration can recover which
-       wording somebody actually saw. */
-    const funnel_version_id = await currentVersionId(input.side);
-
-    const created = await boundedWrite(
-      db.from("rift_assessments")
-        .insert({
-          agent_id,
-          session_id: input.sessionId,
-          side: input.side,
-          county: input.county ?? null,
-          funnel_version_id,
-        })
-        .select("id")
-        .single(),
-      "the assessment",
-    );
-    if (!created.ok) {
-      /* Lost the race. The partial unique index refused the second insert,
-         which is exactly what it is for, so read back the row that won rather
-         than reporting a failure the visitor would experience as a broken
-         assessment.
-         
-         The check above is an optimisation; this is the correctness. */
-      const raced = await boundedRead(
-        db.from("rift_assessments")
-          .select("id")
-          .eq("agent_id", agent_id)
-          .eq("session_id", input.sessionId)
-          .eq("side", input.side)
-          .is("completed_at", null)
-          .maybeSingle(),
-        "the assessment re-read",
-      );
-      const winner = raced.ok && "data" in raced ? raced.data : null;
-      if (winner) return done({ id: winner.id as string });
-      return created;
-    }
-
-    const row = "data" in created ? created.data : null;
-    if (!row) return failed("the assessment was not returned after insert");
-    return done({ id: row.id as string });
-  } catch (e) {
-    return failed(e);
-  }
-}
-
-export async function saveAnswer(
-  assessmentId: string,
-  questionKey: string,
-  value: unknown,
-): Promise<DbResult<{ saved: true }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-
-  try {
-    const saved = await boundedWrite(db
-      .from("rift_answers")
-      .upsert(
-        { assessment_id: assessmentId, question_key: questionKey, value: value as never, answered_at: new Date().toISOString() },
-        { onConflict: "assessment_id,question_key" },
-      ), "the answer");
-    if (!saved.ok) return saved;
-    return done({ saved: true as const });
-  } catch (e) {
-    return failed(e);
-  }
-}
-
-export async function completeAssessment(assessmentId: string): Promise<DbResult<{ completed: true }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  try {
-    const done_ = await boundedWrite(
-      db.from("rift_assessments")
-        .update({ completed_at: new Date().toISOString(), abandoned_at: null })
-        .eq("id", assessmentId),
-      "the completion",
-    );
-    if (!done_.ok) return done_;
-    return done({ completed: true as const });
-  } catch (e) {
-    return failed(e);
-  }
-}
-
 /* ------------------------------------------------------------------ *
  * The readout snapshot
  * ------------------------------------------------------------------ */
-
-/**
- * An unguessable share token.
- *
- * The readout is URL-addressable and ungated by design: that is the product's
- * central promise. Ungated is not the same as enumerable: a sequential id would
- * let anyone walk every stranger's finances. 24 bytes of base64url is not a
- * password, but it is not a number you can count to either.
- */
-export const newShareToken = () => randomBytes(24).toString("base64url");
 
 export interface SnapshotInput {
   assessmentId: string;
@@ -183,63 +56,6 @@ export interface TrackedFigure {
   couldBeWrong: string;
   /** How high this figure could ever be certified. Not everything can be verified. */
   ceiling?: "preliminary" | "pending-review" | "reviewed" | "verified";
-}
-
-export async function saveReadout(input: SnapshotInput): Promise<DbResult<{ id: string; shareToken: string }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured; the readout is shown but not stored");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  try {
-    /* A second readout for the same assessment is a NEW row, never an update.
-       Overwriting would destroy the thing this table exists to preserve. */
-    const shareToken = newShareToken();
-    const saved = await boundedWrite(
-      db.from("rift_readouts")
-        .insert({
-          agent_id,
-          assessment_id: input.assessmentId,
-          side: input.side,
-          share_token: shareToken,
-          inputs: input.inputs as never,
-          figures: input.figures as never,
-          matched: (input.matched ?? []) as never,
-        })
-        .select("id")
-        .single(),
-      "the readout",
-    );
-    if (!saved.ok) return saved;
-    const savedRow = "data" in saved ? saved.data : null;
-    if (!savedRow) return failed("the readout was not returned after insert");
-
-    const readoutId = savedRow.id as string;
-
-    /* Written after the snapshot and reported if they fail, but never allowed
-       to fail the snapshot itself. The readout is the promise; the tracked
-       figures are how it becomes reviewable. */
-    if (input.trackedFigures?.length) {
-      const rows = input.trackedFigures.map((f) => ({
-        agent_id,
-        readout_id: readoutId,
-        label: f.label.slice(0, 120),
-        value_cents: Math.round(f.valueCents),
-        trust_state: "preliminary",
-        ceiling: f.ceiling ?? "verified",
-        assumptions: f.assumptions as never,
-        could_be_wrong: f.couldBeWrong,
-      }));
-      const figs = await boundedWrite(db.from("rift_figures").insert(rows as never[]), "the figures");
-      if (!figs.ok) {
-        captureOpError(new Error(figs.error), { op: "readout.figures", extra: { count: rows.length } });
-      }
-    }
-
-    return done({ id: readoutId, shareToken });
-  } catch (e) {
-    return failed(e);
-  }
 }
 
 export interface StoredFigure {
@@ -302,50 +118,6 @@ export async function readByToken(
         couldBeWrong: f.could_be_wrong,
       })),
     });
-  } catch (e) {
-    return failed(e);
-  }
-}
-
-/* ------------------------------------------------------------------ *
- * Funnel definition
- * ------------------------------------------------------------------ */
-
-/**
- * The live funnel.
- *
- * Falls back to the definitions in `lib/core/funnel.ts` when the database has
- * no published version. That is the correct default rather than an error: the
- * built-in funnel is the one the compute engine was designed against, and a
- * visitor should never see a broken assessment because an agent has not
- * customised anything yet.
- */
-export async function readFunnel(side: "buy" | "sell"): Promise<DbResult<{ funnel: Funnel; source: "database" | "built-in" }>> {
-  const fallback = side === "buy" ? BUY_FUNNEL : SELL_FUNNEL;
-
-  try {
-    /* One round trip, not two.
-       
-       This used to look up the rift_funnels row purely to decide whether to
-       carry on, and then `readWording` resolved the same funnel and its
-       version all over again. Two sequential queries to learn one thing, on
-       the page where a stranger first meets the product: /buy/start was
-       spending about 1.7 seconds before its first byte, and the second query
-       was the redundant half of it.
-       
-       `readWording` already answers both questions: a `skipped` means there is
-       nothing published to read, which is exactly the case the first query
-       existed to detect. */
-    const worded = await readWording(side);
-    if (!worded.ok || !("data" in worded)) return done({ funnel: fallback, source: "built-in" as const });
-
-    /* The agent's own words over the code's own structure. `applyWording`
-       takes the title, the note, the field label and the option LABELS, and
-       reads no structural field at all: not the key, not the type, not what
-       it is bound to, not the machine value behind an option. The engine's
-       contract is unreachable from anything stored, which is what makes
-       reading this safe where the previous note concluded it was not. */
-    return done({ funnel: applyWording(fallback, worded.data), source: "database" as const });
   } catch (e) {
     return failed(e);
   }
