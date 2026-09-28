@@ -5,7 +5,7 @@ import { refFrom } from "@/lib/core/attribution";
 import { money } from "@/lib/core/compute";
 import { Trust } from "@/components/rift/Trust";
 import { Ico, Mark } from "@/components/rift/icons";
-import { showDay } from "@/lib/core/day";
+import { daysBetween, georgiaDay, showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = {
   title: "A shared readout",
@@ -91,7 +91,10 @@ export default async function SharedReadout({ params }: { params: Promise<{ toke
 
   const figures = snap.figures as Record<string, number | string>;
   const created = new Date(snap.createdAt);
-  const days = Math.floor((Date.now() - created.getTime()) / 86_400_000);
+  /* Calendar days in Georgia, the same days the date below is shown in.
+     Whole 24-hour spans said "today" beside yesterday's date for anything
+     made the evening before and opened the next morning. */
+  const days = daysBetween(georgiaDay(created), georgiaDay());
 
   return (
     <div className={snap.side}>

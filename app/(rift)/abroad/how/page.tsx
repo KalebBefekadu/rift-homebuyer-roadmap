@@ -80,7 +80,7 @@ function AbroadDetail() {
           <Ico.alert size={14} className="c-4" style={{ flex: "none", marginTop: 3 }} />
           <div>
             <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
-              This page is in English only so far. <Link href="/abroad" className="u">The main page</Link>{" "}
+              This page is in English only so far. <Link href="/abroad" className="btn-link">The main page</Link>{" "}
               is available in Amharic, and this one will be once it has been written by somebody who speaks it,
               not by a machine.
             </p>

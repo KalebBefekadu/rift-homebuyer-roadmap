@@ -386,7 +386,7 @@ export function Form() {
           <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.6 }}>
             We keep the offer, the PDF if you uploaded one, and your name, phone and email so Kaleb
             can reply. None of it is used for marketing.{" "}
-            <Link href="/privacy" className="u">What we keep</Link>.
+            <Link href="/privacy" className="btn-link">What we keep</Link>.
           </p>
 
           {errors.length ? (
@@ -404,7 +404,7 @@ export function Form() {
                   <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
                     Your terms are still on this page and the arithmetic above is still yours;
                     nothing was lost. The quickest way through is{" "}
-                    <Link href="/book?v=offer" className="u">fifteen minutes with Kaleb</Link>,
+                    <Link href="/book?v=offer" className="btn-link">fifteen minutes with Kaleb</Link>,
                     which does not depend on whatever just failed here.
                   </p>
                 </div>

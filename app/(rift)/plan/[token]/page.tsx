@@ -13,7 +13,7 @@ import { money } from "@/lib/core/compute";
 import { Ico, Mark } from "@/components/rift/icons";
 import { NOT_ACCEPTANCE } from "@/lib/core/offer-room";
 import { Choose } from "./Choose";
-import { showDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = {
   title: "Your plan",
@@ -26,6 +26,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const WHEN = (value: string) => showDay(value);
+/* How long ago a moment was, counted in Georgia days. Slicing the stored
+   timestamp gave London's day, so a choice made after eight in the evening
+   read as made "tomorrow" until midnight. */
+const AGO = (iso: string, now: Date) => whenPhrase(daysUntil(georgiaDay(new Date(iso)), now));
 
 /**
  * The client's own page.
@@ -371,7 +375,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
               <div className="row gap-2" style={{ alignItems: "center" }}>
                 <Ico.users size={14} className="c-3" />
                 <span className="t-sm w6">{agentFirst}&rsquo;s take</span>
-                <span className="t-2xs c-4">· {whenPhrase(daysUntil(plan.take.approvedAt.slice(0, 10), now))}</span>
+                <span className="t-2xs c-4">· {AGO(plan.take.approvedAt, now)}</span>
               </div>
               <p className="t-sm c-2" style={{ marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-line" }}>
                 {plan.take.text}
@@ -455,7 +459,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
             <div className="card p-4" style={{ marginTop: 14, borderColor: "var(--pos-line)" }}>
               <div className="t-sm w6">
                 You told {agentFirst} you want the offer from {plan.choice.seen.from}
-                <span className="c-4 w5"> · {whenPhrase(daysUntil(plan.choice.at.slice(0, 10), now))}</span>
+                <span className="c-4 w5"> · {AGO(plan.choice.at, now)}</span>
               </div>
               <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
                 Recorded with what you saw: {money(plan.choice.seen.price)} offered

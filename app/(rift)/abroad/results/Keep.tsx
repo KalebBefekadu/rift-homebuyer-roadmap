@@ -125,23 +125,29 @@ export function Keep({
           </p>
 
           {state === "sent" || state === "off" ? (
-            <div className="row-t gap-2" style={{ marginTop: 16 }}>
+            <div role="status" className="row-t gap-2" style={{ marginTop: 16 }}>
               <Ico.checkCircle size={14} className={state === "sent" ? "c-pos" : "c-4"} style={{ flex: "none", marginTop: 3 }} />
               <p className="t-sm c-3" style={{ lineHeight: 1.6, ...body }}>{note}</p>
             </div>
           ) : (
             <>
-              <label className="t-xs c-4" style={{ display: "block", marginTop: 16, ...script }}>
+              {/* Tied to their inputs by id. The labels sat beside the
+                  boxes without naming them, so a screen reader announced
+                  two unnamed text fields. */}
+              <label htmlFor="keep-email" className="t-xs c-4" style={{ display: "block", marginTop: 16, ...script }}>
                 {t["res.email.field"]}
               </label>
               <div className="row gap-2 wrap" style={{ marginTop: 6 }}>
                 <input
+                  id="keep-email"
                   className="input grow"
                   type="email"
                   inputMode="email"
                   autoComplete="email"
                   style={{ minWidth: 200 }}
                   value={email}
+                  aria-invalid={state === "bad"}
+                  aria-describedby={note ? "keep-note" : undefined}
                   onChange={(e) => { setEmail(e.target.value); if (state === "bad") setState("idle"); }}
                   placeholder="you@example.com"
                 />
@@ -151,10 +157,10 @@ export function Keep({
                 </button>
               </div>
               <div lang="en" style={{ marginTop: 14 }}>
-                <label className="t-xs c-4" style={{ display: "block" }}>
+                <label htmlFor="keep-phone" className="t-xs c-4" style={{ display: "block" }}>
                   Phone, with your country code (optional){am ? " · English only for now" : ""}
                 </label>
-                <input className="input" type="tel" autoComplete="tel" style={{ marginTop: 6, maxWidth: 280 }}
+                <input id="keep-phone" className="input" type="tel" autoComplete="tel" style={{ marginTop: 6, maxWidth: 280 }}
                   value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+251 91 234 5678" />
                 {phone.trim() ? (
                   <label className="opt fade-in" data-on={consent} style={{ marginTop: 10, alignItems: "flex-start" }}>
@@ -165,7 +171,7 @@ export function Keep({
                 {blocked ? <p className="t-xs c-3" style={{ marginTop: 6 }}>Tick the box to include your phone number, or leave it empty.</p> : null}
               </div>
               {note ? (
-                <p className="t-xs c-neg" style={{ marginTop: 8, lineHeight: 1.6, ...body }}>{note}</p>
+                <p id="keep-note" role="alert" className="t-xs c-neg" style={{ marginTop: 8, lineHeight: 1.6, ...body }}>{note}</p>
               ) : null}
             </>
           )}

@@ -72,6 +72,10 @@ export function Landing({ initial, initialLocale, localePinned }: {
   useEffect(() => {
     document.documentElement.lang = locale;
     try { window.localStorage.setItem("rift.locale", locale); } catch { /* ignore */ }
+    /* Put back on the way out. A link from here to an English page is a
+       client-side navigation, so <html lang="am"> used to stay behind and a
+       screen reader went on reading English in an Amharic voice. */
+    return () => { document.documentElement.lang = "en"; };
   }, [locale]);
 
   const t = translator(locale);
@@ -376,7 +380,9 @@ export function Landing({ initial, initialLocale, localePinned }: {
                       invented here would be exactly the guess the whole
                       dictionary exists to avoid. */}
                   <Link href="/privacy" className="t-sm c-3">What we keep</Link>
-                  <Link href="/operations" className="t-sm c-3">Sign in</Link>
+                  {/* The client sign-in, as in every other footer. This one
+                      sent a buyer to the agent's Operations sign-in. */}
+                  <Link href="/app/sign-in" className="t-sm c-3">Client sign in</Link>
                 </div>
               </div>
             </div>
