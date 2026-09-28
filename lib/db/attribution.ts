@@ -99,13 +99,17 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
       } else if (inserted.ok && hasRef === null) {
         hasRef = true;
       }
-      if (!inserted.ok) return inserted;
-      return done({ first: true, visits: 1 });
+      if (inserted.ok) return done({ first: true, visits: 1 });
+      /* Two requests from one session both found no row (two tabs opened at
+         once, a page and its prefetch) and the other wrote first. This is
+         then the second visit, not a failure: it updates the last touch like
+         any return, and the first touch stays with whichever arrived first. */
+      if (!/duplicate key|23505/.test(inserted.error)) return inserted;
     }
 
     /* Only last_* and the visit count. Sending first_* here would be rejected
        by the trigger, which is the intended safety net rather than the plan. */
-    const visits = (existing.visits as number) + 1;
+    const visits = ((existing?.visits as number | undefined) ?? 1) + 1;
     const patch: Record<string, unknown> = {
       last_source: touch.source ?? null,
       last_medium: touch.medium ?? null,
