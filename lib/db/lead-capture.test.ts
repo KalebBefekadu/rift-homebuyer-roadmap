@@ -112,6 +112,19 @@ describe("the consent record", () => {
     expect(consents[0]!.session_id).toBe("sess-1");
   });
 
+  it("does not keep a session every storage-blocked browser shared", async () => {
+    /* "anon" was sent by every visitor whose storage was blocked. Stored as
+       the handle, "delete all of it" from any of them reached all of them. */
+    build();
+    await captureLead({ ...base, sessionId: "anon", emailConsentWording: "yes" });
+
+    expect((db.to("insert rift_leads")[0]!.payload as Record<string, unknown>).session_id).toBeNull();
+    const consents = db.to("insert rift_consents")[0]!.payload as Record<string, unknown>[];
+    expect(consents[0]!.session_id).toBeNull();
+    /* Nor is a referral looked up through the row they all shared. */
+    expect(db.to("select rift_attributions")).toHaveLength(0);
+  });
+
   it("writes nothing when there was no wording to record", async () => {
     /* A consent row with no wording is worse than none: it asserts that
        somebody agreed to something nobody can produce. */

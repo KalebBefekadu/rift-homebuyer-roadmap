@@ -8,6 +8,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { RETENTION } from "@/lib/core/privacy";
 import { markAbandoned } from "./recovery";
 import { boundedWrite, boundedRead } from "./bounded";
+import { oneVisitor } from "./visitor-session";
 
 /**
  * Enforcing the retention schedule.
@@ -287,6 +288,10 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
   if (!db) return skipped("no database configured");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
+  /* A placeholder every storage-blocked browser used to send. Keyed on it,
+     this button deleted every visitor who shared it. Refused, and said so:
+     "nothing stored" would be untrue for somebody who left an address. */
+  if (!oneVisitor(sessionId)) return failed("this browser did not keep a session of its own, so its records cannot be told apart from anybody else's");
   try {
     return await erase(db, agent_id, { sessionId, leads: [], assessments: [] });
   } catch (e) {
@@ -333,7 +338,9 @@ async function erase(
   agent_id: string,
   h: { sessionId: string | null; leads: string[]; assessments: string[] },
 ): Promise<DbResult<{ deleted: number; held: number }>> {
-  const { sessionId } = h;
+  /* A lead saved under a shared placeholder keeps its own row, but that
+     session is not theirs alone: erasing by it would reach strangers. */
+  const sessionId = oneVisitor(h.sessionId) ? h.sessionId : null;
   /* Bounded, because a person waiting on "delete all of it" is entitled to
      an answer. A hang here reads as the request being ignored, which is the
      worst possible impression to leave on this particular button. */

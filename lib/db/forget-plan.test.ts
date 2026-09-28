@@ -23,7 +23,7 @@ const forgetAtBrevo = vi.fn(async () => ({ ok: true }));
 vi.mock("./email", () => ({ forgetAtBrevo: (...a: unknown[]) => forgetAtBrevo(...(a as [])) }));
 vi.mock("./recovery", () => ({ markAbandoned: vi.fn() }));
 
-const { forgetByPlan } = await import("./retention");
+const { forget, forgetByPlan } = await import("./retention");
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -102,6 +102,23 @@ describe("what is checked, and in which order", () => {
     const r = await forgetByPlan(TOKEN);
     expect(r.ok).toBe(false);
     expect(db.to("delete rift_leads")).toHaveLength(0);
+  });
+
+  it("never erases by a session every storage-blocked browser shared", async () => {
+    /* The lead's own row goes; nothing keyed by "anon" does, because that
+       session belongs to every visitor who ever sent it. */
+    build(saved({ id: "l1", session_id: "anon", assessment_id: null }));
+    const r = await forgetByPlan(TOKEN);
+    expect(r.ok && "data" in r && r.data.deleted).toBe(1);
+    expect(db.to("delete rift_leads")[0]!.filters).toContain("in:id=[l1]");
+    expect(db.calls.some((c) => c.filters.includes("eq:session_id=anon"))).toBe(false);
+  });
+
+  it("refuses a delete request keyed by a shared session, instead of deleting everyone under it", async () => {
+    build(saved(null));
+    const r = await forget("anon");
+    expect(r.ok).toBe(false);
+    expect(db.calls).toHaveLength(0);
   });
 
   it("scopes the first-touch delete to this agent", async () => {

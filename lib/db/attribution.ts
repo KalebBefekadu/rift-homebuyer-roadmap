@@ -4,6 +4,7 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { boundedWrite, boundedRead } from "./bounded";
 import { type Touch, refFrom } from "@/lib/core/attribution";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { oneVisitor } from "./visitor-session";
 
 export { stripToHost, touchFromRequest, describeTouch, type Touch } from "@/lib/core/attribution";
 export { refFrom };
@@ -43,6 +44,9 @@ const isMissingColumn = (e: unknown) =>
  */
 
 export async function captureTouch(sessionId: string, touch: Touch): Promise<DbResult<{ first: boolean; visits: number }>> {
+  /* A shared placeholder would put every such visitor's first touch on one
+     row, whoever arrived first (lib/db/visitor-session.ts). */
+  if (!oneVisitor(sessionId)) return skipped("this browser sent no session of its own, so the visit is not attributed");
   const db = serviceClient();
   if (!db) return skipped("no database configured; attribution is not being recorded");
 
@@ -140,7 +144,7 @@ export async function captureTouch(sessionId: string, touch: Touch): Promise<DbR
  * relationship. The session id is the handle; the database holds the claim.
  */
 export async function firstRefFor(sessionId: string): Promise<string | null> {
-  if (!sessionId || hasRef === false) return null;
+  if (!oneVisitor(sessionId) || hasRef === false) return null;
   const db = serviceClient();
   if (!db) return null;
 

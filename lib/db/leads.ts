@@ -8,6 +8,7 @@ import { boundedWrite } from "./bounded";
 import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
 import { firstRefFor, resolveReferrer } from "./attribution";
+import { oneVisitor } from "./visitor-session";
 
 /**
  * Capture, consent, and lead scoring.
@@ -68,6 +69,9 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
      number you may not lawfully call is pure liability: it cannot be used, and
      it still has to be disclosed and deleted. */
   const phone = input.phone && input.phoneConsent?.granted ? input.phone : null;
+  /* Only a session that is this visitor's alone is kept: it is the handle
+     "delete all of it" erases by (lib/db/visitor-session.ts). */
+  const sessionId = oneVisitor(input.sessionId) ? input.sessionId : null;
 
   try {
     const row: Record<string, unknown> = {
@@ -87,7 +91,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       /* Kept so the score can be recomputed as recency decays. Without it a
          three-week-old lead keeps the urgency it earned on the day. */
       lead_input: input.lead as never,
-      session_id: input.sessionId || null,
+      session_id: sessionId,
     };
 
     /* Bounded: the visitor is watching a button spin. A capture that cannot
@@ -138,11 +142,11 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
        rather than raised. The relationship is the durable thing; an unrecorded
        referral is a real loss and a lost lead is a bigger one. */
     const leadId = (data as { id: string }).id;
-    if (input.sessionId) {
+    if (sessionId) {
       try {
-        const ref = await firstRefFor(input.sessionId);
+        const ref = await firstRefFor(sessionId);
         const referrer = ref
-          ? await resolveReferrer(ref, { excludeSessionId: input.sessionId })
+          ? await resolveReferrer(ref, { excludeSessionId: sessionId })
           : null;
         if (referrer) {
           const linked = await boundedWrite(
@@ -169,7 +173,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
     if (input.email && input.emailConsentWording) {
       consents.push({
         agent_id, assessment_id: input.assessmentId || null,
-        session_id: input.sessionId || null, kind: "email",
+        session_id: sessionId, kind: "email",
         wording: input.emailConsentWording, version: CONSENT_VERSION, granted: true,
         ip: input.ip ?? null, user_agent: input.userAgent ?? null,
       });
@@ -179,7 +183,7 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
          what proves the number was never called. */
       consents.push({
         agent_id, assessment_id: input.assessmentId || null,
-        session_id: input.sessionId || null, kind: "phone",
+        session_id: sessionId, kind: "phone",
         wording: input.phoneConsent.wording, version: CONSENT_VERSION,
         granted: input.phoneConsent.granted,
         ip: input.ip ?? null, user_agent: input.userAgent ?? null,
