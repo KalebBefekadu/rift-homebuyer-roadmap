@@ -62,7 +62,7 @@ export function ClientPricing({ journeyId, opinion, scenarios, mine, canAnswer, 
         mine ? (
           <p className="t-sm" style={{ marginTop: 10 }}>
             ✓ You {mine.response === "agree" ? "agreed to launch at this price" : "asked to talk it through first"}.{" "}
-            <button type="button" className="u t-xs" onClick={() => setTalking(true)}>Change your answer</button>
+            <button type="button" className="btn-link t-xs" onClick={() => setTalking(true)}>Change your answer</button>
           </p>
         ) : null
       ) : <p className="t-xs c-4" style={{ marginTop: 10 }}>Your access shows the pricing; the sellers answer it.</p>}

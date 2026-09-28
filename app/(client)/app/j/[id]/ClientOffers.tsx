@@ -83,7 +83,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
                 {a.documents.length ? (
                   <p className="t-xs" style={{ marginTop: 6 }}>
                     {a.documents.map((d, i) => (
-                      <span key={d.id}>{i ? " · " : ""}<a className="u" href={`/api/app/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">
+                      <span key={d.id}>{i ? " · " : ""}<a className="btn-link" href={`/api/app/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">
                         {d.label}</a> <span className="c-4">({FAMILY_LABEL[d.family as Family] ?? "Document"})</span></span>
                     ))}
                   </p>

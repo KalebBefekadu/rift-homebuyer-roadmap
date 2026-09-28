@@ -96,7 +96,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
                 <li key={`${kind}-${n}`} className="t-sm" style={{ lineHeight: 1.5 }}>
                   <span className="w6">{i.title}</span>
                   <span className="c-3"> {i.detail}</span>
-                  {i.anchor ? <> <a className="u t-xs" href={`#${i.anchor}`}>Go to it</a></> : null}
+                  {i.anchor ? <> <a className="btn-link t-xs" href={`#${i.anchor}`}>Go to it</a></> : null}
                 </li>
               ))}
             </ul>
