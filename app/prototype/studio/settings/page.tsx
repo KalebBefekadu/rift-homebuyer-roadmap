@@ -6,10 +6,8 @@ import { Ico } from "@/components/rift/icons";
 import { FunnelEditor } from "@/components/rift/FunnelEditor";
 import { RETENTION, PHONE_CONSENT, EMAIL_NOTE, CONSENT_VERSION } from "@/lib/prototype/privacy";
 import { PROGRAMS, daysSinceVerified, isStale } from "@/lib/core/registry";
-import {
-  readRules, writeRule, resetRules, undecided, RULE_LABEL, DEFAULT_RULES,
-  type BusinessRules,
-} from "@/lib/core/settings";
+import { RULE_LABEL, DEFAULT_RULES, type BusinessRules } from "@/lib/core/settings";
+import { readRules, writeRule, resetRules, undecided } from "@/lib/prototype/rulesStore";
 
 const TABS = ["Automation", "Business rules", "Funnels", "Programs", "Playbooks", "Privacy", "Profile"] as const;
 

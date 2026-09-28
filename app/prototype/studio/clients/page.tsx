@@ -10,7 +10,8 @@ import { useAttribution, describeTouch } from "@/lib/prototype/attribution";
 import { MOMENTS, STATE_CHIP, serviceCheck } from "@/lib/core/referral";
 import { REFERRAL_STATE, dueNow, referralStats } from "./referral-demo";
 import { stallOf, STALL_CHIP, forecast, commissionOn, weightFor, evidenceMix, BASIS_CHIP, HISTORY } from "@/lib/core/pipeline";
-import { readRules, DEFAULT_RULES } from "@/lib/core/settings";
+import { DEFAULT_RULES } from "@/lib/core/settings";
+import { readRules } from "@/lib/prototype/rulesStore";
 import { money } from "@/lib/core/compute";
 
 const SOURCES = [

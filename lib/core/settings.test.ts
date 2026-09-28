@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  DEFAULT_RULES, RULE_LABEL, readRules, resetRules, undecided, writeRule,
-  type BusinessRules,
-} from "./settings";
+import { DEFAULT_RULES, RULE_LABEL, type BusinessRules } from "./settings";
+import { readRules, resetRules, undecided, writeRule } from "@/lib/prototype/rulesStore";
 
 /**
  * The decisions that are the owner's, not engineering's.

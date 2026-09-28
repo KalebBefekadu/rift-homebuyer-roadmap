@@ -44,8 +44,10 @@ describe("layer boundaries", () => {
 
   it("the domain layer performs no I/O", () => {
     /* Purity is what makes every contract in handoff.md testable without a
-       database, a network, or a browser. */
-    const offenders = sources("lib/core").filter((f) => /\bfetch\(|createClient\(/.test(read(f)));
+       database, a network, or a browser. The prototype's browser stores live
+       in lib/prototype (reviewStore, rulesStore, funnelStore). */
+    const offenders = sources("lib/core").filter((f) =>
+      /\bfetch\(|createClient\(|\b(localStorage|sessionStorage)\.(get|set|remove)Item/.test(read(f)));
     expect(offenders, "lib/core must stay I/O-free").toEqual([]);
   });
 

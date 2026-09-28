@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Ico } from "./icons";
-import { askReview, type TrustState } from "@/lib/core/review";
+import type { TrustState } from "@/lib/core/review";
+import { askReview } from "@/lib/prototype/reviewStore";
 
 /**
  * The trust ladder, rendered.

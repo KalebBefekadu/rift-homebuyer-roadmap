@@ -9,9 +9,10 @@ import {
   CHANNEL_LABEL, type Enrolment, type Channel,
 } from "@/lib/core/nurture";
 import {
-  SEEDED, readAsked, clearAsked, openItems, overdue, promote, nextRung, ceilingNote,
+  SEEDED, openItems, overdue, promote, nextRung, ceilingNote,
   KIND_LABEL, REVIEW_SLA_HOURS, type ReviewItem,
 } from "@/lib/core/review";
+import { readAsked, clearAsked } from "@/lib/prototype/reviewStore";
 import { CROSSINGS, CARRY_LABEL, CARRY_CHIP, DRIFT_PCT, drift, mustDisclose, canPublish } from "@/lib/core/seam";
 import { BAND_LABEL, BAND_TONE } from "@/lib/core/lead";
 import { money } from "@/lib/core/compute";

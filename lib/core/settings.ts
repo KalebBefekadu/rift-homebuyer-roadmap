@@ -71,7 +71,6 @@ export const DEFAULT_RULES: BusinessRules = {
  * Storage
  * ------------------------------------------------------------------ */
 
-const KEY = "rift.rules";
 
 /**
  * Whether a value read back out of storage is the shape this rule expects.
@@ -124,38 +123,6 @@ export function mergeRules(saved: Partial<Record<keyof BusinessRules, unknown>>)
 export function undecidedIn(saved: Partial<Record<keyof BusinessRules, unknown>>): (keyof BusinessRules)[] {
   return (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[])
     .filter((k) => saved[k] === undefined || !usable(k, saved[k]));
-}
-
-export function readRules(): BusinessRules {
-  if (typeof window === "undefined") return DEFAULT_RULES;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return DEFAULT_RULES;
-    return mergeRules(JSON.parse(raw) as Partial<Record<keyof BusinessRules, unknown>>);
-  } catch { return DEFAULT_RULES; }
-}
-
-export function writeRule<K extends keyof BusinessRules>(k: K, v: BusinessRules[K]["value"]) {
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    const saved = raw ? JSON.parse(raw) : {};
-    window.localStorage.setItem(KEY, JSON.stringify({ ...saved, [k]: v }));
-    window.dispatchEvent(new CustomEvent("rift:rules"));
-  } catch { /* ignore */ }
-}
-
-export function resetRules() {
-  try { window.localStorage.removeItem(KEY); window.dispatchEvent(new CustomEvent("rift:rules")); } catch { /* ignore */ }
-}
-
-/** Rules still sitting on their default. Shown so "unset" and "chosen" differ. */
-export function undecided(): (keyof BusinessRules)[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    const saved = raw ? JSON.parse(raw) : {};
-    return (Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[]).filter((k) => saved[k] === undefined);
-  } catch { return Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[]; }
 }
 
 export const RULE_LABEL: Record<keyof BusinessRules, string> = {
