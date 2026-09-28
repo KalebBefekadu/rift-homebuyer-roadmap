@@ -4,6 +4,7 @@ import { serviceClient, currentAgentId } from "@/lib/db/service";
 import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
 import { currentRate } from "@/lib/db/rates";
 import { overdue } from "@/lib/db/retention";
+import { KEYS, WRONG_IN_AM, unreviewedAm } from "@/lib/core/i18n";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -163,6 +164,11 @@ export async function GET(req: Request) {
        the job stops, including in a way nobody predicted. */
     scheduler: process.env.CRON_SECRET ? "configured" : "missing",
     monitoring: process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN ? "configured" : "missing",
+    /* The Amharic review as an outcome, not a note (REVIEWED_AM in
+       lib/core/i18n.ts): how many strings a native reader has not yet
+       approved, and how many are known to say something the English no
+       longer says. Counts of dictionary keys; nothing about anybody. */
+    amharic: `${unreviewedAm().length} of ${KEYS.length} unreviewed${WRONG_IN_AM.length ? `, ${WRONG_IN_AM.length} known wrong` : ""}`,
   };
 
   if (db && agent) {

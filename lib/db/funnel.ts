@@ -121,23 +121,6 @@ async function publish(
   }
 }
 
-export async function publishedQuestionCount(side: "buy" | "sell"): Promise<DbResult<number>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const versionId = await currentVersionId(side);
-  if (!versionId) return skipped("no published version");
-  try {
-    const { count, error } = await db
-      .from("rift_questions")
-      .select("*", { count: "exact", head: true })
-      .eq("funnel_version_id", versionId);
-    if (error) return failed(error.message);
-    return done(count ?? 0);
-  } catch (e) {
-    return failed(e);
-  }
-}
-
 /* ------------------------------------------------------------------ *
  * The agent's own words
  * ------------------------------------------------------------------ */

@@ -86,13 +86,6 @@ export async function clientRoomFor(leadId: string): Promise<DbResult<OfferRoom>
   return done({ ...room, prepared: null, clientNote: null });
 }
 
-/** Rift's current draft, for the agent to start from. Recomputed, never stored until approval. */
-export async function currentDraft(leadId: string): Promise<DbResult<string | null>> {
-  const o = await offersFor(leadId);
-  if (!o.ok || "skipped" in o) return o as DbResult<never>;
-  return done(draftTake(o.data.offers.filter((x) => x.releasedAt), o.data.costs));
-}
-
 /**
  * Approve a take. Records Rift's draft beside it, and the exact set of
  * released offers it describes.
