@@ -1104,6 +1104,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | The seller-offer form reads "5,000" as 5,000: concessions, repair credit and earnest money written with a comma were recorded as $0, moving net to seller, and a price with a comma left Record disabled without saying why |
 | 28 Sep 2026 | The prototype's browser stores for review requests and business rules move from lib/core to lib/prototype (`reviewStore`, `rulesStore`), and the layers test now refuses browser storage in lib/core |
 | 28 Sep 2026 | A seller's answer to the pricing needs "Price and fees", the access that shows the pricing (it needed none). The retired MVP's unauthenticated Brevo server action is removed |
 | 28 Sep 2026 | Amounts typed into the seller, money and decision forms are read or refused (`lib/core/typed.ts`): the forms kept only the digits, so "about 350k" was recorded as $350 and "3 or 4" bedrooms as 34. One request-id helper replaces nine copies, and the last local date formatters (which read a timestamp's UTC day) use `showDay` |

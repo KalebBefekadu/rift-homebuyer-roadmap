@@ -8,6 +8,7 @@ import {
   type Financing, type Offer, type SellerCosts,
 } from "@/lib/core/offers";
 import { recordOffer, releaseOffer, deleteOffer, saveSellerCosts } from "./actions";
+import { typedNumber } from "@/lib/core/typed";
 
 /**
  * The offer table.
@@ -43,6 +44,18 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
   const [closeOn, setCloseOn] = useState("");
   const [preapproval, setPreapproval] = useState(false);
   const [proofOfFunds, setProofOfFunds] = useState(false);
+
+  /* "350,000" reads; "about 5k" is refused by name rather than recorded as $0
+     (lib/core/typed.ts). A concession dropped to nothing moves the net. */
+  const amounts = (fields: [string, string][]): number[] | null => {
+    const out: number[] = [];
+    for (const [label, text] of fields) {
+      const n = typedNumber(text);
+      if (Number.isNaN(n)) { setError(`${label} is not a number`); return null; }
+      out.push(n ?? 0);
+    }
+    return out;
+  };
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) =>
     start(async () => {
@@ -97,7 +110,10 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
               value={commission} onChange={(e) => setCommission(e.target.value)}
               placeholder="Commission %" aria-label="Total commission percent" />
             <button className="btn btn-s btn-sm" disabled={pending || !payoff.trim()}
-              onClick={() => run(() => saveSellerCosts(leadId, Number(payoff), Number(commission)))}>
+              onClick={() => {
+                const n = amounts([["What is still owed", payoff], ["The commission", commission]]);
+                if (n) run(() => saveSellerCosts(leadId, n[0]!, n[1]!));
+              }}>
               Save
             </button>
           </div>
@@ -238,22 +254,27 @@ export function Offers({ leadId, offers, costs, agentFirst }: {
               </label>
             </div>
             <div className="row gap-2">
-              <button className="btn btn-s btn-sm" disabled={pending || !from.trim() || !(Number(price) > 0)}
-                onClick={() => run(
-                  () => recordOffer(leadId, {
-                    from: from.trim(), price: Number(price),
-                    concessions: Number(concessions) || 0,
-                    repairCredit: Number(repairCredit) || 0,
-                    earnest: Number(earnest) || 0,
-                    financing, closeOn: closeOn || null,
-                    preapproval, proofOfFunds,
-                  }),
-                  () => {
-                    setAdding(false); setFrom(""); setPrice(""); setConcessions("");
-                    setRepairCredit(""); setEarnest(""); setCloseOn("");
-                    setPreapproval(false); setProofOfFunds(false);
-                  },
-                )}>
+              <button className="btn btn-s btn-sm" disabled={pending || !from.trim() || !price.trim()}
+                onClick={() => {
+                  const n = amounts([["The price", price], ["Concessions", concessions], ["The repair credit", repairCredit], ["Earnest money", earnest]]);
+                  if (!n) return;
+                  if (!(n[0]! > 0)) { setError("Give the offer price"); return; }
+                  run(
+                    () => recordOffer(leadId, {
+                      from: from.trim(), price: n[0]!,
+                      concessions: n[1]!,
+                      repairCredit: n[2]!,
+                      earnest: n[3]!,
+                      financing, closeOn: closeOn || null,
+                      preapproval, proofOfFunds,
+                    }),
+                    () => {
+                      setAdding(false); setFrom(""); setPrice(""); setConcessions("");
+                      setRepairCredit(""); setEarnest(""); setCloseOn("");
+                      setPreapproval(false); setProofOfFunds(false);
+                    },
+                  );
+                }}>
                 Record it
               </button>
               <button className="btn btn-g btn-sm" onClick={() => setAdding(false)}>Cancel</button>
