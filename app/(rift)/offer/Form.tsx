@@ -12,6 +12,7 @@ import {
 } from "@/lib/core/offer-intake";
 import { sessionId } from "@/lib/rift/session";
 import { money } from "@/lib/core/compute";
+import { typedNumber } from "@/lib/core/typed";
 
 
 const FINANCING = [
@@ -72,10 +73,15 @@ export function Form() {
      one is ours, and only ours warrants sending them somewhere else. */
   const [failedToSend, setFailedToSend] = useState(false);
 
+  /* "$350,000" reads; "5k" is said back to them rather than sent as $5
+     (lib/core/typed.ts). The reading on the page uses the same numbers. */
   const num = (v: string) => {
-    const n = Number(v.replace(/[^0-9.]/g, ""));
-    return Number.isFinite(n) ? n : 0;
+    const n = typedNumber(v);
+    return n !== null && Number.isFinite(n) ? n : 0;
   };
+  const unreadable = ([["The price", price], ["Concessions", concessions], ["Earnest money", earnest]] as const)
+    .filter(([, v]) => Number.isNaN(typedNumber(v)))
+    .map(([label]) => `${label}: write it as a number of dollars, like 5000.`);
 
   /* Read against the real parser, so the page cannot show a figure the
      endpoint would reject: the two used to be a validation function and a
@@ -91,7 +97,7 @@ export function Form() {
        contingencies, preapproval, proofOfFunds, documentToken, from, email, phone, note, representing]);
 
   const parsed = readSubmission(draft);
-  const reading = parsed.ok && num(price) > 0 ? read(parsed.value, commissionPct) : null;
+  const reading = parsed.ok && !unreadable.length && num(price) > 0 ? read(parsed.value, commissionPct) : null;
 
   const toggle = (c: string) =>
     setContingencies((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
@@ -126,6 +132,7 @@ export function Form() {
   };
 
   const send = async () => {
+    if (unreadable.length) { setErrors(unreadable); setFailedToSend(false); return; }
     const real = readSubmission({ ...draft, address, from, email, phone, representing });
     if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
     setErrors([]);
