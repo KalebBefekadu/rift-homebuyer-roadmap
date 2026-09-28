@@ -9,8 +9,9 @@ import type { ProgramRecord } from "@/lib/core/assistance";
 import { CampaignBlocks } from "@/components/rift/campaign/CampaignBlocks";
 import { BRIEF_MAX, briefError } from "@/lib/core/campaign-draft";
 import { draftCampaignRecipe, publishCampaign, saveCampaign } from "../actions";
+import { showTime } from "@/lib/core/day";
 
-const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+const WHEN = (iso: string) => showTime(iso);
 const LIVE_VALUES = VALUES.filter((v) => v.live);
 
 const blank = (t: BlockType): Block =>

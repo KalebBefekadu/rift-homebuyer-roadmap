@@ -1,7 +1,8 @@
 import { planSummary, type SavedPlan as Plan } from "@/lib/core/saved-plan";
 import { siteUrl } from "@/lib/core/site";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
 
 /**
  * What this person worked out before they spoke to anyone (Blueprint v5

@@ -33,6 +33,7 @@ import { DeskRow } from "./DeskRow";
 import { saleCadences } from "@/lib/db/listing";
 import { cadenceDue, pricingAnswers } from "@/lib/core/seller-cadence";
 import { householdActivity } from "@/lib/db/summary";
+import { showTime } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -172,7 +173,7 @@ export default async function OperationsToday() {
       <div className="between wrap gap-2">
         <h1 className="serif">Today</h1>
         <span className="t-xs c-4">
-          {new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/New_York" }).format(now)} · Georgia time
+          {showTime(now.toISOString(), { weekday: "long", month: "long", day: "numeric" })} · Georgia time
         </span>
       </div>
 
@@ -256,7 +257,7 @@ export default async function OperationsToday() {
             <ul>
               {recent.map((a) => (
                 <li key={a.at + a.text} className="desk-row t-xs">
-                  <span className="c-4">{new Date(a.at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })}</span>{" "}
+                  <span className="c-4">{showTime(a.at, { weekday: "short", hour: "numeric", minute: "2-digit" })}</span>{" "}
                   {a.auto ? <span className="chip t-2xs" style={{ marginRight: 4 }}>Rift</span> : null}
                   <Link className="u" href={a.href}>{a.text}</Link>
                 </li>

@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { Ico } from "@/components/rift/icons";
 import { KIND_LABEL, FUNDING_TEXT, upTo, type ProgramRecord } from "@/lib/core/assistance";
+import { money } from "@/lib/core/compute";
+import { showDay } from "@/lib/core/day";
 
-const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const MONTH = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+const MONTH = (iso: string) => showDay(iso, { month: "short", year: "numeric" });
 
 
 function incomeText(p: ProgramRecord) {

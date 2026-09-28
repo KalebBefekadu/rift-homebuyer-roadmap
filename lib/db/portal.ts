@@ -31,7 +31,7 @@ import {
   briefErrors, FIELDS, statusOf, SEARCH_SCHEMA_VERSION,
   type Response, type SearchBrief, type SearchCriterion, type SearchStatus,
 } from "@/lib/core/search";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
 
 /**
  * The client's side of a journey: who is signed in, which journeys they are a
@@ -673,7 +673,7 @@ export async function clientRecords(m: Membership): Promise<DbResult<ClientRecor
     buy && canRespond(m.role) ? readDeadlines(m.journeyId, m.agentId) : Promise.resolve(null),
   ]);
   const NOT_READ = "This part could not be read just now. Reload to try again.";
-  const DAY = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" });
+  const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
   const sections: RecordSection[] = [];
   const got = <T,>(r: DbResult<T> | null): T | null | undefined => (r === null ? undefined : r.ok && "data" in r ? r.data : null);
 

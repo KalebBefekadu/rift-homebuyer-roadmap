@@ -19,7 +19,8 @@
  */
 
 import type { AssistanceProgram } from "./registry";
-import { georgiaDay } from "./day";
+import { addDays, georgiaDay } from "./day";
+import { money } from "./compute";
 
 export type Occupation = "educator" | "safety" | "health" | "military";
 export type LoanType = "fha" | "conventional" | "va" | "usda";
@@ -449,14 +450,11 @@ export interface Match {
   alsoNote?: string;
 }
 
-const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const OCC: Record<Occupation, string> = { educator: "people working in education", safety: "people working in public safety", health: "people working in health care", military: "the military and veterans" };
 
 /** The day a record is due to be checked again, and whether it is past it. */
 export function reviewDue(p: ProgramRecord, windowDays: number): string {
-  const d = new Date(`${p.checkedOn}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + windowDays);
-  return d.toISOString().slice(0, 10);
+  return addDays(p.checkedOn, windowDays);
 }
 export const isCurrent = (p: ProgramRecord, today: Date, windowDays: number) =>
   p.status === "active" && reviewDue(p, windowDays) >= georgiaDay(today);
@@ -695,12 +693,11 @@ export const CAUTION =
  * program's amount differently.
  */
 export function upTo(p: ProgramRecord): { n: number; label: string } {
-  const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
   const occ = p.amount.occupations;
   const top = Math.max(p.amount.max, occ?.max ?? 0);
   if (p.amount.pctOfLoan && !top) return { n: 0, label: `Up to ${p.amount.pctOfLoan}% of the loan` };
-  if (p.amount.pctOfPrice) return { n: top, label: `${p.amount.pctOfPrice}% of price, up to ${usd(top)}` };
-  return { n: top, label: `Up to ${usd(top)}` };
+  if (p.amount.pctOfPrice) return { n: top, label: `${p.amount.pctOfPrice}% of price, up to ${money(top)}` };
+  return { n: top, label: `Up to ${money(top)}` };
 }
 
 /** Programs that apply in a county: statewide ones and the county's own. */

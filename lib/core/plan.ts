@@ -16,6 +16,8 @@
  * is the behaviour worth encouraging.
  */
 
+import { daysUntil } from "./day";
+
 export type Owner = "client" | "agent" | "other";
 
 export interface PlanItem {
@@ -78,12 +80,8 @@ export const BUCKET_ORDER: Bucket[] = ["overdue", "now", "soon", "later", "somed
 
 const DAY = 86_400_000;
 
-/** Whole days from today to a date, negative when it has passed. */
-export function daysUntil(dueOn: string, today: Date): number {
-  const due = new Date(`${dueOn}T00:00:00Z`).getTime();
-  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return Math.round((due - now) / DAY);
-}
+/** Whole days from today in Georgia to a date, negative when it has passed. */
+export { daysUntil };
 
 export function bucketFor(item: PlanItem, today = new Date()): Bucket {
   if (item.doneAt) return "done";

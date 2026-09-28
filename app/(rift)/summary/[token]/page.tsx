@@ -3,11 +3,12 @@ import { openSummary } from "@/lib/db/summary-links";
 import { stageStrip, WORK_STATE_LABEL } from "@/lib/core/progress";
 import { SCOPE_LABEL } from "@/lib/core/summary-link";
 import { Mark } from "@/components/rift/icons";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "A summary of a move", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "long", day: "numeric", year: "numeric" });
 
 /**
  * A read-only summary, opened by a link the agent made for someone outside

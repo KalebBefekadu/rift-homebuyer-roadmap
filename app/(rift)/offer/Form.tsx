@@ -11,8 +11,8 @@ import {
   MIN_COMMISSION_PCT, MAX_COMMISSION_PCT,
 } from "@/lib/core/offer-intake";
 import { sessionId } from "@/lib/rift/session";
+import { money } from "@/lib/core/compute";
 
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 const FINANCING = [
   ["conventional", "Conventional"], ["cash", "Cash"], ["fha", "FHA"],

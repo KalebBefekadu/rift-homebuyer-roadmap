@@ -4,9 +4,10 @@ import { useState } from "react";
 import { money } from "@/lib/core/compute";
 import { COMP_STATUS_LABEL, responseLine, type Comp, type CompStatus, type Opinion } from "@/lib/core/pricing";
 import { useWrite } from "./useWrite";
+import { georgiaDay } from "@/lib/core/day";
 
 const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+const today = () => georgiaDay();
 const blank = (): Comp => ({ address: "", price: 0, status: "sold", on: today(), note: "" });
 const num = (v: string) => Number(v.replace(/[^0-9.]/g, "")) || 0;
 

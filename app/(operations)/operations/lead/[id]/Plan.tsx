@@ -6,6 +6,7 @@ import { Ico } from "@/components/rift/icons";
 import { ownerLabel, type Owner, type PlanItem } from "@/lib/core/plan";
 import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep } from "./actions";
 import type { Drift } from "@/lib/core/seam";
+import { money } from "@/lib/core/compute";
 
 /**
  * The agent's end of the client's own page.
@@ -124,9 +125,9 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst }: 
                 {drifts.map((d) => (
                   <div key={d.field} className="t-xs" style={{ lineHeight: 1.5 }}>
                     <span className="w6">{d.field}</span>{" "}
-                    <span className="num">${d.was.toLocaleString()}</span>
+                    <span className="num">{money(d.was)}</span>
                     {" → "}
-                    <span className="num w6">{d.now === null ? "no longer worked out" : `$${d.now.toLocaleString()}`}</span>{" "}
+                    <span className="num w6">{d.now === null ? "no longer worked out" : money(d.now)}</span>{" "}
                     <span className="c-3">
                       ({d.deltaPct !== null ? `${d.deltaPct > 0 ? "+" : ""}${d.deltaPct}%` : "missing"}
                       {d.reasons.filter((r) => r !== "moved" && r !== "missing").map((r) => `, ${REASON_LABEL[r]}`).join("")}, {d.cause})

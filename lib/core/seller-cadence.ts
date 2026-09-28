@@ -14,7 +14,7 @@
  * Pure: no I/O.
  */
 
-import { georgiaDay } from "./day";
+import { addDays, daysBetween, georgiaDay } from "./day";
 import { listingStatus, type ListingEvent } from "./listing";
 import type { Stage } from "./progress";
 
@@ -75,8 +75,6 @@ export interface CadenceDue {
 }
 
 const dayOf = (iso: string) => georgiaDay(new Date(iso));
-const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
-const plus = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 export function cadenceDue(sales: SaleCadence[], today: string): CadenceDue[] {
   const out: CadenceDue[] = [];
@@ -90,7 +88,7 @@ export function cadenceDue(sales: SaleCadence[], today: string): CadenceDue[] {
       const live = dayOf(l.live.at);
       const last = s.lastReviewAt ? dayOf(s.lastReviewAt) : null;
       const from = last && last > live ? last : live;
-      const due = plus(from, REVIEW_EVERY_DAYS);
+      const due = addDays(from, REVIEW_EVERY_DAYS);
       if (due <= today) out.push({ ...base, kind: "weekly-review", due, late: daysBetween(due, today) });
     }
 

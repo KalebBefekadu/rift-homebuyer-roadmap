@@ -1,3 +1,4 @@
+import { money } from "./compute";
 /**
  * A buyer's offer on one home, from strategy to the other side's answer
  * (blueprint v4 W08; journey contracts B08 to B10; REQ-DEC-01 to 03).
@@ -132,7 +133,7 @@ const TERM_LABEL: Record<keyof Terms, string> = {
   closingDate: "Closing date", respondBy: "Respond by", respondBySource: "Deadline source", other: "Other terms",
 };
 
-const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const usd = money;
 
 export function termText(field: keyof Terms, t: Terms): string {
   const v = t[field];

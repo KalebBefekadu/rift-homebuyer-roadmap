@@ -189,9 +189,11 @@ describe("daysTo", () => {
   });
 
   it("is not moved by the time of day", () => {
-    /* An agreement does not expire at noon. */
-    for (const h of ["00:00:01", "12:00:00", "23:59:59"]) {
-      expect(daysTo(day(3), new Date(`2026-09-21T${h}Z`)), h).toBe(3);
+    /* An agreement does not expire at noon, or at eight in the evening when
+       London's day turns over: the first second to the last of 21 September
+       in Georgia. */
+    for (const at of ["2026-09-21T04:00:01Z", "2026-09-21T16:00:00Z", "2026-09-22T03:59:59Z"]) {
+      expect(daysTo(day(3), new Date(at)), at).toBe(3);
     }
   });
 });

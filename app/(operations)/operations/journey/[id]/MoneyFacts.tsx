@@ -4,9 +4,10 @@ import { useState } from "react";
 import { money } from "@/lib/core/compute";
 import { FACT_KINDS, FACT_LABEL, type Fact, type FactKind } from "@/lib/core/ledger";
 import { useWrite } from "./useWrite";
+import { georgiaDay } from "@/lib/core/day";
 
 const DAY = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+const today = () => georgiaDay();
 
 /**
  * Recording a money amount from a named source (money v2, Blueprint v5

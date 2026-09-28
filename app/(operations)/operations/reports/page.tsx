@@ -6,7 +6,7 @@ import { pilotReport, type PilotJourney } from "@/lib/db/pilot";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { STAGE_LABEL, STATUS_LABEL } from "@/lib/core/progress";
 import {
-  ANSWER_LABEL, ASK_LABEL, DATES_CHECK_LABEL, PILOT_TZ, SEARCH_CHECK_LABEL,
+  ANSWER_LABEL, ASK_LABEL, DATES_CHECK_LABEL, SEARCH_CHECK_LABEL,
   durationText, promiseLine, replyStats, setupStats, timing, type CheckState,
 } from "@/lib/core/pilot";
 import { PrintButton } from "@/components/rift/PrintButton";
@@ -16,14 +16,13 @@ import { FunnelReports } from "./Funnel";
 import { ladderEvents, conversionCounts } from "@/lib/db/events";
 import { valueLadder } from "@/lib/core/ladder";
 import { valueById } from "@/lib/core/values";
+import { showDay, showTime } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Reports" };
 export const dynamic = "force-dynamic";
 
-const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", {
-  timeZone: PILOT_TZ, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-});
-const DAY = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: PILOT_TZ, month: "short", day: "numeric" });
+const WHEN = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const DAY = (iso: string) => showDay(iso);
 
 function checkLine(c: CheckState): { text: string; tone: "pos" | "warn" | "neg" | "none" } {
   switch (c.state) {

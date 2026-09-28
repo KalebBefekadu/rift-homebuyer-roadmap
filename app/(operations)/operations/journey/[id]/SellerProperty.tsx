@@ -4,9 +4,10 @@ import { Fragment } from "react";
 import { money } from "@/lib/core/compute";
 import type { PropertyFacts } from "@/lib/core/search";
 import { useWrite } from "./useWrite";
+import { georgiaDay } from "@/lib/core/day";
 
 const DAY = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+const today = () => georgiaDay();
 
 /**
  * The home being sold (S02): its address and the facts, each set from a

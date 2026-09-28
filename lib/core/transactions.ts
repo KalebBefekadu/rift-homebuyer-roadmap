@@ -12,6 +12,7 @@
 
 import { STALE_DAYS, WORKSTREAM_LABEL, isSettled, type ContractOutcome, type Financing, type Stage, type Workstream, type WorkstreamView } from "./progress";
 import type { DeadlineKind, DeadlineView } from "./deadline";
+import { addDays } from "./day";
 
 export interface ContractDate {
   id: string;
@@ -111,7 +112,6 @@ export interface Waiting {
   checkIn: string;
 }
 
-const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 /**
  * Open workstreams that someone other than the agent is doing, with the

@@ -52,7 +52,7 @@ export const metadata: Metadata = { title: "Journey", robots: { index: false } }
 export const dynamic = "force-dynamic";
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
-const WHEN = (iso: string) => showTime(iso, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+const WHEN = (iso: string) => showTime(iso, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const settled = <T,>(p: Promise<T> | null) => p ?? Promise.resolve(null);
 
 /**

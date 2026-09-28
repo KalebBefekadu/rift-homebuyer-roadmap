@@ -5,6 +5,8 @@ import { useRefresh } from "@/components/rift/useRefresh";
 import { INSTRUCTION_LABEL, termText, type BuyerBid, type Instruction, type Terms } from "@/lib/core/bid";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { post } from "../../post";
+import { money } from "@/lib/core/compute";
+import { showTime } from "@/lib/core/day";
 
 const newRequest = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -12,10 +14,8 @@ const newRequest = () =>
     : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
         (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
-const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const WHEN = (iso: string) => new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-}).format(new Date(iso));
+const usd = money;
+const WHEN = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const ROWS: [keyof Terms, string][] = [
   ["price", "Price"], ["earnestMoney", "Earnest money"], ["financing", "Paying by"], ["downPct", "Down payment"],
   ["concessions", "Asked back from the seller"], ["dueDiligenceDays", "Due diligence period"],

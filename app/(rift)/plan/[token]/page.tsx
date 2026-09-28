@@ -13,6 +13,7 @@ import { money } from "@/lib/core/compute";
 import { Ico, Mark } from "@/components/rift/icons";
 import { NOT_ACCEPTANCE } from "@/lib/core/offer-room";
 import { Choose } from "./Choose";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = {
   title: "Your plan",
@@ -24,9 +25,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const WHEN = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
-  month: "short", day: "numeric", timeZone: "UTC",
-});
+const WHEN = (value: string) => showDay(value);
 
 /**
  * The client's own page.
@@ -139,7 +138,7 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
       {plan.stage ? (
         <p className="t-sm c-3" style={{ marginTop: 12, maxWidth: 560, lineHeight: 1.6 }}>
           Where things stand: <strong>{plan.stage}</strong>
-          {plan.stageSince ? ` since ${WHEN(plan.stageSince.slice(0, 10))}` : ""}.
+          {plan.stageSince ? ` since ${WHEN(plan.stageSince)}` : ""}.
           {" "}This page is kept up to date by {agentFirst}, and nothing on it is automatic.
         </p>
       ) : null}

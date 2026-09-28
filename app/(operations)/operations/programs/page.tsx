@@ -12,11 +12,12 @@ import { applyChecks, openFlags, textDiff, type CheckOutcome, type SourceCheck }
 import { Ico } from "@/components/rift/icons";
 import { Unavailable } from "../Unavailable";
 import { reviewProgramPage, prepareProgramAlerts } from "./actions";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Programs" };
 export const dynamic = "force-dynamic";
 
-const DAY = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric" });
+const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
 
 const READING: Record<CheckOutcome, { label: string; chip: string }> = {
   baseline: { label: "First reading", chip: "chip-out" },

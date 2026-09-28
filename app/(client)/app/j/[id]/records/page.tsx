@@ -7,6 +7,7 @@ import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { ClientShell } from "../../../ClientShell";
 import { Help } from "../../../Help";
 import { PrintButton } from "@/components/rift/PrintButton";
+import { showTime } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Your records", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
   const member = m.data;
   const r = await clientRecords(member);
   const records = r.ok && "data" in r ? r.data : null;
-  const asOf = new Date().toLocaleString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  const asOf = showTime(new Date().toISOString(), { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
     <ClientShell agentName={member.agentName}>

@@ -14,8 +14,8 @@
  */
 
 import type { CSSProperties } from "react";
+import { money } from "@/lib/core/compute";
 
-const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const short = (n: number) => (Math.abs(n) >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : Math.abs(n) >= 10_000 ? `$${Math.round(n / 1_000)}k` : money(n));
 
 const frame: CSSProperties = { width: "100%", height: "auto", display: "block", overflow: "visible" };

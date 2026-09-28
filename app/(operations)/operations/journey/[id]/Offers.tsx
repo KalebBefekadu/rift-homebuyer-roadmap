@@ -10,7 +10,8 @@ import { FAMILIES, FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { zonedToUtc } from "@/lib/core/tour";
 import { useWrite } from "./useWrite";
 import { send } from "../send";
-import { showDay } from "@/lib/core/day";
+import { showDay, showTime } from "@/lib/core/day";
+import { money } from "@/lib/core/compute";
 
 export interface OfferView {
   id: string;
@@ -29,11 +30,9 @@ const newRequest = () =>
     : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
         (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
-const usd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const usd = money;
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
-const WHEN = (iso: string) => new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-}).format(new Date(iso));
+const WHEN = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const SIZE = (b: number) => (b > 1_048_576 ? `${(b / 1_048_576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 const CHIP: Partial<Record<BidView["status"], string>> = {
   instructed: "chip-pos", disagreement: "chip-neg", stopped: "chip-neg", changes: "chip-warn", awaiting: "chip-warn",

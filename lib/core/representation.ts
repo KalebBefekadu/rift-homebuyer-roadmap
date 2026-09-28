@@ -22,6 +22,8 @@
  * authority on it. Rift never signs, and never sends for signature.
  */
 
+import { daysUntil } from "./day";
+
 export const STATUSES = [
   "none",
   "prepared",
@@ -97,14 +99,8 @@ export const isCovered = (status: Status): boolean => status === "signed";
  */
 export const EXPIRY_WARNING_DAYS = 21;
 
-const DAY = 86_400_000;
-
-/** Whole days until a date, negative once it has passed. */
-export function daysTo(date: string, today: Date): number {
-  const then = new Date(`${date}T00:00:00Z`).getTime();
-  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return Math.round((then - now) / DAY);
-}
+/** Whole days until a date in Georgia, negative once it has passed. */
+export const daysTo = (date: string, today: Date): number => daysUntil(date, today);
 
 export interface Representation {
   status: Status;

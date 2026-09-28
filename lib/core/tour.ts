@@ -1,3 +1,4 @@
+import { GEORGIA_TZ } from "./day";
 /**
  * Tours (blueprint v4, W06; journey contract B06; REQ-SEARCH-07 and 08).
  *
@@ -57,7 +58,7 @@ export const AVAILABILITY_MAX = 300;
 export const NOTE_MAX = 500;
 export const REF_MAX = 200;
 /** Rift works in the agent's market. */
-export const TOUR_TIMEZONE = "America/New_York";
+export const TOUR_TIMEZONE = GEORGIA_TZ;
 
 export interface TourStep {
   seq: number;

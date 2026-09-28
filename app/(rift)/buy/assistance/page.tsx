@@ -13,6 +13,7 @@ import { ValueLayout, AnswerHead, BasedOn } from "@/components/rift/value/parts"
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { AssistanceSteps } from "@/components/rift/value/artifacts";
 import { Ico } from "@/components/rift/icons";
+import { showDay } from "@/lib/core/day";
 
 export const metadata: Metadata = {
   title: "What Georgia programs might help me buy?",
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const MONTH = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+const MONTH = (iso: string) => showDay(iso, { month: "long", year: "numeric" });
 
 /**
  * Value: assistance (Blueprint v5 §5.2 first, §6.3 to §6.7).

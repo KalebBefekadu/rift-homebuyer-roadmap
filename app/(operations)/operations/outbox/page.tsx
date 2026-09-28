@@ -6,11 +6,12 @@ import { outbox } from "@/lib/db/outbox";
 import { STATE_LABEL, type OutboxState } from "@/lib/core/outbox";
 import { Unavailable } from "../Unavailable";
 import { outboxAction } from "./actions";
+import { showTime } from "@/lib/core/day";
 
 export const metadata: Metadata = { title: "Outbox" };
 export const dynamic = "force-dynamic";
 
-const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const WHEN = (iso: string) => showTime(iso);
 const CHIP: Record<OutboxState, string> = {
   prepared: "chip-warn", approved: "chip-warn", running: "chip-out", succeeded: "chip-pos", failed: "chip-neg", unknown: "chip-neg", cancelled: "chip-out",
 };

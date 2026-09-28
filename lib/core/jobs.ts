@@ -14,6 +14,7 @@
 
 import { isBusinessDay } from "./deadline";
 import { marketDay } from "./progress";
+import { showTime } from "./day";
 
 export type JobId = "nurture-run" | "retention-sweep" | "rates-refresh" | "daily-summary" | "program-check";
 
@@ -66,7 +67,7 @@ export interface JobHealth {
 }
 
 const HOUR = 3_600_000;
-const DATE = (iso: string) => new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const DATE = (iso: string) => showTime(iso);
 
 /**
  * A job's health from its runs. `trackingSince` is when runs began being

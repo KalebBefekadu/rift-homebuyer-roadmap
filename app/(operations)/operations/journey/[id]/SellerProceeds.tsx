@@ -4,9 +4,10 @@ import { useState } from "react";
 import { money } from "@/lib/core/compute";
 import { FIGURE_KINDS, FIGURE_LABEL, OWED_LABEL, type FigureKind, type FigureView, type OwedSource } from "@/lib/core/proceeds";
 import { useWrite } from "./useWrite";
+import { georgiaDay } from "@/lib/core/day";
 
 const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+const today = () => georgiaDay();
 const num = (v: FormDataEntryValue | null) => { const s = String(v ?? "").replace(/[^0-9.]/g, ""); return s ? Number(s) : null; };
 const signed = (n: number) => (n < 0 ? `−${money(-n)}` : money(n));
 

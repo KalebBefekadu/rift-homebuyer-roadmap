@@ -5,6 +5,7 @@ import { REACTION_LABEL, type Reaction } from "./search";
 import { OFFER_LABEL, type OfferInterest } from "./tour";
 import { INSTRUCTION_LABEL, type Instruction } from "./bid";
 import { BAND_LABEL, type Band } from "./lead";
+import { GEORGIA_TZ } from "./day";
 
 /**
  * The agent's daily summary (blueprint v4 W12; decision D07).
@@ -19,7 +20,7 @@ import { BAND_LABEL, type Band } from "./lead";
  * Pure. Reading the rows is lib/db/summary.ts; sending is lib/db/email.ts.
  */
 
-export const SUMMARY_TZ = "America/New_York";
+export const SUMMARY_TZ = GEORGIA_TZ;
 
 /**
  * What one summary covers: from the same time on the previous business day

@@ -7,10 +7,11 @@ import {
   type Interest, type ListingEvent, type ListingKind, type Review, type Showing,
 } from "@/lib/core/listing";
 import { useWrite } from "./useWrite";
+import { georgiaDay, showTime } from "@/lib/core/day";
 
-const WHEN = (iso: string) => new Date(iso).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+const WHEN = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+const today = () => georgiaDay();
 
 /**
  * Listing and launch, showings and weekly reviews (S06 to S09). Every entry

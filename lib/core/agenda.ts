@@ -18,6 +18,8 @@
  * page says which is which.
  */
 
+import { daysUntil } from "./day";
+
 export type CommitmentKind = "action" | "step";
 
 export interface Commitment {
@@ -47,14 +49,9 @@ export interface AgendaDay {
   items: Commitment[];
 }
 
-const DAY = 86_400_000;
 const WEEKDAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-const utcMidnight = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-
-export function daysAway(dueOn: string, today: Date): number {
-  return Math.round((new Date(`${dueOn}T00:00:00Z`).getTime() - utcMidnight(today)) / DAY);
-}
+export const daysAway = (dueOn: string, today: Date): number => daysUntil(dueOn, today);
 
 /**
  * How a day reads.

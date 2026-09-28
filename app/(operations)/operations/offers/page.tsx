@@ -6,11 +6,11 @@ import { Unavailable } from "../Unavailable";
 import { inboundOffers, type InboundOffer } from "@/lib/db/offer-intake";
 import { read, type Submission } from "@/lib/core/offer-intake";
 import { Ico } from "@/components/rift/icons";
+import { money } from "@/lib/core/compute";
 
 export const metadata: Metadata = { title: "Offers in" };
 export const dynamic = "force-dynamic";
 
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 /**
  * Offers that arrived through the public form.

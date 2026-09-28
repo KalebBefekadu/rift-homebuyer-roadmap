@@ -29,6 +29,8 @@
  * when, and in whose words. It does not compute whether the decision was good.
  */
 
+import { daysUntil } from "./day";
+
 export type Kind = "affordability" | "offers" | "property" | "timing" | "other";
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -203,9 +205,7 @@ export function compare(options: Option[]): Option[] {
 /** Days until the decision is due, or null when nobody set a date. */
 export function daysLeft(d: Pick<Decision, "decideBy">, today = new Date()): number | null {
   if (!d.decideBy) return null;
-  const due = new Date(`${d.decideBy}T00:00:00Z`).getTime();
-  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  return Math.round((due - now) / 86_400_000);
+  return daysUntil(d.decideBy, today);
 }
 
 /**

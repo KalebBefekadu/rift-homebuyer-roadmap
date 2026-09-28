@@ -31,6 +31,7 @@ import type { Commitment } from "./agenda";
 import type { ContractSummary, DateAttention, Waiting } from "./transactions";
 import { LATE_DAYS, type CadenceDue, type PricingAnswer } from "./seller-cadence";
 import { activityLine, type Activity as ClientActivity } from "./summary";
+import { daysBetween } from "./day";
 
 export type Group = "attention" | "approval" | "today" | "waiting" | "upcoming";
 export const GROUPS: Group[] = ["attention", "approval", "today", "waiting", "upcoming"];
@@ -104,7 +105,7 @@ export interface DeskInput {
 }
 
 const DAY = 86_400_000;
-const daysFrom = (today: string, day: string) => Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / DAY);
+const daysFrom = daysBetween;
 const short = (day: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
 const lead = (id: string, label: string) => ({ label, href: `/operations/lead/${id}` });
 const journey = (id: string, label: string) => ({ label, href: `/operations/journey/${id}` });

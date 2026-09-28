@@ -1,3 +1,4 @@
+import { GEORGIA_TZ } from "./day";
 /**
  * What AI may cost, and whether a call may be made (Blueprint v5 §10.2,
  * decision D16, AUTO-06).
@@ -92,7 +93,7 @@ export function allowance(opts: { configured: boolean; spentCents: number; workf
 
 /** The first moment of this calendar month in Georgia, for "spent this month". */
 export function monthStart(now = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit" }).formatToParts(now);
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: GEORGIA_TZ, year: "numeric", month: "2-digit" }).formatToParts(now);
   const y = parts.find((p) => p.type === "year")!.value;
   const m = parts.find((p) => p.type === "month")!.value;
   /* 04:00 UTC is midnight Eastern in summer and 11pm the evening before in
