@@ -100,7 +100,9 @@ export async function POST(req: Request) {
 
   if (action === "accept") {
     const r = await acceptInvitation(str(b.token, 80), session.userId, session.email);
-    if (!r.ok) return json({ ok: false, error: r.error }, 409);
+    /* Through the same filter as every other write below: a failed read of
+       the invitation arrives here as the database's own message. */
+    if (!r.ok) return refusal(action, r.error);
     if ("skipped" in r) return json({ ok: false, error: r.reason }, 503);
     return json({ ok: true, journeyId: r.data.journeyId });
   }
@@ -195,15 +197,19 @@ export async function POST(req: Request) {
       return json({ ok: false, error: "Unknown action." }, 400);
   }
 
-  if (!r.ok) {
-    /* Refusals written for the buyer (out of date, not allowed, invalid
-       input) are shown as written. Anything that looks like a database
-       message is ours, and is reported instead. */
-    const raw = String(r.error ?? "");
-    const ours = /violates|duplicate key|syntax|relation|column|timeout|did not complete/i.test(raw);
-    if (ours) captureOpError(new Error(raw), { op: `app.${action}` });
-    return json({ ok: false, error: ours ? "That did not save. Nothing was changed. Try again in a minute." : raw }, ours ? 502 : 409);
-  }
+  if (!r.ok) return refusal(action, r.error);
   if ("skipped" in r) return json({ ok: false, error: String(r.reason) }, 503);
   return json({ ok: true });
+}
+
+/**
+ * Refusals written for the buyer (out of date, not allowed, invalid input)
+ * are shown as written. Anything that looks like a database message is ours,
+ * and is reported instead.
+ */
+function refusal(action: string, error: unknown) {
+  const raw = String(error ?? "");
+  const ours = /violates|duplicate key|syntax|relation|column|timeout|did not complete|fetch failed|permission denied/i.test(raw);
+  if (ours) captureOpError(new Error(raw), { op: `app.${action}` });
+  return json({ ok: false, error: ours ? "That did not save. Nothing was changed. Try again in a minute." : raw }, ours ? 502 : 409);
 }

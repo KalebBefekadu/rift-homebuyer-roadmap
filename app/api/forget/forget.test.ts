@@ -9,9 +9,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 const calls: { forget: string[]; byPlan: string[] } = { forget: [], byPlan: [] };
+let dbError: string | null = null;
 
 vi.mock("@/lib/db/retention", () => ({
-  forget: async (s: string) => { calls.forget.push(s); return { ok: true, data: { deleted: 1, held: 0 } }; },
+  forget: async (s: string) => {
+    calls.forget.push(s);
+    return dbError ? { ok: false, error: dbError } : { ok: true, data: { deleted: 1, held: 0 } };
+  },
   forgetByPlan: async (t: string) => { calls.byPlan.push(t); return { ok: true, data: { deleted: 1, held: 0 } }; },
 }));
 vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: () => {} }));
@@ -26,7 +30,7 @@ const post = (body: unknown) =>
     body: JSON.stringify(body),
   }));
 
-beforeEach(() => { calls.forget = []; calls.byPlan = []; reset(); });
+beforeEach(() => { calls.forget = []; calls.byPlan = []; dbError = null; reset(); });
 
 describe("POST /api/forget", () => {
   it("erases a session a browser minted for itself", async () => {
@@ -49,5 +53,12 @@ describe("POST /api/forget", () => {
     expect((await res.json()).ok).toBe(true);
     expect(calls.byPlan).toEqual(["abcdefghijklmnopqrstuv"]);
     expect(calls.forget).toEqual([]);
+  });
+
+  it("says it failed without handing the caller the database's own words", async () => {
+    dbError = 'update or delete on table "rift_leads" violates foreign key constraint "rift_consents_lead_id_fkey"';
+    const body = await (await post({ sessionId: "s-mfx1k2ab-4fzyo82m" })).json();
+    expect(body.ok).toBe(false);
+    expect(JSON.stringify(body)).not.toMatch(/rift_|constraint/);
   });
 });

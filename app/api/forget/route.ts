@@ -61,7 +61,9 @@ export async function POST(req: Request) {
 function answer(r: Awaited<ReturnType<typeof forget>>) {
   if (!r.ok) {
     captureOpError(new Error(r.error), { op: "retention.forget" });
-    return NextResponse.json({ ok: false, error: r.error }, { status: 200 });
+    /* The page says what failed in its own words; the database's (table and
+       constraint names) stay in Sentry rather than going to any caller. */
+    return NextResponse.json({ ok: false, error: "the deletion did not complete" }, { status: 200 });
   }
   if ("skipped" in r) return NextResponse.json({ ok: true, skipped: true, reason: r.reason });
   return NextResponse.json({ ok: true, ...r.data });
