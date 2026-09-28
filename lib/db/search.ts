@@ -4,6 +4,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyFor, journeyTablesMissing } from "./journeys";
+import { georgiaDay } from "@/lib/core/day";
 import {
   briefErrors, buildPackage, canonicalPackage, disagreementOn, statusOf, SEARCH_SCHEMA_VERSION,
   type Cadence, type Response, type SearchBrief, type SearchCriterion, type SearchPackage, type SearchStatus,
@@ -364,7 +365,7 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   };
 
   if (row.plan?.answers && row.plan_saved_at) {
-    const on = row.plan_saved_at.slice(0, 10);
+    const on = georgiaDay(new Date(row.plan_saved_at));
     const from = `saved plan of ${on}`;
     const criteria = fromAnswers(row.plan.answers, on, "Their saved plan", from, "plan");
     if (criteria.length) return done({ criteria, from });
@@ -380,7 +381,7 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   const snap = ("data" in readout ? readout.data : null) as { inputs: Record<string, unknown>; created_at: string; side: string } | null;
   if (!snap || snap.side !== "buy") return done(null);
 
-  const on = snap.created_at.slice(0, 10);
+  const on = georgiaDay(new Date(snap.created_at));
   const from = `readout of ${on}`;
   const criteria = fromAnswers(snap.inputs, on, "Their readout", from, "readout");
   return done(criteria.length ? { criteria, from } : null);
