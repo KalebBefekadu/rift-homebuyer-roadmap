@@ -42,6 +42,7 @@ import { listingOf } from "@/lib/db/listing";
 import { sellerMoneyFor } from "@/lib/db/seller";
 import { scenarios } from "@/lib/core/pricing";
 import { proceedsLine, viewFigures } from "@/lib/core/proceeds";
+import { journeyHistory } from "@/lib/core/journey-history";
 import { dependenciesFor } from "@/lib/db/dependencies";
 import { journeysFor } from "@/lib/db/journeys";
 import { stateOf } from "@/lib/core/dependency";
@@ -118,8 +119,8 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     settled(buyerNeeds("money") ? moneyFor(id) : null),
     dependenciesFor(id),
     settled(tab === "overview" ? journeysFor(journey.leadId) : null),
-    settled(!buying && needs("pricing", "proceeds") ? sellerMoneyFor(id) : null),
-    settled(!buying && needs("listing", "overview") ? listingOf(id, agent.agentId) : null),
+    settled(!buying && needs("pricing", "proceeds", "history") ? sellerMoneyFor(id) : null),
+    settled(!buying && needs("listing", "overview", "history") ? listingOf(id, agent.agentId) : null),
     settled(!buying && needs("seller-offers") ? offersFor(journey.leadId) : null),
     settled(!buying && needs("seller-offers") ? roomFor(journey.leadId) : null),
     settled(!buying && needs("prep") ? readPlanForAgent(journey.leadId) : null),
@@ -464,17 +465,22 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
         {tab === "history" ? (
           <section className="card p-4" aria-labelledby="history-h">
             <h2 id="history-h" className="t-md w6">History</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>Every change to the stage and status, and every revision of the brief, with who and why. Nothing here is ever edited.</div>
-            <ul>
-              {[
-                ...(prog?.events ?? []).map((e) => ({ at: e.at, key: `e${e.seq}`, text: `${e.kind === "stage" ? "Stage" : "Status"} ${e.from ? `${e.from} to ` : ""}${e.to}`, who: e.by, note: [e.reason, e.evidence].filter(Boolean).join(" · ") })),
-                ...(s?.revisions ?? []).map((r) => ({ at: r.createdAt, key: `r${r.id}`, text: `Brief revision ${r.revision}`, who: r.authorLabel, note: r.note ?? "" })),
-              ].sort((a, b) => b.at.localeCompare(a.at)).map((h) => (
-                <li key={h.key} className="desk-row t-sm"><span className="c-4 t-xs">{WHEN(h.at)}</span> {h.text} · {h.who}{h.note ? <div className="desk-meta">{h.note}</div> : null}</li>
-              ))}
-            </ul>
-            {!prog?.events.length && !s?.revisions.length ? <p className="t-sm c-4">Nothing recorded yet.</p> : null}
-            {buying && !prog ? <p className="t-xs c-neg">The stage history did not load.</p> : null}
+            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
+              Every change to the stage and status{buying ? ", and every revision of the brief" : ", every pricing and proceeds version, the listing and each weekly review"}, with who and why. Nothing here is ever edited.
+            </div>
+            {(() => {
+              const history = journeyHistory({
+                events: prog?.events ?? [], revisions: s?.revisions ?? [],
+                opinions: seller?.opinions, figures: seller?.figures, listing,
+              });
+              return history.length ? (
+                <ul>{history.map((h) => (
+                  <li key={h.key} className="desk-row t-sm"><span className="c-4 t-xs">{WHEN(h.at)}</span> {h.text} · {h.who}{h.note ? <div className="desk-meta">{h.note}</div> : null}</li>
+                ))}</ul>
+              ) : <p className="t-sm c-4">Nothing recorded yet.</p>;
+            })()}
+            {!prog ? <p className="t-xs c-neg">The stage history did not load.</p> : null}
+            {!buying && (!sellerRead?.ok || !listingRead?.ok) ? <p className="t-xs c-neg">Part of the sale&apos;s history did not load; what is shown is not all of it.</p> : null}
           </section>
         ) : null}
       </div>
