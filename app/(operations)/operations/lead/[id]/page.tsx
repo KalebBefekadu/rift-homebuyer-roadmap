@@ -27,6 +27,7 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { Journeys, type JourneySummary } from "./Journeys";
 import { savedPlanFor } from "@/lib/db/saved-plan";
 import { SavedPlan } from "./SavedPlan";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Record", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -50,6 +51,8 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const agent = session.agent;
 
   const { id } = await params;
+  /* A mistyped link is not found, not a database failure to report. */
+  if (!isUuid(id)) notFound();
   const read = await readLead(id);
 
   if (!read.ok) {

@@ -27,6 +27,7 @@ import { Help } from "../../Help";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
 import { showDay } from "@/lib/core/day";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
     return <ClientShell agentName={null}><p className="t-sm c-3">We could not check your sign-in just now. Reload in a moment.</p></ClientShell>;
   }
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!isUuid(id)) notFound();
   const m = await memberOf(session.userId, id);
   if (!m.ok || "skipped" in m) {
     return <ClientShell agentName={null}><p className="t-sm c-3">This did not load. Nothing is lost. Try again in a minute.</p></ClientShell>;

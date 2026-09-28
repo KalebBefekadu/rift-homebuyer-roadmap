@@ -1104,6 +1104,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | `/api/review` retired: only the retired readout called it, and "Ask Kaleb to review my numbers" is a plan saved in review mode. One uuid check (`lib/core/ids.ts`) replaces fifteen copies; a mistyped lead link is now not found instead of a reported database failure |
 | 28 Sep 2026 | Days until a date are counted from Georgia's day everywhere (plans, decisions, agreements, the agenda): from 8pm a step due today read as overdue. Money and dates are formatted by one helper each instead of twenty copies, three of which followed the viewer's locale |
 | 28 Sep 2026 | Dates and times on screen are Georgia's (a server in UTC dated evening events the next day; a browser showed date-only values a day early); the home page is in the sitemap |
 | 28 Sep 2026 | A journey's History says stages in words, and a sale's History includes its pricing and proceeds versions, listing events and weekly reviews |

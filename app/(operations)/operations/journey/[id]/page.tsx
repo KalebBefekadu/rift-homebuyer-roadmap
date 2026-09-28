@@ -47,6 +47,7 @@ import { dependenciesFor } from "@/lib/db/dependencies";
 import { journeysFor } from "@/lib/db/journeys";
 import { stateOf } from "@/lib/core/dependency";
 import { showDay, showTime } from "@/lib/core/day";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -84,7 +85,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   }
 
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!isUuid(id)) notFound();
   const j = await journeyFor(id);
   if (!j.ok) {
     return (

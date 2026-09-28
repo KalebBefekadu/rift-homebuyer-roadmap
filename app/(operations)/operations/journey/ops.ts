@@ -26,6 +26,7 @@ import type { DependencyEvent } from "@/lib/core/dependency";
 import type { CheckResult } from "@/lib/core/pilot";
 import type { Instruction, StepInput as BidStepInput, Terms } from "@/lib/core/bid";
 import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * Operations writes for journeys, the search brief, the Matrix search and
@@ -60,9 +61,6 @@ function out<T extends object>(r: DbResult<T>, pick?: (d: T) => object): Out<Rec
   if ("skipped" in r) return { ok: false, error: r.reason };
   return { ok: true, ...(pick ? pick(r.data) : {}) };
 }
-
-const isUuid = (s: unknown): s is string =>
-  typeof s === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
 export async function startJourney(leadId: string, side: Side, label: string) {
   const g = await gate();

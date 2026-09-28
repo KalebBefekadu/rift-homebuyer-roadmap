@@ -81,7 +81,7 @@ built against.
 | `/r/[token]` | A shared readout, rendered exactly as it was saved |
 | `/studio` | The agent surface, behind a server-checked session |
 | `/api/events`, `/api/attribution` | Telemetry and attribution intake |
-| `/api/capture`, `/api/plan/save`, `/api/review` | The capture path (the v4 questionnaire's `/api/assessment/*` and `/api/readout` were retired with it, D31; `/r/<token>` still opens readouts already shared) |
+| `/api/capture`, `/api/plan/save` | The capture path. "Ask Kaleb to review my numbers" is a plan saved in review mode. The v4 questionnaire's `/api/assessment/*` and `/api/readout` were retired with it (D31), and `/api/review`, which only the retired readout called, went too; `/r/<token>` still opens readouts already shared |
 | `/api/nurture/run`, `/api/retention/sweep` | Scheduled jobs, secret-protected |
 | `/api/forget` | "Delete all of it" |
 

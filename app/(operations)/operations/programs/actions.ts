@@ -8,6 +8,7 @@ import { outbox, prepare } from "@/lib/db/outbox";
 import { programAlertDraft } from "@/lib/core/outbox";
 import { mayFit } from "@/lib/core/alerts";
 import { siteUrl } from "@/lib/core/site";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * A reviewer's answer to a flagged program page (Blueprint v5 §6.5).
@@ -22,7 +23,7 @@ export async function reviewProgramPage(form: FormData) {
   if (!agent) return;
   const checkId = String(form.get("checkId") ?? "");
   const outcome = form.get("outcome") === "needs-update" ? "needs-update" : "still-right";
-  if (!/^[0-9a-f-]{36}$/i.test(checkId)) return;
+  if (!isUuid(checkId)) return;
   await reviewCheck({ checkId, outcome, reviewedBy: agent.name, note: String(form.get("note") ?? "") || null });
   revalidatePath("/operations/programs");
   revalidatePath("/operations");

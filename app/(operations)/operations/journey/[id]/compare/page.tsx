@@ -8,6 +8,7 @@ import { searchState } from "@/lib/db/search";
 import { moneyFor } from "@/lib/db/money";
 import { CompareTable, chosen } from "@/components/rift/money/CompareTable";
 import { Unavailable } from "../../../Unavailable";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Compare homes", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function ComparePage({ params, searchParams }: { params: Pr
   if (session.state === "unknown") return <Unavailable reason={session.reason} />;
   if (session.state === "signed-out") redirect("/operations/sign-in");
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!isUuid(id)) notFound();
   const j = await journeyFor(id);
   if (!j.ok) return <main className="shell-w sec"><p className="t-sm c-neg">This journey did not load ({j.error}).</p></main>;
   if ("skipped" in j) return <Unavailable reason={j.reason} />;

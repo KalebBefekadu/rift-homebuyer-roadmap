@@ -3,6 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { dependencyError, eventError, stateOf, type Dependency, type DependencyEvent, type DependencyKind } from "@/lib/core/dependency";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * The only reader and writer of rift_dependencies and their events
@@ -15,7 +16,7 @@ const rows = (r: DbResult<unknown>) => (r.ok && "data" in r ? (r.data as Record<
 /** Dependencies touching a journey, on either side; or every one when no journey is given. Null before the tables exist. */
 export async function dependenciesFor(journeyId: string | null, agentIdIn?: string): Promise<DbResult<Dependency[] | null>> {
   /* The id goes into a PostgREST filter string, so it must be only an id. */
-  if (journeyId !== null && !/^[0-9a-f-]{36}$/i.test(journeyId)) return done([]);
+  if (journeyId !== null && !isUuid(journeyId)) return done([]);
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const agentId = agentIdIn ?? await currentAgentId();

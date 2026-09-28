@@ -6,6 +6,7 @@ import { clientMoney } from "@/lib/db/money";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { CompareTable, chosen } from "@/components/rift/money/CompareTable";
 import { ClientShell } from "../../../ClientShell";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Compare homes", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export default async function ClientCompare({ params, searchParams }: { params: 
     return <ClientShell agentName={null}><p className="t-sm c-3">We could not check your sign-in just now. Reload in a moment.</p></ClientShell>;
   }
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!isUuid(id)) notFound();
   const m = await memberOf(session.userId, id);
   if (!m.ok || "skipped" in m) {
     return <ClientShell agentName={null}><p className="t-sm c-3">This did not load. Nothing is lost. Try again in a minute.</p></ClientShell>;

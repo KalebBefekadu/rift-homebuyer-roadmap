@@ -1,7 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedWrite, boundedRead } from "./bounded";
+import { boundedWrite } from "./bounded";
 import { nextRung, ceilingNote, type ReviewItem, type TrustState, type ReviewKind } from "@/lib/core/review";
 
 /**
@@ -22,87 +22,6 @@ import { nextRung, ceilingNote, type ReviewItem, type TrustState, type ReviewKin
  *   VERIFICATION NAMES A PARTY. A green chip with nobody behind it is the exact
  *   false confidence this ladder exists to prevent.
  */
-
-export interface AskInput {
-  who: string;
-  kind: ReviewKind;
-  what: string;
-  claim: string;
-  ceiling: TrustState;
-  readoutId?: string;
-  /** The specific figure. "Check this" has to mean a particular number. */
-  figureId?: string;
-}
-
-const TO_ADVANCE: Record<ReviewKind, string> = {
-  document: "Read it and confirm the figure it supports.",
-  program: "Re-check eligibility against the current programme terms.",
-  figure: "Go through the inputs and confirm the arithmetic holds for their situation.",
-  plan: "Read it end to end before it goes out.",
-};
-
-/**
- * The figure a share token's readout holds under a given label.
- *
- * The ask control knows which figure it sits beside; it does not know that
- * figure's id, and it must not be trusted to send one: a client that can name
- * an arbitrary figure id can queue a review against somebody else's numbers.
- * So the server resolves it from the token and the label instead.
- */
-export async function figureFor(shareToken: string, label: string): Promise<string | null> {
-  const db = serviceClient();
-  if (!db) return null;
-  try {
-    const read = await boundedRead(
-      db.from("rift_readouts").select("id").eq("share_token", shareToken).maybeSingle(),
-      "the readout lookup",
-    );
-    const readout = read.ok && "data" in read ? read.data : null;
-    if (!readout) return null;
-
-    const figRead = await boundedRead(
-      db.from("rift_figures").select("id").eq("readout_id", readout.id).eq("label", label).maybeSingle(),
-      "the figure lookup",
-    );
-    const fig = figRead.ok && "data" in figRead ? figRead.data : null;
-    return (fig?.id as string) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export async function ask(input: AskInput): Promise<DbResult<{ id: string }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured; the request was not queued");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  try {
-    const created = await boundedWrite(
-      db.from("rift_review_items")
-      .insert({
-        agent_id,
-        readout_id: input.readoutId ?? null,
-        figure_id: input.figureId ?? null,
-        who: input.who.slice(0, 120),
-        kind: input.kind,
-        what: input.what.slice(0, 200),
-        claim: input.claim.slice(0, 80),
-        ceiling: input.ceiling,
-        raised_by: "client",
-        to_advance: TO_ADVANCE[input.kind],
-      })
-      .select("id")
-      .single(),
-      "the review request",
-    );
-    if (!created.ok) return created;
-    const row = "data" in created ? created.data : null;
-    return row ? done({ id: row.id as string }) : failed("the review was not returned after insert");
-  } catch (e) {
-    return failed(e);
-  }
-}
 
 /**
  * A review item together with the figure it is about.

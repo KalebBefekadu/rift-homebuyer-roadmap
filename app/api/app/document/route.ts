@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { clientDocumentLink, clientSession, memberOf } from "@/lib/db/portal";
 import { buyerSearchOn } from "@/lib/core/journey";
+import { isUuid } from "@/lib/core/ids";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Open a document, for a household member: only one attached to a version of
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const journeyId = u.searchParams.get("journeyId") ?? "";
   const id = u.searchParams.get("id") ?? "";
   if (!buyerSearchOn(process.env)) return new NextResponse("Switched off", { status: 503 });
-  if (!UUID.test(journeyId) || !UUID.test(id)) return new NextResponse("Not found", { status: 404 });
+  if (!isUuid(journeyId) || !isUuid(id)) return new NextResponse("Not found", { status: 404 });
   const session = await clientSession();
   if (session.state !== "signed-in") return new NextResponse("Sign in again", { status: 401 });
   const m = await memberOf(session.userId, journeyId);

@@ -1,5 +1,6 @@
 import { GA_TRANSFER_TAX_RATE } from "./compute";
 import { gapsIn, type Financing, type Offer } from "./offers";
+import { isUuid } from "./ids";
 
 /**
  * An offer submitted from outside, by somebody with no account.
@@ -182,7 +183,7 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
       financingOther: financing === "other" ? financingOther : null,
       closeOn,
       dueDiligenceDays,
-      documentToken: /^[0-9a-f-]{36}$/.test(String(raw.documentToken ?? "")) ? String(raw.documentToken) : null,
+      documentToken: isUuid(String(raw.documentToken ?? "")) ? String(raw.documentToken) : null,
       contingencies,
       preapproval: raw.preapproval === true,
       proofOfFunds: raw.proofOfFunds === true,

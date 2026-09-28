@@ -12,6 +12,7 @@ import { Forward } from "./Forward";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { Ico } from "@/components/rift/icons";
 import { Search } from "./Search";
+import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Relationships" };
 export const dynamic = "force-dynamic";
@@ -77,7 +78,7 @@ export default async function ClientsPage({
 
   const people = list.ok && "data" in list ? list.data.people : [];
   /* The person open beside the list, kept in the address with the search. */
-  const open = /^[0-9a-f-]{36}$/i.test(one("open") ?? "") ? one("open")! : null;
+  const open = isUuid(one("open") ?? "") ? one("open")! : null;
   const withOpen = (id: string | null) => {
     const next = new URLSearchParams();
     for (const k of ["q", "filter", "side"]) if (one(k)) next.set(k, one(k)!);

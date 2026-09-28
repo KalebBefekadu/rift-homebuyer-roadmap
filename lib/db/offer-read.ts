@@ -7,6 +7,7 @@ import { mayCall, recordCall } from "./ai";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { MODEL_FOR } from "@/lib/core/ai";
 import { INSTRUCTIONS, PROMPT_VERSION, SCHEMA, readCandidates, type Candidates } from "@/lib/core/offer-extract";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * Reading an uploaded offer PDF (Blueprint v5 §5.9, DOC-02).
@@ -123,7 +124,7 @@ export async function readOfferPdf(bytes: Uint8Array): Promise<OfferRead> {
 /** Moves a sent offer's PDF beside it, and returns its place and what the read proposed. */
 export async function attachOfferPdf(token: string, offerId: string): Promise<{ path: string; candidates: Candidates | null } | null> {
   const db = serviceClient();
-  if (!db || !/^[0-9a-f-]{36}$/.test(token) || !/^[0-9a-f-]{36}$/.test(offerId)) return null;
+  if (!db || !isUuid(token) || !isUuid(offerId)) return null;
   const path = `offers/${offerId}.pdf`;
   const moved = await boundedTransfer(db.storage.from(BUCKET).move(`${INCOMING}/${token}.pdf`, path), "the offer PDF");
   if (!moved.ok) { captureOpError(new Error(moved.error), { op: "offer.attach" }); return null; }

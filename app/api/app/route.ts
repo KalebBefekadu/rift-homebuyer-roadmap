@@ -12,6 +12,7 @@ import {
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
 import { WORKSTREAMS, type Workstream } from "@/lib/core/progress";
+import { isUuid } from "@/lib/core/ids";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,6 @@ export const dynamic = "force-dynamic";
 
 type Body = Record<string, unknown>;
 const str = (v: unknown, max = 5000) => (typeof v === "string" ? v.slice(0, max) : "");
-const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 const json = (body: object, status = 200) => NextResponse.json(body, { status, headers: { "cache-control": "no-store" } });
 
 async function sendLink(email: string, next: string): Promise<boolean> {

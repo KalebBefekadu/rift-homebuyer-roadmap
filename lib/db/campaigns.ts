@@ -3,6 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { SLUG, cleanRecipe, liveVersion, recipeErrors, versionFor, type Publication, type PublicationAction, type Recipe } from "@/lib/core/campaign";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * The only reader and writer of campaigns, their revisions and their
@@ -65,7 +66,7 @@ async function detail(db: NonNullable<ReturnType<typeof serviceClient>>, campaig
 export async function campaignFor(id: string): Promise<DbResult<CampaignDetail | null>> {
   const s = await scope();
   if (!s.db) return skipped(s.why!);
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return done(null);
+  if (!isUuid(id)) return done(null);
   const c = await boundedRead(s.db.from("rift_campaigns").select("id,slug,name,created_at").eq("id", id).eq("agent_id", s.agentId).maybeSingle(), "the campaign");
   if (!c.ok) return MISSING.test(c.error) ? done(null) : c;
   const row = ("data" in c ? c.data : null) as Record<string, unknown> | null;

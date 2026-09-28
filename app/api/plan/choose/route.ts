@@ -7,6 +7,7 @@ import { sendOfferChosen } from "@/lib/db/email";
 import { siteUrl } from "@/lib/core/site";
 import { CLIENT_NOTE_MAX } from "@/lib/core/offer-room";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { isUuid } from "@/lib/core/ids";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
   const token = typeof b.token === "string" ? b.token : "";
   const offerId = typeof b.offerId === "string" ? b.offerId : "";
   const note = typeof b.note === "string" ? b.note.slice(0, CLIENT_NOTE_MAX) : null;
-  if (!token || !/^[0-9a-f-]{36}$/i.test(offerId)) {
+  if (!token || !isUuid(offerId)) {
     return NextResponse.json({ ok: false, error: "That did not look like a choice." }, { status: 400 });
   }
 
