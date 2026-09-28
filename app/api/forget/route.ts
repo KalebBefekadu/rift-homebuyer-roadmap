@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { limited, readJson } from "@/lib/db/guard";
-import { forget } from "@/lib/db/retention";
+import { forget, forgetByPlan } from "@/lib/db/retention";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -18,23 +18,30 @@ export const dynamic = "force-dynamic";
  * token in sessionStorage and the only thing it can do is destroy that
  * session's own records: the worst an attacker achieves is deleting data on
  * the person's behalf, which is what the endpoint is for.
+ *
+ * A saved plan's page sends its private link instead (`planToken`): the
+ * session that saved it is long gone by the time somebody comes back to
+ * delete it, and whoever holds the link can already read everything it
+ * deletes (LEAD-06).
  */
 export async function POST(req: Request) {
   const refused = limited(req, "forget");
   if (refused) return refused;
 
   let sessionId = "";
+  let planToken = "";
   try {
     const read = await readJson(req);
     if (!read.ok) return read.res;
-    const b = read.body as { sessionId?: unknown };
+    const b = read.body as { sessionId?: unknown; planToken?: unknown };
     sessionId = typeof b.sessionId === "string" ? b.sessionId.slice(0, 64) : "";
+    planToken = typeof b.planToken === "string" ? b.planToken.slice(0, 64) : "";
   } catch {
     return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
   }
-  if (!sessionId) return NextResponse.json({ ok: false, error: "sessionId required" }, { status: 400 });
+  if (!sessionId && !planToken) return NextResponse.json({ ok: false, error: "sessionId or planToken required" }, { status: 400 });
 
-  const r = await forget(sessionId);
+  const r = planToken ? await forgetByPlan(planToken) : await forget(sessionId);
   if (!r.ok) {
     captureOpError(new Error(r.error), { op: "retention.forget" });
     return NextResponse.json({ ok: false, error: r.error }, { status: 200 });

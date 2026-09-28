@@ -9,6 +9,7 @@ import { rememberValue, readPlan, type PlanEntry } from "@/lib/rift/plan";
 import { missingPhrase, nextValues, valueById } from "@/lib/core/values";
 import type { Answers } from "@/lib/core/asks";
 import { SavePlan } from "./SavePlan";
+import { ForgetMe } from "@/components/rift/Forget";
 
 /**
  * Everything after a value's answer (Blueprint v5 §5.1, §5.5, D14).
@@ -17,6 +18,10 @@ import { SavePlan } from "./SavePlan";
  * questions it needs given what is already answered, and a share link.
  * Asks for details: keeping the plan, and asking Kaleb to look at it. The
  * answer above is never cut short to push anyone into the form.
+ *
+ * Last, "Delete all of it" (LEAD-06): the answers kept on this device, the
+ * plan taking shape and anything this visit sent us, gone in one press. The
+ * privacy page promises this button at the bottom of every readout.
  */
 export function AfterAnswer({ tool, entry, answers }: {
   tool: string;
@@ -110,6 +115,11 @@ export function AfterAnswer({ tool, entry, answers }: {
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="sec-sm" aria-label="Delete what you gave">
+        <p className="t-xs c-4" style={{ marginBottom: 8 }}>Your answers stay on this device for thirty days, so the next question is not asked twice.</p>
+        <ForgetMe side={def.side === "abroad" ? undefined : def.side} />
       </section>
 
       {saving ? (

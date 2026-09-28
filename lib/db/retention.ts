@@ -282,184 +282,234 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
   if (!db) return skipped("no database configured");
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
-
   try {
-    /* Bounded, because a person waiting on "delete all of it" is entitled to
-       an answer. A hang here reads as the request being ignored, which is the
-       worst possible impression to leave on this particular button. */
-    const read = await boundedRead(
-      db.from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
-      "the deletion lookup",
-    );
-    if (!read.ok) return read;
-    const ids = (("data" in read ? read.data : []) as { id: string }[]).map((r) => r.id);
+    return await erase(db, agent_id, { sessionId, leads: [], assessments: [] });
+  } catch (e) {
+    return failed(e);
+  }
+}
 
-    /* Leads FIRST, and the order is the whole point.
-       
-       rift_leads.assessment_id is SET NULL on delete, so removing the
-       assessments before collecting the leads that point at them severs the
-       only link between the two and leaves the person permanently
-       unfindable: deleted from their own point of view, present in the
-       table. Two queries: the leads that came from these assessments, and
-       the leads that carry this session directly, which is the only handle a
-       capture with no assessment behind it has ever had. */
-    const byAssessment = ids.length
-      ? await boundedRead(
-          db.from("rift_leads").select("id").eq("agent_id", agent_id).in("assessment_id", ids),
-          "the lead lookup",
-        )
+/**
+ * "Delete all of it" from a saved plan's page (LEAD-06). The session id dies
+ * with the tab, so somebody who saved a plan last week and comes back to
+ * delete it has no session handle left, and the readout's button would
+ * truthfully report "nothing stored on our side" while their name, address
+ * and plan sat in rift_leads. The plan's private link is the claim instead:
+ * whoever holds it can already read everything it would delete. The lead's
+ * own session, if it kept one, is erased with it.
+ */
+export async function forgetByPlan(token: string): Promise<DbResult<{ deleted: number; held: number }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+  if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return done({ deleted: 0, held: 0 });
+  const r = await boundedRead(
+    db.from("rift_leads").select("id,session_id,assessment_id").eq("agent_id", agent_id).eq("plan_token", token).maybeSingle(),
+    "the saved plan",
+  );
+  if (!r.ok) return r;
+  const row = ("data" in r ? r.data : null) as { id: string; session_id: string | null; assessment_id: string | null } | null;
+  if (!row) return done({ deleted: 0, held: 0 });
+  try {
+    return await erase(db, agent_id, {
+      sessionId: row.session_id || null,
+      leads: [row.id],
+      assessments: row.assessment_id ? [row.assessment_id] : [],
+    });
+  } catch (e) {
+    return failed(e);
+  }
+}
+
+/** The deletion itself, from whichever handle the person has: a session, a saved plan's lead, or both. */
+async function erase(
+  db: NonNullable<ReturnType<typeof serviceClient>>,
+  agent_id: string,
+  h: { sessionId: string | null; leads: string[]; assessments: string[] },
+): Promise<DbResult<{ deleted: number; held: number }>> {
+  const { sessionId } = h;
+  /* Bounded, because a person waiting on "delete all of it" is entitled to
+     an answer. A hang here reads as the request being ignored, which is the
+     worst possible impression to leave on this particular button. */
+  const read = sessionId
+    ? await boundedRead(
+        db.from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
+        "the deletion lookup",
+      )
+    : null;
+  if (read && !read.ok) return read;
+  const ids = [...new Set([...h.assessments, ...((read && "data" in read ? read.data : []) as { id: string }[]).map((r) => r.id)])];
+
+  /* Leads FIRST, and the order is the whole point.
+     
+     rift_leads.assessment_id is SET NULL on delete, so removing the
+     assessments before collecting the leads that point at them severs the
+     only link between the two and leaves the person permanently
+     unfindable: deleted from their own point of view, present in the
+     table. Two queries: the leads that came from these assessments, and
+     the leads that carry this session directly, which is the only handle a
+     capture with no assessment behind it has ever had. */
+  const byAssessment = ids.length
+    ? await boundedRead(
+        db.from("rift_leads").select("id").eq("agent_id", agent_id).in("assessment_id", ids),
+        "the lead lookup",
+      )
+    : null;
+  if (byAssessment && !byAssessment.ok) return byAssessment;
+
+  /* `session_id` on rift_leads arrived with 20260920020000, which is run by
+     hand. If this deploys first, asking for the column returns an error:
+     and failing the whole request would leave the person with a delete
+     button that does nothing at all, which is strictly worse than the
+     partial erasure this is fixing. So a missing column degrades to "no
+     leads found by session", the assessment-side deletion below still runs,
+     and the gap is reported rather than swallowed. */
+  const bySession = sessionId
+    ? await boundedRead(
+        db.from("rift_leads").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
+        "the lead lookup",
+      )
+    : null;
+  if (bySession && !bySession.ok) {
+    if (!/session_id/.test(bySession.error)) return bySession;
+    captureOpError(new Error(bySession.error), {
+      op: "retention.forget.noSessionColumn",
+      extra: { migration: "20260920020000_rift_forget_reaches_the_lead" },
+    });
+  }
+
+  const rows = (r: { ok: boolean } | null) =>
+    r && "data" in r ? (((r as { data?: { id: string }[] }).data ?? [])).map((x) => x.id) : [];
+  const leadIds = [...new Set([...h.leads, ...rows(byAssessment), ...rows(bySession)])];
+
+  let heldCount = 0;
+  let heldLeadCount = 0;
+  if (leadIds.length) {
+    /* Journeys FIRST. A journey refuses to let its lead be deleted
+       (origin_lead_id is RESTRICT, so a future transaction file is never
+       removed as a side effect), which is right for everything except a
+       person asking to be forgotten. Their journeys today hold a search
+       brief, invitations and a shortlist, no transaction record, so they
+       go too, and everything under them cascades from the journey. When
+       transaction records exist this is where the broker's hold rule
+       belongs (first-migration-proposal, "deletion compatibility"). */
+    /* Their documents' FILES first (W08). The rows are how the files are
+       found, and the rows go with the journeys below; a file left in
+       Storage after its row is gone could never be found to delete. If
+       the files cannot be removed, stop here so the request can be
+       retried, rather than erase the record and keep the files. */
+    const theirJourneys = await boundedRead(
+      db.from("rift_journeys").select("id,origin_lead_id").eq("agent_id", agent_id).in("origin_lead_id", leadIds),
+      "their journeys");
+    if (!theirJourneys.ok && !journeyTablesMissing(theirJourneys.error)) return theirJourneys;
+    const journeyRows = theirJourneys.ok && "data" in theirJourneys ? (theirJourneys.data as { id: string; origin_lead_id: string }[]) : [];
+    const journeyIds = journeyRows.map((x) => x.id);
+
+    /* THE TRANSACTION HOLD (W11, AT36). The privacy page promises that one
+       thing survives this button: "if you became a client and we worked on
+       a transaction together ... the transaction record is kept". A
+       journey with a contract recorded on it is that record, so it is held,
+       whole, with its lead. Which parts the broker actually requires, and
+       for how long, is the broker's answer (D06, F16), still owed; until
+       then the published promise is the rule. Everything else goes, and a
+       held record is closed to sign-in and its share link revoked. */
+    const tx = journeyIds.length
+      ? await boundedRead(db.from("rift_transactions").select("journey_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their contracts")
       : null;
-    if (byAssessment && !byAssessment.ok) return byAssessment;
+    if (tx && !tx.ok && !journeyTablesMissing(tx.error)) return tx;
+    const held = new Set(tx && tx.ok && "data" in tx ? (tx.data as { journey_id: string }[]).map((x) => x.journey_id) : []);
+    const drop = journeyIds.filter((id) => !held.has(id));
+    const heldLeads = new Set(journeyRows.filter((j) => held.has(j.id)).map((j) => j.origin_lead_id));
 
-    /* `session_id` on rift_leads arrived with 20260920020000, which is run by
-       hand. If this deploys first, asking for the column returns an error:
-       and failing the whole request would leave the person with a delete
-       button that does nothing at all, which is strictly worse than the
-       partial erasure this is fixing. So a missing column degrades to "no
-       leads found by session", the assessment-side deletion below still runs,
-       and the gap is reported rather than swallowed. */
-    const bySession = await boundedRead(
-      db.from("rift_leads").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
-      "the lead lookup",
-    );
-    if (!bySession.ok) {
-      if (!/session_id/.test(bySession.error)) return bySession;
-      captureOpError(new Error(bySession.error), {
-        op: "retention.forget.noSessionColumn",
-        extra: { migration: "20260920020000_rift_forget_reaches_the_lead" },
-      });
+    /* Their sign-in accounts, a copy Supabase holds (AT36). Removed while
+       the membership rows still say whose they are, and only when the
+       account belongs to nobody else's live journey. If it cannot be
+       removed, stop here so the request can be retried. */
+    const members = journeyIds.length
+      ? await boundedRead(db.from("rift_journey_members").select("id,journey_id,auth_user_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their sign-ins")
+      : null;
+    if (members && !members.ok && !journeyTablesMissing(members.error)) return members;
+    const memberRows = members && members.ok && "data" in members ? (members.data as { id: string; journey_id: string; auth_user_id: string | null }[]) : [];
+    const accounts = [...new Set(memberRows.map((x) => x.auth_user_id).filter((x): x is string => Boolean(x)))];
+    for (const account of accounts) {
+      const elsewhere = await boundedRead(
+        db.from("rift_journey_members").select("id").eq("auth_user_id", account).is("revoked_at", null).not("journey_id", "in", `(${journeyIds.join(",")})`).limit(1),
+        "their other journeys");
+      if (!elsewhere.ok) return elsewhere;
+      if ((("data" in elsewhere ? elsewhere.data : []) as unknown[]).length) continue;
+      const { error } = await db.auth.admin.deleteUser(account);
+      if (error && !/not found/i.test(error.message)) return failed(`their sign-in could not be removed: ${error.message}`);
     }
 
-    const rows = (r: { ok: boolean } | null) =>
-      r && "data" in r ? (((r as { data?: { id: string }[] }).data ?? [])).map((x) => x.id) : [];
-    const leadIds = [...new Set([...rows(byAssessment), ...rows(bySession)])];
+    const files = await removeJourneyFiles(agent_id, drop);
+    if (!files.ok) return files;
 
-    let heldCount = 0;
-    let heldLeadCount = 0;
-    if (leadIds.length) {
-      /* Journeys FIRST. A journey refuses to let its lead be deleted
-         (origin_lead_id is RESTRICT, so a future transaction file is never
-         removed as a side effect), which is right for everything except a
-         person asking to be forgotten. Their journeys today hold a search
-         brief, invitations and a shortlist, no transaction record, so they
-         go too, and everything under them cascades from the journey. When
-         transaction records exist this is where the broker's hold rule
-         belongs (first-migration-proposal, "deletion compatibility"). */
-      /* Their documents' FILES first (W08). The rows are how the files are
-         found, and the rows go with the journeys below; a file left in
-         Storage after its row is gone could never be found to delete. If
-         the files cannot be removed, stop here so the request can be
-         retried, rather than erase the record and keep the files. */
-      const theirJourneys = await boundedRead(
-        db.from("rift_journeys").select("id,origin_lead_id").eq("agent_id", agent_id).in("origin_lead_id", leadIds),
+    if (drop.length) {
+      const journeys = await boundedWrite(
+        db.from("rift_journeys").delete().eq("agent_id", agent_id).in("id", drop),
         "their journeys");
-      if (!theirJourneys.ok && !journeyTablesMissing(theirJourneys.error)) return theirJourneys;
-      const journeyRows = theirJourneys.ok && "data" in theirJourneys ? (theirJourneys.data as { id: string; origin_lead_id: string }[]) : [];
-      const journeyIds = journeyRows.map((x) => x.id);
-
-      /* THE TRANSACTION HOLD (W11, AT36). The privacy page promises that one
-         thing survives this button: "if you became a client and we worked on
-         a transaction together ... the transaction record is kept". A
-         journey with a contract recorded on it is that record, so it is held,
-         whole, with its lead. Which parts the broker actually requires, and
-         for how long, is the broker's answer (D06, F16), still owed; until
-         then the published promise is the rule. Everything else goes, and a
-         held record is closed to sign-in and its share link revoked. */
-      const tx = journeyIds.length
-        ? await boundedRead(db.from("rift_transactions").select("journey_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their contracts")
-        : null;
-      if (tx && !tx.ok && !journeyTablesMissing(tx.error)) return tx;
-      const held = new Set(tx && tx.ok && "data" in tx ? (tx.data as { journey_id: string }[]).map((x) => x.journey_id) : []);
-      const drop = journeyIds.filter((id) => !held.has(id));
-      const heldLeads = new Set(journeyRows.filter((j) => held.has(j.id)).map((j) => j.origin_lead_id));
-
-      /* Their sign-in accounts, a copy Supabase holds (AT36). Removed while
-         the membership rows still say whose they are, and only when the
-         account belongs to nobody else's live journey. If it cannot be
-         removed, stop here so the request can be retried. */
-      const members = journeyIds.length
-        ? await boundedRead(db.from("rift_journey_members").select("id,journey_id,auth_user_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their sign-ins")
-        : null;
-      if (members && !members.ok && !journeyTablesMissing(members.error)) return members;
-      const memberRows = members && members.ok && "data" in members ? (members.data as { id: string; journey_id: string; auth_user_id: string | null }[]) : [];
-      const accounts = [...new Set(memberRows.map((x) => x.auth_user_id).filter((x): x is string => Boolean(x)))];
-      for (const account of accounts) {
-        const elsewhere = await boundedRead(
-          db.from("rift_journey_members").select("id").eq("auth_user_id", account).is("revoked_at", null).not("journey_id", "in", `(${journeyIds.join(",")})`).limit(1),
-          "their other journeys");
-        if (!elsewhere.ok) return elsewhere;
-        if ((("data" in elsewhere ? elsewhere.data : []) as unknown[]).length) continue;
-        const { error } = await db.auth.admin.deleteUser(account);
-        if (error && !/not found/i.test(error.message)) return failed(`their sign-in could not be removed: ${error.message}`);
-      }
-
-      const files = await removeJourneyFiles(agent_id, drop);
-      if (!files.ok) return files;
-
-      if (drop.length) {
-        const journeys = await boundedWrite(
-          db.from("rift_journeys").delete().eq("agent_id", agent_id).in("id", drop),
-          "their journeys");
-        if (!journeys.ok && !journeyTablesMissing(journeys.error)) return journeys;
-      }
-
-      if (held.size) {
-        const revoked = await boundedWrite(
-          db.from("rift_journey_members").update({ revoked_at: new Date().toISOString() })
-            .eq("agent_id", agent_id).in("journey_id", [...held]).is("revoked_at", null),
-          "closing the record to sign-in");
-        if (!revoked.ok) return revoked;
-        const unshared = await boundedWrite(
-          db.from("rift_leads").update({ client_token: null }).eq("agent_id", agent_id).in("id", [...heldLeads]),
-          "revoking the plan link");
-        if (!unshared.ok) return unshared;
-      }
-
-      /* Brevo's log of the emails sent to them, the other copy a provider
-         holds. Best effort: a Brevo outage must not stop a person being
-         deleted here, so a failure is reported, not returned. The block list
-         is left as it is: an opt-out that forgot itself would let the next
-         visit email them again. */
-      const deletable = leadIds.filter((id) => !heldLeads.has(id));
-      const addresses = deletable.length
-        ? await boundedRead(db.from("rift_leads").select("email").eq("agent_id", agent_id).in("id", deletable), "their addresses")
-        : null;
-      for (const a of addresses && addresses.ok && "data" in addresses ? (addresses.data as { email: string | null }[]) : []) {
-        if (!a.email) continue;
-        const logs = await forgetAtBrevo(a.email);
-        if (!logs.ok) captureOpError(new Error(logs.error), { op: "retention.forget.brevo" });
-      }
-
-      /* rift_enrolments cascades from the lead, so the sequence stops by
-         construction rather than by remembering to stop it. A lead with a
-         held record stays with it; its sequence is stopped. */
-      if (deletable.length) {
-        const gone = await boundedWrite(
-          db.from("rift_leads").delete().in("id", deletable), "the lead deletion");
-        if (!gone.ok) return gone;
-      }
-      if (heldLeads.size) {
-        await boundedWrite(
-          db.from("rift_enrolments").update({ stopped_at: new Date().toISOString(), stop_reason: "unsubscribed" })
-            .in("lead_id", [...heldLeads]).is("stopped_at", null),
-          "stopping their follow-ups");
-      }
-      heldCount = held.size;
-      heldLeadCount = heldLeads.size;
+      if (!journeys.ok && !journeyTablesMissing(journeys.error)) return journeys;
     }
 
-    if (ids.length) {
-      const deleted = await boundedWrite(
-        db.from("rift_assessments").delete().in("id", ids), "the deletion");
-      if (!deleted.ok) return deleted;
+    if (held.size) {
+      const revoked = await boundedWrite(
+        db.from("rift_journey_members").update({ revoked_at: new Date().toISOString() })
+          .eq("agent_id", agent_id).in("journey_id", [...held]).is("revoked_at", null),
+        "closing the record to sign-in");
+      if (!revoked.ok) return revoked;
+      const unshared = await boundedWrite(
+        db.from("rift_leads").update({ client_token: null }).eq("agent_id", agent_id).in("id", [...heldLeads]),
+        "revoking the plan link");
+      if (!unshared.ok) return unshared;
     }
 
-    /* Consent, by both handles, for the same reason as the lead. */
-    if (ids.length) {
+    /* Brevo's log of the emails sent to them, the other copy a provider
+       holds. Best effort: a Brevo outage must not stop a person being
+       deleted here, so a failure is reported, not returned. The block list
+       is left as it is: an opt-out that forgot itself would let the next
+       visit email them again. */
+    const deletable = leadIds.filter((id) => !heldLeads.has(id));
+    const addresses = deletable.length
+      ? await boundedRead(db.from("rift_leads").select("email").eq("agent_id", agent_id).in("id", deletable), "their addresses")
+      : null;
+    for (const a of addresses && addresses.ok && "data" in addresses ? (addresses.data as { email: string | null }[]) : []) {
+      if (!a.email) continue;
+      const logs = await forgetAtBrevo(a.email);
+      if (!logs.ok) captureOpError(new Error(logs.error), { op: "retention.forget.brevo" });
+    }
+
+    /* rift_enrolments cascades from the lead, so the sequence stops by
+       construction rather than by remembering to stop it. A lead with a
+       held record stays with it; its sequence is stopped. */
+    if (deletable.length) {
+      const gone = await boundedWrite(
+        db.from("rift_leads").delete().in("id", deletable), "the lead deletion");
+      if (!gone.ok) return gone;
+    }
+    if (heldLeads.size) {
       await boundedWrite(
-        db.from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids),
-        "the consent record");
+        db.from("rift_enrolments").update({ stopped_at: new Date().toISOString(), stop_reason: "unsubscribed" })
+          .in("lead_id", [...heldLeads]).is("stopped_at", null),
+        "stopping their follow-ups");
     }
+    heldCount = held.size;
+    heldLeadCount = heldLeads.size;
+  }
+
+  if (ids.length) {
+    const deleted = await boundedWrite(
+      db.from("rift_assessments").delete().in("id", ids), "the deletion");
+    if (!deleted.ok) return deleted;
+  }
+
+  /* Consent, by both handles, for the same reason as the lead. */
+  if (ids.length) {
+    await boundedWrite(
+      db.from("rift_consents").delete().eq("agent_id", agent_id).in("assessment_id", ids),
+      "the consent record");
+  }
+  if (sessionId) {
     await boundedWrite(
       db.from("rift_consents").delete().eq("agent_id", agent_id).eq("session_id", sessionId),
       "the consent record");
@@ -468,18 +518,16 @@ export async function forget(sessionId: string): Promise<DbResult<{ deleted: num
       db.from("rift_events").delete().eq("agent_id", agent_id).eq("session_id", sessionId), "the events");
     await boundedWrite(
       db.from("rift_attributions").delete().eq("session_id", sessionId), "the attribution");
-
-    /* The retention promise names five categories. Four are cleared here; the
-       client record is the one that is not ours to discard, and the privacy
-       page says so in those words rather than quietly excluding it. */
-    void RETENTION;
-    /* Counts the person, not the paperwork. "deleted: 0" on a session that
-       had a lead and no assessment was the old answer, and the route turns
-       that into "nothing was stored on our side to remove". */
-    return done({ deleted: ids.length + leadIds.length - heldLeadCount, held: heldCount });
-  } catch (e) {
-    return failed(e);
   }
+
+  /* The retention promise names five categories. Four are cleared here; the
+     client record is the one that is not ours to discard, and the privacy
+     page says so in those words rather than quietly excluding it. */
+  void RETENTION;
+  /* Counts the person, not the paperwork. "deleted: 0" on a session that
+     had a lead and no assessment was the old answer, and the route turns
+     that into "nothing was stored on our side to remove". */
+  return done({ deleted: ids.length + leadIds.length - heldLeadCount, held: heldCount });
 }
 
 /**

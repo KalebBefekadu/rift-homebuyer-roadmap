@@ -1102,6 +1102,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | "Delete all of it" under every value's answer and on the saved plan's page; it now clears the values' answers and plan on the device (LEAD-06) |
 | 28 Sep 2026 | AI draft of a campaign's blocks (CAMP-01, D30), migration 20260928070000 |
 | 28 Sep 2026 | Requirement statuses brought up to date (MONEY-01, MONEY-04, UX-01, pins, Today's groups); mortgage insurance says it is a conventional-loan estimate; a campaign page that cannot load says so |
 | 28 Sep 2026 | Campaign composer (§5.10, CAMP-01 to CAMP-03, D29) |

@@ -14,6 +14,7 @@ import { currentPrograms } from "@/lib/db/program-checks";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { currentAgentId } from "@/lib/db/service";
 import { PrintButton } from "@/components/rift/PrintButton";
+import { ForgetMe } from "@/components/rift/Forget";
 import { money } from "@/lib/core/compute";
 
 export const metadata: Metadata = {
@@ -171,7 +172,10 @@ export default async function SavedPlanPage({ params }: { params: Promise<{ toke
             </div>
             <Link href={`/book?v=${plan.side === "sell" ? "sell" : "buy"}`} className="btn btn-brand">Book a call</Link>
           </div>
-          <p className="t-xs c-4 mt-3">Anyone with this link can open the plan. <Link href="/privacy" className="btn-link">Delete all of it</Link> from the privacy page at any time.</p>
+          <p className="t-xs c-4 mt-3">Anyone with this link can open the plan. <Link href="/privacy" className="btn-link">What we keep</Link></p>
+          <div className="mt-3" style={{ maxWidth: 560 }}>
+            <ForgetMe side={plan.side === "sell" ? "sell" : "buy"} planToken={token} />
+          </div>
         </section>
       </main>
       <SiteFooter />

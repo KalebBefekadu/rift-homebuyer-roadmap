@@ -61,7 +61,7 @@ export default function PrivacyPage() {
             <li>We never ask for a credit score, a social security number, or a bank login.</li>
             <li>Nothing is sold, shared for advertising, or given to a data broker. There is no advertising on this site.</li>
             <li>
-              You can delete everything in one click from the bottom of your readout, with no
+              You can delete everything in one click from the bottom of any answer, with no
               account and without asking anyone.
             </li>
           </ul>
@@ -175,9 +175,11 @@ export default function PrivacyPage() {
 
         <Block title="Deleting it">
           <p>
-            There is a button at the bottom of your readout that deletes your answers, your
+            There is a button at the bottom of every answer that deletes your answers, your
             readout, your contact details and your consent record. One click. No account, no
-            form, no reply from anyone, and no question about why.
+            form, no reply from anyone, and no question about why. If you saved a plan and have
+            come back on another day, the same button is on the plan&apos;s own page, from the link
+            we emailed you.
           </p>
           <p>
             One thing survives it, and it is fair that you know which: if you became a client and

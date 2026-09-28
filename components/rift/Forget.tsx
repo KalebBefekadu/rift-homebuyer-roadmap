@@ -5,6 +5,8 @@ import { Ico } from "@/components/rift/icons";
 import { track } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
 import { CONTACT_EMAIL } from "@/lib/core/privacy";
+import { clearAnswers } from "@/lib/rift/answers";
+import { clearPlan } from "@/lib/rift/plan";
 
 /**
  * "Delete all of it": the one that actually does.
@@ -56,7 +58,7 @@ export interface ForgetLabels {
    renders this under an Amharic paragraph and passes its own, out of the same
    dictionary the rest of that page reads from: an English button below
    Amharic prose is the half-translated seam that page exists to remove. */
-const EN: ForgetLabels = {
+const FORGET_EN: ForgetLabels = {
   blurb: "Changed your mind? Remove everything now rather than waiting for the schedule.",
   cta: "Delete all of it",
   working: "Deleting\u2026",
@@ -64,7 +66,8 @@ const EN: ForgetLabels = {
     "Deleted. Nothing about this visit is left on this device or on our side. The numbers on " +
     "this page are still on screen and will disappear when you close it.",
   partial:
-    "Cleared from this device. There was nothing stored on our side to remove.",
+    "Cleared from this device. Nothing from this visit was stored on our side. If you saved a " +
+    "plan on another day, open the link we emailed you and delete it there.",
   /* This was folded into `partial` as "or the request did not reach us, in
      which case the retention schedule removes it on its own": which, for
      somebody who had left an email address, meant up to eighteen months, said
@@ -84,12 +87,20 @@ const EN: ForgetLabels = {
     "Everything else is gone from this device and our side.",
 };
 
-export function ForgetMe({ side, labels, style }: {
+/* On a saved plan's page the blurb names what goes: the plan and the details it was saved with. */
+const PLAN: ForgetLabels = {
+  ...FORGET_EN,
+  blurb: "Delete this plan, your details and everything sent with them, now rather than on the schedule.",
+};
+
+export function ForgetMe({ side, labels, style, planToken }: {
   side?: "buy" | "sell";
   labels?: ForgetLabels;
   style?: React.CSSProperties;
+  /** On a saved plan's page: delete by its private link, since the session that saved it is gone. */
+  planToken?: string;
 }) {
-  const l = labels ?? EN;
+  const l = labels ?? (planToken ? PLAN : FORGET_EN);
   const [state, setState] = useState<"idle" | "working" | "done" | "held" | "partial" | "failed">("idle");
 
   const forget = async () => {
@@ -103,12 +114,17 @@ export function ForgetMe({ side, labels, style }: {
       window.localStorage.removeItem("rift.events");
       window.sessionStorage.removeItem("rift.sid");
     } catch { /* storage already unavailable: nothing to clear */ }
+    /* The values' answers (income, savings) and the plan taking shape. These
+       arrived with v5 and were missed here, so "nothing is left on this
+       device" was untrue for exactly the figures a person most wants gone. */
+    clearAnswers();
+    clearPlan();
 
     try {
       const r = await fetch("/api/forget", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: sid }),
+        body: JSON.stringify(planToken ? { planToken } : { sessionId: sid }),
       }).then((x) => x.json());
       /* Three answers, not two. "Nothing was there" and "we never heard you"
          are different facts, and only one of them is finished. */
@@ -128,7 +144,7 @@ export function ForgetMe({ side, labels, style }: {
       <div className="card p-3" style={{ borderColor: "var(--pos, #2f7a52)" }}>
         <div className="row-t gap-2">
           <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
-          <p className="t-xs c-3" style={{ lineHeight: 1.55, ...(state === "held" && !l.held ? {} : style) }}>{state === "held" ? l.held ?? EN.held : l.done}</p>
+          <p className="t-xs c-3" style={{ lineHeight: 1.55, ...(state === "held" && !l.held ? {} : style) }}>{state === "held" ? l.held ?? FORGET_EN.held : l.done}</p>
         </div>
       </div>
     );
@@ -137,7 +153,7 @@ export function ForgetMe({ side, labels, style }: {
   if (state === "failed") {
     return (
       <div className="card p-3" role="alert" style={{ borderColor: "var(--warn-line)" }}>
-        <p className="t-xs c-2" style={{ lineHeight: 1.55, ...style }}>{l.failed ?? EN.failed}</p>
+        <p className="t-xs c-2" style={{ lineHeight: 1.55, ...style }}>{l.failed ?? FORGET_EN.failed}</p>
         <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={forget}>
           <Ico.refresh size={12} /><span style={style}>{l.cta}</span>
         </button>
@@ -162,7 +178,7 @@ export function ForgetMe({ side, labels, style }: {
             one saying the same thing. */}
         {l.blurb === null ? <span /> : (
           <p className="t-xs c-3" style={{ lineHeight: 1.55, maxWidth: 360, ...style }}>
-            {l.blurb ?? EN.blurb}
+            {l.blurb ?? FORGET_EN.blurb}
           </p>
         )}
         {/* Never disabled. The previous seller-side version switched itself off

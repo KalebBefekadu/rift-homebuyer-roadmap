@@ -134,6 +134,7 @@ describe("with nothing configured at all", () => {
     const r = await import("./retention");
     expect(contract("sweep", await r.sweep(new Date()))).toBe("skipped");
     expect(contract("forget", await r.forget("s"))).toBe("skipped");
+    expect(contract("forgetByPlan", await r.forgetByPlan("Abcdefghijklmnopqrstuvwxyz012345"))).toBe("skipped");
     expect(contract("overdue", await r.overdue(new Date()))).toBe("skipped");
   });
 
