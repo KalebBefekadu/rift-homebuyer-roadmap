@@ -30,6 +30,24 @@ describe("the rate assumption", () => {
     expect(r.note).toContain("materially wrong");
   });
 
+  it("counts its age in Georgia's days, not London's", () => {
+    /* 9:30 in the evening in Georgia on the day the rate is dated. By UTC it
+       is already the next day, and the label used to say "yesterday". */
+    const evening = new Date("2026-09-08T01:30:00Z");
+    expect(describeRate(6.5, "Freddie Mac PMMS", "2026-09-07", evening).label).toContain("today");
+    /* And a rate exactly a week old is still fresh until the week is up in Georgia. */
+    const week = describeRate(6.5, "Freddie Mac PMMS", "2026-08-31", evening);
+    expect(week.ageDays).toBe(7);
+    expect(week.freshness).toBe("fresh");
+  });
+
+  it("never prints an unreadable date as a number of days", () => {
+    const r = describeRate(6.5, "Freddie Mac PMMS", "not a date", TODAY);
+    expect(r.label).not.toMatch(/NaN/);
+    expect(r.label).toContain("at no recorded date");
+    expect(r.freshness).toBe("stale");
+  });
+
   it("does not dress the fallback up as an observation", () => {
     const r = describeRate(FALLBACK_RATE.pct, FALLBACK_RATE.source, null, TODAY);
     expect(r.freshness).toBe("stale");

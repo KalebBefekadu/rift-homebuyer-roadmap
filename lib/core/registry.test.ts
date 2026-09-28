@@ -14,6 +14,29 @@ import { DEFAULT_RULES } from "./settings";
 const TODAY = new Date("2026-09-07T12:00:00Z");
 
 describe("suppression", () => {
+  it("counts a program's age in Georgia's days", () => {
+    /* 2 a.m. in Georgia on the 91st day. Measured in hours from noon UTC this
+       read as day 90, so the program stayed on customer pages until eight in
+       the morning after the registry read had already withdrawn it. */
+    const p = { ...PROGRAMS[0]!, verifiedOn: "2026-06-09" };
+    const early = new Date("2026-09-08T06:00:00Z");
+    expect(daysSinceVerified(p, early)).toBe(91);
+    expect(isStale(p, early)).toBe(true);
+    /* And 9 p.m. the evening before is still day 90 in Georgia, though it is
+       already the 8th in London. */
+    expect(daysSinceVerified(p, new Date("2026-09-08T01:00:00Z"))).toBe(90);
+  });
+
+  it("honours the agent's own window rather than re-suppressing at the default", () => {
+    /* The registry read keeps a program current for the agent's window. At
+       120 days, one verified 100 days ago must match, not be withdrawn again
+       here at the default 90. */
+    const p = { ...PROGRAMS[0]!, verifiedOn: "2026-05-30" };
+    const at = new Date("2026-09-07T16:00:00Z");
+    expect(matchPrograms({ county: "DeKalb", firstTimeBuyer: true, programs: [p], today: at }).matched).toHaveLength(0);
+    expect(matchPrograms({ county: "DeKalb", firstTimeBuyer: true, programs: [p], today: at, windowDays: 120 }).matched).toHaveLength(1);
+  });
+
   it("reads the window from the business rules, never a constant", () => {
     /* Hard-coding 90 means the setting exists and changes nothing, which is
        worse than not having the setting. */
