@@ -5,8 +5,9 @@ import { money } from "@/lib/core/compute";
 import { COMP_STATUS_LABEL, type Opinion } from "@/lib/core/pricing";
 import { useRefresh } from "@/components/rift/useRefresh";
 import { post } from "../../post";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
+const DAY = (d: string) => showDay(d, { month: "long", day: "numeric" });
 
 /**
  * The seller's view of pricing (S04): the agent's opinion and the homes it

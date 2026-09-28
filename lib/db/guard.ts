@@ -19,9 +19,13 @@ export { MAX_BODY_BYTES };
  * trying to get around it.
  */
 export function ipOf(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]!.trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
+  return clientIp(req) ?? "unknown";
+}
+
+/** The client IP for a consent record, or nothing: never the word "unknown" stored as if it were an address. */
+export function clientIp(req: Request): string | undefined {
+  const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return fwd || req.headers.get("x-real-ip")?.trim() || undefined;
 }
 
 

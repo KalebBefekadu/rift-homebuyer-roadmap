@@ -10,6 +10,7 @@ import { CampaignBlocks } from "@/components/rift/campaign/CampaignBlocks";
 import { BRIEF_MAX, briefError } from "@/lib/core/campaign-draft";
 import { draftCampaignRecipe, publishCampaign, saveCampaign } from "../actions";
 import { showTime } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
 
 const WHEN = (iso: string) => showTime(iso);
 const LIVE_VALUES = VALUES.filter((v) => v.live);
@@ -152,7 +153,7 @@ export function Composer({ id, slug, live, revisions, history, programs, origin,
           <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
             <label className="col gap-1 t-xs" style={{ flex: "1 1 200px" }}>What changed (optional)<input className="input input-sm" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} /></label>
             <button className="btn btn-p btn-sm" disabled={pending || !!errors.length || !changed}
-              onClick={() => act(() => saveCampaign({ id, recipe: { blocks }, expectedVersion: latest.version, note: note || null, requestId: crypto.randomUUID() }))}>
+              onClick={() => act(() => saveCampaign({ id, recipe: { blocks }, expectedVersion: latest.version, note: note || null, requestId: newRequestId() }))}>
               {pending ? "Saving…" : `Save as version ${latest.version + 1}`}
             </button>
             {changed ? <button type="button" className="btn btn-g btn-sm" onClick={() => setBlocks(latest.recipe.blocks)}>Undo changes</button> : null}
@@ -194,11 +195,11 @@ export function Composer({ id, slug, live, revisions, history, programs, origin,
                 <button type="button" className="u t-xs" onClick={() => setBlocks(r.recipe.blocks)}>Load into the editor</button>
                 {r.version !== live ? (
                   <button type="button" className="btn btn-sm btn-g" disabled={pending}
-                    onClick={() => act(() => publishCampaign({ id, action: live !== null && r.version < live ? "rollback" : "publish", version: r.version, requestId: crypto.randomUUID() }))}>
+                    onClick={() => act(() => publishCampaign({ id, action: live !== null && r.version < live ? "rollback" : "publish", version: r.version, requestId: newRequestId() }))}>
                     {live !== null && r.version < live ? "Roll back to this" : "Publish this"}
                   </button>
                 ) : (
-                  <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => act(() => publishCampaign({ id, action: "unpublish", version: null, requestId: crypto.randomUUID() }))}>Unpublish</button>
+                  <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => act(() => publishCampaign({ id, action: "unpublish", version: null, requestId: newRequestId() }))}>Unpublish</button>
                 )}
               </span>
             </li>

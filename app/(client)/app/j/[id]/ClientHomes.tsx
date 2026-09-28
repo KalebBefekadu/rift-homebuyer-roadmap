@@ -7,6 +7,7 @@ import { AddHome, type HomeInput } from "@/components/rift/AddHome";
 import { REACTION_LABEL, describe, type Reaction, type SearchCriterion } from "@/lib/core/search";
 import { OFFER_LABEL, type OfferInterest } from "@/lib/core/tour";
 import { post } from "../../post";
+import { newRequestId } from "@/lib/core/ids";
 
 const REACTIONS: Reaction[] = ["interested", "maybe", "pass", "tour-requested"];
 
@@ -29,12 +30,6 @@ export interface BuyerShowing {
   myAnswer: string | null;
 }
 
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
-
 export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showings, agentFirst }: {
   journeyId: string;
   homes: HomeCardData[];
@@ -47,7 +42,7 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
   const refresh = useRefresh(JSON.stringify(homes) + JSON.stringify(showings));
   const [asking, setAsking] = useState<string | null>(null);
   const [when, setWhen] = useState("");
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
   const [answer, setAnswer] = useState<Record<string, { offer: OfferInterest | null; reason: string; change: string }>>({});
   const [thanks, setThanks] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -73,7 +68,7 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
     setBusy(null);
     if (!r.ok) { setError(r.error ?? "That did not send."); return; }
     setError(null);
-    setReq(newRequest());
+    setReq(newRequestId());
     setAsking(null);
     setWhen("");
     setSaved(homeId);

@@ -3,7 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
-import { STATUSES, standingOf, type Status as RepStatus } from "@/lib/core/representation";
+import { readStatus, standingOf } from "@/lib/core/representation";
 import {
   AVAILABILITY_MAX, feedbackError, stepError, viewOf,
   type FeedbackInput, type OfferInterest, type StepInput, type TourContext, type TourStatus, type TourStep, type TourView,
@@ -72,11 +72,8 @@ export async function coverageFor(journeyId: string, agentId: string): Promise<D
   );
   if (!r.ok) return r;
   const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
-  /* Unknown or missing reads as "none", which refuses (same rule as representationOf). */
-  const raw = (row?.representation as string | null) ?? "none";
-  const status = ((STATUSES as readonly string[]).includes(raw) ? raw : "none") as RepStatus;
   const standing = standingOf({
-    status,
+    status: readStatus(row?.representation),
     signedOn: (row?.representation_signed_on as string | null) ?? null,
     expiresOn: (row?.representation_expires_on as string | null) ?? null,
   });

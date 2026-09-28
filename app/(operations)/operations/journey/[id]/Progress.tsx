@@ -10,6 +10,7 @@ import {
 } from "@/lib/core/progress";
 import { useWrite } from "./useWrite";
 import { showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
 
 export interface ContractView {
   id: string;
@@ -22,12 +23,6 @@ export interface ContractView {
   work: WorkstreamView[];
   history: Record<Workstream, WorkUpdate[]>;
 }
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 const today = () => marketDay();
@@ -75,7 +70,7 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
   const closed = afterClose(past, open);
   const stamp = `${progress.seq}|${open ? open.work.map((w) => w.seq).join(",") : "-"}|${closed ? closed.work.map((w) => w.seq).join(",") : "-"}`;
   const { busy, error, write } = useWrite(stamp);
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
   const [form, setForm] = useState<null | "stage" | "status" | "contract" | "end">(null);
   const manual = MANUAL[side];
   const [to, setTo] = useState<Stage>(manual[1]!);
@@ -92,7 +87,7 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
 
   const run = async (op: string, body: Record<string, unknown>) => {
     const r = await write(op, { journeyId, requestId: req, expectedSeq: progress.seq, ...body });
-    if (r.ok) { setReq(newRequest()); setForm(null); setReason(""); setEvidence(""); }
+    if (r.ok) { setReq(newRequestId()); setForm(null); setReason(""); setEvidence(""); }
     return r.ok;
   };
   const finished = progress.status === "completed" || progress.status === "cancelled";

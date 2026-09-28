@@ -3,8 +3,9 @@ import { money } from "@/lib/core/compute";
 import { FINANCING_LABEL, netOf, type Offer, type SellerCosts } from "@/lib/core/offers";
 import { ownerLabel, type PlanItem } from "@/lib/core/plan";
 import type { OfferRoom } from "@/lib/core/offer-room";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (d: string) => new Date(d.length === 10 ? `${d}T12:00:00Z` : d).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const DAY = (d: string) => showDay(d);
 
 /**
  * A sale's offers (S10, S11) and preparation (S05), read on the journey.

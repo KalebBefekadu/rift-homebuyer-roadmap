@@ -7,6 +7,8 @@ import {
 } from "@/lib/core/deadline";
 import { WORKSTREAMS, WORKSTREAM_LABEL, type Workstream } from "@/lib/core/progress";
 import { useWrite } from "./useWrite";
+import { newRequestId } from "@/lib/core/ids";
+import { showDay } from "@/lib/core/day";
 
 export interface DateView {
   id: string;
@@ -17,13 +19,7 @@ export interface DateView {
   view: DeadlineView;
 }
 
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
-
-const DAY = (iso: string) => new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const DAY = (iso: string) => showDay(iso);
 
 /**
  * The open contract's dates (W09). Each says where it comes from and whether
@@ -37,12 +33,12 @@ export function Dates({ journeyId, dates, docs }: {
   docs: { id: string; label: string }[];
 }) {
   const { busy, error, write } = useWrite(dates.map((d) => `${d.id}:${d.view.current.seq}`).join("|"));
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
   const [form, setForm] = useState<null | "add" | "amend">(null);
   const [showDone, setShowDone] = useState(false);
   const run = async (op: string, body: Record<string, unknown>) => {
     const r = await write(op, { journeyId, requestId: req, ...body });
-    if (r.ok) setReq(newRequest());
+    if (r.ok) setReq(newRequestId());
     return r.ok;
   };
   const active = dates.filter((d) => d.view.state === "active");

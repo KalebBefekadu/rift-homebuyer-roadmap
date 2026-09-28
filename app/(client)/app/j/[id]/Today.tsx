@@ -5,6 +5,7 @@ import { useRefresh } from "@/components/rift/useRefresh";
 import type { TodayItem, TodayKind } from "@/lib/core/today";
 import type { WorkState, Workstream } from "@/lib/core/progress";
 import { post } from "../../post";
+import { newRequestId } from "@/lib/core/ids";
 
 /** A workstream as the buyer may see it: worded on the server (lib/core/progress `workLine`). */
 export interface BuyerWork {
@@ -17,12 +18,6 @@ export interface BuyerWork {
   canReport: boolean;
   seq: number;
 }
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
 const HEADING: Record<TodayKind, string> = {
   blocker: "Needs sorting out",
@@ -60,7 +55,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<Workstream | null>(null);
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
 
   const report = async (w: BuyerWork) => {
     if (!contract) return;
@@ -69,7 +64,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
     setBusy(false);
     if (!r.ok) { setError(r.error ?? "That did not save."); return; }
     setError(null);
-    setReq(newRequest());
+    setReq(newRequestId());
     setReporting(null);
     setNote("");
     setSent(w.workstream);

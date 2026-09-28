@@ -5,6 +5,7 @@ import { money } from "@/lib/core/compute";
 import type { PropertyFacts } from "@/lib/core/search";
 import { useWrite } from "./useWrite";
 import { georgiaDay } from "@/lib/core/day";
+import { typedNumber, unreadableField } from "@/lib/core/typed";
 
 const DAY = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 const today = () => georgiaDay();
@@ -25,7 +26,9 @@ export function SellerProperty({ journeyId, property }: {
   const save = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const n = (k: string) => { const v = String(f.get(k) ?? "").replace(/[^0-9.]/g, ""); return v ? Number(v) : null; };
+    const bad = unreadableField(f, { bedrooms: "Bedrooms", bathrooms: "Bathrooms", lotAcres: "The lot size", hoaMonthly: "The HOA fee", garageSpaces: "Garage spaces" });
+    if (bad) { setError(`${bad} is not a number`); return; }
+    const n = (k: string) => typedNumber(f.get(k));
     const address = String(f.get("address") ?? "").trim();
     if (address.length < 5) { setError("Give the full address"); return; }
     await write("add-home", {

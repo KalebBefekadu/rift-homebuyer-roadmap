@@ -1,7 +1,8 @@
 import { money } from "@/lib/core/compute";
 import { PROVENANCE_LABEL, type Bucket, type Ledger, type LedgerLine } from "@/lib/core/ledger";
+import { showDay } from "@/lib/core/day";
 
-const DAY = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const DAY = (d: string) => showDay(d, { month: "short", day: "numeric", year: "numeric" });
 
 /* A word and a mark for where each figure came from, never colour alone. */
 const MARK: Record<LedgerLine["provenance"], string> = { estimate: "≈", answer: "•", recorded: "✓" };

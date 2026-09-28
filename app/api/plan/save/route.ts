@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited, readJson } from "@/lib/db/guard";
+import { clientIp, limited, readJson } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { attachPlan } from "@/lib/db/saved-plan";
 import { sendNewLead, sendSavedPlan } from "@/lib/db/email";
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       contactable: true,
       source: plan.mode === "review" ? "review" : "plan",
     },
-    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined,
+    ip: clientIp(req),
     userAgent: req.headers.get("user-agent") ?? undefined,
   });
 

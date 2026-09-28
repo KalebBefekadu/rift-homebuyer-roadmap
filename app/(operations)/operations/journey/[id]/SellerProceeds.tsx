@@ -4,11 +4,13 @@ import { useState } from "react";
 import { money } from "@/lib/core/compute";
 import { FIGURE_KINDS, FIGURE_LABEL, OWED_LABEL, type FigureKind, type FigureView, type OwedSource } from "@/lib/core/proceeds";
 import { useWrite } from "./useWrite";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
+import { typedNumber, unreadableField } from "@/lib/core/typed";
 
-const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const DAY = (d: string) => showDay(d, { month: "short", day: "numeric", year: "numeric" });
 const today = () => georgiaDay();
-const num = (v: FormDataEntryValue | null) => { const s = String(v ?? "").replace(/[^0-9.]/g, ""); return s ? Number(s) : null; };
+const num = typedNumber;
 const signed = (n: number) => (n < 0 ? `−${money(-n)}` : money(n));
 
 /**
@@ -27,10 +29,12 @@ export function SellerProceeds({ journeyId, views, line }: { journeyId: string; 
   const save = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    const bad = unreadableField(f, { price: "The price", owed: "What is owed", commissionPct: "The commission", credits: "The credits", officialNet: "The closing statement's net" });
+    if (bad) { setError(`${bad} is not a number`); return; }
     const price = num(f.get("price"));
     if (price === null) { setError("Give the price"); return; }
     const r = await write("proceeds", {
-      journeyId, requestId: crypto.randomUUID(),
+      journeyId, requestId: newRequestId(),
       figure: {
         kind, price, owed: num(f.get("owed")) ?? 0, owedSource, commissionPct: num(f.get("commissionPct")),
         credits: num(f.get("credits")) ?? 0, officialNet: kind === "official" ? num(f.get("officialNet")) : null,

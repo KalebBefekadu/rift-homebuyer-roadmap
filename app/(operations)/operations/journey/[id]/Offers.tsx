@@ -12,6 +12,7 @@ import { useWrite } from "./useWrite";
 import { send } from "../send";
 import { showDay, showTime } from "@/lib/core/day";
 import { money } from "@/lib/core/compute";
+import { newRequestId } from "@/lib/core/ids";
 
 export interface OfferView {
   id: string;
@@ -23,12 +24,6 @@ export interface OfferView {
 }
 
 export interface DocView { id: string; family: Family; label: string; filename: string; bytes: number; by: string; at: string }
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
 const usd = money;
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
@@ -64,7 +59,7 @@ export function Offers({ journeyId, bids, docs, homes, deciders, coverage, leadI
 }) {
   const stamp = bids.map((b) => `${b.id}:${b.steps.length}:${b.responses.length}`).join("|") + `#${docs.length}`;
   const { busy, error, write } = useWrite(stamp);
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
   const [starting, setStarting] = useState(false);
   const [homeId, setHomeId] = useState("");
   const [showDone, setShowDone] = useState(false);
@@ -73,7 +68,7 @@ export function Offers({ journeyId, bids, docs, homes, deciders, coverage, leadI
 
   const run = async (op: string, body: Record<string, unknown>) => {
     const r = await write(op, { journeyId, requestId: req, ...body });
-    if (r.ok) setReq(newRequest());
+    if (r.ok) setReq(newRequestId());
     return r.ok;
   };
   /* Accepted stays in view: it is exactly when the agent still owes the

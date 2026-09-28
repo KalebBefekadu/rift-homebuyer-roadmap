@@ -35,6 +35,14 @@ export const STATUSES = [
 
 export type Status = (typeof STATUSES)[number];
 
+/**
+ * A stored status, read. Anything unrecognised or missing is `none`, which
+ * REFUSES rather than permits: passing an unknown string through would also
+ * refuse, but silently, with a chip reading whatever the column held.
+ */
+export const readStatus = (raw: unknown): Status =>
+  typeof raw === "string" && (STATUSES as readonly string[]).includes(raw) ? (raw as Status) : "none";
+
 export interface StatusRule {
   status: Status;
   label: string;

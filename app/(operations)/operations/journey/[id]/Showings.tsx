@@ -8,6 +8,7 @@ import {
 } from "@/lib/core/tour";
 import { useWrite } from "./useWrite";
 import { showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
 
 export interface ShowingView {
   id: string;
@@ -19,12 +20,6 @@ export interface ShowingView {
   feedback: { who: string; offer: OfferInterest; reason: string | null; searchChange: string | null; at: string }[];
   view: TourView;
 }
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 const CHIP: Record<TourStatus, string> = {
@@ -51,7 +46,7 @@ export function Showings({ journeyId, stops, homes, coverage, leadId, person, un
   unavailable?: string;
 }) {
   const { busy, error, write } = useWrite(stops.map((s) => `${s.id}:${s.steps.length}:${s.feedback.length}`).join("|"));
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
   const [adding, setAdding] = useState(false);
   const [homeId, setHomeId] = useState("");
   const [availability, setAvailability] = useState("");
@@ -61,7 +56,7 @@ export function Showings({ journeyId, stops, homes, coverage, leadId, person, un
 
   const run = async (op: string, body: Record<string, unknown>, after?: () => void) => {
     const r = await write(op, { journeyId, requestId: req, ...body });
-    if (r.ok) { setReq(newRequest()); after?.(); }
+    if (r.ok) { setReq(newRequestId()); after?.(); }
   };
 
   const open = stops.filter((s) => s.view.status !== "cancelled" && s.view.status !== "completed");

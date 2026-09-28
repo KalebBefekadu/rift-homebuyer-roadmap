@@ -4,9 +4,11 @@ import { useState } from "react";
 import { money } from "@/lib/core/compute";
 import { COMP_STATUS_LABEL, responseLine, type Comp, type CompStatus, type Opinion } from "@/lib/core/pricing";
 import { useWrite } from "./useWrite";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
+import { typedNumber, unreadableField } from "@/lib/core/typed";
 
-const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const DAY = (d: string) => showDay(d, { month: "short", day: "numeric", year: "numeric" });
 const today = () => georgiaDay();
 const blank = (): Comp => ({ address: "", price: 0, status: "sold", on: today(), note: "" });
 const num = (v: string) => Number(v.replace(/[^0-9.]/g, "")) || 0;
@@ -31,10 +33,12 @@ export function SellerPricing({ journeyId, opinions, scenarios }: {
   const save = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
+    const bad = unreadableField(f, { listPrice: "The list price", low: "The low end", high: "The high end" });
+    if (bad) { setError(`${bad} is not a number of dollars`); return; }
     const r = await write("pricing", {
-      journeyId, expectedVersion: latest?.version ?? 0, requestId: crypto.randomUUID(),
+      journeyId, expectedVersion: latest?.version ?? 0, requestId: newRequestId(),
       pricing: {
-        listPrice: num(String(f.get("listPrice") ?? "")), low: num(String(f.get("low") ?? "")), high: num(String(f.get("high") ?? "")),
+        listPrice: typedNumber(f.get("listPrice")) ?? 0, low: typedNumber(f.get("low")) ?? 0, high: typedNumber(f.get("high")) ?? 0,
         comps, rationale: String(f.get("rationale") ?? ""), reviewOn: String(f.get("reviewOn") ?? ""),
       },
     });

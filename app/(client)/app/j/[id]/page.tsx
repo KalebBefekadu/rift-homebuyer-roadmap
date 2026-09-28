@@ -211,7 +211,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
         {listingSays ? <p className="t-sm" style={{ marginTop: 6 }}>{listingSays}</p> : null}
         {latestReview ? (
           <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.6 }}>
-            {agentFirst}&apos;s review of the week of {new Date(`${latestReview.weekOf}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })}: {latestReview.summary}
+            {agentFirst}&apos;s review of the week of {showDay(latestReview.weekOf, { month: "long", day: "numeric" })}: {latestReview.summary}
             {latestReview.decision === "keep" ? " You decided to keep the strategy." : latestReview.decision === "change" ? ` You decided to change it: ${latestReview.decisionNote}.` : ""}
           </p>
         ) : null}
@@ -265,7 +265,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
               </li>
             ))}
           </ul>
-          <p className="t-2xs c-4" style={{ marginTop: 10 }}>Checked against the official pages on {new Date(`${MOVE_IN_CHECKED}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.</p>
+          <p className="t-2xs c-4" style={{ marginTop: 10 }}>Checked against the official pages on {showDay(MOVE_IN_CHECKED, { month: "long", day: "numeric", year: "numeric" })}.</p>
         </section>
       ) : null}
 

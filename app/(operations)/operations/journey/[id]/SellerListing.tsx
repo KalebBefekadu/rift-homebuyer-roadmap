@@ -8,6 +8,8 @@ import {
 } from "@/lib/core/listing";
 import { useWrite } from "./useWrite";
 import { georgiaDay, showTime } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
+import { typedNumber } from "@/lib/core/typed";
 
 const WHEN = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const DAY = (d: string) => new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -26,7 +28,7 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
   const [decision, setDecision] = useState<"keep" | "change" | "undecided">("keep");
   const status = listingStatus(events);
   const counts = showingCounts(showings);
-  const req = () => crypto.randomUUID();
+  const req = () => newRequestId();
 
   const done = (r: { ok: boolean }) => { if (r.ok) { setForm(null); setStep(null); } };
   const fd = (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); return new FormData(e.currentTarget); };
@@ -55,7 +57,8 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
         {form === "event" ? (
           <form className="desk-form" onSubmit={async (e) => {
             const f = fd(e);
-            const price = s(f, "price") ? Number(s(f, "price").replace(/[^0-9.]/g, "")) : null;
+            const price = typedNumber(f.get("price"));
+            if (Number.isNaN(price)) { setError("The price is not a number of dollars"); return; }
             done(await write("listing", { journeyId, kind, detail: s(f, "detail"), url: s(f, "url") || null, price, requestId: req() }));
           }}>
             <label>What happened

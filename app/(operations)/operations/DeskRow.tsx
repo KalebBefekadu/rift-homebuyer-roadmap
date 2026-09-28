@@ -7,6 +7,7 @@ import { Ico } from "@/components/rift/icons";
 import type { DeskItem, ItemMark, MarkKind, Tone } from "@/lib/core/desk";
 import { markItem } from "./actions";
 import { showTime } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
 
 const TONE: Record<Tone, { chip: string; word: string }> = {
   neg: { chip: "chip-neg", word: "Urgent" },
@@ -43,7 +44,7 @@ export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { ma
   const send = (kind: MarkKind, extra: { until?: string; person?: string; reason?: string } = {}) => start(async () => {
     setError(null);
     const r = await markItem({
-      key: item.key, kind, requestId: crypto.randomUUID(),
+      key: item.key, kind, requestId: newRequestId(),
       until: extra.until ? new Date(extra.until).toISOString() : null, person: extra.person ?? null, reason: extra.reason ?? null,
     });
     if (!r.ok) { setError(r.error); return; }

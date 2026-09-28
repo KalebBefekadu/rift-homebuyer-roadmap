@@ -14,7 +14,7 @@ import {
 } from "@/lib/core/pipeline";
 
 import {
-  standingOf, mayAdvance, STATUSES, STATUS_RULES, EXPIRY_WARNING_DAYS,
+  standingOf, mayAdvance, readStatus, STATUSES, STATUS_RULES, EXPIRY_WARNING_DAYS,
   type Representation, type Standing, type Status as RepStatus,
 } from "@/lib/core/representation";
 import { georgiaDay } from "@/lib/core/day";
@@ -618,15 +618,8 @@ export async function representationOf(leadId: string): Promise<DbResult<Represe
   const row = res.data as Record<string, unknown> | null;
   if (!row) return failed("no such person");
 
-  /* An unrecognised status is read as `none`, which REFUSES rather than
-     permits. The alternative: passing an unknown string through to
-     `isCovered`: also refuses, but silently and with a chip reading whatever
-     the database happened to contain. */
-  const raw = (row.representation as string | null) ?? "none";
-  const status = (STATUSES as readonly string[]).includes(raw) ? (raw as RepStatus) : "none";
-
   return done({
-    status,
+    status: readStatus(row.representation),
     signedOn: (row.representation_signed_on as string | null) ?? null,
     expiresOn: (row.representation_expires_on as string | null) ?? null,
   });

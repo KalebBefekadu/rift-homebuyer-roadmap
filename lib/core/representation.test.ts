@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  readStatus,
   standingOf, mayAdvance, isCovered, daysTo,
   STATUSES, STATUS_RULES, GATE, JOURNEY, EXPIRY_WARNING_DAYS,
   type Representation, type Status,
@@ -195,5 +196,14 @@ describe("daysTo", () => {
     for (const at of ["2026-09-21T04:00:01Z", "2026-09-21T16:00:00Z", "2026-09-22T03:59:59Z"]) {
       expect(daysTo(day(3), new Date(at)), at).toBe(3);
     }
+  });
+});
+
+describe("readStatus", () => {
+  it("reads anything unrecognised as none, which refuses", () => {
+    expect(readStatus("signed")).toBe("signed");
+    expect(readStatus("SIGNED")).toBe("none");
+    expect(readStatus(null)).toBe("none");
+    expect(readStatus(7)).toBe("none");
   });
 });

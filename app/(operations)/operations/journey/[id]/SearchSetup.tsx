@@ -8,6 +8,7 @@ import {
 } from "@/lib/core/search";
 import { useWrite } from "./useWrite";
 import { showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
 
@@ -25,12 +26,6 @@ export interface PackageView {
   confirmNote: string | null;
   endedAt: string | null;
 }
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
 
 /**
  * From an approved brief to a search in Matrix.
@@ -55,8 +50,8 @@ export function SearchSetup({ journeyId, person, status, latest, disagreement, a
   history: PackageView[];
 }) {
   const [cadence, setCadence] = useState<Cadence>("daily");
-  const [approveReq, setApproveReq] = useState(newRequest);
-  const [confirmReq, setConfirmReq] = useState(newRequest);
+  const [approveReq, setApproveReq] = useState(newRequestId);
+  const [confirmReq, setConfirmReq] = useState(newRequestId);
   const [ref, setRef] = useState("");
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
@@ -147,7 +142,7 @@ export function SearchSetup({ journeyId, person, status, latest, disagreement, a
             </label>
             <button className="btn btn-p btn-sm" style={{ marginTop: 10 }} disabled={busy || (!ref.trim() && !url.trim())}
               onClick={() => run("confirm-setup", { packageId: pending.id, ref, url, note, requestId: confirmReq },
-                () => { setConfirmReq(newRequest()); setRef(""); setUrl(""); setNote(""); })}>
+                () => { setConfirmReq(newRequestId()); setRef(""); setUrl(""); setNote(""); })}>
               {busy ? "Recording…" : "I set this up in Matrix"}
             </button>
           </div>
@@ -179,7 +174,7 @@ export function SearchSetup({ journeyId, person, status, latest, disagreement, a
                   </select>
                 </label>
                 <button className="btn btn-p btn-sm" disabled={busy}
-                  onClick={() => run("approve", { revisionId: latest!.id, cadence, requestId: approveReq }, () => setApproveReq(newRequest()))}>
+                  onClick={() => run("approve", { revisionId: latest!.id, cadence, requestId: approveReq }, () => setApproveReq(newRequestId()))}>
                   {busy ? "Approving…" : pending ? "Approve this instead" : "Approve as Matrix search"}
                 </button>
               </div>

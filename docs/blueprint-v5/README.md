@@ -1104,6 +1104,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 28 Sep 2026 | Amounts typed into the seller, money and decision forms are read or refused (`lib/core/typed.ts`): the forms kept only the digits, so "about 350k" was recorded as $350 and "3 or 4" bedrooms as 34. One request-id helper replaces nine copies, and the last local date formatters (which read a timestamp's UTC day) use `showDay` |
 | 28 Sep 2026 | Dead code removed: the v4 questionnaire's wording overlay, a rent-versus-buy calculation nothing showed, and two data functions superseded by Today (`dueActions`, `readStale`) |
 | 28 Sep 2026 | `/api/review` retired: only the retired readout called it, and "Ask Kaleb to review my numbers" is a plan saved in review mode. One uuid check (`lib/core/ids.ts`) replaces fifteen copies; a mistyped lead link is now not found instead of a reported database failure |
 | 28 Sep 2026 | Days until a date are counted from Georgia's day everywhere (plans, decisions, agreements, the agenda): from 8pm a step due today read as overdue. Money and dates are formatted by one helper each instead of twenty copies, three of which followed the viewer's locale |

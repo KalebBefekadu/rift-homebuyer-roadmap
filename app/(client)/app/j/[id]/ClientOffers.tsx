@@ -7,12 +7,7 @@ import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { post } from "../../post";
 import { money } from "@/lib/core/compute";
 import { showTime } from "@/lib/core/day";
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
+import { newRequestId } from "@/lib/core/ids";
 
 const usd = money;
 const WHEN = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -40,7 +35,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
 
   const answer = async (b: (typeof bids)[number]) => {
     const instruction = choice[b.id];
@@ -50,7 +45,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
     setBusy(null);
     if (!r.ok) { setError(r.error ?? "That did not save."); return; }
     setError(null);
-    setReq(newRequest());
+    setReq(newRequestId());
     setSent(b.id);
     refresh();
   };

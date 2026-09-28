@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { newCampaign } from "./actions";
+import { newRequestId } from "@/lib/core/ids";
 
 /** A new campaign starts as the assistance recipe for one county (CAMP-02), then is composed. */
 export function NewCampaign({ counties }: { counties: string[] }) {
@@ -19,7 +20,7 @@ export function NewCampaign({ counties }: { counties: string[] }) {
       e.preventDefault();
       const county = String(new FormData(e.currentTarget).get("county") ?? "");
       start(async () => {
-        const r = await newCampaign({ name, slug, county, requestId: crypto.randomUUID() });
+        const r = await newCampaign({ name, slug, county, requestId: newRequestId() });
         if (!r.ok) { setError(r.error); return; }
         router.push(`/operations/campaigns/${r.id}`);
       });

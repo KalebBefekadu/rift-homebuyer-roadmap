@@ -4,9 +4,11 @@ import { useState } from "react";
 import { money } from "@/lib/core/compute";
 import { FACT_KINDS, FACT_LABEL, type Fact, type FactKind } from "@/lib/core/ledger";
 import { useWrite } from "./useWrite";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
+import { typedNumber } from "@/lib/core/typed";
 
-const DAY = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const DAY = (d: string) => showDay(d, { month: "short", day: "numeric", year: "numeric" });
 const today = () => georgiaDay();
 
 /**
@@ -24,11 +26,11 @@ export function MoneyFacts({ journeyId, facts }: { journeyId: string; facts: Fac
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const amount = Number(String(f.get("amount") ?? "").replace(/[^0-9.]/g, ""));
-    if (!Number.isFinite(amount) || String(f.get("amount") ?? "").trim() === "") { setError("Give the amount"); return; }
+    const amount = typedNumber(f.get("amount"));
+    if (amount === null || Number.isNaN(amount)) { setError("Give the amount in dollars, like 5000"); return; }
     const form = e.currentTarget;
     const r = await write("record-money", {
-      journeyId, kind, amount, source: String(f.get("source") ?? ""), asOf: String(f.get("asOf") ?? ""), requestId: crypto.randomUUID(),
+      journeyId, kind, amount, source: String(f.get("source") ?? ""), asOf: String(f.get("asOf") ?? ""), requestId: newRequestId(),
     });
     if (r.ok) { setDone(`${FACT_LABEL[kind]}: ${money(amount)} recorded.`); form.reset(); }
   };

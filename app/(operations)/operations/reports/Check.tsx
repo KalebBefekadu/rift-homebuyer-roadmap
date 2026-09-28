@@ -3,12 +3,7 @@
 import { useState } from "react";
 import { DATES_CHECK_LABEL, SEARCH_CHECK_LABEL, checkError, type Checkable, type CheckResult } from "@/lib/core/pilot";
 import { useWrite } from "../journey/[id]/useWrite";
-
-const newRequest = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
-        (Number(c) ^ (Math.random() * 16) >> (Number(c) / 4)).toString(16));
+import { newRequestId } from "@/lib/core/ids";
 
 /**
  * Record one check of a buyer's search and dates against Matrix and the
@@ -18,7 +13,7 @@ const newRequest = () =>
 export function Check({ journeyId, has, stamp }: { journeyId: string; has: Checkable; stamp: string }) {
   const { busy, error, setError, write } = useWrite(stamp);
   const [open, setOpen] = useState(false);
-  const [req, setReq] = useState(newRequest);
+  const [req, setReq] = useState(newRequestId);
   const [search, setSearch] = useState<CheckResult>(has.search ? "matches" : "none");
   const [dates, setDates] = useState<CheckResult>(has.dates ? "matches" : "none");
   const [note, setNote] = useState("");
@@ -36,7 +31,7 @@ export function Check({ journeyId, has, stamp }: { journeyId: string; has: Check
     if (bad) return setError(bad);
     const r = await write("reconcile", { journeyId, search, dates, note: note.trim() || null, requestId: req });
     if (r.ok) {
-      setReq(newRequest());
+      setReq(newRequestId());
       setOpen(false);
       setNote("");
     }

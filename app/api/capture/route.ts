@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited, readJson } from "@/lib/db/guard";
+import { clientIp, limited, readJson } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     lead: scored,
     /* Recorded as evidence of the consent, and for nothing else. It is never
        used to identify or to enrich, and it is deleted with the record. */
-    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined,
+    ip: clientIp(req),
     userAgent: req.headers.get("user-agent") ?? undefined,
   });
 

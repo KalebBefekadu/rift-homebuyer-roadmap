@@ -286,7 +286,14 @@ function NewOption({ leadId, decisionId, onDone }: { leadId: string; decisionId:
 
   const save = () => {
     setError(null);
-    const dollars = amount.trim() ? Number(amount.replace(/[^0-9.-]/g, "")) : null;
+    /* Typed but unreadable ("about 5k", "1.2.3") is said, not saved as $0 or
+       quietly dropped: the option would read as having no amount at all. */
+    const digits = amount.replace(/[$,\s]/g, "");
+    const dollars = digits ? Number(digits) : null;
+    if (dollars !== null && !Number.isFinite(dollars)) {
+      setError("Write the amount as a number of dollars, like 12500");
+      return;
+    }
     start(async () => {
       const r = await addDecisionOption(leadId, {
         decisionId,
@@ -294,7 +301,7 @@ function NewOption({ leadId, decisionId, onDone }: { leadId: string; decisionId:
         detail: detail || null,
         /* Cents, converted once and here. Money as a float anywhere in this
            product is a rounding error somebody reads off a screen. */
-        amountCents: dollars !== null && Number.isFinite(dollars) ? Math.round(dollars * 100) : null,
+        amountCents: dollars !== null ? Math.round(dollars * 100) : null,
         amountLabel: amountLabel || null,
         upside: upside || null,
         downside: downside || null,

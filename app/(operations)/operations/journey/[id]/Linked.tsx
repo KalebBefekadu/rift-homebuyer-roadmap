@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DEPENDENCY_KINDS, KIND_LABEL, STATE_LABEL, lineFor, stateOf, type Dependency, type DependencyKind } from "@/lib/core/dependency";
 import { useWrite } from "./useWrite";
 import { showDay } from "@/lib/core/day";
+import { newRequestId } from "@/lib/core/ids";
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
@@ -32,7 +33,7 @@ export function Linked({ journeyId, side, deps, candidates, agentName }: {
     if (!other) { setError("Choose the other journey"); return; }
     const r = await write("link-journeys", {
       journeyId, saleJourneyId: side === "sell" ? journeyId : other, purchaseJourneyId: side === "buy" ? journeyId : other,
-      kind: String(f.get("kind")), note: String(f.get("note") ?? ""), owner: String(f.get("owner") ?? ""), requestId: crypto.randomUUID(),
+      kind: String(f.get("kind")), note: String(f.get("note") ?? ""), owner: String(f.get("owner") ?? ""), requestId: newRequestId(),
     });
     if (r.ok) setAdding(false);
   };
@@ -40,7 +41,7 @@ export function Linked({ journeyId, side, deps, candidates, agentName }: {
   const happened = (dependencyId: string, state: "met" | "removed" | "reopened") => async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const evidence = String(new FormData(e.currentTarget).get("evidence") ?? "");
-    const r = await write("dependency-event", { journeyId, dependencyId, state, evidence, requestId: crypto.randomUUID() });
+    const r = await write("dependency-event", { journeyId, dependencyId, state, evidence, requestId: newRequestId() });
     if (r.ok) setOpen(null);
   };
 
