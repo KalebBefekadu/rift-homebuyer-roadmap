@@ -37,7 +37,7 @@ export function MoneyField({ def, value, onDone, cta = "Continue" }: {
       className="card p-5"
     >
       <label htmlFor={id} className="label">{def.unitLabel ?? "Amount"}</label>
-      <div className="row" style={{
+      <div className="row money-box" style={{
         border: "1px solid var(--line)", borderRadius: 10, background: "var(--paper)", paddingLeft: 14, height: 60,
       }}>
         <span className="num c-4" style={{ fontSize: 26 }}>$</span>
