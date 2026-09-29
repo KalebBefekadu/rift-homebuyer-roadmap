@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { abroadReturns, STATUSES, rentFor, ABROAD_DEFAULTS, statusById, RENT_RATIO_SOURCE } from "./abroad";
+import { abroadReturns, STATUSES, rentFor, ABROAD_DEFAULTS, statusById, RENT_RATIO_SOURCE, ASSUMPTIONS } from "./abroad";
+import { BUYER_DEFAULTS } from "./compute";
 import { dictFor } from "./i18n";
 
 describe("buying from abroad", () => {
@@ -44,6 +45,36 @@ describe("buying from abroad", () => {
 
   it("falls back to the strictest status rather than the loosest", () => {
     expect(statusById("nope" as never).id).toBe("foreign");
+  });
+});
+
+describe("mortgage insurance from abroad", () => {
+  it("charges a citizen under 20% down the buyer engine's rate, and counts it in the month", () => {
+    const r = abroadReturns({ ...ABROAD_DEFAULTS, status: "citizen", use: "live" });
+    expect(r.downPct).toBe(5);
+    expect(r.monthly.pmi).toBeCloseTo((r.loan * BUYER_DEFAULTS.pmiPct) / 100 / 12, 6);
+    expect(r.monthly.total).toBeCloseTo(r.monthly.pi + r.monthly.tax + r.monthly.insurance + r.monthly.pmi, 6);
+  });
+
+  it("takes it out of a resident's rental cash flow", () => {
+    const i = { ...ABROAD_DEFAULTS, status: "resident" as const, use: "rent" as const };
+    const r = abroadReturns(i);
+    const without = abroadReturns(i, { ...ASSUMPTIONS, pmiPct: 0 });
+    expect(r.monthly.pmi).toBeGreaterThan(0);
+    expect(r.cashFlow).toBeCloseTo(without.cashFlow - r.monthly.pmi, 6);
+    expect(r.year1.cashFlow).toBeCloseTo(r.cashFlow * 12, 6);
+  });
+
+  it("stops at 20% down", () => {
+    const r = abroadReturns({ ...ABROAD_DEFAULTS, status: "citizen", downPct: 20 });
+    expect(r.monthly.pmi).toBe(0);
+  });
+
+  it("never charges it on a loan that prices the risk into the rate instead", () => {
+    /* ITIN at 15% down is under 20% and still pays none: that paper carries
+       a rate premium, and charging both would count the same risk twice. */
+    expect(abroadReturns({ ...ABROAD_DEFAULTS, status: "itin", use: "live" }).monthly.pmi).toBe(0);
+    expect(abroadReturns({ ...ABROAD_DEFAULTS, status: "foreign" }).monthly.pmi).toBe(0);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { money, pct } from "@/lib/core/compute";
+import { money, pct, PMI_NOTE } from "@/lib/core/compute";
 import { abroadReturns, statusById, ASSUMPTIONS, type StatusId, type Use } from "@/lib/core/abroad";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
@@ -57,6 +57,9 @@ export default async function AbroadCost({ searchParams }: { searchParams: Promi
     { label: "Loan payments", amount: r.monthly.pi * 12, note: `${pct(r.ratePct, 2)} on ${money(r.loan)} over ${ASSUMPTIONS.termYears} years` },
     { label: "Property tax", amount: r.monthly.tax * 12, note: `About ${pct(ASSUMPTIONS.taxPct)} of the price a year, with no homestead exemption` },
     { label: "Insurance", amount: r.monthly.insurance * 12, note: "A planning figure; the home decides it" },
+    ...(r.monthly.pmi > 0 ? [
+      { label: "Mortgage insurance", amount: r.monthly.pmi * 12, note: `${pct(ASSUMPTIONS.pmiPct, 2)} of the loan a year, because less than 20% is down` },
+    ] : []),
     ...(use === "rent" ? [
       { label: "Property management", amount: r.operating.management * 12, note: `${ASSUMPTIONS.managementPct}% of rent, someone local` },
       { label: "Repairs and turnover", amount: r.operating.maintenance * 12, note: `${ASSUMPTIONS.maintenancePct}% of rent, set aside` },
@@ -94,6 +97,14 @@ export default async function AbroadCost({ searchParams }: { searchParams: Promi
           { label: "Closing costs", value: `${ASSUMPTIONS.closingPct}% of the price` },
           { label: "Property tax", value: `${pct(ASSUMPTIONS.taxPct)} a year, no homestead exemption` },
           { label: "Insurance", value: `${money(ASSUMPTIONS.insuranceYr)} a year` },
+          {
+            label: "Mortgage insurance",
+            value: r.monthly.pmi > 0
+              ? `${pct(ASSUMPTIONS.pmiPct, 2)} of the loan a year. ${PMI_NOTE}`
+              : s.mortgageInsurance
+                ? "None, 20% or more down"
+                : "None; lenders for your situation price the risk into the rate instead",
+          },
         ]}
         couldBeWrong="The rate depends on the lender and your file, and lenders who work with buyers abroad price that differently. Tax depends on the parcel, and insurance on the house. Money sent from abroad also has transfer costs your bank sets."
       />
