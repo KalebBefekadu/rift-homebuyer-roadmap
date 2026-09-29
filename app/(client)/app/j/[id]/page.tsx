@@ -189,7 +189,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>{member.journeyLabel}</h1>
       <p className="t-xs c-4" style={{ marginTop: 4 }}>
         With {member.agentName} · you are signed in as {member.name} ({ROLE_LABEL[member.role].toLowerCase()})
-        {" · "}<Link className="u" href={`/app/j/${member.journeyId}/records`}>Your records</Link>
+        {" · "}<Link className="btn-link" href={`/app/j/${member.journeyId}/records`}>Your records</Link>
       </p>
       {/* One page, so the parts are places on it rather than separate
           screens (Blueprint v5 §7.2 navigation); only what this person can
@@ -261,7 +261,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
               <li key={m.id}>
                 <div className="between gap-2 wrap"><span className="t-sm w6">{m.title}</span><span className="chip t-2xs">{m.who === "you" ? "You" : m.who === "your agent" ? agentFirst : "Your lender"}</span></div>
                 <p className="t-sm c-3" style={{ marginTop: 2, lineHeight: 1.6 }}>{m.body}</p>
-                {m.source ? <a className="t-xs u" href={m.source.url} target="_blank" rel="noopener noreferrer">{m.source.name}</a> : null}
+                {m.source ? <a className="t-xs btn-link" href={m.source.url} target="_blank" rel="noopener noreferrer">{m.source.name}</a> : null}
               </li>
             ))}
           </ul>
@@ -424,7 +424,7 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
           <ul style={{ marginTop: 10, display: "grid", gap: 6 }}>
             {documents.map((d) => (
               <li key={d.id} className="between gap-2 wrap t-sm">
-                <a className="u" href={`/api/app/document?journeyId=${member.journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>
+                <a className="btn-link" href={`/api/app/document?journeyId=${member.journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>
                 <span className="t-xs c-4">{FAMILY_LABEL[d.family as Family] ?? "Document"} · {d.with}</span>
               </li>
             ))}

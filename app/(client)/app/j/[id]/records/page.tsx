@@ -54,9 +54,12 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
         <p className="t-sm c-3" style={{ marginTop: 18 }}>Your records could not be read just now. Nothing is lost. Try again in a minute.</p>
       ) : (
         <>
-          {records.sections.map((s) => (
-            <section key={s.title} className="card p-4" style={{ marginTop: 14 }} aria-labelledby={`rec-${s.title}`}>
-              <h2 id={`rec-${s.title}`} className="t-md w6">{s.title}</h2>
+          {/* Numbered ids: the titles have spaces, and aria-labelledby reads
+              "rec-Search priorities" as two ids that do not exist, which left
+              every section unnamed. */}
+          {records.sections.map((s, n) => (
+            <section key={s.title} className="card p-4" style={{ marginTop: 14 }} aria-labelledby={`rec-${n}`}>
+              <h2 id={`rec-${n}`} className="t-md w6">{s.title}</h2>
               <ul className="t-sm" style={{ marginTop: 8, display: "grid", gap: 6, paddingLeft: 18, lineHeight: 1.55 }}>
                 {s.lines.map((l, i) => <li key={i}>{l}</li>)}
               </ul>
@@ -68,7 +71,7 @@ export default async function ClientRecords({ params }: { params: Promise<{ id: 
               <ul className="t-sm" style={{ marginTop: 8, display: "grid", gap: 6, paddingLeft: 18 }}>
                 {records.documents.map((d) => (
                   <li key={d.id}>
-                    <a className="u" href={`/api/app/document?journeyId=${id}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>{" "}
+                    <a className="btn-link" href={`/api/app/document?journeyId=${id}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>{" "}
                     <span className="c-4">({FAMILY_LABEL[d.family as Family] ?? "Document"})</span>
                   </li>
                 ))}

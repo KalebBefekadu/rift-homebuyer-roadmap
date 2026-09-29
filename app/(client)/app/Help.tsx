@@ -15,7 +15,7 @@ export function Help({ agentName, agentEmail, next }: {
       {next ? <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}><span className="w6">What happens next:</span> {next}</p> : null}
       <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
         Questions, or something here looks wrong? {agentEmail
-          ? <>Email {first} at <a className="u" href={`mailto:${agentEmail}`}>{agentEmail}</a>, or reply to any email from Rift.</>
+          ? <>Email {first} at <a className="btn-link" href={`mailto:${agentEmail}`}>{agentEmail}</a>, or reply to any email from Rift.</>
           : <>Reply to any email from Rift and it reaches {first}.</>}
         {" "}On business days you hear back the same day.
       </p>

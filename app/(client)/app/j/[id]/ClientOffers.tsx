@@ -33,7 +33,9 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
   const [choice, setChoice] = useState<Record<string, Instruction | null>>({});
   const [note, setNote] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  /* Under the Send button it is about, not above the first offer, where on
+     a phone it was off screen and a refused answer looked like no answer. */
+  const [error, setError] = useState<{ bid: string; text: string } | null>(null);
   const [sent, setSent] = useState<string | null>(null);
   const [req, setReq] = useState(newRequestId);
 
@@ -43,7 +45,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
     setBusy(b.id);
     const r = await post({ action: "bid-answer", journeyId, bidId: b.id, version: b.asked.version, instruction, note: note[b.id] ?? "", requestId: req });
     setBusy(null);
-    if (!r.ok) { setError(r.error ?? "That did not save."); return; }
+    if (!r.ok) { setError({ bid: b.id, text: r.error ?? "That did not save." }); return; }
     setError(null);
     setReq(newRequestId());
     setSent(b.id);
@@ -52,7 +54,6 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
 
   return (
     <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-      {error ? <p role="alert" className="t-xs c-neg">{error}</p> : null}
       {bids.map((b) => {
         const a = b.asked;
         const picked = choice[b.id] ?? null;
@@ -83,7 +84,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
                 {a.documents.length ? (
                   <p className="t-xs" style={{ marginTop: 6 }}>
                     {a.documents.map((d, i) => (
-                      <span key={d.id}>{i ? " · " : ""}<a className="u" href={`/api/app/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">
+                      <span key={d.id}>{i ? " · " : ""}<a className="btn-link" href={`/api/app/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">
                         {d.label}</a> <span className="c-4">({FAMILY_LABEL[d.family as Family] ?? "Document"})</span></span>
                     ))}
                   </p>
@@ -118,6 +119,7 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
                       onClick={() => answer(b)}>
                       {busy === b.id ? "Sending…" : `Send to ${agentFirst}`}
                     </button>
+                    {error?.bid === b.id ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 6 }}>{error.text}</p> : null}
                     <p className="t-2xs c-4" style={{ marginTop: 6, lineHeight: 1.5 }}>
                       This tells {agentFirst} how to proceed on version {a.version}. It does not sign, send or accept anything: the offer is
                       prepared and signed separately, and nothing goes ahead until everyone asked has said go ahead.

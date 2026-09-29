@@ -53,7 +53,9 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
   const [reporting, setReporting] = useState<Workstream | null>(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /* Under the button it is about. It was at the top of Today, above the
+     stages and the lists, a screen or more from the contract's parts. */
+  const [error, setError] = useState<{ work: Workstream; text: string } | null>(null);
   const [sent, setSent] = useState<Workstream | null>(null);
   const [req, setReq] = useState(newRequestId);
 
@@ -62,7 +64,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
     setBusy(true);
     const r = await post({ action: "report-work", journeyId, contractId: contract.id, workstream: w.workstream, note, expectedSeq: w.seq, requestId: req });
     setBusy(false);
-    if (!r.ok) { setError(r.error ?? "That did not save."); return; }
+    if (!r.ok) { setError({ work: w.workstream, text: r.error ?? "That did not save." }); return; }
     setError(null);
     setReq(newRequestId());
     setReporting(null);
@@ -82,7 +84,6 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
         ))}
       </ol>
       <p className="t-sm" style={{ marginTop: 8 }}>{where}</p>
-      {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
 
       {nothingOwed ? <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>{nothingOwed}</p> : null}
       {ORDER.map((kind) => {
@@ -96,7 +97,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
                 <li key={`${kind}-${n}`} className="t-sm" style={{ lineHeight: 1.5 }}>
                   <span className="w6">{i.title}</span>
                   <span className="c-3"> {i.detail}</span>
-                  {i.anchor ? <> <a className="u t-xs" href={`#${i.anchor}`}>Go to it</a></> : null}
+                  {i.anchor ? <> <a className="btn-link t-xs" href={`#${i.anchor}`}>Go to it</a></> : null}
                 </li>
               ))}
             </ul>
@@ -116,10 +117,13 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
                   <span className={`chip t-2xs ${CHIP[w.state] ?? ""}`}>{w.stateLabel}</span>
                 </div>
                 <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.5 }}>{w.line}</p>
-                {sent === w.workstream && w.state === "reported" ? (
+                {/* From the moment the server has it, not from when the
+                    refresh brings the new state: until then this said
+                    nothing and "I have done this" came straight back. */}
+                {sent === w.workstream ? (
                   <p role="status" className="t-2xs c-pos" style={{ marginTop: 4 }}>Sent to {agentFirst}.</p>
                 ) : null}
-                {w.canReport && canRespond ? (
+                {w.canReport && canRespond && sent !== w.workstream ? (
                   reporting === w.workstream ? (
                     <div style={{ marginTop: 8 }}>
                       <input className="input" value={note} maxLength={500} placeholder="Anything to add? (optional)"
@@ -130,6 +134,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
                         </button>
                         <button className="btn btn-g btn-sm" style={{ minHeight: 44 }} onClick={() => setReporting(null)}>Back</button>
                       </div>
+                      {error?.work === w.workstream ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 6 }}>{error.text}</p> : null}
                       <p className="t-2xs c-4" style={{ marginTop: 6, lineHeight: 1.5 }}>
                         {w.workstream === "earnest-money"
                           ? "This says you sent it. It counts as received once the holder confirms it. Only use payment instructions you have confirmed by phone with the holder."

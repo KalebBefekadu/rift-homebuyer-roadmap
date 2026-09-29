@@ -44,7 +44,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     return frame(<>
       <h1 className="serif" style={{ fontSize: 24 }}>This invitation link is not valid.</h1>
       <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-        It may have been replaced by a newer one, or already used. If you have signed in before, <a className="u" href="/app">go to your move</a>.
+        It may have been replaced by a newer one, or already used. If you have signed in before, <a className="btn-link" href="/app">go to your move</a>.
         Otherwise ask your agent for a new link.
       </p>
     </>);
@@ -66,7 +66,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     ) : (
       <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>
         {i.state === "expired" ? "This invitation has expired." : i.state === "revoked" ? "This invitation was withdrawn." : "This invitation has already been used."}
-        {" "}Ask {i.agentName.split(/\s+/)[0]} for a new one{i.state === "active" ? <>, or <a className="u" href="/app">go to your move</a> if it was you</> : null}.
+        {" "}Ask {i.agentName.split(/\s+/)[0]} for a new one{i.state === "active" ? <>, or <a className="btn-link" href="/app">go to your move</a> if it was you</> : null}.
       </p>
     )}
   </>);

@@ -10,6 +10,20 @@ import { track, useTrack, flush } from "@/lib/rift/track";
 import { translator, ETHIOPIC_STACK, isLocale } from "@/lib/core/i18n";
 import { sessionId } from "@/lib/rift/session";
 
+/* The confirmation replaces the button that was pressed, and a focused
+   element that disappears drops focus to the top of the page. Stable, so it
+   runs once when the message appears and never pulls focus back later. */
+const focusOnShow = (el: HTMLElement | null) => el?.focus();
+
+/* The server's refusals are lower-case fragments ("that email address does
+   not look right"); on the page they are sentences. */
+const sentence = (s: string) => {
+  const t = s.trim();
+  if (!t) return t;
+  const up = t.charAt(0).toUpperCase() + t.slice(1);
+  return /[.!?]$/.test(up) ? up : `${up}.`;
+};
+
 /**
  * The consultation booking.
  *
@@ -63,6 +77,11 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   const [slot, setSlot] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  /* Whether the calendar actually holds the slot. The server books only
+     with an email address, and a calendar that fails after the request is
+     stored is reported, not raised: either way the request reached Kaleb
+     and the time did not, so the page must not say "Held". */
+  const [held, setHeld] = useState(false);
 
   useTrack({ name: "booking_start", side, meta: { hasTopic: topic !== "your numbers" } });
 
@@ -77,7 +96,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
   const ready = phoneOk && (live ? slot : true) && !blocked;
 
   const submit = async () => {
-    if (!ready) return;
+    if (!ready || state === "sending") return;
     setState("sending");
     setError("");
     try {
@@ -94,7 +113,13 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
         }),
       });
       const d = await res.json();
-      if (!d.ok && d.error) { setState("error"); setError(d.error); return; }
+      /* A refusal without a reason is still a refusal: this fell through to
+         "done" whenever the server said no without saying why. */
+      if (!d.ok) {
+        setState("error");
+        setError(d.error ? sentence(String(d.error)) : "We could not save your request just now, so it has not reached Kaleb. Please try again in a minute.");
+        return;
+      }
       /* This rendered "done" over a request that stored nothing, so somebody
          who had just asked the agent for a call believed they had, and he never
          heard of it. Happened on every cold start. */
@@ -105,35 +130,43 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
       }
       track({ name: "booking_complete", side, meta: { live } });
       flush();
+      setHeld(d.booking === "held");
       setState("done");
     } catch {
       setState("error");
-      setError("Something went wrong on our side. Your readout is unaffected.");
+      setError("We could not send your request, so it has not reached Kaleb. Check your connection and try again; what you typed is still here.");
     }
   };
 
+  const slotLabel = slots.find((s) => s.start === slot)?.label ?? "your time";
+
+  /* Inside the same header and footer as the form, so sending does not look
+     like being dropped off the site. */
   if (state === "done") {
     return (
-      <main className={`shell-w sec ${side}`}>
-        <div className="card p-5" style={{ maxWidth: 560, margin: "0 auto" }}>
-          <div className="row gap-2">
-            <Ico.checkCircle size={18} className="c-pos" />
-            <span className="t-md w6">
-              {live
-                ? `Held: ${slots.find((s) => s.start === slot)?.label ?? "your slot"}.`
-                : "Got it."}
-            </span>
+      <div className={side}>
+        <SiteHeader side={abroad ? "abroad" : side} current="/book" />
+        <main className="shell-w sec">
+          <div className="card p-5" role="status" tabIndex={-1} ref={focusOnShow} style={{ maxWidth: 560, margin: "0 auto" }}>
+            <div className="row gap-2">
+              <Ico.checkCircle size={18} className="c-pos" />
+              <span className="t-md w6">
+                {live ? (held ? `Held: ${slotLabel}.` : `Asked for ${slotLabel}.`) : "Got it."}
+              </span>
+            </div>
+            <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
+              {live && !held ? "The time is not held in Kaleb's calendar yet. He" : "Kaleb"} confirms
+              by phone{email ? " or email" : ""}, usually within a few hours, and
+              always the same day. If it stops working, say so and it moves; there is nothing to
+              cancel and no deposit.
+            </p>
+            <Link href={backHref} className="btn btn-g" style={{ marginTop: 16 }}>
+              <Ico.chevL size={14} /><span style={script}>{backLabel}</span>
+            </Link>
           </div>
-          <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            Kaleb confirms by phone{email ? " or email" : ""}, usually within a few hours, and
-            always the same day. If it stops working, say so and it moves; there is nothing to
-            cancel and no deposit.
-          </p>
-          <Link href={backHref} className="btn btn-g" style={{ marginTop: 16 }}>
-            <Ico.chevL size={14} /><span style={script}>{backLabel}</span>
-          </Link>
-        </div>
-      </main>
+        </main>
+        <SiteFooter />
+      </div>
     );
   }
 
@@ -212,11 +245,11 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           </label>
 
           <div className="field" style={{ marginTop: 16 }}>
-            <span className="label">What time works best for you?</span>
+            <span className="label" id="book-time">What time works best for you?</span>
             {live ? (
               <>
                 <div className="col gap-2" style={{ marginTop: 6 }}
-                  role="radiogroup" aria-label="What time works best for you?">
+                  role="radiogroup" aria-labelledby="book-time">
                   {slots.map((s) => (
                     <label key={s.start} className="opt" data-on={slot === s.start}>
                       <input type="radio" name="slot" checked={slot === s.start} onChange={() => setSlot(s.start)} />
@@ -225,13 +258,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
                   ))}
                 </div>
                 <p className="t-2xs c-4" style={{ marginTop: 8 }}>
-                  Real openings in Kaleb&apos;s calendar. Taking one holds it.
+                  Real openings in Kaleb&apos;s calendar. With an email address, taking one holds it.
                 </p>
               </>
             ) : (
               <>
                 <textarea
                   className="input"
+                  aria-labelledby="book-time"
                   rows={2}
                   style={{ marginTop: 6, resize: "vertical" }}
                   placeholder="Evenings after 6, or weekends, whatever works"
@@ -248,7 +282,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           </div>
 
           {error ? (
-            <p className="t-xs c-neg row gap-2" style={{ marginTop: 12 }}>
+            <p role="alert" className="t-xs c-neg row gap-2" style={{ marginTop: 12 }}>
               <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{error}
             </p>
           ) : null}

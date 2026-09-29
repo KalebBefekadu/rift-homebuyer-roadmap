@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useGo } from "@/components/rift/useRefresh";
 import { Ico } from "@/components/rift/icons";
 import { post } from "../../post";
+
+/* The confirmation replaces the button that was pressed; without this, focus
+   drops to the top of the page. Stable, so it runs once when it appears. */
+const focusOnShow = (el: HTMLElement | null) => el?.focus();
 
 export function InviteActions({ token, signedIn, mismatch, masked }: {
   token: string;
@@ -12,10 +15,20 @@ export function InviteActions({ token, signedIn, mismatch, masked }: {
   mismatch: string | null;
   masked: string;
 }) {
-  const router = useRouter();
   const go = useGo();
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+
+  /* A button, and a full reload after. It was a link to "#" that posted and
+     then relied on `router.refresh()`, which components/rift/useRefresh.ts
+     records as sometimes never landing, and it said nothing while it worked.
+     The reload shows whichever state is true, even when the request failed. */
+  const signOut = async () => {
+    setLeaving(true);
+    try { await fetch("/app/sign-out", { method: "POST" }); } catch { /* the reload shows where things stand */ }
+    window.location.reload();
+  };
 
   const sendLink = async () => {
     setState("busy");
@@ -34,7 +47,7 @@ export function InviteActions({ token, signedIn, mismatch, masked }: {
 
   if (state === "sent") {
     return (
-      <div role="status" style={{ marginTop: 16 }}>
+      <div role="status" tabIndex={-1} ref={focusOnShow} style={{ marginTop: 16 }}>
         <div className="row gap-2"><Ico.mail size={16} className="c-pos" /><span className="t-md w6">Check {masked}.</span></div>
         <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
           We sent a sign-in link. Open it on this device and you will come straight back here to join.
@@ -54,7 +67,10 @@ export function InviteActions({ token, signedIn, mismatch, masked }: {
         <>
           {signedIn && mismatch ? (
             <p className="t-xs c-3" style={{ marginBottom: 10, lineHeight: 1.6 }}>
-              {mismatch} <a className="u" href="#" onClick={(e) => { e.preventDefault(); fetch("/app/sign-out", { method: "POST" }).then(() => router.refresh()); }}>Sign out</a> first.
+              {mismatch}{" "}
+              <button type="button" className="btn-link" disabled={leaving} onClick={() => void signOut()}>
+                {leaving ? "Signing out…" : "Sign out"}
+              </button>{leaving ? null : " first."}
             </p>
           ) : null}
           <button className="btn btn-p" style={{ width: "100%" }} disabled={state === "busy" || Boolean(signedIn && mismatch)} onClick={sendLink}>

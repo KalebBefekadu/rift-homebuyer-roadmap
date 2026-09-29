@@ -209,7 +209,7 @@ which state it is in. Three states, three screens:
 
 | State | What the visitor sees |
 | --- | --- |
-| `calendar` | Real openings. Taking one holds it |
+| `calendar` | Real openings. Taking one holds it when an email is given; without one, or when the hold fails, the confirmation says "Asked for", never "Held" |
 | `unconfigured` | "Live booking is not switched on yet — tell us roughly when suits" |
 | `error` | "The calendar is not responding, so we are not going to show you times that might not exist" |
 

@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { NOT_ACCEPTANCE, CLIENT_NOTE_MAX } from "@/lib/core/offer-room";
 
+/* The confirmation replaces the button that was pressed; without this, focus
+   drops to the top of the page. Stable, so it runs once when it appears. */
+const focusOnShow = (el: HTMLElement | null) => el?.focus();
+
 /**
  * "This is the one I want."
  *
@@ -59,7 +63,7 @@ export function Choose({ token, agentFirst, options }: {
 
   if (done) {
     return (
-      <div role="status" className="card p-4" style={{ marginTop: 14, borderColor: "var(--pos-line)" }}>
+      <div role="status" tabIndex={-1} ref={focusOnShow} className="card p-4" style={{ marginTop: 14, borderColor: "var(--pos-line)" }}>
         <div className="t-sm w6">You told {agentFirst} you want the offer from {done}</div>
         <p className="t-sm c-3" style={{ marginTop: 6, lineHeight: 1.6 }}>
           Recorded with the figures above. {NOT_ACCEPTANCE}

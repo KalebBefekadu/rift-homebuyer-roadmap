@@ -9,6 +9,8 @@ import { showDay } from "@/lib/core/day";
 
 const DAY = (d: string) => showDay(d, { month: "long", day: "numeric" });
 
+type Answer = "agree" | "discuss";
+
 /**
  * The seller's view of pricing (S04): the agent's opinion and the homes it
  * rests on, their own net at each end of the range, and one answer: launch
@@ -19,22 +21,32 @@ export function ClientPricing({ journeyId, opinion, scenarios, mine, canAnswer, 
   journeyId: string;
   opinion: Opinion;
   scenarios: { label: string; price: number; text: string }[] | null;
-  mine: { response: "agree" | "discuss"; at: string } | null;
+  mine: { response: Answer; at: string } | null;
   canAnswer: boolean;
   agentFirst: string;
 }) {
   const refresh = useRefresh(`${opinion.id}|${mine?.at ?? ""}`);
+  /* Changing an answer and opening the note are two things. They were one
+     flag, so "I want to talk first" while changing an answer closed the
+     buttons it was one of. */
+  const [changing, setChanging] = useState(false);
   const [talking, setTalking] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<Answer | null>(null);
+  /* Shown the moment the server has it, not when the refresh lands: until
+     then the buttons stayed up with nothing said, and a seller who sees
+     nothing taps again. Tied to this version, so a revision asks again. */
+  const [sent, setSent] = useState<{ opinionId: string; response: Answer } | null>(null);
+  const justSent = sent?.opinionId === opinion.id ? sent.response : null;
+  const answered = justSent ?? mine?.response ?? null;
 
-  const answer = async (response: "agree" | "discuss") => {
-    setBusy(true);
+  const answer = async (response: Answer) => {
+    setBusy(response);
     const r = await post({ action: "pricing-answer", journeyId, opinionId: opinion.id, response, note: response === "discuss" ? note : null });
-    setBusy(false);
-    if (!r.ok) { setError(r.error ?? "That did not save"); return; }
-    setError(null); setTalking(false); refresh();
+    setBusy(null);
+    if (!r.ok) { setError(r.error ?? "That did not save."); return; }
+    setError(null); setSent({ opinionId: opinion.id, response }); setChanging(false); setTalking(false); setNote(""); refresh();
   };
 
   return (
@@ -59,26 +71,35 @@ export function ClientPricing({ journeyId, opinion, scenarios, mine, canAnswer, 
       </p>
 
       {canAnswer ? (
-        mine ? (
-          <p className="t-sm" style={{ marginTop: 10 }}>
-            ✓ You {mine.response === "agree" ? "agreed to launch at this price" : "asked to talk it through first"}.{" "}
-            <button type="button" className="u t-xs" onClick={() => setTalking(true)}>Change your answer</button>
-          </p>
-        ) : null
+        <p className="t-sm" style={{ marginTop: 10 }}>
+          <span role="status">
+            {answered
+              ? `✓ You ${answered === "agree" ? "agreed to launch at this price" : "asked to talk it through first"}.${justSent ? ` ${agentFirst} can see your answer.` : ""}`
+              : ""}
+          </span>
+          {answered && !changing ? <>{" "}<button type="button" className="btn-link t-xs" onClick={() => setChanging(true)}>Change your answer</button></> : null}
+        </p>
       ) : <p className="t-xs c-4" style={{ marginTop: 10 }}>Your access shows the pricing; the sellers answer it.</p>}
 
-      {canAnswer && (!mine || talking) ? (
+      {canAnswer && (!answered || changing) ? (
         <div className="col gap-2" style={{ marginTop: 10 }}>
           <div className="row gap-2 wrap">
-            <button className="btn btn-p btn-sm" disabled={busy} onClick={() => answer("agree")}>Launch at {money(opinion.listPrice)}</button>
-            <button className="btn btn-g btn-sm" disabled={busy} onClick={() => setTalking((v) => !v)} aria-expanded={talking}>I want to talk first</button>
+            <button className="btn btn-p btn-sm" disabled={busy !== null} onClick={() => answer("agree")}>
+              {busy === "agree" ? "Saving…" : `Launch at ${money(opinion.listPrice)}`}
+            </button>
+            <button className="btn btn-g btn-sm" disabled={busy !== null} onClick={() => setTalking((v) => !v)} aria-expanded={talking}>I want to talk first</button>
+            {changing ? (
+              <button className="btn btn-g btn-sm" disabled={busy !== null} onClick={() => { setChanging(false); setTalking(false); }}>Keep my answer</button>
+            ) : null}
           </div>
           {talking ? (
             <div className="col gap-2">
               <label className="col gap-1 t-xs">What would you like to talk about? (optional)
                 <textarea className="input" rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
               </label>
-              <button className="btn btn-s btn-sm" style={{ alignSelf: "flex-start" }} disabled={busy} onClick={() => answer("discuss")}>Send to {agentFirst}</button>
+              <button className="btn btn-s btn-sm" style={{ alignSelf: "flex-start" }} disabled={busy !== null} onClick={() => answer("discuss")}>
+                {busy === "discuss" ? "Sending…" : `Send to ${agentFirst}`}
+              </button>
             </div>
           ) : null}
         </div>

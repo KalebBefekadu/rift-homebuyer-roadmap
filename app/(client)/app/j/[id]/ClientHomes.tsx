@@ -47,7 +47,10 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
   const [thanks, setThanks] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [reason, setReason] = useState<Record<string, string>>({});
-  const [error, setError] = useState<string | null>(null);
+  /* Beside the home it is about. It was one line above the whole list, off
+     screen on a phone below the first card, so a reaction that failed looked
+     like one that did nothing. */
+  const [error, setError] = useState<{ home: string; text: string } | null>(null);
   const [adding, setAdding] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const live = homes.filter((h) => !h.withdrawnAt);
@@ -56,7 +59,7 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
     setBusy(homeId);
     const r = await post({ action: "react", journeyId, homeId, reaction, reason: reason[homeId] ?? null });
     setBusy(null);
-    if (!r.ok) { setError(r.error ?? "That did not save."); return; }
+    if (!r.ok) { setError({ home: homeId, text: r.error ?? "That did not save." }); return; }
     setError(null);
     setSaved(homeId);
     refresh();
@@ -66,7 +69,7 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
     setBusy(homeId);
     const r = await post({ action: "request-tour", journeyId, homeId, availability: when, requestId: req });
     setBusy(null);
-    if (!r.ok) { setError(r.error ?? "That did not send."); return; }
+    if (!r.ok) { setError({ home: homeId, text: r.error ?? "That did not send." }); return; }
     setError(null);
     setReq(newRequestId());
     setAsking(null);
@@ -75,13 +78,13 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
     refresh();
   };
 
-  const sendAnswer = async (stopId: string) => {
+  const sendAnswer = async (stopId: string, homeId: string) => {
     const a = answer[stopId];
     if (!a?.offer) return;
     setBusy(stopId);
     const r = await post({ action: "tour-feedback", journeyId, stopId, offer: a.offer, reason: a.reason, searchChange: a.change });
     setBusy(null);
-    if (!r.ok) { setError(r.error ?? "That did not save."); return; }
+    if (!r.ok) { setError({ home: homeId, text: r.error ?? "That did not save." }); return; }
     setError(null);
     setThanks(stopId);
     refresh();
@@ -99,7 +102,6 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
 
   return (
     <div style={{ marginTop: 10 }}>
-      {error ? <p role="alert" className="t-xs c-neg" style={{ marginBottom: 8 }}>{error}</p> : null}
       {live.length === 0 ? (
         /* SEARCH-09: an empty list names what limits it, and promises the
            search is not quietly widened to fill it. */
@@ -153,7 +155,7 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
                         value={a.change} aria-label="What should change in your search"
                         onChange={(e) => setAnswer({ ...answer, [toAnswer.stopId]: { ...a, change: e.target.value } })} />
                       <button className="btn btn-p btn-sm" style={{ marginTop: 8, minHeight: 44 }} disabled={!a.offer || busy === toAnswer.stopId}
-                        onClick={() => sendAnswer(toAnswer.stopId)}>
+                        onClick={() => sendAnswer(toAnswer.stopId, h.id)}>
                         {busy === toAnswer.stopId ? "Sending…" : `Send to ${agentFirst}`}
                       </button>
                     </div>
@@ -189,6 +191,7 @@ export function ClientHomes({ journeyId, homes, criteria, me, canRespond, showin
                     {saved === h.id ? <p role="status" className="t-2xs c-pos" style={{ marginTop: 6 }}>Saved.</p> : null}
                   </div>
                 ) : null}
+                {error?.home === h.id ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error.text}</p> : null}
               </HomeCard>
             );
           })}
