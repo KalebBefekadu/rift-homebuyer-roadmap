@@ -110,13 +110,13 @@ describe("the buyer's readout email", () => {
 describe("the cadence's own emails still behave", () => {
   it("a touch with no figures is not built", () => {
     expect(buildTouch({
-      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", county: "DeKalb", figures: null,
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", againUrl: "https://x/again", county: "DeKalb", figures: null,
     })).toBeNull();
   });
 
   it("the programs touch names each programme and what it asks, escaped", () => {
     const built = buildTouch({
-      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", county: "DeKalb",
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", againUrl: "https://x/again", county: "DeKalb",
       figures: { cashToClose: 26_000, gap: 0 },
       programs: [
         { name: "Georgia Dream <b>", state: null, needs: ["Homebuyer education course required.", "Primary residence"] },
@@ -128,9 +128,31 @@ describe("the cadence's own emails still behave", () => {
     expect(built.html).toContain("<strong>County Fund</strong> (Waiting list)");
   });
 
+  it("never says a readout is kept up to date, because it is a snapshot", () => {
+    const built = buildTouch({
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", againUrl: "https://x/again", county: "DeKalb",
+      figures: { cashToClose: 26_000, gap: 0 },
+    })!;
+    expect(built.html).not.toMatch(/up to date/i);
+    expect(built.html).toMatch(/saved as it\s+was on the day you made it/);
+    expect(built.html).toContain('href="https://x/again"');
+  });
+
+  it("escapes the links it puts in an attribute", () => {
+    const hostile = 'https://x/r/t"><script>alert(1)</script>';
+    const touch = buildTouch({
+      to: "a@b.com", says: "s", body: "b", shareUrl: hostile, againUrl: "https://x/again?a=1&b=2", county: "DeKalb",
+      figures: { cashToClose: 26_000, gap: 0 },
+    })!;
+    expect(touch.html).not.toContain("<script>");
+    expect(touch.html).toContain('href="https://x/again?a=1&amp;b=2"');
+    const readout = buildReadout({ to: "a@b.com", shareUrl: hostile, county: "DeKalb", side: "buy", cashToClose: 26_000 })!;
+    expect(readout.html).not.toContain("<script>");
+  });
+
   it("an ordinary touch lists no programmes", () => {
     const built = buildTouch({
-      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", county: "DeKalb",
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", againUrl: "https://x/again", county: "DeKalb",
       figures: { cashToClose: 26_000, gap: 0 },
     })!;
     expect(built.html).not.toContain("<ul");

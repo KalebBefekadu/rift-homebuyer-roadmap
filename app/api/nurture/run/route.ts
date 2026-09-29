@@ -162,6 +162,9 @@ async function run(req: Request) {
           says: copy?.says ?? t.says,
           body: copy?.body ?? t.body,
           shareUrl: t.shareToken ? `${origin}/r/${t.shareToken}` : `${origin}/buy`,
+          /* The touch quotes their cash to close, so that is the page that
+             works it out again from today's rate and registry. */
+          againUrl: `${origin}/buy/cash-to-close`,
           county: t.county,
           figures: t.figures,
           ...(programs ? { programs } : {}),

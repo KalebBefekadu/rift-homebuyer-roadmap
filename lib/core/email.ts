@@ -99,7 +99,7 @@ export function buildReadout(r: ReadoutEmail): { subject: string; html: string }
     ${lead}
   </p>
   <p style="font-size:15px">
-    <a href="${r.shareUrl}" style="color:#e8442a">Your full readout is here</a>. Every line of
+    <a href="${escapeHtml(r.shareUrl)}" style="color:#e8442a">Your full readout is here</a>. Every line of
     that figure${r.side === "buy" ? ", the Georgia programs that may fit you, and what to ask a lender" : ", what it is worth fixing first, and what you may be able to claim"}.
   </p>
   <p style="font-size:13px;color:#666">
@@ -289,6 +289,8 @@ export interface TouchEmail {
   /** The opening line the person reads. Never `gives`, which is a design note. */
   body: string;
   shareUrl: string;
+  /** Where they can work the figure out again today. The readout itself never changes. */
+  againUrl: string;
   county: string | null;
   figures: Record<string, string | number> | null;
   /** For the programs step: what they matched, itemised. Absent on every other step. */
@@ -308,6 +310,15 @@ export interface TouchEmail {
  *
  * A touch with no figures behind it is not sent at all. There is no version of
  * this email that is worth sending with the numbers missing.
+ *
+ * The readout is a dated snapshot and is never rewritten (rule 4), so this
+ * email used to say something untrue: "it is kept up to date". It says what
+ * is true instead, and where to get today's figure.
+ *
+ * Links are escaped as attributes, here and in `buildReadout`. The capture
+ * route already refuses a readout link that is not on this site, and the
+ * runner builds its own; this is the second lock, so a quote in a URL can
+ * never end the attribute early.
  */
 export function buildTouch(t: TouchEmail): { subject: string; html: string } | null {
   if (!t.figures || t.figures.cashToClose === undefined) return null;
@@ -334,7 +345,12 @@ export function buildTouch(t: TouchEmail): { subject: string; html: string } | n
     Your readout still says <strong>${money(cash)}</strong> at the table in ${where}${
       gap > 0 ? `, with <strong>${money(gap)}</strong> still to find` : ", and your savings already cover it"
     }.
-    <a href="${t.shareUrl}" style="color:#e8442a">Open it here</a>. It is kept up to date and it stays yours.
+    <a href="${escapeHtml(t.shareUrl)}" style="color:#e8442a">Open it here</a>. It is saved as it
+    was on the day you made it, and it stays yours.
+  </p>
+  <p style="font-size:15px">
+    If your numbers or rates have changed since, <a href="${escapeHtml(t.againUrl)}" style="color:#e8442a">run
+    it again</a>.
   </p>
   <p style="font-size:13px;color:#666">
     Every figure is a planning estimate, not a lending commitment or approval. Nothing here

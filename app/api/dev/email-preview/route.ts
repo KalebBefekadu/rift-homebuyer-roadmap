@@ -67,6 +67,7 @@ export async function GET(req: Request) {
           ...programsCopy(PROGRAMS.slice(0, 2).map((p) => p.name))!,
           programs: programLines(PROGRAMS.slice(0, 2)),
           shareUrl: `${url.origin}/r/sample-token`,
+          againUrl: `${url.origin}/buy/cash-to-close`,
           county: "DeKalb",
           figures: { cashToClose: 26187.5, gap: 17187.5 },
         })
