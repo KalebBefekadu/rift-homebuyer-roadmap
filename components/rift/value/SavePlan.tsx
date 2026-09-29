@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Ico } from "@/components/rift/icons";
 import { LiveRegion } from "@/components/rift/Live";
 import { EMAIL_NOTE, PHONE_CONSENT } from "@/lib/core/privacy";
@@ -8,6 +8,9 @@ import { readAnswers } from "@/lib/rift/answers";
 import { sessionId } from "@/lib/rift/session";
 import { track, flush } from "@/lib/rift/track";
 import type { PlanEntry } from "@/lib/rift/plan";
+
+/* Stable, so it runs once when the element appears and never pulls focus back later. */
+const focusOnShow = (el: HTMLElement | null) => el?.focus();
 
 /**
  * "Save my plan" and "Ask Kaleb to review my numbers" (Blueprint v5 §5.5,
@@ -71,13 +74,55 @@ export function SavePlan({ side, mode, plan, onClose }: {
 
   const tone = side === "sell" ? "sell" : side === "abroad" ? "abroad" : "buy";
 
+  /* Behaving like a dialog, which it only looked like. It said aria-modal and
+     then left focus on the button behind it, let Tab walk out into the page
+     it was covering, ignored Escape, and on close dropped focus to the top of
+     the page. For somebody on a keyboard, "Save my plan" opened something
+     they could neither reach nor leave. */
+  const box = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; }, [onClose]);
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    box.current?.querySelector<HTMLElement>("input")?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.preventDefault(); close.current(); return; }
+      if (e.key !== "Tab" || !box.current) return;
+      const stops = Array.from(box.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+      ));
+      if (!stops.length) return;
+      const first = stops[0], last = stops[stops.length - 1];
+      const at = document.activeElement;
+      const inside = box.current.contains(at);
+      if (e.shiftKey && (at === first || !inside)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (at === last || !inside)) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      /* Back to "Save my plan" or "Ask Kaleb", whichever opened it. */
+      if (opener?.isConnected) opener.focus();
+    };
+  }, []);
+
+  /* A press on the dim page behind closed the dialog, and the dialog is
+     unmounted on close, so a stray click while reaching for the mouse threw
+     away a name and email already typed. Once anything is typed, only the
+     close button, Escape or "Back to my answer" closes it. The press's own
+     default is stopped either way, or it moves focus to the page's top after
+     the close has put it back on the opener. */
+  const typed = state !== "done" && (name.trim() !== "" || email.trim() !== "" || phone.trim() !== "");
+
   return (
-    <div className="cmdk-veil" style={{ alignItems: "center" }} onMouseDown={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="save-h" className={`card fade-in ${tone}`}
+    <div className="cmdk-veil" style={{ alignItems: "center" }}
+      onMouseDown={(e) => { e.preventDefault(); if (!typed) onClose(); }}>
+      <div ref={box} role="dialog" aria-modal="true" aria-labelledby="save-h" className={`card fade-in ${tone}`}
         style={{ maxWidth: 460, width: "100%", padding: 28, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}
         onMouseDown={(e) => e.stopPropagation()}>
         {state === "done" ? (
-          <>
+          /* The submit button that had focus is gone; the answer takes it. */
+          <div tabIndex={-1} ref={focusOnShow}>
             <h2 id="save-h" className="serif" style={{ fontSize: 26, letterSpacing: "-0.022em" }}>
               {mode === "review" ? "Kaleb has it." : "Saved."}
             </h2>
@@ -92,7 +137,7 @@ export function SavePlan({ side, mode, plan, onClose }: {
               <a href={result.url} className="btn btn-s mt-3" style={{ width: "100%" }}>Open my saved plan</a>
             ) : null}
             <button className="btn btn-p btn-lg mt-2" style={{ width: "100%" }} onClick={onClose}>Back to my answer</button>
-          </>
+          </div>
         ) : (
           <form onSubmit={submit}>
             <div className="between">
