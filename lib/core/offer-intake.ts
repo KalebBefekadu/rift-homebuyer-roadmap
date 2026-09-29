@@ -48,6 +48,19 @@ export const MAX_COMMISSION_PCT = 10;
 export const MIN_PRICE = 10_000;
 export const MAX_PRICE = 100_000_000;
 
+/**
+ * The largest offer PDF the page will send to be read.
+ *
+ * Set by the host, not by us. The route said 10 MB, but Vercel refuses a
+ * request body over about 4.5 MB before the route ever runs, so a 6 MB file
+ * got the platform's error page instead of our sentence and the promise of
+ * 10 MB was never true. 4 MB leaves room for the multipart wrapping. The
+ * form checks it before sending and the route checks it again.
+ */
+export const MAX_OFFER_PDF_BYTES = 4 * 1024 * 1024;
+export const MAX_OFFER_PDF_SAY =
+  "That file is over 4 MB, which is the most we can read. Fill in the boxes instead, or save a smaller copy of the PDF and try again.";
+
 export interface Submission {
   address: string;
   price: number;

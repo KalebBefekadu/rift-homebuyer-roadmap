@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   readSubmission, read, asOffer, ASSUMED_COMMISSION_PCT,
-  MIN_PRICE, MAX_PRICE, MAX_COMMISSION_PCT, type Submission,
+  MIN_PRICE, MAX_PRICE, MAX_COMMISSION_PCT, MAX_OFFER_PDF_BYTES, MAX_OFFER_PDF_SAY, type Submission,
 } from "./offer-intake";
 import { GA_TRANSFER_TAX_RATE } from "./compute";
 
@@ -209,5 +209,18 @@ describe("sending is required, and says who is sending (Blueprint v5 §5.9)", ()
     expect(good.ok && good.value.documentToken).toBe("0f8fad5b-d9cb-469f-a165-70867728950e");
     const bad = readSubmission({ ...RAW, documentToken: "../../etc/passwd" });
     expect(bad.ok && bad.value.documentToken).toBeNull();
+  });
+});
+
+describe("the offer PDF size limit", () => {
+  /* The host refuses a body over about 4.5 MB before the route runs, so a
+     limit above that is a promise the page cannot keep: the file gets the
+     platform's error instead of our sentence. */
+  it("stays under the host's request body limit, with room for the form wrapping", () => {
+    expect(MAX_OFFER_PDF_BYTES + 64 * 1024).toBeLessThan(4.5 * 1024 * 1024);
+  });
+
+  it("says the same limit it enforces", () => {
+    expect(MAX_OFFER_PDF_SAY).toContain(`${MAX_OFFER_PDF_BYTES / 1024 / 1024} MB`);
   });
 });

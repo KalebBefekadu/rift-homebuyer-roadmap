@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import type { Candidates, Field } from "@/lib/core/offer-extract";
 import {
   readSubmission, read, ASSUMED_COMMISSION_PCT,
-  MIN_COMMISSION_PCT, MAX_COMMISSION_PCT,
+  MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_OFFER_PDF_BYTES, MAX_OFFER_PDF_SAY,
 } from "@/lib/core/offer-intake";
 import { sessionId } from "@/lib/rift/session";
 import { money } from "@/lib/core/compute";
@@ -115,6 +115,10 @@ export function Form() {
 
   const upload = async (file: File | undefined) => {
     if (!file) return;
+    /* Checked here because past about 4.5 MB the host refuses the upload
+       before our route runs, and what comes back is its error page, not a
+       sentence. Nothing is sent that could only fail. */
+    if (file.size > MAX_OFFER_PDF_BYTES) { setReadSay(MAX_OFFER_PDF_SAY); setReading("done"); return; }
     setReading("reading");
     setReadSay(null);
     try {
@@ -122,7 +126,9 @@ export function Form() {
       body.append("file", file);
       const res = await fetch("/api/offer/read", { method: "POST", body });
       const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; token?: string | null; candidates?: Candidates };
-      if (!j?.ok) { setReadSay(j?.error ?? "That file could not be read. Fill in the boxes instead."); setReading("done"); return; }
+      /* A 413 without our JSON is the host's limit, reached despite the check
+         above (a limit lowered after this page loaded): still a size. */
+      if (!j?.ok) { setReadSay(j?.error ?? (res.status === 413 ? MAX_OFFER_PDF_SAY : "That file could not be read. Fill in the boxes instead.")); setReading("done"); return; }
       setDocumentToken(j.token ?? null);
       const c = j.candidates ?? {};
       if (c.address) setAddress(c.address.value);
@@ -177,6 +183,7 @@ export function Form() {
           <div className="t-md w6">Upload your offer in PDF</div>
           <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
             We read it and fill in the boxes below for you to check. Or skip this and type them.
+            Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB.
           </p>
           <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
             <Ico.doc size={15} />{reading_ === "reading" ? "Reading your offer…" : documentToken ? "Choose a different PDF" : "Choose the PDF"}
