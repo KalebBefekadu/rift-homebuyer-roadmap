@@ -45,7 +45,8 @@ export interface ProgramRecord {
     occupations?: {
       max: number; who: Occupation[]; pctOfPrice?: number; note: string;
       /** The program's own word for who counts is narrower than the job
-          question (Beltline's "civil servants"): the higher cap is mentioned,
+          question (Beltline's "public sector employees": a government employer,
+          which the job question does not ask): the higher cap is mentioned,
           never used as the amount. */
       confirm?: boolean;
     };
@@ -192,7 +193,7 @@ export const GEORGIA_PROGRAMS: ProgramRecord[] = [
     name: "Beltline Mortgage Assistance Program",
     kind: "deferred",
     terms: "A 0% soft second mortgage with a 15-year affordability period.",
-    amount: { max: 20_000, occupations: { max: 30_000, who: ["safety", "educator", "health", "military"], note: "Up to $30,000 for civil servants and legacy residents; Invest Atlanta decides whether your job counts.", confirm: true } },
+    amount: { max: 20_000, occupations: { max: 30_000, who: ["safety", "educator", "health", "military"], note: "Up to $30,000 for public-sector employees (such as police, firefighters, public school teachers, and city or county staff) and long-term residents. It depends on working for a government employer; Invest Atlanta confirms.", confirm: true } },
     area: { counties: ["Fulton", "DeKalb"], within: "In the Beltline Tax Allocation District, subareas 1, 2, 3, 8, 9 and 10." },
     income: { kind: "ami", pct: 140, note: "Two income tiers, up to 120% and up to 140% of area median income." },
     conditions: ["Put in at least $1,500 of your own money", "Homebuyer education", "The home must be in an eligible Beltline subarea"],

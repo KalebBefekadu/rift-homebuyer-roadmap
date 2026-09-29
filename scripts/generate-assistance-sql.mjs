@@ -4,7 +4,7 @@
  * (lib/core/assistance.ts) into rift_programs, and retires every row that is
  * not one of them.
  *
- *   node scripts/generate-assistance-sql.mjs > supabase/migrations/<stamp>_rift_assistance_programs.sql
+ *   npx vite-node scripts/generate-assistance-sql.mjs > supabase/migrations/<stamp>_rift_assistance_programs.sql
  *   npm run rift:seed-programs     (the same statements, as the local and test seed)
  *
  * The seed used to be generated from the specification's placeholder
