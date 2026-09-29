@@ -94,7 +94,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
 
   const blocked = Boolean(phone) && !consent;
   const phoneOk = phone.replace(/\D/g, "").length >= 10;
-  const ready = phoneOk && (live ? slot : true) && !blocked;
+  /* The calendar holds a time only for an email address (the booking and any
+     change to it are sent there), so the server books nothing without one.
+     This page called the email optional beside real times and let the button
+     say "Book this time" without it: the time was asked for and never held.
+     With real times on offer the address is required, and the page says why.
+     With no calendar there is nothing to hold, and it stays optional. */
+  const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const ready = phoneOk && (live ? Boolean(slot) && emailOk : true) && !blocked;
 
   const submit = async () => {
     if (!ready || state === "sending") return;
@@ -240,8 +247,14 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           ) : null}
 
           <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Email <span className="c-4 w5">(optional)</span></span>
-            <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <span className="label">Email {live ? null : <span className="c-4 w5">(optional)</span>}</span>
+            <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
+              required={live} aria-describedby={live ? "book-email-why" : undefined} />
+            {live ? (
+              <span id="book-email-why" className="t-2xs c-3" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>
+                Needed to hold a time: the calendar sends your booking, and any change to it, to this address.
+              </span>
+            ) : null}
             <span className="t-2xs c-4" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>{emailNote}</span>
           </label>
 
@@ -259,7 +272,7 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
                   ))}
                 </div>
                 <p className="t-2xs c-4" style={{ marginTop: 8 }}>
-                  Real openings in Kaleb&apos;s calendar. With an email address, taking one holds it.
+                  Real openings in Kaleb&apos;s calendar. Taking one holds it, and the booking goes to your email.
                 </p>
               </>
             ) : (
@@ -291,7 +304,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           </LiveRegion>
 
           <button className="btn btn-p" style={{ width: "100%", marginTop: 16 }} disabled={!ready || state === "sending"} onClick={submit}>
-            {state === "sending" ? "Sending…" : !phoneOk ? "Add your phone number" : blocked ? "Tick the box so Kaleb can call you" : live ? "Book this time" : "Ask for a call"}
+            {state === "sending" ? "Sending…" : !phoneOk ? "Add your phone number" : blocked ? "Tick the box so Kaleb can call you"
+              : live && !emailOk ? "Add your email so the time can be held" : live && !slot ? "Choose a time" : live ? "Book this time" : "Ask for a call"}
           </button>
           <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.5 }}>
             Your answers stay yours either way, whether or not you book anything.
