@@ -143,7 +143,7 @@ describe("with nothing configured at all", () => {
        caller that cannot propagate a skip, so it converts it. */
     const { rulesOrDefaults } = await import("./settings");
     const r = await rulesOrDefaults(null);
-    expect(r.rules.commissionPct.value).toBe(2.5);
+    expect(r.rules.commissionPct.value).toBe(3);
     expect(r.undecided.length).toBeGreaterThan(0);
     expect(r.decided).toEqual([]);
   });

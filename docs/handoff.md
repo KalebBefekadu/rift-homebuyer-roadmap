@@ -400,7 +400,7 @@ surface distinguishes *decided* from *still on the default*.
 
 | # | Decision | Default | Whose call | Why it blocks something |
 | --- | --- | --- | --- | --- |
-| 1 | Commission assumption in the forecast | 2.5% | Kaleb | Drives the only revenue number in the product |
+| 1 | Commission assumption in the forecast | 3% (Kaleb's own side) | Kaleb | Drives the only revenue number in the product |
 | 2 | Readout emailed automatically, or only on request | On request | Kaleb | Changes the consent surface and the speed-to-lead model |
 | 3 | Who verifies programme data | Kaleb | Kaleb | The suppression rule is worthless without an owner |
 | 4 | Programme re-check window | 90 days | Kaleb | Longer means stale offers reach people |
