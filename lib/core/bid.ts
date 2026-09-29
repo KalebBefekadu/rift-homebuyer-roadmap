@@ -108,6 +108,11 @@ export interface TermsEffects {
   priceAfterConcessions: number;
   /** Known cash, and when. Closing costs are not estimated here. */
   cashAtContract: number;
+  /** The rest of the down payment, due at closing. Never reduced by concessions. */
+  downPaymentAtClosing: number;
+  /** What the seller pays toward the buyer's closing costs. A credit against those costs only. */
+  closingCostCredit: number;
+  /** The down payment still due, less the seller's credit: what closing takes on top of the closing costs themselves. */
   cashAtClosingBeforeCosts: number;
 }
 
@@ -120,6 +125,14 @@ export function termsEffects(t: Terms): TermsEffects {
     priceAfterConcessions: t.price - t.concessions,
     cashAtContract: t.earnestMoney,
     /* Earnest money is applied at closing, so it is not paid twice. */
+    downPaymentAtClosing: Math.max(0, downPayment - t.earnestMoney),
+    /* Concessions are the seller paying toward the buyer's closing costs. A
+       lender will not let them pay any of the down payment, and showing them
+       subtracted from it told a household their down payment was smaller than
+       the one the loan requires. The credit is its own line; the total is the
+       same arithmetic it always was, on the assumption the costs are at least
+       as large as the credit, which is what a concession is sized to. */
+    closingCostCredit: t.concessions,
     cashAtClosingBeforeCosts: Math.max(0, downPayment - t.earnestMoney - t.concessions),
   };
 }

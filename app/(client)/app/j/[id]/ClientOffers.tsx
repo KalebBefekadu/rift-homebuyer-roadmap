@@ -77,8 +77,17 @@ export function ClientOffers({ journeyId, bids, canRespond, agentFirst }: {
                   {a.terms.other ? <><dt className="c-4">Other</dt><dd>{a.terms.other}</dd></> : null}
                 </dl>
                 <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.5 }}>
-                  On these terms: {usd(a.effects.cashAtContract)} earnest money when it goes under contract, then about{" "}
-                  {usd(a.effects.cashAtClosingBeforeCosts)} more at closing before closing costs, which are not estimated here.
+                  On these terms: {usd(a.effects.cashAtContract)} earnest money when it goes under contract, then{" "}
+                  {a.effects.closingCostCredit > 0 ? (
+                    <>
+                      the rest of the {usd(a.effects.downPayment)} down payment, {usd(a.effects.downPaymentAtClosing)}, at closing.
+                      The seller&apos;s {usd(a.effects.closingCostCredit)} is a credit against your closing costs, which are not
+                      estimated here; it can pay those costs but not the down payment. Closing comes to
+                      about {usd(a.effects.cashAtClosingBeforeCosts)} plus those costs.
+                    </>
+                  ) : (
+                    <>about {usd(a.effects.downPaymentAtClosing)} more at closing before closing costs, which are not estimated here.</>
+                  )}
                   {a.effects.loanAmount ? ` Loan of ${usd(a.effects.loanAmount)}.` : ""}
                 </p>
                 {a.documents.length ? (
