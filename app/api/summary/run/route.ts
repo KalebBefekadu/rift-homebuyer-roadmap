@@ -31,7 +31,14 @@ async function run(req: Request) {
   const window = summaryWindow(now);
   if (!window.businessDay) return NextResponse.json({ ok: true, sent: false, reason: "not a business day" });
 
-  const parts = await summaryParts(window.since, now);
+  /* One more try when a read ran out of time. The summary makes about sixteen
+     reads at once, each held to the deadline a waiting visitor gets, and the
+     scheduled run is always a cold start: it failed that way in production
+     while the same read took half a second warm. Nobody waits on this run, so
+     a second attempt on warm connections costs nothing; a real error is not
+     retried. */
+  let parts = await summaryParts(window.since, now);
+  if (!parts.ok && /did not complete in time/.test(parts.error)) parts = await summaryParts(window.since, now);
   if (!parts.ok) {
     captureOpError(new Error(parts.error), { op: "summary.read" });
     return NextResponse.json({ ok: false, error: parts.error });

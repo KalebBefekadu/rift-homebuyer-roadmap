@@ -1104,6 +1104,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 29 Sep 2026 | The daily summary retries once when a read runs out of time: its scheduled run is a cold start with sixteen reads at the visitor deadline, and it failed that way in production |
 | 29 Sep 2026 | Security: a signed-in stranger could insert their own `rift_agents` row and become the agent (policy now read-only, write grants revoked, migration 20260929100000). Storage-less browsers all sent the session "anon", so one "Delete all of it" erased every such visitor's leads; placeholders are no longer stored or accepted (20260929100100 clears existing ones). The readout email only links to this site; public endpoints stop echoing database errors; the cron secret is compared in constant time |
 | 29 Sep 2026 | Data: "Delete all of it" now removes consent records and reports any failure; Send pressed twice sends once (`rift_outbox_events.seq`, 20260929200000) and a held send keeps its reasons; transactional email and calendar calls have deadlines; the nurture run and retention sweep fail instead of guessing on a read error; days are Georgia's in saved plans, readouts and review |
 | 29 Sep 2026 | Calculations: `/sell/unclaimed` no longer quotes a $392,000 county assessment nobody gave; tied offers are ordered by net; rate and program ages count Georgia days; a price inside a program's new-build cap is "needs checking"; the agent's registry window reaches matching; `typedSignedNumber` for amounts that may be negative |
