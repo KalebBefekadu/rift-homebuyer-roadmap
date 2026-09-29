@@ -11,6 +11,7 @@ import {
 } from "@/lib/core/decision";
 import { DecisionRoom } from "@/components/rift/DecisionRoom";
 import { Ico } from "@/components/rift/icons";
+import { typedSignedNumber } from "@/lib/core/typed";
 
 /**
  * Assembling a decision room, and releasing it.
@@ -295,9 +296,8 @@ function NewOption({ leadId, decisionId, onDone }: { leadId: string; decisionId:
     setError(null);
     /* Typed but unreadable ("about 5k", "1.2.3") is said, not saved as $0 or
        quietly dropped: the option would read as having no amount at all. */
-    const digits = amount.replace(/[$,\s]/g, "");
-    const dollars = digits ? Number(digits) : null;
-    if (dollars !== null && !Number.isFinite(dollars)) {
+    const dollars = typedSignedNumber(amount);
+    if (dollars !== null && Number.isNaN(dollars)) {
       setError("Write the amount as a number of dollars, like 12500");
       return;
     }

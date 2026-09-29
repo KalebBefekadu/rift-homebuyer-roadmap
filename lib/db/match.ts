@@ -64,8 +64,8 @@ export async function matchForVisitor(
   const windowDays = usable?.windowDays ?? 90;
 
   const match = programs.length
-    ? matchPrograms({ county, firstTimeBuyer, programs, today })
-    : matchPrograms({ county, firstTimeBuyer, today });
+    ? matchPrograms({ county, firstTimeBuyer, programs, today, windowDays })
+    : matchPrograms({ county, firstTimeBuyer, today, windowDays });
 
   return {
     match,
