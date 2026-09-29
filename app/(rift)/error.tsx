@@ -21,9 +21,18 @@ export default function RiftError({ error, reset }: { error: Error & { digest?: 
       <h1 className="serif" style={{ fontSize: "clamp(24px,3.2vw,36px)", letterSpacing: "-0.02em", maxWidth: 620 }}>
         Something on our side broke.
       </h1>
+      {/* This said "none of your answers were lost. They are saved on this
+          device", on every public page. True for the value questions, whose
+          answers live on the device, and for readouts, whose answers live in
+          the address. Untrue on /offer and /book, where what was typed lives
+          only in the form this boundary has just replaced. A reassurance that
+          is false on the page where somebody typed the most is worse than
+          none, so it says which is which. */}
       <p className="lede" style={{ marginTop: 14, maxWidth: 560 }}>
-        Not your browser, and nothing you did. It has been reported automatically, and none of
-        your answers were lost. They are saved on this device.
+        Not your browser, and nothing you did. It has been reported automatically. Answers
+        kept on this device or in the page address are safe, and trying again brings them back.
+        Anything typed into a form on this page, like an offer or a request for a call, may need
+        typing again.
       </p>
       <div className="row gap-2 wrap" style={{ marginTop: 20 }}>
         <button className="btn btn-p" onClick={reset}>Try that again</button>
