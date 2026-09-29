@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { serviceClient } from "./service";
+import { currentAgentId, serviceClient } from "./service";
 import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
 
 /**
@@ -98,6 +98,16 @@ async function readSession(): Promise<SessionState> {
      This one IS signed-out rather than unknown: the question was asked and
      answered, and the answer was no. */
   if (!agent) return { state: "signed-out", reason: "signed in, but not an agent on this account" };
+
+  /* And the row must be THE agent: the one every write is filed under
+     (service.ts). Until 20260929100000 any login could insert its own agent
+     row through PostgREST; the policy is closed now, and this is the second
+     lock, so a row that got in some other way is still not a session. A
+     second row also makes currentAgentId() answer null, and that is not a
+     reason to show a sign-in page, so it reads as unknown. */
+  const theAgent = await currentAgentId();
+  if (!theAgent) return { state: "unknown", reason: "the agent account could not be confirmed" };
+  if (theAgent !== agent.id) return { state: "signed-out", reason: "signed in, but not the agent on this account" };
 
   return {
     state: "signed-in",

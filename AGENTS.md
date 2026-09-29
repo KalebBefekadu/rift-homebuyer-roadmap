@@ -16,7 +16,7 @@ Everything else exists to make that promise survivable at scale for one person.
 | Half | Where | What it is |
 | --- | --- | --- |
 | **Specification** | `app/prototype`, `components/rift`, `lib/prototype` | The agreed product, running. No accounts, no database, no env vars. Complete and reviewed |
-| **Plumbing** | `lib/supabase`, `lib/auth`, `lib/brevo`, `lib/monitoring`, `supabase/` | Real, deployed, reusable |
+| **Plumbing** | `lib/supabase`, `lib/brevo`, `lib/monitoring`, `supabase/` | Real, deployed, reusable |
 
 **The production product is not built yet.** Building it is the job.
 

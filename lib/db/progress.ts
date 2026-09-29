@@ -246,7 +246,16 @@ export async function recordContract(
   );
   if (!t.ok) return t;
   const id = (("data" in t ? t.data : null) as { id: string }).id;
-  const undo = () => boundedWrite(db.from("rift_transactions").delete().eq("id", id).eq("agent_id", agentId), "the contract");
+  /* The contract is taken back out when a later step fails, so it never sits
+     on the journey without its stage move. When the take-back itself fails
+     that is the one state this exists to prevent, so it is said and reported,
+     not dropped: the agent would otherwise record it again beside the first. */
+  const undo = async <T,>(why: DbResult<T>): Promise<DbResult<T>> => {
+    const u = await boundedWrite(db.from("rift_transactions").delete().eq("id", id).eq("agent_id", agentId), "the contract");
+    if (u.ok) return why;
+    captureOpError(new Error(u.error), { op: "progress.recordContract.undo", extra: { journeyId } });
+    return failed(`The contract was saved but the rest was not, and it could not be taken back out. Reload before recording it again (${u.error})`);
+  };
 
   const first = await boundedWrite(
     db.from("rift_workstream_updates").insert(initialWork(input.financing, rec.side).map(({ workstream, input: w }) => ({
@@ -256,13 +265,13 @@ export async function recordContract(
     }))),
     "the contract's workstreams",
   );
-  if (!first.ok) { await undo(); return first; }
+  if (!first.ok) return undo(first);
 
   const moved = await insertEvent(l.data, journeyId, {
     kind: "stage", from: rec.progress.stage, to: "under-contract",
     reason: "Contract recorded", evidence: input.evidence, transactionId: id,
   }, agentLabel, randomUUID());
-  if (!moved.ok) { await undo(); return seqConflict(moved.error) ? failed(CHANGED) : moved; }
+  if (!moved.ok) return undo(seqConflict(moved.error) ? failed(CHANGED) : moved);
   return done({ id });
 }
 
@@ -301,7 +310,11 @@ export async function endContract(
     transactionId: contractId,
   }, agentLabel, requestId);
   if (!moved.ok) {
-    await boundedWrite(db.from("rift_transaction_outcomes").delete().eq("transaction_id", contractId).eq("agent_id", agentId), "how the contract ended");
+    const u = await boundedWrite(db.from("rift_transaction_outcomes").delete().eq("transaction_id", contractId).eq("agent_id", agentId), "how the contract ended");
+    if (!u.ok) {
+      captureOpError(new Error(u.error), { op: "progress.endContract.undo", extra: { journeyId } });
+      return failed(`How the contract ended was saved but the stage did not move, and it could not be taken back out. Reload before trying again (${u.error})`);
+    }
     return seqConflict(moved.error) ? failed(CHANGED) : moved;
   }
   if (outcome === "closed") {

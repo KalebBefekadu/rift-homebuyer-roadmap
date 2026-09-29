@@ -20,7 +20,7 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 
 | Service | Purpose | Status | Code |
 | --- | --- | --- | --- |
-| **Supabase** | Auth, Postgres, RLS, file storage | Project live, schema is the retired MVP's | `lib/supabase/*`, `lib/auth/*`, `supabase/migrations/` |
+| **Supabase** | Auth, Postgres, RLS, file storage | Project live, schema is the retired MVP's | `lib/supabase/*`, `lib/db/*`, `supabase/migrations/` |
 | **Sentry** | Errors, tracing, source maps | Wired and deployed | `next.config.ts`, `instrumentation*.ts`, `lib/monitoring/capture.ts` |
 | **Brevo** | Transactional email, contact attributes | Client written, no caller yet (the unauthenticated server action that wrapped it was removed, 28 Sep) | `lib/brevo/sync.ts` |
 | **Vercel** | Hosting, edge, cron | Project linked (`rift-homebuyer-roadmap`) | `.vercel/project.json` |
@@ -43,9 +43,8 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 
 Used for four things, and it is worth naming them separately because they fail differently:
 
-1. **Auth** — `lib/auth/index.ts` already switches between Supabase and a localStorage
-   fallback based on whether keys are present. Keep that switch. It is what lets the
-   product be developed on a plane.
+1. **Auth** — Supabase Auth email links, read on the server (`lib/db/session.ts` for the
+   agent, `lib/db/portal.ts` for clients).
 2. **Postgres + RLS** — the data layer. See [schema.md](schema.md) for the model to build.
 3. **Storage** — client documents. Not yet used; phase 6.
 4. **Realtime** — not needed yet. Do not reach for it before there is a second concurrent

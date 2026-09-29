@@ -7,7 +7,7 @@ Two things live here, and confusing them is the fastest way to build the wrong t
 1. **The specification** — `app/prototype`, `components/rift`, `lib/prototype`. Complete,
    reviewed, and running. No accounts, no database, no environment variables. It is the
    agreed product, expressed as working software instead of a wireframe.
-2. **The plumbing** — `lib/supabase`, `lib/auth`, `lib/brevo`, `lib/monitoring`,
+2. **The plumbing** — `lib/supabase`, `lib/brevo`, `lib/monitoring`,
    `supabase/migrations`, the Sentry config. Real, deployed, and reusable. It came from the
    portal MVP that Rift replaces.
 
@@ -25,7 +25,7 @@ history. Two consequences worth stating so nobody rediscovers them the hard way:
   first Rift migration is additive. Do not repurpose `roadmaps` for Rift plans — see
   [schema.md](schema.md).
 - `app/layout.tsx` no longer wraps the tree in an auth provider, because nothing consumes a
-  session yet. `lib/auth/*` is intact. Re-introduce the provider in phase 3.
+  session in the browser. Sessions are read on the server (`lib/db/session.ts`, `lib/db/portal.ts`).
 
 ## System shape
 
@@ -34,7 +34,7 @@ Browser
   -> Next.js App Router (React 19, TypeScript)
   -> lib/core/*             pure, deterministic domain logic — no I/O, no env
   -> lib/db/*               server-only data access (service role, RLS bypassed)
-  -> lib/auth + lib/supabase  Supabase Auth and Postgres behind RLS
+  -> lib/db + lib/supabase    Supabase Auth and Postgres behind RLS
   -> lib/brevo              contact and transactional email projection
   -> lib/monitoring         Sentry, for anything that fails
 ```
@@ -93,7 +93,7 @@ built against.
 | Public product | `app/(rift)` | The buyer surfaces |
 | Agent surface | `app/(studio)` | Studio |
 | Specification prototype | `app/prototype`, `components/rift`, `lib/prototype` | The agreed product, running |
-| Auth | `lib/auth`, `lib/supabase`, `app/auth/callback` | Supabase Auth with a localStorage fallback |
+| Auth | `lib/supabase`, `lib/db/session.ts`, `app/auth/callback` | Supabase Auth: email links for clients and the agent |
 | Messaging | `lib/brevo/sync.ts` | Contact upsert and event projection (no caller yet) |
 | Observability | `lib/monitoring`, `instrumentation*.ts`, `sentry.*.config.ts` | Capture failures without PII |
 | Domain | `lib/core` | The compute engine and every product rule, pure and tested |
@@ -104,9 +104,10 @@ built against.
 
 ## Persistence
 
-`lib/auth/index.ts` switches between Supabase and a localStorage implementation depending on
-whether keys are present. **Preserve that switch.** It is what lets the product be developed
-without a network, and it is one `isSupabaseConfigured()` call.
+Without Supabase keys every public page still renders (the degradation contract the e2e suite
+runs against), and writes come back `skipped`, never faked. The retired MVP's `lib/auth`
+switch to a localStorage login was removed on 29 Sep 2026: nothing used it, and it decided a
+user's role from metadata the user controls.
 
 The data model to build is in [schema.md](schema.md). The authoritative schema is always the
 SQL in `supabase/migrations/`; a model change requires a migration, a mapping update, and a
@@ -272,7 +273,7 @@ Then open `/prototype`. Nothing needs to be configured — no Supabase, no envir
 
 ### What the prototypes must not do
 
-- Import from `lib/auth`, `lib/supabase`, or `lib/brevo`.
+- Import from `lib/db`, `lib/supabase`, or `lib/brevo`.
 - Write to anything but `localStorage`.
 - Depend on environment variables.
 - Be extended with new features instead of the real product. If a change belongs in the

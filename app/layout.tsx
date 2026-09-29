@@ -15,8 +15,8 @@ export const metadata: Metadata = {
  * prototype has no accounts by design, so wrapping the tree in a provider
  * that nothing reads is a dependency pretending to be a decision.
  *
- * `lib/auth/*` is intact and working. Re-introduce a session provider here in
- * phase 3, when there are real accounts for it to serve. See docs/handoff.md.
+ * Sessions are read on the server where they are needed (lib/db/session.ts for
+ * the agent, lib/db/portal.ts for clients), so no provider is needed here.
  */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

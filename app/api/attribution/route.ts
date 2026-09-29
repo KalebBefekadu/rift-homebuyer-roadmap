@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited, readJson } from "@/lib/db/guard";
+import { limited, readJson, visitorSession } from "@/lib/db/guard";
 import { captureTouch, touchFromRequest } from "@/lib/db/attribution";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -37,7 +37,9 @@ export async function POST(req: Request) {
     const read = await readJson(req);
     if (!read.ok) return read.res;
     const body = read.body as { sessionId?: unknown; referrer?: unknown };
-    sessionId = typeof body.sessionId === "string" ? body.sessionId.slice(0, 64) : "";
+    /* A shared placeholder ("anon") would give every storage-less visitor one
+       first touch between them. */
+    sessionId = visitorSession(body.sessionId) ?? "";
     /* `document.referrer`. Long enough for a real URL, short enough that the
        body cannot be used as storage; only the host survives parsing anyway. */
     cameFrom = typeof body.referrer === "string" ? body.referrer.slice(0, 2_048) : null;

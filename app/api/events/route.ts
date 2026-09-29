@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { limited, readJson } from "@/lib/db/guard";
+import { limited, readJson, visitorSession } from "@/lib/db/guard";
 import { recordEvents, isEventName, type EventInput } from "@/lib/db/events";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -44,7 +44,10 @@ export async function POST(req: Request) {
   for (const e of raw) {
     const o = e as Record<string, unknown>;
     const name = typeof o.name === "string" ? o.name : "";
-    const sessionId = typeof o.sessionId === "string" ? o.sessionId.slice(0, 64) : "";
+    /* Only a session a browser minted for itself. The funnel counts people by
+       session, and an old tab's shared "anon" would count every storage-less
+       visitor as one person (visitorSession, lib/db/guard.ts). */
+    const sessionId = visitorSession(o.sessionId) ?? "";
     /* An unknown event name is dropped rather than stored. A taxonomy that
        accepts anything is not a taxonomy, and the first typo becomes a
        permanent column in somebody's report. */

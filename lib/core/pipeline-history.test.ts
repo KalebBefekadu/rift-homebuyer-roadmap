@@ -20,7 +20,9 @@ const ROOT = join(__dirname, "..", "..");
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".next" || entry === ".git") continue;
+    /* Dot-folders hold tooling, not the product: .claude/worktrees is another
+       checkout of this repository, and scanning it reports its copies. */
+    if (entry === "node_modules" || entry.startsWith(".")) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) walk(full, out);
     else if (/\.tsx?$/.test(entry)) out.push(full);
