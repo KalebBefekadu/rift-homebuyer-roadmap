@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Ico } from "@/components/rift/icons";
+import { LiveRegion } from "@/components/rift/Live";
 import { track } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
 import { CONTACT_EMAIL } from "@/lib/core/privacy";
@@ -139,55 +140,62 @@ export function ForgetMe({ side, labels, style, planToken }: {
     }
   };
 
-  if (state === "done" || state === "held") {
-    return (
-      <div className="card p-3" style={{ borderColor: "var(--pos, #2f7a52)" }}>
-        <div className="row-t gap-2">
-          <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
-          <p className="t-xs c-3" style={{ lineHeight: 1.55, ...(state === "held" && !l.held ? {} : style) }}>{state === "held" ? l.held ?? FORGET_EN.held : l.done}</p>
-        </div>
-      </div>
-    );
-  }
+  const deleted = state === "done" || state === "held";
 
-  if (state === "failed") {
-    return (
-      <div className="card p-3" role="alert" style={{ borderColor: "var(--warn-line)" }}>
-        <p className="t-xs c-2" style={{ lineHeight: 1.55, ...style }}>{l.failed ?? FORGET_EN.failed}</p>
+  /* One card for every state, so the two message regions inside it are in
+     the page before the outcome is. This returned a different card per state,
+     each with its role on it, which is a live region that arrives already
+     full: the one control where the outcome matters most was often silent to
+     a screen reader. */
+  return (
+    <div className="card p-3" style={
+      deleted ? { borderColor: "var(--pos, #2f7a52)" }
+        : state === "failed" ? { borderColor: "var(--warn-line)" }
+          : state === "partial" ? undefined
+            : { background: "var(--paper)" }
+    }>
+      <LiveRegion>
+        {deleted ? (
+          <div className="row-t gap-2">
+            <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none", marginTop: 2 }} />
+            <p className="t-xs c-3" style={{ lineHeight: 1.55, ...(state === "held" && !l.held ? {} : style) }}>{state === "held" ? l.held ?? FORGET_EN.held : l.done}</p>
+          </div>
+        ) : state === "partial" ? (
+          <p className="t-xs c-3" style={{ lineHeight: 1.55, ...style }}>{l.partial}</p>
+        ) : null}
+      </LiveRegion>
+
+      <LiveRegion kind="alert">
+        {state === "failed" ? (
+          <p className="t-xs c-2" style={{ lineHeight: 1.55, ...style }}>{l.failed ?? FORGET_EN.failed}</p>
+        ) : null}
+      </LiveRegion>
+
+      {state === "failed" ? (
         <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={forget}>
           <Ico.refresh size={12} /><span style={style}>{l.cta}</span>
         </button>
-      </div>
-    );
-  }
+      ) : null}
 
-  if (state === "partial") {
-    return (
-      <div className="card p-3">
-        <p className="t-xs c-3" style={{ lineHeight: 1.55, ...style }}>{l.partial}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="card p-3" style={{ background: "var(--paper)" }}>
-      <div className="between wrap gap-2">
-        {/* Suppressed, not translated, when the caller has its own heading and
-            body above this card. The abroad readout does, and rendering this
-            as well printed the English sentence directly beneath the Amharic
-            one saying the same thing. */}
-        {l.blurb === null ? <span /> : (
-          <p className="t-xs c-3" style={{ lineHeight: 1.55, maxWidth: 360, ...style }}>
-            {l.blurb ?? FORGET_EN.blurb}
-          </p>
-        )}
-        {/* Never disabled. The previous seller-side version switched itself off
-            when localStorage was empty, which is exactly the state of somebody
-            on a second device, or anybody whose record is only on our side. */}
-        <button className="btn btn-g btn-sm" onClick={forget} disabled={state === "working"}>
-          <Ico.x size={12} /><span style={style}>{state === "working" ? l.working : l.cta}</span>
-        </button>
-      </div>
+      {state === "idle" || state === "working" ? (
+        <div className="between wrap gap-2">
+          {/* Suppressed, not translated, when the caller has its own heading and
+              body above this card. The abroad readout does, and rendering this
+              as well printed the English sentence directly beneath the Amharic
+              one saying the same thing. */}
+          {l.blurb === null ? <span /> : (
+            <p className="t-xs c-3" style={{ lineHeight: 1.55, maxWidth: 360, ...style }}>
+              {l.blurb ?? FORGET_EN.blurb}
+            </p>
+          )}
+          {/* Never disabled. The previous seller-side version switched itself off
+              when localStorage was empty, which is exactly the state of somebody
+              on a second device, or anybody whose record is only on our side. */}
+          <button className="btn btn-g btn-sm" onClick={forget} disabled={state === "working"}>
+            <Ico.x size={12} /><span style={style}>{state === "working" ? l.working : l.cta}</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

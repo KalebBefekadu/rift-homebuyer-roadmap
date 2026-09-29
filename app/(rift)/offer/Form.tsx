@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
+import { LiveRegion } from "@/components/rift/Live";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import type { Candidates, Field } from "@/lib/core/offer-extract";
@@ -199,9 +200,9 @@ export function Form() {
           {/* Always in the page, so a screen reader is listening before the
               answer arrives: a live region inserted with its text already
               in it is often not read out at all. */}
-          <div role="status">
+          <LiveRegion>
             {readSay ? <p className="t-sm c-2" style={{ marginTop: 10, lineHeight: 1.6 }}>{readSay}</p> : null}
-          </div>
+          </LiveRegion>
         </section>
 
         <section className="card p-5" style={{ marginTop: 24 }}>
@@ -331,11 +332,13 @@ export function Form() {
                 onChange={(e) => setCommissionText(e.target.value)} />
               <span className="t-xs c-3">% commission. We do not know their arrangement, so change it.</span>
             </div>
-            {pctReads ? null : (
-              <p id="offer-pct-note" role="status" className="t-xs c-3" style={{ marginTop: 6 }}>
-                Worked out at {ASSUMED_COMMISSION_PCT}% until the box holds a number from {MIN_COMMISSION_PCT} to {MAX_COMMISSION_PCT}.
-              </p>
-            )}
+            <LiveRegion id="offer-pct-note">
+              {pctReads ? null : (
+                <p className="t-xs c-3" style={{ marginTop: 6 }}>
+                  Worked out at {ASSUMED_COMMISSION_PCT}% until the box holds a number from {MIN_COMMISSION_PCT} to {MAX_COMMISSION_PCT}.
+                </p>
+              )}
+            </LiveRegion>
 
             {reading.gaps.length ? (
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line-2)" }}>
@@ -396,28 +399,30 @@ export function Form() {
             <Link href="/privacy" className="btn-link">What we keep</Link>.
           </p>
 
-          {errors.length ? (
-            <div role="alert" style={{ marginTop: 10 }}>
-              <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
-                {errors.map((e) => <li key={e}>{e}</li>)}
-              </ul>
-              {/* A dead end is not an honest failure, it is half of one.
-                  Telling somebody to "send it to Kaleb directly" without
-                  giving them a way to is the kind of message that reads as
-                  helpful and leaves them exactly where they were. The booking
-                  path does not depend on anything this one does. */}
-              {failedToSend ? (
-                <div className="card p-3" style={{ marginTop: 10, background: "var(--sunk)" }}>
-                  <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
-                    Your terms are still on this page and the arithmetic above is still yours;
-                    nothing was lost. The quickest way through is{" "}
-                    <Link href="/book?v=offer" className="btn-link">fifteen minutes with Kaleb</Link>,
-                    which does not depend on whatever just failed here.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+          <LiveRegion kind="alert">
+            {errors.length ? (
+              <div style={{ marginTop: 10 }}>
+                <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
+                  {errors.map((e) => <li key={e}>{e}</li>)}
+                </ul>
+                {/* A dead end is not an honest failure, it is half of one.
+                    Telling somebody to "send it to Kaleb directly" without
+                    giving them a way to is the kind of message that reads as
+                    helpful and leaves them exactly where they were. The booking
+                    path does not depend on anything this one does. */}
+                {failedToSend ? (
+                  <div className="card p-3" style={{ marginTop: 10, background: "var(--sunk)" }}>
+                    <p className="t-xs c-2" style={{ lineHeight: 1.6 }}>
+                      Your terms are still on this page and the arithmetic above is still yours;
+                      nothing was lost. The quickest way through is{" "}
+                      <Link href="/book?v=offer" className="btn-link">fifteen minutes with Kaleb</Link>,
+                      which does not depend on whatever just failed here.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </LiveRegion>
 
           {sent ? (
             <div role="status" tabIndex={-1} ref={focusOnShow} className="card p-4" style={{ marginTop: 12, background: "var(--pos-wash)", borderColor: "var(--pos-line)" }}>

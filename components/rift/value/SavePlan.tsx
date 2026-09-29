@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Ico } from "@/components/rift/icons";
+import { LiveRegion } from "@/components/rift/Live";
 import { EMAIL_NOTE, PHONE_CONSENT } from "@/lib/core/privacy";
 import { readAnswers } from "@/lib/rift/answers";
 import { sessionId } from "@/lib/rift/session";
@@ -134,7 +135,13 @@ export function SavePlan({ side, mode, plan, onClose }: {
               </label>
             ) : null}
 
-            {error ? <p role="alert" className="t-sm c-neg mt-3">{error}</p> : null}
+            <LiveRegion kind="alert">
+              {error ? (
+                <p className="t-sm c-neg mt-3 row-t gap-2">
+                  <Ico.alert size={13} style={{ flex: "none", marginTop: 3 }} />{error}
+                </p>
+              ) : null}
+            </LiveRegion>
 
             <button type="submit" className="btn btn-brand btn-lg mt-4" style={{ width: "100%" }} disabled={!ready || state === "sending"}>
               {state === "sending" ? "Saving…" : mode === "review" ? "Send it to Kaleb" : "Save my plan"}

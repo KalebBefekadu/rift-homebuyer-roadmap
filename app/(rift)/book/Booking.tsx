@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
+import { LiveRegion } from "@/components/rift/Live";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { track, useTrack, flush } from "@/lib/rift/track";
@@ -281,11 +282,13 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             )}
           </div>
 
-          {error ? (
-            <p role="alert" className="t-xs c-neg row gap-2" style={{ marginTop: 12 }}>
-              <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{error}
-            </p>
-          ) : null}
+          <LiveRegion kind="alert">
+            {error ? (
+              <p className="t-xs c-neg row gap-2" style={{ marginTop: 12 }}>
+                <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{error}
+              </p>
+            ) : null}
+          </LiveRegion>
 
           <button className="btn btn-p" style={{ width: "100%", marginTop: 16 }} disabled={!ready || state === "sending"} onClick={submit}>
             {state === "sending" ? "Sending…" : !phoneOk ? "Add your phone number" : blocked ? "Tick the box so Kaleb can call you" : live ? "Book this time" : "Ask for a call"}
