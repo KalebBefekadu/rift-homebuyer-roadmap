@@ -66,7 +66,9 @@ export async function POST(req: Request) {
       op: "events.record",
       extra: { count: events.length, dropped: raw.length - events.length },
     });
-    return NextResponse.json({ ok: false, recorded: 0, error: result.error }, { status: 200 });
+    /* The database's own words stay in Sentry. Echoed here, they told any
+       caller our table, column and constraint names. */
+    return NextResponse.json({ ok: false, recorded: 0, error: "not recorded" }, { status: 200 });
   }
 
   if ("skipped" in result) {

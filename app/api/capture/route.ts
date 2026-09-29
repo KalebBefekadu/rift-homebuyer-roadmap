@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { clientIp, limited, readJson } from "@/lib/db/guard";
+import { clientIp, limited, ownLink, readJson, visitorSession } from "@/lib/db/guard";
+import { isUuid } from "@/lib/core/ids";
 import { captureLead } from "@/lib/db/leads";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -36,8 +37,11 @@ export async function POST(req: Request) {
 
   /* Empty means "no assessment behind this lead", which is a real case rather
      than a mistake: a share-link visitor, or somebody booking from the
-     landing page. It must not reach the database as an empty uuid. */
-  const assessmentId = typeof b.assessmentId === "string" && b.assessmentId.trim()
+     landing page. It must not reach the database as an empty uuid. Nor as a
+     malformed one: /book copies it from its own `?a=` parameter, and
+     Postgres refusing a uuid it cannot parse failed the whole insert, losing
+     the lead over a link somebody had trimmed. */
+  const assessmentId = typeof b.assessmentId === "string" && isUuid(b.assessmentId.trim())
     ? b.assessmentId.trim()
     : null;
   const email = typeof b.email === "string" ? b.email.trim().slice(0, 200) : "";
@@ -66,26 +70,29 @@ export async function POST(req: Request) {
   const county = str(wantsDeliver.county) || str(lead.county) || str(b.county);
   const scored: LeadInput = {
     side: lead.side === "sell" ? "sell" : "buy",
-    timing: typeof lead.timing === "string" ? lead.timing : "",
+    /* Clamped like every other string here: both are stored in the lead's
+       jsonb and the timing is quoted verbatim in the agent's alert. */
+    timing: typeof lead.timing === "string" ? lead.timing.slice(0, 200) : "",
     completion: typeof lead.completion === "number" ? Math.min(1, Math.max(0, lead.completion)) : 0,
     hoursSince: 0,
     value: typeof lead.value === "number" ? lead.value : 0,
     monthsToReady: typeof lead.monthsToReady === "number" ? lead.monthsToReady : null,
     coBuyer: lead.coBuyer === true,
     contactable: Boolean(email || phone),
-    source: typeof lead.source === "string" ? lead.source : "direct",
+    source: typeof lead.source === "string" ? lead.source.slice(0, 40) : "direct",
   };
 
   /* The session, so the person can later be erased.
      
      Without it a lead captured from the abroad readout or from /book has no
      link to anything a delete request can key on, and "delete all of it"
-     silently spares exactly the row that holds their email address. */
-  const sessionId = typeof b.sessionId === "string" ? b.sessionId.trim().slice(0, 64) : "";
+     silently spares exactly the row that holds their email address. Only a
+     session the browser minted for itself: see visitorSession. */
+  const sessionId = visitorSession(b.sessionId);
 
   const r = await captureLead({
     assessmentId,
-    sessionId: sessionId || undefined,
+    sessionId,
     side: scored.side,
     name: name || undefined,
     email: email || undefined,
@@ -188,21 +195,32 @@ export async function POST(req: Request) {
     const side = (lead.side === "sell" ? "sell" : "buy") as "buy" | "sell";
     const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
 
-    const sent = await sendReadout({
-      to: email,
-      name: name || undefined,
-      shareUrl: wants.shareUrl,
-      county: typeof wants.county === "string" ? wants.county : "your",
-      side,
-      ...(side === "sell"
-        ? { net: num(wants.netProceeds), price: num(wants.price) }
-        : {
-            cashToClose: num(wants.cashToClose),
-            gap: num(wants.gap) ?? 0,
-            monthsToClose: typeof wants.monthsToClose === "number" ? wants.monthsToClose : null,
-          }),
-    });
-    delivery = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
+    /* Only a link to this site. The address is whatever the caller typed, so
+       an arbitrary link here made this route a relay for phishing mail under
+       Kaleb's sender. A refusal is not the visitor's problem to solve: the
+       lead is stored and the readout is on their screen, and the page reads
+       anything but "sent" as saved and not emailed. */
+    const shareUrl = ownLink(wants.shareUrl, req);
+    if (!shareUrl) {
+      delivery = "refused";
+      captureOpError(new Error("readout link is not on this site"), { op: "email.readout.link" });
+    } else {
+      const sent = await sendReadout({
+        to: email,
+        name: name || undefined,
+        shareUrl,
+        county: county || "your",
+        side,
+        ...(side === "sell"
+          ? { net: num(wants.netProceeds), price: num(wants.price) }
+          : {
+              cashToClose: num(wants.cashToClose),
+              gap: num(wants.gap) ?? 0,
+              monthsToClose: typeof wants.monthsToClose === "number" ? wants.monthsToClose : null,
+            }),
+      });
+      delivery = sent.ok ? ("skipped" in sent ? "not configured" : "sent") : "failed";
+    }
   }
 
   /* `stored` says, in one word, whether the person's details now exist on our

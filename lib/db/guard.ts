@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { check, LIMITS, type Limit } from "@/lib/core/ratelimit";
 import { MAX_BODY_BYTES } from "@/lib/core/limits";
 import { authoriseCron } from "@/lib/core/cron";
+import { siteUrl } from "@/lib/core/site";
 
 export { MAX_BODY_BYTES };
 
@@ -26,6 +27,51 @@ export function ipOf(req: Request): string {
 export function clientIp(req: Request): string | undefined {
   const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return fwd || req.headers.get("x-real-ip")?.trim() || undefined;
+}
+
+/* What lib/rift/session.ts mints: `s-<time>-<random>`, both base36. */
+const VISITOR_SESSION = /^s-[0-9a-z]{1,16}-[0-9a-z]{1,16}$/;
+
+/**
+ * A session id a browser minted for itself, or nothing.
+ *
+ * lib/rift/session.ts falls back to the constant "anon" when sessionStorage
+ * is blocked (and "ssr" on the server). A constant is not a session: it is
+ * one id shared by every visitor in that situation. Stored against a lead it
+ * links strangers together, and /api/forget accepted it, so anybody could
+ * post `{ "sessionId": "anon" }` and erase every lead ever captured from a
+ * browser with storage switched off. Only an id shaped like one this product
+ * mints is a handle on one person; anything else is treated as no session.
+ */
+export function visitorSession(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const s = v.trim();
+  return VISITOR_SESSION.test(s) ? s : undefined;
+}
+
+/**
+ * A link a browser asked us to put in an email, if it points at this site.
+ *
+ * The abroad readout posts its own URL for the readout email, and capture
+ * sent whatever arrived: any address, any link, under Kaleb's sender and the
+ * words "Your full readout is here", with the link written into the markup
+ * unescaped. That is a phishing relay with a good sending reputation. Only
+ * this deployment's origin is accepted (the one the request arrived on, or
+ * the configured site), and the link is rebuilt from its parsed parts, which
+ * the URL parser has already percent-encoded, so no quote survives into an
+ * attribute.
+ */
+export function ownLink(v: unknown, req: Request): string | undefined {
+  if (typeof v !== "string" || v.length > 2_048) return undefined;
+  let u: URL;
+  try {
+    u = new URL(v);
+  } catch {
+    return undefined;
+  }
+  const ours = [new URL(req.url).origin, siteUrl()];
+  if (!ours.includes(u.origin)) return undefined;
+  return `${u.origin}${u.pathname}${u.search}`;
 }
 
 

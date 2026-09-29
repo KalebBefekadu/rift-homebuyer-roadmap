@@ -66,7 +66,8 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     captureOpError(new Error(result.error), { op: "attribution.capture", extra: { hasSource: Boolean(touch.source) } });
-    return NextResponse.json({ ok: false, error: result.error }, { status: 200 });
+    /* Reported above in full; the caller is anybody, and gets no schema. */
+    return NextResponse.json({ ok: false, error: "not recorded" }, { status: 200 });
   }
   if ("skipped" in result) return NextResponse.json({ ok: true, skipped: true, reason: result.reason });
   return NextResponse.json({ ok: true, ...result.data });

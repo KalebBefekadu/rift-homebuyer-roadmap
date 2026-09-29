@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clientIp, limited, readJson } from "@/lib/db/guard";
+import { clientIp, limited, readJson, visitorSession } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { attachPlan } from "@/lib/db/saved-plan";
 import { sendNewLead, sendSavedPlan } from "@/lib/db/email";
@@ -46,12 +46,12 @@ export async function POST(req: Request) {
 
   const plan = cleanPlan(b);
   const side = plan.side === "sell" ? "sell" : "buy";
-  const sessionId = str(b.sessionId, 64);
+  const sessionId = visitorSession(b.sessionId);
   const price = typeof plan.answers.price === "number" ? plan.answers.price : 0;
 
   const r = await captureLead({
     assessmentId: null,
-    sessionId: sessionId || undefined,
+    sessionId,
     side,
     name,
     email,
