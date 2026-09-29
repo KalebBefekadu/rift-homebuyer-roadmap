@@ -26,6 +26,7 @@
  */
 
 import type { Band } from "./lead";
+import { FUNDING_LABEL, type AssistanceProgram } from "./registry";
 
 export type Channel = "email" | "text" | "call" | "task";
 
@@ -58,6 +59,12 @@ export interface Step {
   body: string;
   /** Sent without the agent, or queued for him. */
   auto: boolean;
+  /**
+   * Set when the step's subject and opening depend on what the person
+   * matched, so the definition cannot carry them. `says` and `body` above are
+   * then only what the agent sees in Studio; the send uses `programsCopy`.
+   */
+  lists?: "programs";
 }
 
 export interface Sequence {
@@ -111,7 +118,10 @@ export const SEQUENCES: Sequence[] = [
       { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
       { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it: Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone.", body: "If it would help to go through this with somebody, there are two windows this week." },
       { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not. Say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date." },
-      { id: "n4", day: 6, channel: "email", auto: true, says: "The two programs you matched, and what each would need from you", gives: "The matched assistance, itemised: new information, not a repeat of the readout.", body: "Two Georgia programs look like they fit your answers. Here is what each one would ask of you." },
+      /* The count and the names are the person's own, worked out at send time
+         (programsCopy below). This step used to say "the two programs" to
+         everybody, including people who matched one, three, or none. */
+      { id: "n4", day: 6, channel: "email", auto: true, lists: "programs", says: "The programs you matched, and what each would need from you", gives: "The matched assistance, itemised: new information, not a repeat of the readout. Not sent to anybody who matched none.", body: "The Georgia programs that look like they fit your answers, and what each one would ask of you." },
       { id: "n5", day: 9, channel: "task", auto: false, says: "Decide: still live, or move to the slower cadence?", gives: "An honest reclassification instead of a permanent 'urgent' that stops meaning anything.", body: "Checking whether this is still something you are working towards, so we know how often to be in touch." },
     ],
   },
@@ -153,6 +163,57 @@ export const SEQUENCES: Sequence[] = [
 ];
 
 export const sequenceFor = (band: Band) => SEQUENCES.find((s) => s.band === band) ?? SEQUENCES[3];
+
+/* ------------------------------------------------------------------ *
+ * The step that lists their programs
+ * ------------------------------------------------------------------ */
+
+/** Whether this step's copy is the person's matched programs. */
+export const listsPrograms = (stepId: string) =>
+  SEQUENCES.some((s) => s.steps.some((x) => x.id === stepId && x.lists === "programs"));
+
+/** One matched programme as the email lists it. */
+export interface ProgramLine {
+  name: string;
+  /** Said only when funding is not simply open. Matched is not the same as available. */
+  state: string | null;
+  /** What it would ask of them, from the verified registry entry. */
+  needs: string[];
+}
+
+export function programLines(matched: AssistanceProgram[]): ProgramLine[] {
+  return matched.map((p) => ({
+    name: p.name,
+    state: p.funding === "open" ? null : FUNDING_LABEL[p.funding],
+    needs: p.conditions,
+  }));
+}
+
+const WORDS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const counted = (n: number) => WORDS[n] ?? String(n);
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * The subject and opening line for the programs step, from what they matched.
+ *
+ * Null when they matched nothing. There is no honest version of an email
+ * about the programs somebody matched when they matched none, and the runner
+ * records the step as skipped rather than sending it.
+ */
+export function programsCopy(names: string[]): { says: string; body: string } | null {
+  if (!names.length) return null;
+  if (names.length === 1) {
+    return {
+      says: "The program you matched, and what it would need from you",
+      body: "One Georgia program looks like it fits your answers. Here is what it would ask of you.",
+    };
+  }
+  const n = counted(names.length);
+  return {
+    says: `The ${n} programs you matched, and what each would need from you`,
+    body: `${capital(n)} Georgia programs look like they fit your answers. Here is what each one would ask of you.`,
+  };
+}
 
 /* ------------------------------------------------------------------ *
  * Resolving a step for a real person

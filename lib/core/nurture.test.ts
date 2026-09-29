@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop } from "./nurture";
+import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines } from "./nurture";
+import { PROGRAMS } from "./registry";
 import { BUY_FUNNEL } from "./funnel";
 
 /**
@@ -167,5 +168,42 @@ describe("an address on the provider's block list (AT37)", () => {
   it("does not claim an opt-out for a block the person did not make", () => {
     expect(blockedStop("adminBlocked")).toBeNull();
     expect(blockedStop("somethingNew")).toBeNull();
+  });
+});
+
+describe("the step that lists their programs", () => {
+  it("is the n4 email, and nothing else claims a count it cannot know", () => {
+    expect(listsPrograms("n4")).toBe(true);
+    expect(listsPrograms("n3")).toBe(false);
+    const n4 = SEQUENCES.flatMap((q) => q.steps).find((x) => x.id === "n4")!;
+    /* The definition is what Studio shows. It used to say "the two programs"
+       for everybody; a number there would be a guess about somebody. */
+    expect(`${n4.says} ${n4.body}`).not.toMatch(/\b(one|two|three|four|\d+) (Georgia )?programs?\b/i);
+  });
+
+  it("does not write anything for somebody who matched none", () => {
+    expect(programsCopy([])).toBeNull();
+  });
+
+  it("speaks of one program in the singular", () => {
+    const c = programsCopy(["Georgia Dream Homeownership Program"])!;
+    expect(c.says).toBe("The program you matched, and what it would need from you");
+    expect(c.body).toMatch(/^One Georgia program looks like it fits/);
+    expect(`${c.says} ${c.body}`).not.toMatch(/programs|each/);
+  });
+
+  it("counts several in words", () => {
+    expect(programsCopy(["A", "B"])!.says).toBe("The two programs you matched, and what each would need from you");
+    const three = programsCopy(["A", "B", "C"])!;
+    expect(three.says).toMatch(/^The three programs/);
+    expect(three.body).toMatch(/^Three Georgia programs look like they fit/);
+    expect(programsCopy(Array.from({ length: 12 }, (_, i) => `P${i}`))!.says).toMatch(/^The 12 programs/);
+  });
+
+  it("lists each programme with what it asks, and says when funding is not simply open", () => {
+    const open = PROGRAMS.find((p) => p.funding === "open")!;
+    const [line] = programLines([open, { ...open, funding: "closed" }]);
+    expect(line).toEqual({ name: open.name, state: null, needs: open.conditions });
+    expect(programLines([{ ...open, funding: "closed" }])[0]!.state).toBe("Funding closed");
   });
 });

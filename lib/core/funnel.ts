@@ -209,6 +209,15 @@ export function firstTimeFrom(o: Ownership) {
 }
 
 /**
+ * A stored ownership answer, narrowed. A snapshot written by an older build
+ * could carry anything here, and "none" is the assumption that matches the
+ * most programmes, so an unrecognised value fails towards showing somebody
+ * more help rather than less; the plan's own intake asks again anyway.
+ */
+export const ownershipOf = (v: unknown): Ownership =>
+  (["none", "primary", "investment"] as const).find((o) => o === v) ?? "none";
+
+/**
  * How an ownership answer reads back to the person who gave it.
  *
  * Lives here rather than inline in a page because two surfaces render it and a

@@ -19,6 +19,7 @@
 
 import { money } from "./compute";
 import { BAND_LABEL, type Band, type Signal } from "./lead";
+import type { ProgramLine } from "./nurture";
 
 export interface ReadoutEmail {
   to: string;
@@ -290,6 +291,8 @@ export interface TouchEmail {
   shareUrl: string;
   county: string | null;
   figures: Record<string, string | number> | null;
+  /** For the programs step: what they matched, itemised. Absent on every other step. */
+  programs?: ProgramLine[];
 }
 
 /**
@@ -313,10 +316,20 @@ export function buildTouch(t: TouchEmail): { subject: string; html: string } | n
   const gap = Number(t.figures.gap) || 0;
   const where = t.county ? `${escapeHtml(t.county)} County` : "your area";
 
+  /* The itemised list the programs step promises in its subject. Names and
+     conditions come from the registry, which is edited by hand, so they are
+     escaped like anything else a person typed. */
+  const programs = t.programs?.length ? `
+  <ul style="font-size:15px;padding-left:20px">
+    ${t.programs.map((p) => `<li style="margin-bottom:10px"><strong>${escapeHtml(p.name)}</strong>${
+      p.state ? ` (${escapeHtml(p.state)})` : ""
+    }${p.needs.length ? `<br><span style="font-size:14px;color:#444">${p.needs.map((n) => escapeHtml(n.replace(/\.\s*$/, ""))).join("; ")}.</span>` : ""}</li>`).join("\n    ")}
+  </ul>` : "";
+
   const html = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
   <p style="font-size:15px">${t.name ? `${escapeHtml(t.name)},` : "Hello,"}</p>
-  <p style="font-size:15px">${escapeHtml(t.body)}</p>
+  <p style="font-size:15px">${escapeHtml(t.body)}</p>${programs}
   <p style="font-size:15px">
     Your readout still says <strong>${money(cash)}</strong> at the table in ${where}${
       gap > 0 ? `, with <strong>${money(gap)}</strong> still to find` : ", and your savings already cover it"

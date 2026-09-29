@@ -23,6 +23,8 @@ vi.mock("./service", () => ({
   currentAgentId: async () => "agent-1",
 }));
 vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: vi.fn() }));
+const matchForVisitor = vi.fn();
+vi.mock("./match", () => ({ matchForVisitor: (...a: unknown[]) => matchForVisitor(...a) }));
 
 const { claimStep, markTouch } = await import("./nurture");
 
@@ -201,5 +203,51 @@ describe("rechecking just before the send (AT37)", async () => {
     });
     const q = await due(new Date("2026-09-24T12:00:00Z"));
     expect(q.ok).toBe(false);
+  });
+});
+
+describe("the programmes the n4 email lists", async () => {
+  const { due, matchedPrograms } = await import("./nurture");
+  const { PROGRAMS } = await import("@/lib/core/registry");
+
+  it("reads first-time status from the ownership answer on their readout", async () => {
+    const enrolment = (id: string, lead: string, assessment: string) => ({
+      id, lead_id: lead, band: "now", entered_at: "2026-09-01T00:00:00Z", phone_consent: false,
+      rift_leads: { name: lead, email: `${lead}@example.com`, assessment_id: assessment, side: "buy" }, rift_touches: [],
+    });
+    build({
+      "select rift_enrolments": { data: [enrolment("e1", "owner", "a1"), enrolment("e2", "renter", "a2")], error: null },
+      "select rift_journeys": { data: [], error: null },
+      "select rift_answers": { data: [], error: null },
+      "select rift_readouts": {
+        data: [
+          { assessment_id: "a1", figures: { cashToClose: 1 }, inputs: { ownership: "primary" }, share_token: "t1", rift_assessments: { county: "DeKalb" } },
+          { assessment_id: "a2", figures: { cashToClose: 1 }, inputs: { ownership: "nonsense" }, share_token: "t2", rift_assessments: { county: "DeKalb" } },
+        ],
+        error: null,
+      },
+    });
+    const q = await due(new Date("2026-09-24T12:00:00Z"));
+    const by = new Map((q.ok && "data" in q ? q.data : []).map((t) => [t.leadId, t.firstTimeBuyer]));
+    expect(by.get("owner")).toBe(false);
+    /* Unrecognised fails towards more help, as the plan's comparison does. */
+    expect(by.get("renter")).toBe(true);
+  });
+
+  it("matches nothing without a county, and does not ask the registry to guess", async () => {
+    matchForVisitor.mockReset();
+    expect(await matchedPrograms({ county: null, firstTimeBuyer: true }, new Map())).toEqual([]);
+    expect(matchForVisitor).not.toHaveBeenCalled();
+  });
+
+  it("matches fresh, once per county and status in a run", async () => {
+    matchForVisitor.mockReset();
+    matchForVisitor.mockResolvedValue({ match: { matched: [PROGRAMS[0]] } });
+    const cache = new Map();
+    const a = await matchedPrograms({ county: "DeKalb", firstTimeBuyer: true }, cache);
+    await matchedPrograms({ county: "DeKalb", firstTimeBuyer: true }, cache);
+    expect(a.map((p) => p.name)).toEqual([PROGRAMS[0]!.name]);
+    expect(matchForVisitor).toHaveBeenCalledTimes(1);
+    expect(matchForVisitor).toHaveBeenCalledWith("DeKalb", true);
   });
 });

@@ -114,6 +114,28 @@ describe("the cadence's own emails still behave", () => {
     })).toBeNull();
   });
 
+  it("the programs touch names each programme and what it asks, escaped", () => {
+    const built = buildTouch({
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", county: "DeKalb",
+      figures: { cashToClose: 26_000, gap: 0 },
+      programs: [
+        { name: "Georgia Dream <b>", state: null, needs: ["Homebuyer education course required.", "Primary residence"] },
+        { name: "County Fund", state: "Waiting list", needs: [] },
+      ],
+    })!;
+    expect(built.html).toContain("<strong>Georgia Dream &lt;b&gt;</strong>");
+    expect(built.html).toContain("Homebuyer education course required; Primary residence.");
+    expect(built.html).toContain("<strong>County Fund</strong> (Waiting list)");
+  });
+
+  it("an ordinary touch lists no programmes", () => {
+    const built = buildTouch({
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", county: "DeKalb",
+      figures: { cashToClose: 26_000, gap: 0 },
+    })!;
+    expect(built.html).not.toContain("<ul");
+  });
+
   it("a resume email carries progress and can say it is the last", () => {
     const built = buildResume({
       to: "a@b.com", says: "s", body: "b", resumeUrl: "https://x", answered: 3, of: 7, last: true,
