@@ -16,6 +16,7 @@
     "rift:seed-programs": "node scripts/generate-assistance-sql.mjs > supabase/seed/rift_programs.sql",
     "rift:rate": "node --env-file=.env.local scripts/record-rate.mjs",
     "verify:queries": "node scripts/verify-queries.mjs",
+    "local:seed-demo": "node scripts/local/seed-demo.mjs | docker exec -i rift-pg psql -U postgres -q -v ON_ERROR_STOP=1",
     "verify": "tsc --noEmit && next lint && vitest run && next build",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
