@@ -3,8 +3,10 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead, boundedWrite } from "./bounded";
 import { journeyTablesMissing } from "./journeys";
-import { sequenceFor, resolveChannel, programLines, type Enrolment, type ProgramLine, type StopId } from "@/lib/core/nurture";
+import { sequenceFor, resolveChannel, programLines, touchCopy, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
 import { BUY_FUNNEL, firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
+import { planFacts } from "@/lib/core/saved-plan";
+import { georgiaDay } from "@/lib/core/day";
 import { matchForVisitor } from "./match";
 import type { Band } from "@/lib/core/lead";
 
@@ -80,10 +82,11 @@ export interface DueTouch {
   email: string | null;
   band: Band;
   stepId: string;
+  /** The subject, already the plan variant's when the step has one and they saved a plan. */
   says: string;
   /** The agent-facing rationale, shown in Studio. Never emailed. */
   gives: string;
-  /** The customer-facing opening line. */
+  /** The customer-facing opening line, chosen the same way as `says`. */
   body: string;
   auto: boolean;
   channel: "email" | "text" | "call" | "task";
@@ -100,10 +103,22 @@ export interface DueTouch {
    */
   figures: Record<string, string | number> | null;
   shareToken: string | null;
+  /**
+   * Which email this is: their readout, their saved plan, or an invitation
+   * back. Decided here, from what is on file, so the dry run and the send
+   * cannot disagree about it.
+   */
+  kind: TouchKind;
+  /** The saved plan's private link token (Blueprint v5 §5.5), when that is what they have. */
+  planToken: string | null;
+  /** The Georgia day the plan was saved. */
+  planSavedOn: string | null;
+  /** A value's own page, for "start it again". Never carries their answers. */
+  againPath: string | null;
   county: string | null;
-  /** From the ownership answer on their readout. What the programs step matches on, with the county. */
+  /** From the ownership answer on their readout or plan. What the programs step matches on, with the county. */
   firstTimeBuyer: boolean;
-  /** How far they got, for the recovery touch. */
+  /** How far they got, for the recovery touch. Everything, for somebody who saved a plan. */
   answered: number;
   of: number;
   side: "buy" | "sell";
@@ -125,7 +140,11 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
   try {
     const { data, error } = await db
       .from("rift_enrolments")
-      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side),rift_touches(step_id)")
+      /* The plan columns ride on the same embed. Since D31 a new lead has no
+         assessment at all, so without them every real lead read as somebody
+         who had started and stopped, and was sent "pick up where you left
+         off" about a plan they had finished and saved. */
+      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side,plan,plan_token,plan_saved_at),rift_touches(step_id)")
       .eq("agent_id", agent_id)
       .is("stopped_at", null);
     if (error) return failed(error.message);
@@ -140,7 +159,10 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 
     const rows = ((data ?? []) as unknown as {
       id: string; lead_id: string; band: Band; entered_at: string; phone_consent: boolean;
-      rift_leads: { name: string | null; email: string | null; assessment_id: string | null; side: "buy" | "sell" } | null;
+      rift_leads: {
+        name: string | null; email: string | null; assessment_id: string | null; side: "buy" | "sell";
+        plan?: unknown; plan_token?: string | null; plan_saved_at?: string | null;
+      } | null;
       rift_touches: { step_id: string }[];
     }[]).filter((r) => !isClient.has(r.lead_id));
 
@@ -192,6 +214,10 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
       }
     }
 
+    /* The buyer funnel's length. Read from the definition rather than
+       hard-coded, so editing the funnel cannot make this sentence lie. */
+    const of = BUY_FUNNEL.questions.filter((q) => q.enabled).length;
+
     const out: DueTouch[] = [];
     for (const row of rows) {
       const daysIn = Math.floor((now.getTime() - new Date(row.entered_at).getTime()) / 86_400_000);
@@ -213,7 +239,14 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 
       const step = pending[0];
       const { channel, downgraded } = resolveChannel(step, e.phoneConsent);
-      const s = row.rift_leads?.assessment_id ? snap.get(row.rift_leads.assessment_id) : undefined;
+      const lead = row.rift_leads;
+      const s = lead?.assessment_id ? snap.get(lead.assessment_id) : undefined;
+      /* A readout wins over a plan: it is what the older lead was sent, and
+         its figures are computed and stored. A plan counts only with its
+         token, because the token is the only way back to it. */
+      const saved = !s && lead?.plan_token ? planFacts(lead.plan) : null;
+      const kind: TouchKind = s ? "readout" : saved ? "plan" : "resume";
+      const copy = touchCopy(step, kind);
 
       out.push({
         enrolmentId: row.id,
@@ -222,22 +255,24 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         email: row.rift_leads?.email ?? null,
         band: e.band,
         stepId: step.id,
-        says: step.says,
+        says: copy.says,
         gives: step.gives,
-        body: step.body,
+        body: copy.body,
         auto: step.auto,
         channel,
         downgraded,
         daysLate: daysIn - step.day,
         figures: s?.figures ?? null,
         shareToken: s?.token ?? null,
-        county: s?.county ?? null,
-        firstTimeBuyer: s?.firstTimeBuyer ?? true,
-        answered: row.rift_leads?.assessment_id ? progress.get(row.rift_leads.assessment_id) ?? 0 : 0,
-        /* The buyer funnel's length. Read from the definition rather than
-           hard-coded, so editing the funnel cannot make this sentence lie. */
-        of: BUY_FUNNEL.questions.filter((q) => q.enabled).length,
-        side: row.rift_leads?.side ?? "buy",
+        kind,
+        planToken: saved ? lead!.plan_token! : null,
+        planSavedOn: saved && lead?.plan_saved_at ? georgiaDay(new Date(lead.plan_saved_at)) : null,
+        againPath: saved?.againPath ?? null,
+        county: s?.county ?? saved?.county ?? null,
+        firstTimeBuyer: s?.firstTimeBuyer ?? saved?.firstTimeBuyer ?? true,
+        answered: saved ? of : lead?.assessment_id ? progress.get(lead.assessment_id) ?? 0 : 0,
+        of,
+        side: lead?.side ?? "buy",
       });
     }
 
