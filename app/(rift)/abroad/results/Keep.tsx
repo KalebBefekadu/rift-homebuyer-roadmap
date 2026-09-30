@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Ico } from "@/components/rift/icons";
 import { ForgetMe } from "@/components/rift/Forget";
+import { LiveRegion } from "@/components/rift/Live";
 import { track } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
 import { ETHIOPIC_STACK, type Locale } from "@/lib/core/i18n";
@@ -124,12 +125,18 @@ export function Keep({
             {t["res.email.body"]}
           </p>
 
-          {state === "sent" || state === "off" ? (
-            <div role="status" className="row-t gap-2" style={{ marginTop: 16 }}>
-              <Ico.checkCircle size={14} className={state === "sent" ? "c-pos" : "c-4"} style={{ flex: "none", marginTop: 3 }} />
-              <p className="t-sm c-3" style={{ lineHeight: 1.6, ...body }}>{note}</p>
-            </div>
-          ) : (
+          {/* Both regions stay in the page for as long as the form could fill
+              them, so the outcome is read out: a region that arrives with its
+              text already inside is often skipped. */}
+          <LiveRegion>
+            {state === "sent" || state === "off" ? (
+              <div className="row-t gap-2" style={{ marginTop: 16 }}>
+                <Ico.checkCircle size={14} className={state === "sent" ? "c-pos" : "c-4"} style={{ flex: "none", marginTop: 3 }} />
+                <p className="t-sm c-3" style={{ lineHeight: 1.6, ...body }}>{note}</p>
+              </div>
+            ) : null}
+          </LiveRegion>
+          {state === "sent" || state === "off" ? null : (
             <>
               {/* Tied to their inputs by id. The labels sat beside the
                   boxes without naming them, so a screen reader announced
@@ -170,9 +177,13 @@ export function Keep({
                 ) : null}
                 {blocked ? <p className="t-xs c-3" style={{ marginTop: 6 }}>Tick the box to include your phone number, or leave it empty.</p> : null}
               </div>
-              {note ? (
-                <p id="keep-note" role="alert" className="t-xs c-neg" style={{ marginTop: 8, lineHeight: 1.6, ...body }}>{note}</p>
-              ) : null}
+              <LiveRegion kind="alert" id="keep-note">
+                {note ? (
+                  <p className="t-xs c-neg row-t gap-2" style={{ marginTop: 8, lineHeight: 1.6, ...body }}>
+                    <Ico.alert size={12} style={{ flex: "none", marginTop: 3 }} />{note}
+                  </p>
+                ) : null}
+              </LiveRegion>
             </>
           )}
         </div>
