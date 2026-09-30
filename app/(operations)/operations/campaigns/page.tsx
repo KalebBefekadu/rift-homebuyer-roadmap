@@ -22,7 +22,7 @@ export default async function CampaignsPage() {
   const list = read.ok && "data" in read ? read.data : null;
 
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <h1 className="serif">Campaigns</h1>
       <p className="t-sm c-3" style={{ marginTop: 4, maxWidth: 660 }}>
         Landing pages built from approved blocks: a heading, the county&apos;s programs, a value, a paragraph, a button. No code, no

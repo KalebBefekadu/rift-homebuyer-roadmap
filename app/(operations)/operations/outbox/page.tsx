@@ -32,7 +32,7 @@ export default async function Outbox() {
 
   return (
     <>
-      <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Outbox</h1>
         <p className="t-sm c-3 mt-2 measure" style={{ lineHeight: 1.6 }}>
           What Rift prepared for you to send. Nothing leaves until you approve it, and it is sent exactly as shown.

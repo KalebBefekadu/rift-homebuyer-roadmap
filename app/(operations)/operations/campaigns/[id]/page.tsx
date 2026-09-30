@@ -22,7 +22,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   /* A mistyped link is not found, not a database failure to report. */
   if (!isUuid(id)) notFound();
   const read = await campaignFor(id);
-  if (!read.ok) return <main className="shell-w sec"><p className="t-sm c-neg">This campaign did not load ({read.error}).</p></main>;
+  if (!read.ok) return <main className="shell-w"><p className="t-sm c-neg">This campaign did not load ({read.error}).</p></main>;
   if ("skipped" in read) return <Unavailable reason={read.reason} />;
   if (!read.data || !read.data.revisions.length) notFound();
   const c = read.data;
@@ -30,7 +30,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const programs = (await programsToday(new Date(), rules.registryDays.value)).shown;
 
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <Link href="/operations/campaigns" className="t-sm c-3">← Campaigns</Link>
       <h1 className="serif" style={{ marginTop: 6 }}>{c.name}</h1>
       <div style={{ marginTop: 12 }}>

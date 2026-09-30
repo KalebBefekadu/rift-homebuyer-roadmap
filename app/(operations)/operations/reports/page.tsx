@@ -81,7 +81,7 @@ export default async function ReportsPage() {
 
   return (
     <>
-      <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
+      <main className="shell-w">
         <div className="between gap-2 wrap">
           <h1 className="serif">Reports</h1>
           <div className="no-print"><PrintButton /></div>

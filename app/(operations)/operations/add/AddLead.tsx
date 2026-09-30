@@ -55,7 +55,7 @@ export function AddLead() {
   };
 
   return (
-    <main className="shell-w" style={{ paddingTop: 26, paddingBottom: 80, maxWidth: 620 }}>
+    <main className="shell-w ops-narrow">
       <Link href="/operations" className="t-sm c-3">← Operations</Link>
 
       <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em", marginTop: 14 }}>

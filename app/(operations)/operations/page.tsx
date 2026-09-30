@@ -68,7 +68,7 @@ export default async function OperationsToday() {
 
   if (!agent) {
     return (
-      <main className="shell-w sec">
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: 28 }}>Operations is for the agent.</h1>
         <p className="lede" style={{ marginTop: 12, maxWidth: 520 }}>
           Sign in to see the people your readout has produced. If you arrived here by accident,
@@ -169,7 +169,7 @@ export default async function OperationsToday() {
   const autoTouches = touches.filter((t) => t.auto).length;
 
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <div className="between wrap gap-2">
         <h1 className="serif">Today</h1>
         <span className="t-xs c-4">

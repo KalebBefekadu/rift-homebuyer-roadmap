@@ -57,7 +57,7 @@ export default async function SearchPage() {
 
   return (
     <>
-      <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 860 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Search</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 620, lineHeight: 1.6 }}>
           Each buyer&apos;s brief and the Matrix search it became. &ldquo;Set up&rdquo; means you recorded setting it up:

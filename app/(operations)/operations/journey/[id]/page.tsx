@@ -74,7 +74,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 
   if (!buyerSearchOn(process.env)) {
     return (
-      <main className="shell-w sec">
+      <main className="shell-w">
         <h1 className="serif">Journeys are switched off.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
           RIFT_BUYER_SEARCH is set to off on this deployment. Nothing has been deleted; switching it back on brings
@@ -89,7 +89,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const j = await journeyFor(id);
   if (!j.ok) {
     return (
-      <main className="shell-w sec">
+      <main className="shell-w">
         <h1 className="serif">This journey could not be loaded.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10 }}>The database did not answer ({j.error}). Nothing has been lost.</p>
       </main>
@@ -186,7 +186,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const href = (t: Tab) => (t === "overview" ? `/operations/journey/${id}` : `/operations/journey/${id}?tab=${t}`);
 
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <header className="card" style={{ padding: "10px 14px" }}>
         <div className="between wrap gap-2">
           <div style={{ minWidth: 0 }}>

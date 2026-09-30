@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Mark } from "@/components/rift/icons";
-import { MAIN, MORE, isCurrent, placesMatching } from "./nav";
+import { OpsIco } from "@/components/rift/ops-icons";
+import { MAIN, MORE, isCurrent, placesMatching, type Place } from "./nav";
 import { jumpTo, signOut, type Jump } from "./actions";
 
 /**
@@ -54,11 +55,15 @@ export function OpsFrame({ agentName, undecided, children }: { agentName: string
     return () => window.removeEventListener("keydown", onKey);
   }, [open, router]);
 
-  const link = (href: string, label: string, extra?: React.ReactNode) => {
-    const here = isCurrent(href, path);
+  const link = (place: Place, extra?: React.ReactNode) => {
+    const here = isCurrent(place.href, path);
+    const Icon = OpsIco[place.icon];
     return (
-      <Link key={href} href={href} className="ops-link" aria-current={here ? "page" : undefined} title={collapsed ? label : undefined}>
-        <span className="ops-link-label">{collapsed ? label[0] : label}</span>{extra}
+      <Link key={place.href} href={place.href} className="ops-link" aria-current={here ? "page" : undefined}
+        aria-label={collapsed ? place.label : undefined} data-tip={collapsed ? place.label : undefined}>
+        <Icon size={18} className="ops-ico" />
+        {collapsed ? null : <span className="ops-link-label">{place.label}</span>}
+        {extra}
       </Link>
     );
   };
@@ -67,29 +72,37 @@ export function OpsFrame({ agentName, undecided, children }: { agentName: string
     <div className={`ops-frame${collapsed ? " ops-collapsed" : ""}`}>
       <aside className="ops-side no-print" aria-label="Operations">
         <div className="ops-brand">
-          <Link href="/operations" className="row gap-2" aria-label="Rift Operations, Today">
+          <Link href="/operations" className="ops-brand-link" aria-label="Rift Operations, Today">
             <Mark size={17} />
-            {!collapsed ? <span style={{ fontWeight: 650 }}>Operations</span> : null}
+            {!collapsed ? <span>Operations</span> : null}
           </Link>
-          <button type="button" className="ops-collapse btn btn-g btn-sm" onClick={toggle} aria-label={collapsed ? "Expand the menu" : "Collapse the menu"} aria-expanded={!collapsed}>
-            {collapsed ? "›" : "‹"}
+          <button type="button" className="ops-collapse" onClick={toggle} aria-label={collapsed ? "Expand the menu" : "Collapse the menu"}
+            aria-expanded={!collapsed} data-tip={collapsed ? "Expand the menu" : undefined}>
+            <OpsIco.panel size={17} />
           </button>
         </div>
-        <Link href="/operations/add" className="btn btn-p btn-sm ops-add">{collapsed ? "+" : "Add someone"}</Link>
+        <Link href="/operations/add" className="btn btn-p btn-sm ops-add" aria-label={collapsed ? "Add someone" : undefined} data-tip={collapsed ? "Add someone" : undefined}>
+          <OpsIco.addPerson size={16} />{collapsed ? null : <span>Add someone</span>}
+        </Link>
         <nav className="ops-nav" aria-label="Main">
-          {MAIN.map((m) => link(m.href, m.label))}
+          {MAIN.map((m) => link(m))}
           <div className="ops-rule" role="separator" />
-          {MORE.map((m) => link(m.href, m.label, m.href === "/operations/settings" && undecided
-            ? <span className="chip chip-warn t-2xs" title={`${undecided} decision${undecided === 1 ? "" : "s"} still yours to make`}>{undecided}</span>
+          {MORE.map((m) => link(m, m.href === "/operations/settings" && undecided
+            ? collapsed
+              ? <span className="ops-dot" aria-label={`${undecided} decision${undecided === 1 ? "" : "s"} still yours to make`} />
+              : <span className="chip chip-warn t-2xs" title={`${undecided} decision${undecided === 1 ? "" : "s"} still yours to make`}>{undecided}</span>
             : null))}
         </nav>
         <div className="ops-foot">
-          <button type="button" className="ops-jump" onClick={() => setOpen(true)}>
-            {collapsed ? "⌘K" : <>Jump anywhere <span className="ops-kbd">⌘K</span></>}
+          <button type="button" className="ops-link ops-jump" onClick={() => setOpen(true)} aria-label={collapsed ? "Jump anywhere" : undefined} data-tip={collapsed ? "Jump anywhere  ⌘K" : undefined}>
+            <OpsIco.jump size={18} className="ops-ico" />
+            {collapsed ? null : <><span className="ops-link-label">Jump anywhere</span><span className="ops-kbd">⌘K</span></>}
           </button>
           {!collapsed ? <span className="ops-who">{agentName}</span> : null}
           <form action={signOut}>
-            <button className="btn btn-g btn-sm" type="submit" style={{ width: "100%" }}>{collapsed ? "↩" : "Sign out"}</button>
+            <button className="ops-link ops-out" type="submit" aria-label={collapsed ? "Sign out" : undefined} data-tip={collapsed ? "Sign out" : undefined}>
+              <OpsIco.signOut size={18} className="ops-ico" />{collapsed ? null : <span className="ops-link-label">Sign out</span>}
+            </button>
           </form>
         </div>
       </aside>

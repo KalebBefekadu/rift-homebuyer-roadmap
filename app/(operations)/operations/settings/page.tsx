@@ -155,7 +155,7 @@ function Frame({ children }: { children: React.ReactNode }) {
           <Link href="/operations" className="t-sm c-3">← Today</Link>
         </div>
       </header>
-      <main className="shell-w sec" style={{ maxWidth: 760 }}>{children}</main>
+      <main className="shell-w">{children}</main>
     </div>
   );
 }

@@ -55,7 +55,7 @@ export default async function ReferralsPage() {
   return (
     <>
 
-      <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 780 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>
           Advocacy
         </h1>

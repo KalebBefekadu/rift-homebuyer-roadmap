@@ -8,7 +8,7 @@
  */
 export default function StudioLoading() {
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <p className="t-sm c-4">Loading…</p>
     </main>
   );

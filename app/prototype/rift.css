@@ -652,22 +652,41 @@
  * The pages still use the shared classes; the overrides below retune them
  * here rather than forking every page's markup.
  * ------------------------------------------------------------------ */
-.ops-frame { display: grid; grid-template-columns: 216px minmax(0,1fr); min-height: 100vh; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13.5px; }
-.ops-frame.ops-collapsed { grid-template-columns: 56px minmax(0,1fr); }
-.ops-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px 10px; border-right: 1px solid var(--line-2); background: var(--sunk); }
-.ops-brand { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 4px 8px; }
-.ops-collapsed .ops-brand { flex-direction: column; }
-.ops-add { margin: 0 2px 6px; }
-.ops-nav { display: flex; flex-direction: column; gap: 1px; }
-.ops-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 30px; padding: 0 10px; border-radius: 6px; color: var(--ink-2); white-space: nowrap; overflow: hidden; }
-.ops-link:hover { background: var(--paper); }
-.ops-link[aria-current="page"] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line-2); }
-.ops-rule { height: 1px; background: var(--line-2); margin: 8px 4px; }
-.ops-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px 2px 0; }
-.ops-jump { text-align: left; font-size: 12px; color: var(--ink-3); padding: 4px 8px; border-radius: 6px; }
-.ops-jump:hover { background: var(--paper); }
-.ops-who { font-size: 12px; color: var(--ink-3); padding: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ops-frame { display: grid; grid-template-columns: 232px minmax(0,1fr); min-height: 100vh; background: var(--canvas); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13.5px; transition: grid-template-columns .18s ease; }
+.ops-frame.ops-collapsed { grid-template-columns: 64px minmax(0,1fr); }
+.ops-side { position: sticky; top: 0; height: 100vh; overflow-y: auto; overflow-x: visible; display: flex; flex-direction: column; gap: 4px; padding: 14px 12px; border-right: 1px solid var(--line-2); background: var(--sunk); z-index: 5; }
+.ops-brand { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 2px 12px 6px; }
+.ops-brand-link { display: inline-flex; align-items: center; gap: 9px; font-weight: 650; font-size: 14px; color: var(--ink); }
+.ops-collapse { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--ink-3); }
+.ops-collapse:hover { background: var(--paper); color: var(--ink); }
+.ops-collapsed .ops-brand { flex-direction: column; gap: 10px; padding: 2px 0 10px; }
+.ops-add { margin: 0 0 12px; height: 34px; gap: 8px; justify-content: center; }
+.ops-nav { display: flex; flex-direction: column; gap: 2px; }
+.ops-link { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; border-radius: 8px; color: var(--ink-2); white-space: nowrap; font-size: 13.5px; text-align: left; }
+.ops-link-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ops-ico { flex: none; color: var(--ink-4); transition: color .12s ease; }
+.ops-link:hover { background: var(--paper); color: var(--ink); }
+.ops-link:hover .ops-ico { color: var(--ink-2); }
+.ops-link[aria-current="page"] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line), var(--sh-1); }
+.ops-link[aria-current="page"] .ops-ico { color: var(--accent); }
+.ops-rule { height: 1px; background: var(--line); margin: 10px 8px; }
+.ops-foot { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 0 0; border-top: 1px solid var(--line); }
+.ops-jump { color: var(--ink-3); }
+.ops-out { color: var(--ink-3); }
+.ops-who { font-size: 12px; color: var(--ink-4); padding: 6px 10px 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ops-kbd { font-size: 11px; border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; color: var(--ink-3); background: var(--paper); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.ops-dot { position: absolute; top: 7px; right: 9px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--sunk); }
+/* Closed: the marks alone, centred, each naming itself on hover and focus. */
+.ops-collapsed .ops-link, .ops-collapsed .ops-add, .ops-collapsed .ops-collapse { justify-content: center; padding: 0; }
+.ops-collapse, .ops-add { position: relative; }
+.ops-collapsed .ops-add { width: 40px; margin-left: auto; margin-right: auto; }
+.ops-collapsed .ops-rule { margin: 10px 6px; }
+.ops-collapsed [data-tip]:hover::after, .ops-collapsed [data-tip]:focus-visible::after {
+  content: attr(data-tip); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 500; line-height: 1; white-space: pre;
+  padding: 7px 9px; border-radius: 6px; box-shadow: var(--sh-2); pointer-events: none; z-index: 50;
+}
+.ops-collapsed .ops-side { overflow: visible; }
 .ops-main { min-width: 0; }
 .ops-switch { width: 480px; max-width: calc(100vw - 32px); padding: 10px; height: fit-content; }
 .ops-hit { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 6px; text-align: left; }
@@ -714,8 +733,14 @@
 .ops-main .serif { font-family: inherit; font-weight: 650; letter-spacing: -0.01em; }
 .ops-main h1.serif { font-size: 21px !important; }
 .ops-main h2.serif { font-size: 15.5px !important; }
-.ops-main .sec { padding-top: 22px; }
-.ops-main .shell-w { max-width: 1240px; margin: 0; padding: 0 clamp(14px,2.2vw,28px) 48px; }
+/* One page frame for every page: the same top, the same gutters, the same
+   measure, centred in whatever room the menu leaves. Pages used to set their
+   own widths from 460 to 1240 px and their own tops from 22 to 60 px, so
+   moving between two of them moved everything. A form page opts into the
+   narrow measure with .ops-narrow; nothing else sets a width. */
+.ops-main > main, .ops-main .shell-w { width: 100%; max-width: 1200px !important; margin: 0 auto; padding: 32px clamp(16px,3vw,40px) 72px !important; }
+.ops-main > main.ops-narrow, .ops-main .shell-w.ops-narrow { max-width: 760px !important; }
+.ops-main .shell-w .shell-w { padding: 0 !important; max-width: none !important; }
 .ops-main .lede { font-size: 14px; }
 
 @media (max-width: 760px) {
@@ -723,10 +748,13 @@
   .ops-side { position: static; height: auto; flex-direction: row; align-items: center; overflow-x: auto; overflow-y: hidden; padding: 8px 10px; border-right: 0; border-bottom: 1px solid var(--line-2); }
   .ops-brand { padding: 0; }
   .ops-collapse, .ops-foot .ops-who, .ops-jump { display: none; }
+  .ops-link .ops-link-label { display: none; }
+  .ops-link, .ops-add { width: 38px; padding: 0; justify-content: center; flex: none; }
+  .ops-add span { display: none; }
+  .ops-foot { border-top: 0; }
   .ops-add { margin: 0; flex: none; }
   .ops-nav { flex-direction: row; }
   .ops-rule { width: 1px; height: 20px; margin: 0 4px; }
   .ops-foot { margin: 0; flex-direction: row; padding: 0; }
-  .ops-link .ops-link-label { font-size: 13px; }
 }
 @media print { .ops-frame { display: block; } }

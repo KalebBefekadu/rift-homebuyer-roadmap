@@ -105,7 +105,7 @@ export default async function ClientsPage({
   return (
     <>
 
-      <main className="shell-w sec">
+      <main className="shell-w">
         <h1 className="serif">Relationships</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, maxWidth: 560, lineHeight: 1.6 }}>
           Everyone, in the order they arrived. Today ranks them by what needs doing;

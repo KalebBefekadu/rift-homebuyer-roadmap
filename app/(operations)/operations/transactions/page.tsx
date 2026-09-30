@@ -46,7 +46,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const rows = (all ?? []).filter((c) => which === "all" || (which === "open" ? !c.outcome : Boolean(c.outcome)));
 
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <div className="between wrap gap-2">
         <h1 className="serif">Transactions</h1>
         <nav className="row gap-1" aria-label="Which contracts">

@@ -58,7 +58,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   if (!read.ok) {
     return (
-      <main className="shell-w" style={{ paddingTop: 60 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: 26 }}>This record could not be loaded.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
           The database did not answer. Nothing has been lost. This is a read, and the record is
@@ -70,7 +70,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   }
   if ("skipped" in read) {
     return (
-      <main className="shell-w" style={{ paddingTop: 60 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: 26 }}>Not available yet.</h1>
         <p className="t-sm c-3" style={{ marginTop: 10 }}>{read.reason}</p>
         <Link href="/operations" className="btn btn-p" style={{ marginTop: 18 }}>Back to Operations</Link>

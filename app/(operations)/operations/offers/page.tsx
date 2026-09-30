@@ -39,7 +39,7 @@ export default async function OffersInPage() {
   return (
     <>
 
-      <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 820 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>
           Offers in
         </h1>

@@ -15,7 +15,7 @@ import { Ico } from "@/components/rift/icons";
  */
 export function Unavailable({ reason }: { reason: string }) {
   return (
-    <main className="shell-w sec" style={{ maxWidth: 560 }}>
+    <main className="shell-w sec ops-narrow" style={{ maxWidth: 560 }}>
       <div className="row gap-2">
         <Ico.alert size={18} className="c-warn" />
         <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>

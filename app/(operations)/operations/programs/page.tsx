@@ -58,7 +58,7 @@ export default async function ProgramsReview() {
 
   return (
     <>
-      <main className="shell-w sec" style={{ paddingTop: 28, maxWidth: 1040 }}>
+      <main className="shell-w">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,34px)", letterSpacing: "-0.02em" }}>Programs</h1>
         <p className="t-sm c-3 mt-2 measure" style={{ lineHeight: 1.6 }}>
           Every Monday Rift reads each program&apos;s official page. An unchanged page renews the program.

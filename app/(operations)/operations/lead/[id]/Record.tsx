@@ -96,7 +96,7 @@ export function Record({ lead, notes }: { lead: ManagedLead; notes: LeadNote[] }
         : showDay(lead.nextDue, { month: "short", day: "numeric" });
 
   return (
-    <main className="shell-w" style={{ paddingTop: 26, paddingBottom: 80 }}>
+    <main className="shell-w">
       <Link href="/operations" className="t-sm c-3">← Operations</Link>
 
       <header className="between wrap gap-3" style={{ marginTop: 14 }}>

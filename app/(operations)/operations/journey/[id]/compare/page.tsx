@@ -25,7 +25,7 @@ export default async function ComparePage({ params, searchParams }: { params: Pr
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const j = await journeyFor(id);
-  if (!j.ok) return <main className="shell-w sec"><p className="t-sm c-neg">This journey did not load ({j.error}).</p></main>;
+  if (!j.ok) return <main className="shell-w"><p className="t-sm c-neg">This journey did not load ({j.error}).</p></main>;
   if ("skipped" in j) return <Unavailable reason={j.reason} />;
   if (!j.data || j.data.side !== "buy") notFound();
 
@@ -37,7 +37,7 @@ export default async function ComparePage({ params, searchParams }: { params: Pr
   const base = `/operations/journey/${id}/compare`;
 
   return (
-    <main className="shell-w sec">
+    <main className="shell-w">
       <Link href={`/operations/journey/${id}?tab=homes`} className="t-sm c-3">← {j.data.label}</Link>
       <h1 className="serif" style={{ marginTop: 6 }}>Compare homes</h1>
       <p className="t-sm c-3" style={{ marginTop: 4, marginBottom: 12 }}>

@@ -42,7 +42,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Pr
   const keys = [...new Set(values.flatMap((v) => v.asks))] as InputKey[];
 
   return (
-    <main className="shell-w sec" style={{ maxWidth: 780 }}>
+    <main className="shell-w">
       <h1 className="serif" style={{ fontSize: "clamp(24px,3vw,32px)", letterSpacing: "-0.02em" }}>Questions</h1>
       <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 600 }}>
         Exactly what a visitor reads, and which values ask it. An answer given once is reused by
