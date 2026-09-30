@@ -5,6 +5,7 @@ import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { CashStack } from "@/components/rift/value/artifacts";
@@ -32,6 +33,8 @@ export default async function AbroadCost({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("abroad-cost")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
   const am = one("lang") === "am";
@@ -41,7 +44,7 @@ export default async function AbroadCost({ searchParams }: { searchParams: Promi
     return (
       <ValueLayout def={def}>
         {englishOnly}
-        <ValueFlow tool={def.id} side="abroad" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="abroad" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -76,7 +79,7 @@ export default async function AbroadCost({ searchParams }: { searchParams: Promi
         sentence={<>is what you would send to buy a {money(price)} home in {county} County: {s.down[use]}% down, the least a lender takes in your situation, plus closing costs. Owning it then costs about {money(perYear)} a year.</>}
         art={<CashStack lines={[{ label: "Down payment", amount: r.down }, { label: "Closing costs", amount: r.closing }]} total={r.cashIn} down={r.down} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
       <Lines
         title="What you would send"
         rows={[
@@ -109,6 +112,7 @@ export default async function AbroadCost({ searchParams }: { searchParams: Promi
         couldBeWrong="The rate depends on the lender and your file, and lenders who work with buyers abroad price that differently. Tax depends on the parcel, and insurance on the house. Money sent from abroad also has transfer costs your bank sets."
       />
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: money(r.cashIn), href: `${def.href}?${answersToQuery(a, def.asks)}` }}

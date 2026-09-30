@@ -5,6 +5,7 @@ import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { MonthlyHomes } from "@/components/rift/value/artifacts";
@@ -26,13 +27,15 @@ export default async function Afford({ searchParams }: { searchParams: Promise<R
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("afford")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -57,7 +60,7 @@ export default async function Afford({ searchParams }: { searchParams: Promise<R
           { label: "Insurance", amount: m.insurance }, { label: "Mortgage insurance", amount: m.pmi },
         ] : []} /> : <div />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
 
       {r.stretch ? (
         <p className="t-sm c-2 mt-3 measure row-t gap-2" style={{ lineHeight: 1.6 }}>
@@ -88,6 +91,7 @@ export default async function Afford({ searchParams }: { searchParams: Promise<R
       <WorkedOut assumptions={r.assumptions} couldBeWrong={r.couldBeWrong} />
 
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: r.comfort.price !== null ? `about ${money(r.comfort.price)}` : "no price yet", href: `${def.href}?${answersToQuery(a, def.asks)}` }}

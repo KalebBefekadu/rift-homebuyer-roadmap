@@ -334,10 +334,14 @@ export function answersToQuery(a: Answers, only?: readonly InputKey[]): string {
 
 export const hasAll = (a: Answers, keys: readonly InputKey[]) => keys.every((k) => a[k] !== undefined);
 
-/** The label a stored answer is shown with ("3.5%", "$325,000", "DeKalb"). */
-export function answerLabel(key: InputKey, v: string | number | undefined): string {
+/**
+ * The label a stored answer is shown with ("3.5%", "$325,000", "DeKalb").
+ * `def` is the question as published (lib/core/question-wording.ts), so a
+ * relabelled choice reads the same on the answer as it did when asked.
+ */
+export function answerLabel(key: InputKey, v: string | number | undefined, def: AskDef = ASKS[key]): string {
   if (v === undefined) return "";
-  const a = ASKS[key];
+  const a = def;
   if (a.type === "money") return Number(v).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
   return a.options?.find((o) => o.value === String(v))?.label ?? String(v);
 }

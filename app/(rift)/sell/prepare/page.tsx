@@ -3,6 +3,7 @@ import { preparePlan, type Finish, type Roof, type Systems, type PrepItem } from
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { PrepRooms } from "@/components/rift/value/artifacts";
@@ -26,13 +27,15 @@ export default async function Prepare({ searchParams }: { searchParams: Promise<
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("prepare")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="sell" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="sell" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -48,7 +51,7 @@ export default async function Prepare({ searchParams }: { searchParams: Promise<
         sentence={<>are worth addressing before you list, {plan.maybe.length} may be, and {plan.notYet.length} can wait. None of it needs doing before you talk to anyone.</>}
         art={<PrepRooms counts={{ now: n, maybe: plan.maybe.length, skip: plan.notYet.length }} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
       <section className="sec-sm g3 gap-4">
         <PrepList title="Worth addressing" icon={<Ico.check size={15} className="c-pos" />} items={plan.address} />
         <PrepList title="Maybe" icon={<Ico.info size={15} className="c-warn" />} items={plan.maybe} />
@@ -59,6 +62,7 @@ export default async function Prepare({ searchParams }: { searchParams: Promise<
         and a figure we made up would be worse than none. Kaleb can tell you what he would do with yours.
       </p>
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: `${n} to address`, href: `${def.href}?${answersToQuery(a, def.asks)}` }}

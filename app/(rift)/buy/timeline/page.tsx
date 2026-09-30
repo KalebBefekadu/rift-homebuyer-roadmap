@@ -3,6 +3,7 @@ import { BUYER_DEFAULTS, cashGap, gapLevers, money } from "@/lib/core/compute";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { TimelinePath } from "@/components/rift/value/artifacts";
@@ -26,13 +27,15 @@ export default async function Timeline({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("timeline")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -60,7 +63,7 @@ export default async function Timeline({ searchParams }: { searchParams: Promise
         sentence={sentence}
         art={<TimelinePath months={months} faster={levers[0] ? { label: levers[0].label, months: levers[0].months } : null} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
 
       {levers.length ? (
         <Lines
@@ -80,6 +83,7 @@ export default async function Timeline({ searchParams }: { searchParams: Promise
       <WorkedOut assumptions={g.assumptions} couldBeWrong={g.couldBeWrong} />
 
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure, href: `${def.href}?${answersToQuery(a, def.asks)}` }}
