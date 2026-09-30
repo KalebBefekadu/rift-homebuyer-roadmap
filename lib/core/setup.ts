@@ -322,7 +322,7 @@ function schedulerItem(secret: boolean, jobs: JobHealth[] | null): SetupItem {
   if (failing.length) {
     return {
       ...base, state: "broken",
-      affects: `${failing.map((j) => j.label).join(", ")} ${failing.length === 1 ? "has" : "have"} not run as scheduled.`,
+      affects: `${failing.map((j) => `${j.label}: ${j.state === "failed" ? "the last run failed" : "missed its schedule"}`).join("; ")}.`,
       action: { kind: "link", href: "/operations", label: "See what failed on Today" },
     };
   }
