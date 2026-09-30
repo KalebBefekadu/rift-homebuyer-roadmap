@@ -53,7 +53,7 @@ export interface Moment {
 
 export const MOMENTS: Moment[] = [
   {
-    id: "value_delivered", label: "Readout delivered", trigger: "They finished the assessment and got their numbers",
+    id: "value_delivered", label: "Numbers delivered", trigger: "They got their numbers: a readout, or a plan they saved",
     ask: "Send this to someone it would help",
     why: "They have just been given something for nothing and owe us nothing. The only honest ask here is for the tool, not for a name.",
     review: false, strength: 2,
@@ -166,7 +166,7 @@ export interface Lifecycle {
   stage: string;
   /** ISO date the relationship closed. Null until it has. */
   closedOn: string | null;
-  /** They finished an assessment and were shown their numbers. */
+  /** They were shown their numbers: a finished readout, or a saved plan. */
   readoutDelivered: boolean;
   /** A plan exists and its link is open. */
   planPublished: boolean;

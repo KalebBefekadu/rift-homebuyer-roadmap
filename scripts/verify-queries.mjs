@@ -55,7 +55,7 @@ await check("readRegistry", () => db.from("rift_programs")
   .eq("active", true).order("verified_on", { ascending: false }));
 
 await check("rankedLeads (embedded enrolment)", () => db.from("rift_leads")
-  .select("id,name,email,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
+  .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,plan,plan_saved_at,rift_enrolments(stop_reason)")
   .order("score", { ascending: false }).limit(5));
 
 await check("rankedLeads snapshot join", () => db.from("rift_readouts")
@@ -191,7 +191,7 @@ await check("chooseOffer seller read", () => db.from("rift_leads")
   .eq("id", "00000000-0000-4000-8000-000000000000").maybeSingle());
 
 await check("referralQueue lifecycle columns", () => db.from("rift_leads")
-  .select("id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,referred_by")
+  .select("id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,plan_saved_at,referred_by")
   .is("archived_at", null).limit(5));
 
 await check("readoutsFor (was rift_leads.figure_id, which does not exist)", () =>

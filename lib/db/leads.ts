@@ -281,6 +281,14 @@ export interface RankedLead {
    */
   figures: Record<string, string | number> | null;
   shareToken: string | null;
+  /**
+   * What they saved, for a lead with a saved plan (Blueprint v5 §5.5) and no
+   * readout, which since D31 is every new lead. The figures are the text
+   * their browser showed them, labelled as such on the row: for the agent
+   * to read before a call, never to be sent anywhere. The plan's link is not
+   * carried; it is the person's credential, and the lead page opens the plan.
+   */
+  saved: { savedAt: string; values: { label: string; figure: string }[] } | null;
 }
 
 /**
@@ -337,6 +345,21 @@ export async function markReplied(
 }
 
 /** Ranked by what the answers say, never by when they arrived. */
+/* Read defensively: the column is jsonb written by whichever build saved it. */
+function savedOf(plan: unknown, savedAt: string | null): RankedLead["saved"] {
+  if (!savedAt || !plan || typeof plan !== "object") return null;
+  const values = (plan as { values?: unknown }).values;
+  if (!Array.isArray(values)) return null;
+  return {
+    savedAt,
+    values: values
+      .map((v) => v as { label?: unknown; figure?: unknown })
+      .filter((v) => typeof v.label === "string" && typeof v.figure === "string" && v.figure)
+      .slice(0, 12)
+      .map((v) => ({ label: v.label as string, figure: v.figure as string })),
+  };
+}
+
 export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
@@ -346,7 +369,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,rift_enrolments(stop_reason)")
+      .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,plan,plan_saved_at,rift_enrolments(stop_reason)")
       .eq("agent_id", agent_id)
       /* Inbound only. "Who to call" answers one question: who volunteered
          their details and has not been answered yet, and a person the agent
@@ -403,6 +426,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
         .rift_enrolments?.[0]?.stop_reason ?? null,
       figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
       shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
+      saved: savedOf(r.plan, r.plan_saved_at as string | null),
       completion: (r.lead_input as LeadInput | null)?.completion ?? 0,
       /* From the row, not assumed. A lead with neither an email nor a phone
          number cannot be replied to, and counting it as a breach would make
