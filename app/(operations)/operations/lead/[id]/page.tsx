@@ -27,6 +27,8 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { Journeys, type JourneySummary } from "./Journeys";
 import { savedPlanFor } from "@/lib/db/saved-plan";
 import { SavedPlan } from "./SavedPlan";
+import { leadQuestions } from "@/lib/db/questions";
+import { TheirAnswers } from "./TheirAnswers";
 import { isUuid } from "@/lib/core/ids";
 import type { DbResult } from "@/lib/db/result";
 
@@ -83,7 +85,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
   const searchOn = buyerSearchOn(process.env);
-  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead, lifeRead] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead, lifeRead, questionsRead] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
@@ -94,6 +96,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     searchOn ? journeysFor(id) : Promise.resolve(null),
     savedPlanFor(id),
     momentsForLead(id),
+    leadQuestions(id),
   ]);
   /* Undefined when it could not be read, which the field says rather than showing an empty date. */
   const closedOn = lifeRead.ok && "data" in lifeRead ? (lifeRead.data?.life.closedOn ?? null) : undefined;
@@ -150,6 +153,10 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       <ClientRecord lead={read.data.lead} notes={read.data.notes} />
       <div className="shell-w" style={{ paddingBottom: 40 }}>
         {saved ? <SavedPlan plan={saved.plan} savedAt={saved.savedAt} /> : null}
+        <TheirAnswers
+          data={questionsRead.ok && "data" in questionsRead ? questionsRead.data : null}
+          unavailable={missing(questionsRead, "Their answers to your questions")}
+        />
         <Journeys
           leadId={id}
           side={read.data.lead.side}
