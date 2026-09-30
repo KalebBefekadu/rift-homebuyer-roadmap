@@ -65,6 +65,14 @@ export interface Step {
    * then only what the agent sees in Studio; the send uses `programsCopy`.
    */
   lists?: "programs";
+  /**
+   * The subject and opening for somebody who saved a plan (Blueprint v5
+   * §5.5) rather than finishing a readout, where the definition's own would
+   * be untrue. "Your readout" to somebody who has none, and "you were most of
+   * the way through" to somebody who finished and saved, are the two it
+   * replaces. A step without one reads the same either way.
+   */
+  plan?: { says: string; body: string };
 }
 
 export interface Sequence {
@@ -108,6 +116,13 @@ export function blockedStop(code: string): StopId | null {
  * The sequences
  * ------------------------------------------------------------------ */
 
+/* The day-zero opening for a saved plan, shared by the two sequences that
+   open the same way for a readout. */
+const SAVED_PLAN_OPENING = {
+  says: "Your saved plan, and how to check it against today's rates",
+  body: "Your plan is saved exactly as you saw it. It stays at this link and it stays yours.",
+};
+
 export const SEQUENCES: Sequence[] = [
   {
     band: "now",
@@ -115,7 +130,7 @@ export const SEQUENCES: Sequence[] = [
     why: "They are transacting inside 90 days. The only job is getting a conversation booked before somebody else does. Short, and it stops the moment a human replies.",
     ends: "After day 9, drops to the 'This week' cadence rather than going quiet.",
     steps: [
-      { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
+      { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.", plan: SAVED_PLAN_OPENING },
       { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it: Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone.", body: "If it would help to go through this with somebody, there are two windows this week." },
       { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not. Say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date." },
       /* The count and the names are the person's own, worked out at send time
@@ -131,7 +146,7 @@ export const SEQUENCES: Sequence[] = [
     why: "They are 3 to 9 months out and genuinely working on it. Value beats urgency here: the person who taught them something is the person they call when they are ready.",
     ends: "Rolls into the long horizon after day 45 unless something changed.",
     steps: [
-      { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours." },
+      { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.", plan: SAVED_PLAN_OPENING },
       { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date, ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date.", body: "Three things move your closing date more than anything else, and they are not the ones most people focus on." },
       { id: "s3", day: 9, channel: "text", auto: false, says: "Rates moved this week. Here is what it does to your monthly.", gives: "A recomputed monthly figure, only sent when the change is material.", body: "Rates moved this week, which changes the monthly figure on your readout." },
       { id: "s4", day: 21, channel: "email", auto: true, says: "The assistance programs in your county, and their deadlines", gives: "Deadlines they would otherwise miss. This is the touch that most often gets replied to.", body: "The assistance programs in your county have deadlines, and they are the sort that pass quietly." },
@@ -144,7 +159,7 @@ export const SEQUENCES: Sequence[] = [
     why: "Nine months to two years. The failure mode is talking to them monthly until they mute you. Four touches a year, each one worth opening, is worth more than twenty that are not.",
     ends: "Repeats quarterly, indefinitely, until a stop fires.",
     steps: [
-      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout: keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to." },
+      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout: keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to.", plan: { says: "Your saved plan: keep this, it stays yours", body: "Your plan is saved as you left it. Nothing needed from you; it is yours to keep and come back to." } },
       { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date.", body: "The one figure that decides how long this takes, and what it would take to shorten it." },
       { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check: what changed in your county", gives: "Local price and programme movement, recomputed against their saved position.", body: "A quarter on, here is what has changed in your county and what it does to your position." },
       { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached.", body: "Half a year on, your gap recomputed. No ask attached to this one." },
@@ -156,13 +171,32 @@ export const SEQUENCES: Sequence[] = [
     why: "Incomplete assessment, no contact detail, or explicitly not now. Two touches, both useful, then stop. A list you cannot stop sending to is not a list, it is a liability.",
     ends: "Stops. Re-entry only if they come back on their own.",
     steps: [
-      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through. Here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them." },
+      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through. Here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them.", plan: { says: "Your plan is saved, whenever it becomes useful", body: "You saved a plan with us, and it is still here exactly as you left it." } },
       { id: "d2", day: 30, channel: "email", auto: true, says: "Still here if it becomes useful. Nothing needed.", gives: "A standing door and an explicit end. Says outright that this is the last one.", body: "Still here if this becomes useful. Nothing is needed from you." },
     ],
   },
 ];
 
 export const sequenceFor = (band: Band) => SEQUENCES.find((s) => s.band === band) ?? SEQUENCES[3];
+
+/**
+ * Which email a touch is, decided by what the person has on file.
+ *
+ *   readout  a v4 readout: the touch quotes its snapshot figures.
+ *   plan     a saved plan (Blueprint v5 §5.5): the touch links the plan and
+ *            quotes no figure, because the plan's figures are text the
+ *            browser sent, not numbers computed here.
+ *   resume   neither: they started and stopped, and are invited back.
+ *
+ * Since D31 retired the questionnaire, every new lead is a plan or nothing;
+ * readouts remain for the people who already have one.
+ */
+export type TouchKind = "readout" | "plan" | "resume";
+
+/** The subject and opening a person of this kind reads for this step. */
+export function touchCopy(step: Pick<Step, "says" | "body" | "plan">, kind: TouchKind): { says: string; body: string } {
+  return kind === "plan" && step.plan ? step.plan : { says: step.says, body: step.body };
+}
 
 /* ------------------------------------------------------------------ *
  * The step that lists their programs

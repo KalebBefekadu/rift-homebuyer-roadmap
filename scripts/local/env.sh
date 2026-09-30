@@ -20,5 +20,6 @@ export NEXT_PUBLIC_SUPABASE_URL="http://localhost:3002"
 export SUPABASE_SERVICE_ROLE_KEY="${JWT}"
 export SUPABASE_ANON_KEY="${JWT}"
 export NEXT_PUBLIC_SUPABASE_ANON_KEY="${JWT}"
+export NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 export CRON_SECRET="local-test-secret"
 ENV

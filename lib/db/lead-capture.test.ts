@@ -234,3 +234,32 @@ describe("who can be replied to", () => {
     expect(db.to("select rift_leads")[0]!.filters.join(" ")).toContain("phone");
   });
 });
+
+describe("what Today shows about a lead with a saved plan", () => {
+  /* Since D31 a new lead has no readout, so the row showed no numbers for
+     anybody who arrived through the values: the agent phoned blind. */
+  const lead = (id: string, over: Record<string, unknown>) => ({
+    id, name: "Sam", email: "a@example.com", phone: null, side: "buy", score: 50, band: "soon", signals: [], lead_input: null,
+    created_at: "2026-09-28T10:00:00Z", human_replied_at: null, assessment_id: null, rift_enrolments: [], ...over,
+  });
+
+  it("carries what they saved and when, and not the plan's link", async () => {
+    build({
+      "select rift_leads": { data: [
+        lead("saver", {
+          plan_saved_at: "2026-09-28T10:00:00Z", plan_token: "never-carried",
+          plan: { values: [{ label: "Cash to close", figure: "$24,788" }, { label: 7, figure: "$1" }, { label: "Empty", figure: "" }] },
+        }),
+        lead("none", {}),
+      ] },
+    });
+    const r = await rankedLeads(10);
+    const by = new Map((r.ok && "data" in r ? r.data : []).map((l) => [l.id, l]));
+    expect(by.get("saver")!.saved).toEqual({ savedAt: "2026-09-28T10:00:00Z", values: [{ label: "Cash to close", figure: "$24,788" }] });
+    expect(JSON.stringify(by.get("saver"))).not.toContain("never-carried");
+    expect(by.get("none")!.saved).toBeNull();
+    const select = db.to("select rift_leads")[0]!.filters.join(" ");
+    expect(select).toContain("plan,plan_saved_at");
+    expect(select).not.toContain("plan_token");
+  });
+});

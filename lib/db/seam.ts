@@ -42,6 +42,8 @@ import { currentRate } from "./rates";
 
 export interface SnapshotComparison {
   hasSnapshot: boolean;
+  /** A v4 readout, or the v5 plan they saved (see canPublish). */
+  from: "readout" | "plan" | null;
   /** When they were shown these numbers. */
   takenAt: string | null;
   side: "buy" | "sell" | null;
@@ -54,7 +56,7 @@ export interface SnapshotComparison {
 }
 
 const EMPTY: SnapshotComparison = {
-  hasSnapshot: false, takenAt: null, side: null,
+  hasSnapshot: false, from: null, takenAt: null, side: null,
   drifts: [], material: [], lostProgrammes: [], trustStates: [],
 };
 
@@ -102,12 +104,20 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
   if (!agentId) return skipped("not signed in");
 
   const lead = await boundedRead(
-    db.from("rift_leads").select("id,assessment_id,side").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
+    db.from("rift_leads").select("id,assessment_id,side,plan_saved_at").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the relationship",
   );
   if (!lead.ok) return lead;
-  const leadRow = ("data" in lead ? lead.data : null) as { assessment_id: string | null } | null;
-  if (!leadRow?.assessment_id) return done(EMPTY);
+  const leadRow = ("data" in lead ? lead.data : null) as { assessment_id: string | null; side: "buy" | "sell" | null; plan_saved_at: string | null } | null;
+
+  /* Every lead since the v5 values saves a plan rather than a readout (D31),
+     so "no readout" was blocking the client plan for every new person. The
+     saved plan is what they were shown and when; there is nothing stored to
+     recompute against, so it carries no drift, and canPublish says why. */
+  const fromPlan = (): SnapshotComparison => leadRow?.plan_saved_at
+    ? { ...EMPTY, hasSnapshot: true, from: "plan", takenAt: leadRow.plan_saved_at, side: leadRow.side ?? null }
+    : EMPTY;
+  if (!leadRow?.assessment_id) return done(fromPlan());
 
   const readout = await boundedRead(
     db.from("rift_readouts").select("id,side,inputs,matched,created_at")
@@ -120,7 +130,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
     id: string; side: "buy" | "sell"; inputs: Record<string, unknown>;
     matched: { id: string; name: string }[] | null; created_at: string;
   } | null;
-  if (!snap) return done(EMPTY);
+  if (!snap) return done(fromPlan());
 
   const figs = await boundedRead(
     db.from("rift_figures").select("label,value_cents,trust_state").eq("readout_id", snap.id).limit(24),
@@ -139,6 +149,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
   const base: SnapshotComparison = {
     ...EMPTY,
     hasSnapshot: true,
+    from: "readout",
     takenAt: snap.created_at,
     side: snap.side,
     trustStates: stored.map((s) => s.trustState),

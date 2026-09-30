@@ -72,7 +72,7 @@ describe("a dry run cannot reach anybody", () => {
 
   /* Everything in this route that writes to the database or hands a message to
      a sending service. */
-  const EFFECTS = ["claimStep", "markTouch", "sendTouch", "sendResume"];
+  const EFFECTS = ["claimStep", "markTouch", "sendTouch", "sendPlanTouch", "sendResume"];
 
   it("takes its limits from the shared helper rather than reading the URL itself", () => {
     expect(src).toContain("runOptions(req.url)");
@@ -136,6 +136,7 @@ describe("a stop after the queue was read still stops the send", () => {
     expect(recheck, "the send is rechecked").toBeGreaterThan(claim);
     expect(src.indexOf("sendTouch(")).toBeGreaterThan(recheck);
     expect(src.indexOf("sendResume(")).toBeGreaterThan(recheck);
+    expect(src.indexOf("sendPlanTouch(")).toBeGreaterThan(recheck);
   });
 
   it("reads the provider's opt-out list before the loop, and never stops a sequence on a dry run", () => {
@@ -146,7 +147,7 @@ describe("a stop after the queue was read still stops the send", () => {
   it("tries no other channel for somebody who opted out", () => {
     const at = src.indexOf("if (block) {");
     const branch = src.slice(at, src.indexOf("continue;", at));
-    for (const other of ["sendTouch", "sendResume", "claimStep", "text"]) {
+    for (const other of ["sendTouch", "sendPlanTouch", "sendResume", "claimStep", "text"]) {
       expect(branch, other).not.toContain(other + "(");
     }
   });
@@ -180,7 +181,7 @@ describe("the programs step for somebody who matched none", () => {
   it("records a skip with its reason, and sends nothing", () => {
     expect(branch).toMatch(/markTouch\([^)]*"skipped"/);
     expect(branch).toContain("nothingToList++");
-    for (const effect of ["sendTouch(", "sendResume(", "failedCount++", "sent++"]) {
+    for (const effect of ["sendTouch(", "sendPlanTouch(", "sendResume(", "failedCount++", "sent++"]) {
       expect(branch, effect).not.toContain(effect);
     }
   });
@@ -196,5 +197,44 @@ describe("the programs step for somebody who matched none", () => {
 
   it("reports how many it held back", () => {
     expect(src).toMatch(/stoppedBeforeSend,\s*nothingToList,/);
+  });
+
+  it("lists the same programs in the plan touch, with the same copy", () => {
+    const planSend = src.slice(src.indexOf("sendPlanTouch({"));
+    expect(planSend).toMatch(/says: copy\?\.says \?\? t\.says[\s\S]{0,400}programs \? \{ programs \}/);
+  });
+
+  it("never lists buyers' programs to somebody selling", () => {
+    expect(src).toMatch(/t\.side === "sell" \? \[\] : await matchedPrograms/);
+  });
+});
+
+/**
+ * Which email a person gets is decided once, in `due()`, and the run follows
+ * it. Before the saved plan (D31, Blueprint v5 §5.5) was read, "no figures"
+ * meant "did not finish", and every real lead was sent the resume email.
+ */
+describe("the run sends the email the queue chose", () => {
+  const src = readFileSync(resolve(__dirname, "../../app/api/nurture/run/route.ts"), "utf8");
+
+  it("chooses by kind, not by whether figures happen to be present", () => {
+    expect(src).toContain('const res = t.kind === "readout"');
+    expect(src).toContain('t.kind === "plan"');
+    expect(src).not.toMatch(/const res = t\.figures/);
+  });
+
+  it("previews the same choice it would send", () => {
+    expect(src).toContain("kind: t.kind });");
+  });
+
+  it("counts what went out by kind", () => {
+    expect(src).toContain("sentAs[t.kind]++");
+    expect(src).toMatch(/sent,\s*sentAs,/);
+  });
+
+  it("links the saved plan's own page, never a figure from it", () => {
+    const planSend = src.slice(src.indexOf("sendPlanTouch({"), src.indexOf("sendResume({"));
+    expect(planSend).toContain("/saved/");
+    expect(planSend).not.toMatch(/figures|\.values/);
   });
 });

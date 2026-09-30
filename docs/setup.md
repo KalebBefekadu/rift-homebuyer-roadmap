@@ -169,6 +169,38 @@ magic-link round trip, which needs a real GoTrue.
 
 No auth verification, no RLS enforcement, no TLS. Local development only.
 
+### A full demo book (local only)
+
+An empty database shows every Operations page in its empty state, which is the least useful
+way to look at them. To see them with a realistic book of business:
+
+```bash
+npm run local:seed-demo
+```
+
+It loads about thirty-five invented Atlanta-area people into the `postgres` database inside
+the `rift-pg` container: buyers, sellers, one household buying and selling at once, buyers
+from abroad, leads in every band (answered, unanswered, gone quiet, archived), and journeys at
+every stage on both sides, with search briefs, shortlists, tours, offers and counters,
+contracts with dated deadlines and workstreams in every state, listings with showings and
+weekly reviews, pricing and proceeds versions, released offers and a seller's choice, outbox
+alerts in every state, campaigns, program checks that need review, a failing job, rates and
+some decided and some undecided settings. Everything is dated relative to the moment it runs,
+so running it again makes the book fresh again.
+
+It is re-runnable and touches only its own rows: every row it writes has an id starting
+`de30` (sessions start `demo-`, and the settings it decides are signed "Kaleb Befekadu
+(demo)"), and it deletes exactly those, in the same transaction, before inserting. Rows other
+tools or test runs left in the local database stay, and show up alongside the demo book.
+
+`scripts/local/seed-demo.mjs` generates the SQL by importing the app's own `lib/core`
+functions (scoring, the outbox content hash, the Matrix package, saved plans, deadline
+resolution), so stored values match what the pages compute. `node scripts/local/seed-demo.mjs`
+prints the SQL instead of loading it.
+
+**Never run it against a hosted database.** The script only ever pipes into the local
+container, and nothing in it is a real person.
+
 ## 9. Verifying the query syntax
 
 The riskiest code in the data layer is the part TypeScript cannot see. Embedded selects like

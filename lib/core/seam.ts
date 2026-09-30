@@ -216,11 +216,22 @@ export function canPublish(input: {
   drifts: Drift[];
   disclosed: boolean;
   trustStates: TrustState[];
+  /** What the snapshot is: a v4 readout, whose figures are stored and can be
+      recomputed, or a v5 saved plan, whose answers are stored but whose
+      figures were worked out in the browser against that day's rate. */
+  snapshotFrom?: "readout" | "plan";
 }): PublishCheck {
   const blocks: string[] = [];
   const warns: string[] = [];
 
-  if (!input.hasSnapshot) blocks.push("No readout snapshot on file. The plan has nothing to be honest about.");
+  if (!input.hasSnapshot) blocks.push("No readout or saved plan on file. The plan has nothing to be honest about.");
+  /* A saved plan is a real snapshot of what they answered and when, so it is
+     not a blocker. It is a weaker one: the rate they saw is not kept with it,
+     so a change since cannot be measured, and silence would read as "nothing
+     moved". Said instead, where the agent will see it before publishing. */
+  if (input.hasSnapshot && input.snapshotFrom === "plan") {
+    warns.push("Their numbers came from a plan they saved on the site. The rate they saw is not kept with it, so a change since cannot be checked: say on the first screen that these figures are worked out today.");
+  }
   if (!input.hasAgreement) blocks.push("No signed representation agreement. Publishing a plan first is the wrong order and in most cases the wrong side of the line.");
 
   const material = mustDisclose(input.drifts);
