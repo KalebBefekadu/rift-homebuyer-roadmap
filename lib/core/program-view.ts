@@ -204,11 +204,13 @@ export function areaGroupOf(p: ProgramRecord): { key: string; label: string; ord
     const label = CITY_OF[p.administrator] ?? p.administrator;
     return { key: `city:${label}`, label, order: 1 };
   }
-  const label = `${p.area.counties.join(" and ")} ${p.area.counties.length === 1 ? "County" : "counties"}`;
-  return { key: `county:${p.area.counties.join("+")}`, label, order: 2 };
+  /* One group for every county program, not one per county: most counties
+     run a single program, and a heading per card read as a list of headings.
+     Each card names its county. */
+  return { key: "counties", label: "County programs", order: 2 };
 }
 
-/** Statewide first, then cities, then counties by name. Order inside a group is the caller's. */
+/** Statewide first, then cities, then county programs. Order inside a group is the caller's. */
 export function groupByArea(ps: ProgramRecord[]): AreaGroup[] {
   const groups = new Map<string, AreaGroup & { order: number }>();
   for (const p of ps) {

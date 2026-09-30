@@ -99,12 +99,11 @@ describe("the key rules and where", () => {
     expect(areaText(bySlug("atl-homenow"))).toBe("Inside the City of Atlanta limits");
   });
 
-  it("groups statewide, then the city, then counties by name, losing none", () => {
+  it("groups statewide, then the city, then the county programs, losing none", () => {
     const g = groupByArea(GEORGIA_PROGRAMS);
-    expect(g[0]!.label).toBe("Statewide");
-    expect(g[1]!.label).toBe("City of Atlanta");
-    const counties = g.slice(2).map((x) => x.label);
-    expect(counties).toEqual([...counties].sort());
+    expect(g.map((x) => x.label)).toEqual(["Statewide", "City of Atlanta", "County programs"]);
+    expect(g[2]!.programs.map((p) => p.slug)).toContain("fulton-hop");
+    expect(g[1]!.programs.map((p) => p.slug)).not.toContain("fulton-hop");
     expect(g.flatMap((x) => x.programs).length).toBe(GEORGIA_PROGRAMS.length);
   });
 
