@@ -693,6 +693,56 @@
 .ops-hit[data-on], .ops-hit:hover { background: var(--sunk); }
 .ops-hint { font-size: 11.5px; color: var(--ink-4); flex: none; }
 
+/* The page kit (app/(operations)/operations/ui.tsx): one header, one section,
+   one notice, one empty state, one stat, one tab row, one fact list. */
+.ops-head { margin-bottom: 24px; }
+.ops-back { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-3); margin-bottom: 10px; }
+.ops-back:hover { color: var(--ink); }
+.ops-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.ops-head-text { min-width: 0; flex: 1 1 420px; }
+.ops-title { font-size: 24px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; color: var(--ink); }
+.ops-lede { margin-top: 6px; font-size: 13.5px; line-height: 1.55; color: var(--ink-3); max-width: 680px; }
+.ops-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ops-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: none; }
+.ops-sec { margin-top: 32px; }
+.ops-sec:first-of-type { margin-top: 0; }
+.ops-head + .ops-sec, .ops-stats + .ops-sec, .ops-notice + .ops-sec { margin-top: 24px; }
+.ops-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ops-sec-title { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink); }
+.ops-sec-hint { margin-top: 3px; font-size: 12.5px; color: var(--ink-4); line-height: 1.5; max-width: 680px; }
+.ops-notice { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); margin-bottom: 16px; }
+.ops-notice-ico { flex: none; margin-top: 2px; }
+.ops-notice-body { flex: 1; min-width: 0; }
+.ops-notice-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.ops-notice-text { margin-top: 3px; font-size: 13px; line-height: 1.55; color: var(--ink-3); }
+.ops-notice-action { flex: none; align-self: center; }
+.ops-notice-neg { background: var(--neg-wash); border-color: color-mix(in srgb, var(--neg) 25%, transparent); }
+.ops-notice-neg .ops-notice-ico { color: var(--neg); }
+.ops-notice-warn { background: var(--warn-wash); border-color: var(--warn-line); }
+.ops-notice-warn .ops-notice-ico { color: var(--warn); }
+.ops-notice-info { background: var(--sunk); border-color: var(--line-2); }
+.ops-notice-info .ops-notice-ico { color: var(--ink-3); }
+.ops-notice-pos { background: var(--pos-wash); border-color: var(--pos-line); }
+.ops-notice-pos .ops-notice-ico { color: var(--pos); }
+.ops-empty { padding: 28px 20px; border: 1px dashed var(--line); border-radius: var(--r); text-align: center; background: var(--paper); }
+.ops-empty-title { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.ops-empty-text { margin: 6px auto 0; font-size: 13px; line-height: 1.55; color: var(--ink-4); max-width: 480px; }
+.ops-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.ops-stat { display: block; padding: 14px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+.ops-stat-link:hover { border-color: var(--ink-5); }
+.ops-stat-label { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.ops-stat-value { margin-top: 6px; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.ops-stat-hint { margin-top: 3px; font-size: 12px; color: var(--ink-4); }
+.ops-tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunk); border: 1px solid var(--line-2); border-radius: 9px; }
+.ops-tab { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+.ops-tab:hover { color: var(--ink); }
+.ops-tab[aria-current="page"] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1), 0 0 0 1px var(--line-2); }
+.ops-tab-count { font-size: 11.5px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.ops-facts { display: grid; gap: 14px 20px; }
+.ops-fact dt { font-size: 12px; color: var(--ink-4); }
+.ops-fact dd { margin: 2px 0 0; font-size: 13.5px; color: var(--ink); font-weight: 550; }
+@media (max-width: 760px) { .ops-facts { grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important; } .ops-title { font-size: 21px; } }
+
 /* Today (§8.4): groups of items, each with its evidence and next action. */
 .ops-main .u { text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--line); }
 .ops-main .u:hover { text-decoration-color: currentColor; }

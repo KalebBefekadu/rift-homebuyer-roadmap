@@ -6,6 +6,7 @@ import { allContracts } from "@/lib/db/transactions";
 import { contractFlags, nextDate, type ContractSummary } from "@/lib/core/transactions";
 import { STAGE_LABEL, WORK_STATE_LABEL, type WorkState } from "@/lib/core/progress";
 import { Unavailable } from "../Unavailable";
+import { PageHead, Tabs, Notice, Empty } from "../ui";
 
 export const metadata: Metadata = { title: "Transactions" };
 export const dynamic = "force-dynamic";
@@ -47,28 +48,27 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
   return (
     <main className="shell-w">
-      <div className="between wrap gap-2">
-        <h1 className="serif">Transactions</h1>
-        <nav className="row gap-1" aria-label="Which contracts">
-          {SHOW.map((s) => (
-            <Link key={s.id} href={s.id === "open" ? "/operations/transactions" : `/operations/transactions?show=${s.id}`}
-              className={`btn btn-sm ${which === s.id ? "btn-p" : "btn-g"}`} aria-current={which === s.id ? "page" : undefined}>{s.label}</Link>
-          ))}
-        </nav>
-      </div>
+      <PageHead
+        title="Transactions"
+        lede="Every contract, its next date and its ten workstreams. A row opens the journey's Contract tab."
+        actions={<Tabs label="Which contracts" current={which} items={SHOW.map((s) => ({
+          id: s.id, label: s.label, href: s.id === "open" ? "/operations/transactions" : `/operations/transactions?show=${s.id}`,
+          count: all ? (all.filter((c) => s.id === "all" || (s.id === "open" ? !c.outcome : Boolean(c.outcome)))).length : undefined,
+        }))} />}
+      />
 
       {!read.ok ? (
-        <p className="card p-4 t-sm" role="alert" style={{ marginTop: 12, borderColor: "var(--neg, #b3261e)" }}>The contracts did not load. That is not the same as there being none; reload in a moment.</p>
+        <Notice tone="neg" title="The contracts did not load">That is not the same as there being none; reload in a moment.</Notice>
       ) : "skipped" in read ? (
-        <p className="card p-4 t-sm c-3" style={{ marginTop: 12 }}>Nothing is recorded on this deployment: {read.reason}.</p>
+        <Notice tone="info" title="Nothing is recorded on this deployment">{read.reason}.</Notice>
       ) : all === null ? (
-        <p className="card p-4 t-sm c-3" style={{ marginTop: 12 }}>Contracts need a database update that has not been applied yet.</p>
+        <Notice tone="warn" title="Contracts need a database update">It has not been applied yet.</Notice>
       ) : !rows.length ? (
-        <p className="card p-4 t-sm c-3" style={{ marginTop: 12 }}>
-          {which === "open" ? "No open contracts. A contract is recorded from its journey, on the Contract tab, once an offer is accepted." : "None."}
-        </p>
+        <Empty title={which === "open" ? "No open contracts" : "None here"}>
+          {which === "open" ? "A contract is recorded from its journey, on the Contract tab, once an offer is accepted." : null}
+        </Empty>
       ) : (
-        <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
+        <div className="card" style={{ overflowX: "auto" }}>
           <table className="ops-table">
             <thead>
               <tr><th>Property</th><th>Client</th><th>Stage</th><th>Next date</th><th>Workstreams</th><th>Needs a look</th></tr>
