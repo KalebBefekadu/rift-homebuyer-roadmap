@@ -79,6 +79,23 @@ describe("a lead with nothing to be honest about", () => {
   });
 });
 
+describe("a lead who saved a plan instead (every lead since D31)", () => {
+  it("counts the saved plan as what they were shown, with nothing to recompute", async () => {
+    build({ rift_leads: { data: [{ id: "l1", assessment_id: null, side: "sell", plan_saved_at: "2026-09-20T15:00:00Z" }] } });
+    const c = await got();
+    expect(c).toMatchObject({ hasSnapshot: true, from: "plan", takenAt: "2026-09-20T15:00:00Z", side: "sell", drifts: [] });
+  });
+
+  it("prefers a stored readout when both exist, because only it can be recomputed", async () => {
+    build({
+      rift_leads: { data: [{ id: "l1", assessment_id: "a1", side: "buy", plan_saved_at: "2026-09-20T15:00:00Z" }] },
+      rift_readouts: { data: [{ id: "r1", side: "buy", inputs: INPUTS, matched: [], created_at: "2026-06-01T00:00:00Z" }] },
+      rift_figures: { data: [] },
+    });
+    expect((await got()).from).toBe("readout");
+  });
+});
+
 describe("what moved", () => {
   it("finds nothing when nothing changed", async () => {
     seed({ figures: [

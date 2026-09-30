@@ -115,6 +115,13 @@ describe("what must be true before a plan goes out", () => {
     expect(r.blocks.join(" ")).toContain("nothing to be honest about");
   });
 
+  it("publishes from a saved plan, and says the change since cannot be measured", () => {
+    const r = canPublish({ ...ok, snapshotFrom: "plan" });
+    expect(r.ok).toBe(true);
+    expect(r.warns.join(" ")).toContain("saved on the site");
+    expect(canPublish({ ...ok, snapshotFrom: "readout" }).warns.join(" ")).not.toContain("saved on the site");
+  });
+
   it("refuses without a signed agreement", () => {
     const r = canPublish({ ...ok, hasAgreement: false });
     expect(r.ok).toBe(false);
