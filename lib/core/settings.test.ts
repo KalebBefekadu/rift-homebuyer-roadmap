@@ -60,9 +60,9 @@ describe("reading rules back out of the browser", () => {
   });
 
   it("takes a stored value and keeps the prose from the code", () => {
-    writeRule("commissionPct", 3);
+    writeRule("commissionPct", 2.5);
     const r = readRules();
-    expect(r.commissionPct.value).toBe(3);
+    expect(r.commissionPct.value).toBe(2.5);
     /* The wording is the single source and must not be overwritten by a stale
        saved copy of an earlier version of it. */
     expect(r.commissionPct.affects).toBe(DEFAULT_RULES.commissionPct.affects);
@@ -70,7 +70,7 @@ describe("reading rules back out of the browser", () => {
   });
 
   it("leaves rules nobody has touched alone", () => {
-    writeRule("commissionPct", 3);
+    writeRule("commissionPct", 2.5);
     expect(readRules().registryDays.value).toBe(DEFAULT_RULES.registryDays.value);
   });
 

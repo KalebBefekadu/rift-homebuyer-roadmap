@@ -32,9 +32,21 @@ describe("terms", () => {
   it("computes only arithmetic on the terms, never closing costs", () => {
     expect(termsEffects(T)).toEqual({
       downPayment: 40_000, loanAmount: 360_000, priceAfterConcessions: 394_000,
-      cashAtContract: 5_000, cashAtClosingBeforeCosts: 29_000,
+      cashAtContract: 5_000, downPaymentAtClosing: 35_000, closingCostCredit: 6_000,
+      cashAtClosingBeforeCosts: 29_000,
     });
     expect(termsEffects({ ...T, financing: "cash", financingContingency: false }).loanAmount).toBe(0);
+  });
+
+  it("credits concessions against closing costs, never against the down payment", () => {
+    const fx = termsEffects(T);
+    /* The full down payment is still owed: earnest money toward it at
+       contract, the rest at closing. The seller's credit is its own line. */
+    expect(fx.downPayment).toBe(40_000);
+    expect(fx.cashAtContract + fx.downPaymentAtClosing).toBe(fx.downPayment);
+    expect(fx.closingCostCredit).toBe(T.concessions);
+    expect(fx.cashAtClosingBeforeCosts).toBe(fx.downPaymentAtClosing - fx.closingCostCredit);
+    expect(termsEffects({ ...T, concessions: 0 }).downPaymentAtClosing).toBe(fx.downPaymentAtClosing);
   });
 
   it("says what a counter changed, in words", () => {

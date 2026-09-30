@@ -6,9 +6,9 @@ import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, mergeRules, undecidedIn, type Bu
 /**
  * A settings page has one way to fail badly, and it is not a crash.
  *
- * It is a dial connected to nothing: the agent sets his commission to 3%,
+ * It is a dial connected to nothing: the agent sets his commission to 2.5%,
  * every screen agrees with him, and a forecast he has been quoting for a
- * quarter turns out to have been computed at 2.5 the whole time. Nothing
+ * quarter turns out to have been computed at 3 the whole time. Nothing
  * throws. This is the same shape as every other defect in this product, with
  * the difference that building a settings page is how you introduce it
  * deliberately.
@@ -66,14 +66,14 @@ describe("merging what was stored", () => {
   });
 
   it("takes a stored value of the right shape", () => {
-    expect(mergeRules({ commissionPct: 3 }).commissionPct.value).toBe(3);
+    expect(mergeRules({ commissionPct: 2.5 }).commissionPct.value).toBe(2.5);
   });
 
   it("keeps the product's own prose rather than a stored copy of it", () => {
     /* Value-only. A saved blob from an older version carrying stale `affects`
        text would otherwise overwrite the current wording, and that wording is
        how the agent knows what he is changing. */
-    const merged = mergeRules({ commissionPct: 3 });
+    const merged = mergeRules({ commissionPct: 2.5 });
     expect(merged.commissionPct.affects).toBe(DEFAULT_RULES.commissionPct.affects);
     expect(merged.commissionPct.owner).toBe(DEFAULT_RULES.commissionPct.owner);
   });
@@ -81,7 +81,7 @@ describe("merging what was stored", () => {
   it("refuses a value of the wrong type rather than letting it through", () => {
     /* jsonb holds anything. A string where commissionPct belongs multiplies
        into every revenue figure without throwing. */
-    expect(mergeRules({ commissionPct: "3" as unknown }).commissionPct.value).toBe(2.5);
+    expect(mergeRules({ commissionPct: "2.5" as unknown }).commissionPct.value).toBe(3);
     expect(mergeRules({ autoEmailReadout: 1 as unknown }).autoEmailReadout.value).toBe(false);
   });
 
@@ -106,19 +106,19 @@ describe("telling a decision from a default", () => {
   });
 
   it("stops calling a key undecided once it has a usable value", () => {
-    expect(undecidedIn({ commissionPct: 3 })).not.toContain("commissionPct");
+    expect(undecidedIn({ commissionPct: 2.5 })).not.toContain("commissionPct");
   });
 
   it("still calls it undecided when the stored value is unusable", () => {
     /* The whole point. A bad row must not read as a decision: the agent
        would see his own value on screen and it would not be the one in use. */
-    expect(undecidedIn({ commissionPct: "3" as unknown })).toContain("commissionPct");
+    expect(undecidedIn({ commissionPct: "2.5" as unknown })).toContain("commissionPct");
   });
 
   it("treats a stored value equal to the default as decided", () => {
-    /* "I looked at this and 2.5 is right" is a different fact from "nobody
+    /* "I looked at this and 3 is right" is a different fact from "nobody
        has ever opened this page", and the table records who and when. */
-    expect(undecidedIn({ commissionPct: 2.5 })).not.toContain("commissionPct");
+    expect(undecidedIn({ commissionPct: DEFAULT_RULES.commissionPct.value })).not.toContain("commissionPct");
   });
 });
 

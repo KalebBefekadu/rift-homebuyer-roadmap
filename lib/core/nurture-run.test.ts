@@ -155,3 +155,46 @@ describe("a stop after the queue was read still stops the send", () => {
     for (const k of ["optedOut", "stoppedBeforeSend", "optOuts:"]) expect(src).toContain(k);
   });
 });
+
+/**
+ * The programs step (n4) lists what the person matched. Somebody who matched
+ * none is not sent an email about the programs they matched: the step is
+ * claimed and recorded as skipped, with the reason, and never counted as a
+ * failure or a send.
+ */
+describe("the programs step for somebody who matched none", () => {
+  const src = readFileSync(resolve(__dirname, "../../app/api/nurture/run/route.ts"), "utf8");
+  const at = src.indexOf("if (programs && !copy) {");
+  let depth = 0, end = -1;
+  for (let i = src.indexOf("{", at); i < src.length; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}" && --depth === 0) { end = i; break; }
+  }
+  const branch = src.slice(at, end);
+
+  it("is decided before anything is sent", () => {
+    expect(at, "the no-programs branch").toBeGreaterThan(-1);
+    expect(src.indexOf("sendTouch(")).toBeGreaterThan(end);
+  });
+
+  it("records a skip with its reason, and sends nothing", () => {
+    expect(branch).toMatch(/markTouch\([^)]*"skipped"/);
+    expect(branch).toContain("nothingToList++");
+    for (const effect of ["sendTouch(", "sendResume(", "failedCount++", "sent++"]) {
+      expect(branch, effect).not.toContain(effect);
+    }
+  });
+
+  it("claims and records nothing on a dry run", () => {
+    expect(branch).toMatch(/if \(!dry\) \{[\s\S]*claimStep\(/);
+  });
+
+  it("sends the person's own subject and opening when there are programmes", () => {
+    expect(src).toContain("says: copy?.says ?? t.says");
+    expect(src).toContain("body: copy?.body ?? t.body");
+  });
+
+  it("reports how many it held back", () => {
+    expect(src).toMatch(/stoppedBeforeSend,\s*nothingToList,/);
+  });
+});

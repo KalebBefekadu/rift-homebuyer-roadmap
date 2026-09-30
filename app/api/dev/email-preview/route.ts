@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildReadout, buildTouch, buildResume, buildNewLead } from "@/lib/db/email";
+import { programLines, programsCopy } from "@/lib/core/nurture";
+import { PROGRAMS } from "@/lib/core/registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,9 +62,12 @@ export async function GET(req: Request) {
       ? buildTouch({
           to: "maya@example.com",
           name: "Maya O'Brien",
-          says: "The two programs you matched, and what each would need from you",
-          body: "Two Georgia programs look like they fit your answers. Here is what each one would ask of you.",
+          /* The programs step as it is really sent: its copy and its list are
+             built from what the person matched, not from the definition. */
+          ...programsCopy(PROGRAMS.slice(0, 2).map((p) => p.name))!,
+          programs: programLines(PROGRAMS.slice(0, 2)),
           shareUrl: `${url.origin}/r/sample-token`,
+          againUrl: `${url.origin}/buy/cash-to-close`,
           county: "DeKalb",
           figures: { cashToClose: 26187.5, gap: 17187.5 },
         })

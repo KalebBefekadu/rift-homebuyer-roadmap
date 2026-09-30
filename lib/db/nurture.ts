@@ -3,8 +3,9 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead, boundedWrite } from "./bounded";
 import { journeyTablesMissing } from "./journeys";
-import { sequenceFor, resolveChannel, type Enrolment, type StopId } from "@/lib/core/nurture";
-import { BUY_FUNNEL } from "@/lib/core/funnel";
+import { sequenceFor, resolveChannel, programLines, type Enrolment, type ProgramLine, type StopId } from "@/lib/core/nurture";
+import { BUY_FUNNEL, firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
+import { matchForVisitor } from "./match";
 import type { Band } from "@/lib/core/lead";
 
 /**
@@ -100,6 +101,8 @@ export interface DueTouch {
   figures: Record<string, string | number> | null;
   shareToken: string | null;
   county: string | null;
+  /** From the ownership answer on their readout. What the programs step matches on, with the county. */
+  firstTimeBuyer: boolean;
   /** How far they got, for the recovery touch. */
   answered: number;
   of: number;
@@ -162,11 +165,11 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
       }
     }
 
-    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null }>();
+    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null; firstTimeBuyer: boolean }>();
     if (assessmentIds.length) {
       const { data: reads, error: readErr } = await db
         .from("rift_readouts")
-        .select("assessment_id,figures,share_token,created_at,rift_assessments(county)")
+        .select("assessment_id,figures,inputs,share_token,created_at,rift_assessments(county)")
         .in("assessment_id", assessmentIds)
         .order("created_at", { ascending: false });
       /* This one decides which email a person gets. Read as empty, everybody
@@ -175,6 +178,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
       if (readErr) return failed(readErr.message);
       for (const r of (reads ?? []) as unknown as {
         assessment_id: string; figures: Record<string, string | number>; share_token: string;
+        inputs: Record<string, unknown> | null;
         rift_assessments: { county: string | null } | null;
       }[]) {
         if (!snap.has(r.assessment_id)) {
@@ -182,6 +186,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
             figures: r.figures,
             token: r.share_token,
             county: r.rift_assessments?.county ?? null,
+            firstTimeBuyer: firstTimeFrom(ownershipOf(r.inputs?.ownership)),
           });
         }
       }
@@ -227,6 +232,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         figures: s?.figures ?? null,
         shareToken: s?.token ?? null,
         county: s?.county ?? null,
+        firstTimeBuyer: s?.firstTimeBuyer ?? true,
         answered: row.rift_leads?.assessment_id ? progress.get(row.rift_leads.assessment_id) ?? 0 : 0,
         /* The buyer funnel's length. Read from the definition rather than
            hard-coded, so editing the funnel cannot make this sentence lie. */
@@ -240,6 +246,33 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
   } catch (e) {
     return failed(e);
   }
+}
+
+/**
+ * The programmes this person matches today, for the step that lists them.
+ *
+ * A fresh match rather than the list stored on their readout, through the
+ * same `matchForVisitor` every page uses. The readout is a snapshot of the day
+ * it was made; this email goes out days later, and a programme that has since
+ * closed or gone unverified must not arrive in an inbox as something that fits
+ * them, for the same reason the page stops showing it.
+ *
+ * No county means nothing to match on, which is an empty list, not a guess.
+ * `cache` is per run: most of a cohort shares a county, and the registry does
+ * not change between two people in the same minute.
+ */
+export async function matchedPrograms(
+  t: Pick<DueTouch, "county" | "firstTimeBuyer">,
+  cache: Map<string, Promise<ProgramLine[]>>,
+): Promise<ProgramLine[]> {
+  if (!t.county) return [];
+  const key = `${t.county}|${t.firstTimeBuyer}`;
+  let lines = cache.get(key);
+  if (!lines) {
+    lines = matchForVisitor(t.county, t.firstTimeBuyer).then((r) => programLines(r.match.matched));
+    cache.set(key, lines);
+  }
+  return lines;
 }
 
 async function journeyLeads(db: NonNullable<ReturnType<typeof serviceClient>>, agentId: string): Promise<DbResult<Set<string>>> {

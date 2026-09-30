@@ -168,14 +168,22 @@ export default async function AbroadResults({
                 <span className="t-md w6" style={script}>{t("res.month.title")}</span>
                 <span className="num t-sm c-4">{rate.pct.toFixed(2)}% + {s.ratePremium}</span>
               </div>
-              {[
+              {([
                 [t("res.month.pi"), r.monthly.pi],
                 [t("res.month.tax"), r.monthly.tax],
                 [t("res.month.ins"), r.monthly.insurance],
-              ].map(([l, v]) => (
-                <div key={l as string} className="between" style={{ padding: "11px 18px", borderBottom: "1px solid var(--line-3)" }}>
-                  <span className="t-sm w5" style={script}>{l as string}</span>
-                  <span className="num t-sm c-neg">−{money(v as number)}</span>
+                /* Its own line with its own reason, only when it is charged:
+                   a zero row would read as a promise that it never will be. */
+                ...(r.monthly.pmi > 0
+                  ? [[t("res.month.pmi"), r.monthly.pmi, t("res.month.pmi.note", { pct: a.pmiPct })]]
+                  : []),
+              ] as [string, number, string?][]).map(([l, v, n]) => (
+                <div key={l} className="between" style={{ padding: "11px 18px", borderBottom: "1px solid var(--line-3)", gap: 12 }}>
+                  <div className="grow">
+                    <div className="t-sm w5" style={script}>{l}</div>
+                    {n ? <div className="t-xs c-4" style={{ marginTop: 1, ...body }}>{n}</div> : null}
+                  </div>
+                  <span className="num t-sm c-neg">−{money(v)}</span>
                 </div>
               ))}
               {i.use === "rent" ? (

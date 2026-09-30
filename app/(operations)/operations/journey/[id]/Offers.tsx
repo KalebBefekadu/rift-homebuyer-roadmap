@@ -274,7 +274,10 @@ function Offer({ b, journeyId, docs, deciders, busy, run }: {
       {fx ? (
         <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.5 }}>
           Loan {usd(fx.loanAmount)} · down payment {usd(fx.downPayment)} · {usd(fx.cashAtContract)} earnest money at contract ·
-          about {usd(fx.cashAtClosingBeforeCosts)} more at closing before closing costs (not estimated here).
+          {fx.closingCostCredit > 0
+            ? <> {usd(fx.downPaymentAtClosing)} of the down payment at closing · {usd(fx.closingCostCredit)} seller credit against closing costs ·
+              about {usd(fx.cashAtClosingBeforeCosts)} at closing plus closing costs (not estimated here).</>
+            : <> about {usd(fx.downPaymentAtClosing)} more at closing before closing costs (not estimated here).</>}
         </p>
       ) : null}
       {v.changes.length ? (

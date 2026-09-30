@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
 import { trackedCron } from "@/lib/db/jobs";
-import { due, claimStep, markTouch, stillOwed, stop } from "@/lib/db/nurture";
+import { due, claimStep, markTouch, stillOwed, stop, matchedPrograms } from "@/lib/db/nurture";
 import { sendTouch, sendResume, blockedContacts } from "@/lib/db/email";
 import { currentAgentId } from "@/lib/db/service";
-import { runOptions, blockedStop } from "@/lib/core/nurture";
+import { runOptions, blockedStop, listsPrograms, programsCopy, type ProgramLine } from "@/lib/core/nurture";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -71,6 +71,11 @@ async function run(req: Request) {
   /* Sixth and seventh: on the provider's block list (the sequence is stopped),
      and stopped between the queue being read and the send (AT37). */
   let optedOut = 0, stoppedBeforeSend = 0;
+  /* Eighth: the programs step for somebody who matched none. Recorded as
+     skipped with its reason, never sent, and not a failure: there was nothing
+     true to say. */
+  let nothingToList = 0;
+  const programCache = new Map<string, Promise<ProgramLine[]>>();
   /* A dry run's only output. Who, which step, and what would have gone: the
      three things you need to decide whether to let it loose. */
   const plan: { to: string; stepId: string; band: string; kind: "readout" | "resume" }[] = [];
@@ -96,6 +101,26 @@ async function run(req: Request) {
        twenty-five of two hundred is the same lie as a send that stops there
        without saying so: both are reported, neither is hidden. */
     if (plan.length + sent + failedCount + notConfigured >= max) { deferred++; continue; }
+
+    /* The programs step lists what they matched, counted and named. With
+       nothing matched it is not sent at all: an email headed "the programs you
+       matched" to somebody who matched none is the zero-in-the-figure defect
+       again, in words. Claimed and marked skipped so it is not owed tomorrow
+       and the agent can see why it did not go. */
+    const programs = listsPrograms(t.stepId) ? await matchedPrograms(t, programCache) : null;
+    const copy = programs ? programsCopy(programs.map((p) => p.name)) : null;
+    if (programs && !copy) {
+      nothingToList++;
+      if (!dry) {
+        const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
+        if (claim.ok && "data" in claim && claim.data.claimed) {
+          await markTouch(t.enrolmentId, t.stepId, "skipped", t.county
+            ? "Not sent: they matched no programs, so there were none to list"
+            : "Not sent: no county on record to match programs against");
+        }
+      }
+      continue;
+    }
 
     if (dry) {
       plan.push({ to: t.email, stepId: t.stepId, band: t.band, kind: t.figures ? "readout" : "resume" });
@@ -134,11 +159,15 @@ async function run(req: Request) {
       ? await sendTouch({
           to: t.email,
           name: t.name,
-          says: t.says,
-          body: t.body,
+          says: copy?.says ?? t.says,
+          body: copy?.body ?? t.body,
           shareUrl: t.shareToken ? `${origin}/r/${t.shareToken}` : `${origin}/buy`,
+          /* The touch quotes their cash to close, so that is the page that
+             works it out again from today's rate and registry. */
+          againUrl: `${origin}/buy/cash-to-close`,
           county: t.county,
           figures: t.figures,
+          ...(programs ? { programs } : {}),
         })
       : await sendResume({
           to: t.email,
@@ -191,6 +220,7 @@ async function run(req: Request) {
     deferred,
     optedOut,
     stoppedBeforeSend,
+    nothingToList,
     /* Whether the provider's opt-out list was read. When it was not, Brevo
        still refuses those sends, but this run could not stop their sequences. */
     optOuts: blockList ? "checked" : `not checked: ${blocked.ok ? ("reason" in blocked ? blocked.reason : "") : blocked.error}`,

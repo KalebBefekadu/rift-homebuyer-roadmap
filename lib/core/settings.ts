@@ -36,7 +36,10 @@ export interface BusinessRules {
 
 export const DEFAULT_RULES: BusinessRules = {
   commissionPct: {
-    value: 2.5,
+    /* Kaleb's own side, 3%. Not the 5.5% total a seller pays in compute.ts,
+       which is both sides together, and not the rate a seller types into
+       Rift Offer: this one only ever prices his own forward view. */
+    value: 3,
     affects: "Every revenue figure in the forward view. It is the only number in the product that turns pipeline into money, so a wrong value here misprices the whole year.",
     owner: "Kaleb, but it varies per agreement, so the forecast is a planning figure, not a receivable.",
   },
@@ -157,8 +160,8 @@ export interface Reach {
  *
  * A dial connected to nothing, on a page that looks like it configures the
  * product, is this codebase's signature failure built on purpose: the agent
- * sets his commission to 3%, nothing anywhere disagrees, and he finds out
- * when a forecast he has been quoting turns out to have been computed at 2.5.
+ * sets his commission to 2.5%, nothing anywhere disagrees, and he finds out
+ * when a forecast he has been quoting turns out to have been computed at 3.
  *
  * So every row says which it is. Being honest about a gap is cheap; the page
  * is still worth having, because a decision that has been RECORDED with a

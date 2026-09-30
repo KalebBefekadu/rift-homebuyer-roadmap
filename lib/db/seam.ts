@@ -5,7 +5,7 @@ import { done, skipped, type DbResult } from "./result";
 import { drift, mustDisclose, type Drift } from "@/lib/core/seam";
 import type { TrustState } from "@/lib/core/review";
 import { cashToClose, cashGap, monthlyComputed, BUYER_DEFAULTS, type BuyerInputs } from "@/lib/core/compute";
-import { firstTimeFrom, type Ownership } from "@/lib/core/funnel";
+import { firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
 import { matchForVisitor } from "./match";
 import { currentRate } from "./rates";
 
@@ -80,10 +80,6 @@ function usable(raw: Record<string, unknown>): Partial<BuyerInputs> {
   }
   return out as Partial<BuyerInputs>;
 }
-
-const OWNERSHIPS: Ownership[] = ["none", "primary", "investment"];
-const ownershipOf = (v: unknown): Ownership =>
-  OWNERSHIPS.find((o) => o === v) ?? "none";
 
 /** A figure as it was stored, in whole currency rather than cents. */
 interface Stored {

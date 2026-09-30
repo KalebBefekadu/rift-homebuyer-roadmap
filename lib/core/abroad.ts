@@ -16,7 +16,7 @@
  * apart.
  */
 
-import { monthlyPI } from "./compute";
+import { monthlyPI, BUYER_DEFAULTS } from "./compute";
 
 /* ------------------------------------------------------------------ status */
 
@@ -34,6 +34,14 @@ export interface Status {
   ratePremium: number;
   /** What a lender will ask for that a domestic buyer is never asked for. */
   asks: string;
+  /**
+   * Whether the loan is the conventional kind that charges mortgage insurance
+   * below 20% down. Citizens and residents borrow on the same paper as any
+   * American buyer and pay it. ITIN and foreign-national loans are portfolio
+   * loans no mortgage insurer covers: the lender prices that risk into the
+   * rate premium above instead, so charging both would count it twice.
+   */
+  mortgageInsurance: boolean;
 }
 
 /**
@@ -53,6 +61,7 @@ export const STATUSES: Status[] = [
     down: { live: 5, rent: 15 },
     ratePremium: 0,
     asks: "Foreign income documented and usually translated, plus a U.S. bank account to close from.",
+    mortgageInsurance: true,
   },
   {
     id: "resident",
@@ -61,6 +70,7 @@ export const STATUSES: Status[] = [
     down: { live: 5, rent: 15 },
     ratePremium: 0,
     asks: "The same file as any American buyer. A visa with under a year left may need extra documentation.",
+    mortgageInsurance: true,
   },
   {
     id: "itin",
@@ -69,6 +79,7 @@ export const STATUSES: Status[] = [
     down: { live: 15, rent: 20 },
     ratePremium: 1.5,
     asks: "Two years of ITIN tax returns. Fewer lenders do this, and the ones that do price it higher.",
+    mortgageInsurance: false,
   },
   {
     id: "foreign",
@@ -77,6 +88,7 @@ export const STATUSES: Status[] = [
     down: { live: 30, rent: 30 },
     ratePremium: 2,
     asks: "A passport, a reference letter from your own bank, and reserves held in a U.S. account before closing.",
+    mortgageInsurance: false,
   },
 ];
 
@@ -197,6 +209,10 @@ export const ASSUMPTIONS = {
   taxPct: 1.0,
   insuranceYr: 1_950,
   closingPct: 3,
+  /* Mortgage insurance a year, as a share of the loan, below 20% down on a
+     conventional loan. Taken from the buyer engine rather than restated, so
+     the same resident sees the same charge on either side of the product. */
+  pmiPct: BUYER_DEFAULTS.pmiPct,
   /** Full-service management, which is what someone 8,000 miles away buys. */
   managementPct: 8,
   /** A month empty a year, roughly, between tenants. */
@@ -217,7 +233,8 @@ export interface AbroadResult {
   cashIn: number;
   rent: number;
   operating: { management: number; vacancy: number; maintenance: number };
-  monthly: { pi: number; tax: number; insurance: number; total: number };
+  /** `pmi` is zero unless the loan is conventional and under 20% down. */
+  monthly: { pi: number; tax: number; insurance: number; pmi: number; total: number };
   /** Rent after costs, minus the mortgage. Negative is shown, never hidden. */
   cashFlow: number;
   /** Year one, the three ways the money comes back. */
@@ -240,6 +257,9 @@ export function breakEvenDownPct(i: AbroadInputs, a = ASSUMPTIONS): number | nul
   return null;
 }
 
+/** Whether this status at this down payment pays mortgage insurance. */
+export const hasMortgageInsurance = (s: Status, downPct: number) => s.mortgageInsurance && downPct < 20;
+
 export function abroadReturns(i: AbroadInputs, a = ASSUMPTIONS): AbroadResult {
   const s = statusById(i.status);
   /* The minimum is a floor, not a recommendation. At today's rates nothing in
@@ -258,7 +278,13 @@ export function abroadReturns(i: AbroadInputs, a = ASSUMPTIONS): AbroadResult {
   const pi = monthlyPI(loan, ratePct, a.termYears);
   const tax = (i.price * a.taxPct) / 100 / 12;
   const insurance = a.insuranceYr / 12;
-  const monthlyTotal = pi + tax + insurance;
+  /* The buyer engine's rule (lib/core/compute.ts monthlyCost), applied only
+     where the loan is the kind that charges it. Leaving it out made a citizen
+     putting 5% down look cheaper to own from abroad than the same purchase
+     looks on the buyer readout, and it flattered the cash flow by the same
+     amount every month. */
+  const pmi = hasMortgageInsurance(s, downPct) && a.pmiPct > 0 ? (loan * a.pmiPct) / 100 / 12 : 0;
+  const monthlyTotal = pi + tax + insurance + pmi;
 
   /* Rent only counts if they will not be living in it. Someone buying a home
      to live in later has no rent, and a page that credited them with it would
@@ -284,7 +310,7 @@ export function abroadReturns(i: AbroadInputs, a = ASSUMPTIONS): AbroadResult {
   return {
     down, downPct, loan, ratePct, closing, cashIn, rent,
     operating: { management, vacancy, maintenance },
-    monthly: { pi, tax, insurance, total: monthlyTotal },
+    monthly: { pi, tax, insurance, pmi, total: monthlyTotal },
     cashFlow,
     year1: { cashFlow: year1CashFlow, principal, appreciation, total },
     returnPct: cashIn > 0 ? (total / cashIn) * 100 : 0,
