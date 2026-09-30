@@ -214,6 +214,34 @@ describe("before the session_id migration has run", () => {
   });
 });
 
+describe("the question wording they saw (D37)", () => {
+  const V = "0b5c2f0e-5b0a-4c55-9d7e-2d7c9c0f0d37";
+
+  it("is recorded when the page sent a version, and absent when it did not", async () => {
+    build();
+    await captureLead({ ...base, questionVersionId: V });
+    expect(db.to("insert rift_leads")[0]!.payload).toMatchObject({ question_version_id: V });
+    build();
+    await captureLead({ ...base, questionVersionId: "not-a-version" });
+    expect(db.to("insert rift_leads")[0]!.payload).not.toHaveProperty("question_version_id");
+  });
+
+  it("a version the database refuses costs the pin, never the person", async () => {
+    build({
+      "insert rift_leads": (_c, nth) =>
+        nth === 1
+          ? { error: { message: `insert or update on table "rift_leads" violates foreign key constraint "rift_leads_question_version"` } }
+          : { data: [{ id: "lead-1" }] },
+    });
+    const r = await captureLead({ ...base, questionVersionId: V });
+    expect(r.ok).toBe(true);
+    const attempts = db.to("insert rift_leads");
+    expect(attempts).toHaveLength(2);
+    expect(attempts[1]!.payload).not.toHaveProperty("question_version_id");
+    expect(attempts[1]!.payload).toMatchObject({ email: "sara@example.com" });
+  });
+});
+
 describe("who can be replied to", () => {
   it("is somebody with an email or a phone number, not somebody with only a name", async () => {
     /* The speed-to-lead clock breaches only a contactable lead. This read the

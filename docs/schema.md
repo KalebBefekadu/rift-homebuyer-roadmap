@@ -80,6 +80,19 @@ anything; clearing is the absence of a claim.
 Enforce it with `CHECK (kind = 'core' OR bound IS NULL)` so no application path can violate
 it, and keep the corresponding test from [handoff.md](handoff.md) §7.
 
+The four tables above are the retired v4 questionnaire's (D31). They stay, unwritten, for the
+leads that point at them. The v5 values' wording lives in the tables below (Blueprint v5 D37).
+
+| Table | Holds | Notes |
+| --- | --- | --- |
+| `question_versions` | Each published set of wording for the values' questions | Migration `20260929400000`. History only; versions unique and counted per agent. Published only through `rift_publish_questions`, one statement, so a version never exists with half its rows, and a version published since the editor loaded is refused. Agent-scoped RLS. Written only by `lib/db/questions.ts`; rules `lib/core/question-wording.ts` |
+| `question_wordings` | One question in a version: the agent's words for a built-in question (only where they differ from `lib/core/asks.ts`), or one of the agent's own | `kind` is `builtin` or `custom`. A built-in row's `bound` is its own key; a custom row's is null (`custom_questions_are_inert`) and its key starts `x_`, which no compute input does (`custom_keys_cannot_name_an_input`). Custom questions are choice or short text, name at least one side, and a choice has two to eight options. Words only: type, choice values, limits and fallbacks stay in code. History only |
+| `custom_answers` | A lead's answers to the agent's own questions | The question and the answer as they were shown (text, not a reference), the version, once per question per lead. Only to a custom question of that version (foreign key and trigger). History only; deleted with the lead. Never in telemetry |
+
+`leads.question_version_id` records the version the page they saved from was rendered with;
+null is the code's own wording. A capture never fails over it: an id the database refuses is
+dropped and the lead kept (`lib/db/leads.ts`).
+
 ### Assessment and capture
 
 | Table | Holds | Notes |
