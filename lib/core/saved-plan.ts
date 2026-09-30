@@ -14,6 +14,7 @@
 import { ASKS, parseAnswers, answersToQuery, type Answers } from "./asks";
 import { valueById, type InputKey } from "./values";
 import { georgiaDay } from "./day";
+import { firstTimeFrom, ownershipOf } from "./funnel";
 
 export interface SavedValue {
   tool: string;
@@ -81,4 +82,40 @@ export function planSummary(p: SavedPlan): string {
   const plan = typeof p.answers.price === "number" ? `a $${Math.round(p.answers.price / 1000)}k plan` : "a plan";
   const alerts = p.alerts ? "; asked for program alerts" : "";
   return `${p.mode === "review" ? `Asked for a review of ${plan}` : `Saved ${plan}`}: ${parts.join(", ")}${alerts}`;
+}
+
+/**
+ * What a follow-up may use from a saved plan: where they are buying, whether
+ * they count as a first-time buyer, and the page that works a value out again.
+ *
+ * Deliberately not the figures. `values[].figure` is a string the browser
+ * sent, kept so the plan can show them what they saw. Quoted in an email it
+ * would be a number about their money that compute.ts never produced (rule
+ * 1), and a way for anyone who can post to the save route to have us mail
+ * text of their choosing.
+ *
+ * Read defensively, because the column is jsonb written by whichever build
+ * saved it: a county not in the list is no county, the same rule
+ * `parseAnswers` applies to an address, and a missing ownership answer counts
+ * as first-time, which fails towards showing somebody more help rather than
+ * less, as `ownershipOf` does for a readout.
+ */
+export function planFacts(plan: unknown): { county: string | null; firstTimeBuyer: boolean; againPath: string } | null {
+  if (!plan || typeof plan !== "object") return null;
+  const p = plan as Partial<SavedPlan>;
+  const answers = (p.answers && typeof p.answers === "object" ? p.answers : {}) as Record<string, unknown>;
+  const county = typeof answers.county === "string" && ASKS.county.options?.some((o) => o.value === answers.county)
+    ? answers.county
+    : null;
+  const side = p.side === "sell" ? "sell" : p.side === "abroad" ? "abroad" : "buy";
+  /* The first value they saved, bare. Not `href`: that carries their answers
+     in the query string (savings, income), and a link in an email is read by
+     every mail scanner and forwarded with the message. The saved plan page
+     reopens each value with its answers; this one is for starting again. */
+  const first = Array.isArray(p.values) ? p.values.map((v) => valueById(String(v?.tool ?? ""))).find(Boolean) : undefined;
+  return {
+    county,
+    firstTimeBuyer: firstTimeFrom(ownershipOf(answers.ownership)),
+    againPath: first?.href ?? `/${side}`,
+  };
 }

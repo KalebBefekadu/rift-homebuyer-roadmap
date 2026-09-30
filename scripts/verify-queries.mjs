@@ -64,7 +64,7 @@ await check("rankedLeads snapshot join", () => db.from("rift_readouts")
   .order("created_at", { ascending: false }));
 
 await check("nurture due (embedded lead + touches)", () => db.from("rift_enrolments")
-  .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side),rift_touches(step_id)")
+  .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side,plan,plan_token,plan_saved_at),rift_touches(step_id)")
   .is("stopped_at", null));
 
 await check("nurture progress count", () => db.from("rift_answers")
