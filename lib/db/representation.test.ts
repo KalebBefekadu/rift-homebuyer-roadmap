@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fakeDb, type Answers, type Fake } from "./test/fake-db";
+import { georgiaDay } from "@/lib/core/day";
 
 /**
  * The gate, at the layer that enforces it.
@@ -29,11 +30,9 @@ const REP = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const iso = (days: number) => {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};
+/* Georgia's calendar, as the gate reads it: a UTC one failed this suite every
+   evening after 8 pm Eastern, when "yesterday" in UTC is still today here. */
+const iso = (days: number) => georgiaDay(new Date(), days);
 
 beforeEach(() => { vi.clearAllMocks(); });
 
