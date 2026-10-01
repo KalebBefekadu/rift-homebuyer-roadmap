@@ -1,5 +1,6 @@
 import { funnelReport } from "@/lib/db/events";
 import { abandoned } from "@/lib/db/recovery";
+import { valueById } from "@/lib/core/values";
 import { diagnose } from "./diagnose";
 
 /**
@@ -26,7 +27,7 @@ export async function FunnelReports({ h2 }: { h2: React.CSSProperties }) {
 
       <h2 className="serif" style={h2}>Started, not finished</h2>
       <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 640, lineHeight: 1.6 }}>
-        A normal state rather than a failure. Most of these people gave no way to reach them, which is correct: a
+        People who opened a value, or a retired assessment, and left without an answer or a saved plan. A normal state rather than a failure. Most of these people gave no way to reach them, which is correct: a
         resume link goes only to somebody who gave an address for that purpose.
       </p>
       {!partial.ok ? (
@@ -36,11 +37,12 @@ export async function FunnelReports({ h2 }: { h2: React.CSSProperties }) {
       ) : (
         <div className="card" style={{ marginTop: 10, overflow: "hidden" }}>
           {started.slice(0, 20).map((a, i) => (
-            <div key={a.assessmentId} className="between wrap gap-2" style={{ padding: "9px 12px", borderBottom: i === Math.min(started.length, 20) - 1 ? undefined : "1px solid var(--line-3)" }}>
+            <div key={`${a.sessionId}-${a.tool ?? a.assessmentId}`} className="between wrap gap-2" style={{ padding: "9px 12px", borderBottom: i === Math.min(started.length, 20) - 1 ? undefined : "1px solid var(--line-3)" }}>
               <div>
                 <div className="row wrap gap-2">
                   <span className="t-sm w55">{a.email ?? "No contact details"}</span>
-                  <span className="chip t-2xs">{a.side === "buy" ? "Buyer" : "Seller"}</span>
+                  <span className="chip t-2xs">{a.side === "buy" ? "Buyer" : a.side === "sell" ? "Seller" : "Buyer abroad"}</span>
+                  {a.tool ? <span className="chip t-2xs">{valueById(a.tool)?.name ?? a.tool}</span> : null}
                   {a.county ? <span className="chip t-2xs">{a.county}</span> : null}
                 </div>
                 <div className="t-xs c-4" style={{ marginTop: 3 }}>
