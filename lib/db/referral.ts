@@ -55,7 +55,7 @@ export interface Relationship {
  *   rather than read per row, because "has this person been given their
  *   numbers" is one query for the whole queue and five hundred otherwise.
  */
-function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Lifecycle {
+function lifecycleOf(row: Record<string, unknown>, withReadout: Map<string, string>): Lifecycle {
   const assessmentId = (row.assessment_id as string | null) ?? null;
   return {
     stage: (row.stage as string | null) ?? "",
@@ -78,6 +78,13 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
        added to it. That is the entire reason that script exists: a column list
        is a STRING, and neither TypeScript nor the build can check one. */
     readoutDelivered: (assessmentId != null && withReadout.has(assessmentId)) || row.plan_saved_at != null,
+    /* The later of the two: somebody who saved a plan yesterday was given
+       numbers yesterday, whatever their old readout says, and the numbers
+       ask ages from the latest delivery (lib/core/referral.ts WINDOW_DAYS). */
+    numbersAt: [assessmentId ? withReadout.get(assessmentId) : null, row.plan_saved_at as string | null]
+      .filter((d): d is string => typeof d === "string")
+      .sort()
+      .at(-1) ?? null,
     planPublished: row.client_token != null,
     mood: ((row.mood as string | null) ?? null) as Mood,
   };
@@ -87,19 +94,19 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
 async function readoutsFor(
   db: NonNullable<ReturnType<typeof serviceClient>>,
   assessmentIds: string[],
-): Promise<Set<string>> {
-  const out = new Set<string>();
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
   const ids = assessmentIds.filter(Boolean);
   if (!ids.length) return out;
 
   const res = await boundedRead(
-    db.from("rift_readouts").select("assessment_id").in("assessment_id", ids).limit(1000),
+    db.from("rift_readouts").select("assessment_id,created_at").in("assessment_id", ids).limit(1000),
     "the delivered readouts",
   );
   if (!res.ok || !("data" in res)) return out;
 
-  for (const r of res.data as { assessment_id: string | null }[]) {
-    if (r.assessment_id) out.add(r.assessment_id);
+  for (const r of res.data as { assessment_id: string | null; created_at: string }[]) {
+    if (r.assessment_id) out.set(r.assessment_id, r.created_at);
   }
   return out;
 }
@@ -220,7 +227,16 @@ export async function referralQueue(now: Date = new Date()): Promise<DbResult<Re
 
   /* Strongest single moment first, so the top of the list is the best thing
      available to do rather than the person who happens to have the most. */
-  out.sort((a, b) => (b.todo[0]?.moment.strength ?? 0) - (a.todo[0]?.moment.strength ?? 0));
+  out.sort((a, b) => {
+    /* Somebody unhappy is owed a call before anybody is owed an ask. */
+    const owed = (r: Relationship) => (r.life.mood === "bad" ? 2 : r.life.mood === "mixed" ? 1 : 0);
+    if (owed(a) !== owed(b)) return owed(b) - owed(a);
+    const top = (r: Relationship) => r.todo[0];
+    const sa = top(a)?.moment.strength ?? 0;
+    const sb = top(b)?.moment.strength ?? 0;
+    if (sa !== sb) return sb - sa;
+    return (top(a)?.closesInDays ?? Infinity) - (top(b)?.closesInDays ?? Infinity);
+  });
   return done(out);
 }
 

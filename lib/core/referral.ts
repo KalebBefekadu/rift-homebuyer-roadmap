@@ -27,13 +27,19 @@
  *      had none, and has never sent an email), and it is gone.
  */
 
-import { georgiaDay } from "./day";
+import { addDays, daysUntil, georgiaDay, showDay } from "./day";
+import { inDays } from "./deadline";
 
 export type MomentId =
   | "value_delivered" | "plan_published" | "financing_secured"
   | "under_contract" | "closing_day" | "day_30" | "month_6" | "anniversary";
 
-export type MomentState = "waiting" | "due" | "sent" | "acted" | "declined" | "held";
+/**
+ * `passed` is derived and never stored: a moment whose window closed before
+ * anybody decided about it. It is not in the table's CHECK constraint on
+ * purpose, because it is a fact about the clock, not a decision.
+ */
+export type MomentState = "waiting" | "due" | "passed" | "sent" | "acted" | "declined" | "held";
 
 export interface Moment {
   id: MomentId;
@@ -104,7 +110,8 @@ export const MOMENTS: Moment[] = [
 
 export const STATE_CHIP: Record<MomentState, { l: string; c: string }> = {
   waiting: { l: "Not yet", c: "chip" },
-  due: { l: "Due now", c: "chip-acc" },
+  due: { l: "Ask now", c: "chip-acc" },
+  passed: { l: "Window passed", c: "chip" },
   sent: { l: "Sent", c: "chip" },
   acted: { l: "Acted on", c: "chip-pos" },
   declined: { l: "Declined", c: "chip" },
@@ -170,6 +177,12 @@ export interface Lifecycle {
   readoutDelivered: boolean;
   /** A plan exists and its link is open. */
   planPublished: boolean;
+  /**
+   * The day they were given their numbers (the later of a readout and a saved
+   * plan). Optional: without it a numbers moment has no window to age out of,
+   * which is the old behaviour and the safe side for a caller that cannot say.
+   */
+  numbersAt?: string | null;
   /** The private service check. Null means unanswered, not "fine". It is
    *  carried for the follow-up it may raise; no moment depends on it. */
   mood: Mood;
@@ -241,26 +254,111 @@ export function anniversariesPassed(closedOn: string, now: Date): number {
   return Math.floor(days / 365.25);
 }
 
-/** Whether a moment's trigger condition has happened yet. */
-function triggered(id: MomentId, life: Lifecycle, now: Date): boolean {
-  if (!OBSERVABLE[id]) return false;
+/**
+ * How long after its trigger each ask stays reasonable.
+ *
+ * Every moment used to stay "due" for as long as its trigger stayed true, so
+ * a readout delivered in May was still "Due now" in September and closing day
+ * was "Due now" seven months after the keys changed hands. An ask is only
+ * reasonable near the thing that earns it: the two weeks after a closing, not
+ * the whole life of the relationship. `null` is a moment with no date of its
+ * own to age from (a published plan), which is bounded by the person's stage
+ * instead.
+ */
+export const WINDOW_DAYS: Record<MomentId, number | null> = {
+  value_delivered: 14,
+  plan_published: null,
+  financing_secured: null,
+  under_contract: null,
+  closing_day: 14,
+  day_30: 14,
+  month_6: 30,
+  anniversary: 30,
+};
+
+/** Stages in which no ask is made: the thirty anxious days, then the closing itself. */
+export const QUIET_STAGES = ["Under contract", "Closing"];
+/** Stages in which the relationship is over and nothing is asked. */
+const OVER_STAGES = ["Lost"];
+
+export interface Phase {
+  state: "waiting" | "due" | "passed";
+  /** The day the moment opened, for "Closed 4 days ago". Null when it has no date. */
+  since: string | null;
+  /** Days left in the window, 0 on its last day. Null when the window is not dated. */
+  closesInDays: number | null;
+  /** Why it is waiting, when that is something the agent can act on. */
+  blockedBecause: string | null;
+}
+
+const undated = (state: Phase["state"], blockedBecause: string | null = null): Phase =>
+  ({ state, since: null, closesInDays: null, blockedBecause });
+
+/**
+ * Where a moment is in its life: not yet, open, or over.
+ *
+ * A dated moment opens `opensAfter` days after its trigger date and stays open
+ * for `WINDOW_DAYS` days from the day it opens.
+ */
+function phase(id: MomentId, life: Lifecycle, now: Date): Phase {
+  if (!OBSERVABLE[id]) return undated("waiting", "Nothing in the record says this has happened. Mark it when it has.");
+
+  const window = WINDOW_DAYS[id];
+  const dated = (fromRaw: string, opensAfter: number): Phase => {
+    /* A timestamp is the day it was in Georgia, not in London. */
+    const from = fromRaw.length > 10 ? georgiaDay(new Date(fromRaw)) : fromRaw;
+    const age = daysBetween(from, now) - opensAfter;
+    const since = addDays(from, opensAfter);
+    if (age < 0) return { state: "waiting", since, closesInDays: null, blockedBecause: null };
+    if (window !== null && age >= window) return { state: "passed", since, closesInDays: null, blockedBecause: null };
+    return { state: "due", since, closesInDays: window === null ? null : window - 1 - age, blockedBecause: null };
+  };
+
+  /* The numbers asks are made to people Kaleb is working with, while they are
+     being worked with. A funnel lead nobody picked up (no stage) is a stranger
+     who was handed a free tool; "send this to someone it would help" would be
+     the first thing they hear from him. */
+  const picked = life.stage !== "" && !OVER_STAGES.includes(life.stage);
+  const quiet = QUIET_STAGES.includes(life.stage);
+  const NOT_PICKED = "Nobody has picked this person up yet, so there is no relationship to ask from.";
+  const UNDER_CONTRACT = "They are under contract. No asks until it has closed.";
+
   switch (id) {
     case "value_delivered":
-      return life.readoutDelivered;
+      if (!life.readoutDelivered) return undated("waiting");
+      if (!picked) return undated("waiting", NOT_PICKED);
+      if (quiet) return undated("waiting", UNDER_CONTRACT);
+      return life.numbersAt ? dated(life.numbersAt, 0) : undated("due");
     case "plan_published":
-      return life.planPublished;
+      if (!life.planPublished) return undated("waiting");
+      if (!picked) return undated("waiting", NOT_PICKED);
+      if (quiet) return undated("waiting", UNDER_CONTRACT);
+      /* There is no date for when a plan was published, so it stays open while
+         they are a live relationship. Closing ends it: from then on closing
+         day is the ask, and a plan to share with whoever is helping you is
+         about a purchase that has finished. */
+      return undated(life.stage === "Closed" ? "passed" : "due");
     case "under_contract":
-      return life.stage === "Under contract";
+      return undated(life.stage === "Under contract" ? "due" : "waiting");
     case "closing_day":
-      return life.closedOn !== null;
+      return life.closedOn ? dated(life.closedOn, 0) : undated("waiting");
     case "day_30":
-      return life.closedOn !== null && daysBetween(life.closedOn, now) >= DAY_30;
+      return life.closedOn ? dated(life.closedOn, DAY_30) : undated("waiting");
     case "month_6":
-      return life.closedOn !== null && daysBetween(life.closedOn, now) >= MONTH_6;
-    case "anniversary":
-      return life.closedOn !== null && anniversariesPassed(life.closedOn, now) >= 1;
+      return life.closedOn ? dated(life.closedOn, MONTH_6) : undated("waiting");
+    case "anniversary": {
+      if (!life.closedOn) return undated("waiting");
+      const n = anniversariesPassed(life.closedOn, now);
+      if (n < 1) return undated("waiting");
+      /* Whole days into this year's anniversary, from the same 365.25-day year. */
+      const into = Math.floor(daysBetween(life.closedOn, now) - n * 365.25);
+      const since = addDays(life.closedOn.slice(0, 10), Math.ceil(n * 365.25));
+      const span = window ?? 30;
+      if (into >= span) return { state: "passed", since, closesInDays: null, blockedBecause: null };
+      return { state: "due", since, closesInDays: span - 1 - into, blockedBecause: null };
+    }
     default:
-      return false;
+      return undated("waiting");
   }
 }
 
@@ -276,6 +374,10 @@ export interface MomentStatus {
   occurrence: number;
   /** Why this is not actionable, in words the agent would use. Null when it is. */
   blockedBecause: string | null;
+  /** The day it opened, when it has a date of its own. */
+  since: string | null;
+  /** Days left to ask, 0 on the last day. Null when it has no dated window. */
+  closesInDays: number | null;
 }
 
 /**
@@ -302,21 +404,11 @@ export function momentsFor(
     );
 
     if (decided) {
-      return { moment, state: decided.state, occurrence, blockedBecause: null };
+      return { moment, state: decided.state, occurrence, blockedBecause: null, since: null, closesInDays: null };
     }
 
-    if (!triggered(moment.id, life, now)) {
-      return {
-        moment,
-        state: "waiting" as const,
-        occurrence,
-        blockedBecause: OBSERVABLE[moment.id]
-          ? null
-          : "Nothing in the record says this has happened. Mark it when it has.",
-      };
-    }
-
-    return { moment, state: "due" as const, occurrence, blockedBecause: null };
+    const p = phase(moment.id, life, now);
+    return { moment, state: p.state, occurrence, blockedBecause: p.blockedBecause, since: p.since, closesInDays: p.closesInDays };
   });
 }
 
@@ -349,6 +441,26 @@ export function actionable(statuses: MomentStatus[]): MomentStatus[] {
       /* Something due outranks something the agent chose to hold back: the
          first is waiting on him, the second is a decision already taken. */
       if (a.state !== b.state) return a.state === "due" ? -1 : 1;
-      return b.moment.strength - a.moment.strength;
+      if (b.moment.strength !== a.moment.strength) return b.moment.strength - a.moment.strength;
+      /* Then the one about to close: a window with three days left is the ask
+         that will be lost, an undated one can wait. */
+      return (a.closesInDays ?? Infinity) - (b.closesInDays ?? Infinity);
     });
+}
+
+/* What the agent reads under a moment: what opened it, and how long is left. */
+const OPENED: Partial<Record<MomentId, string>> = {
+  value_delivered: "They were given their numbers",
+  closing_day: "Closed",
+  day_30: "Thirty days since closing",
+  month_6: "Six months since closing",
+  anniversary: "Anniversary",
+};
+
+export function momentTiming(s: MomentStatus, now: Date = new Date()): { timing: string | null; closing: { text: string; urgent: boolean } | null } {
+  if (s.state !== "due" && s.state !== "held") return { timing: null, closing: null };
+  const timing = s.since ? `${OPENED[s.moment.id] ?? "Opened"} ${inDays(daysUntil(s.since, now))}` : null;
+  if (s.state !== "due" || s.closesInDays === null) return { timing, closing: null };
+  const text = s.closesInDays === 0 ? "Last day to ask" : `Ask by ${showDay(addDays(georgiaDay(now), s.closesInDays))}`;
+  return { timing, closing: { text, urgent: s.closesInDays <= 3 } };
 }

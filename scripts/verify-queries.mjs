@@ -195,7 +195,7 @@ await check("referralQueue lifecycle columns", () => db.from("rift_leads")
   .is("archived_at", null).limit(5));
 
 await check("readoutsFor (was rift_leads.figure_id, which does not exist)", () =>
-  db.from("rift_readouts").select("assessment_id")
+  db.from("rift_readouts").select("assessment_id,created_at")
     .in("assessment_id", ["00000000-0000-4000-8000-000000000000"]).limit(5));
 
 await check("referral moments", () => db.from("rift_referral_moments")

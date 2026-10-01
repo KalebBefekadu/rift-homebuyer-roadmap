@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ico } from "@/components/rift/icons";
-import { STATE_CHIP, serviceCheck, type MomentId, type MomentState, type Mood } from "@/lib/core/referral";
+import { serviceCheck, type MomentId, type MomentState, type Mood } from "@/lib/core/referral";
+import { Tag, type TagTone } from "../_business/Tag";
 import { decideMoment, setMood } from "./actions";
+import s from "./moment.module.css";
 
 /**
  * The private service check, and the moments.
@@ -22,6 +23,7 @@ const MOOD_LABEL: Record<"good" | "mixed" | "bad", string> = {
 export function MoodCheck({ leadId, mood, name }: { leadId: string; mood: Mood; name: string }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const check = serviceCheck(mood);
 
   const choose = (m: Mood) =>
     start(async () => {
@@ -31,52 +33,50 @@ export function MoodCheck({ leadId, mood, name }: { leadId: string; mood: Mood; 
     });
 
   return (
-    <div className="card p-4" style={{ background: mood === null ? "var(--accent-wash)" : undefined }}>
-      <div className="row gap-2">
-        <Ico.alert size={14} className={mood === null ? "c-acc" : "c-4"} style={{ flex: "none", marginTop: 2 }} />
-        <div className="grow">
-          <div className="t-sm w6">Have you asked {name} how it went?</div>
-          <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>
-            In private. The answer decides whether you owe them a follow-up, never
-            whether they are asked for a review: everyone who reaches a review moment
-            is asked the same way.
-          </p>
-
-          <div className="row gap-2 wrap" style={{ marginTop: 10 }}>
-            {(["good", "mixed", "bad"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={`btn btn-sm ${mood === m ? "btn-p" : "btn-g"}`}
-                aria-pressed={mood === m}
-                disabled={pending}
-                onClick={() => choose(m)}
-              >
-                {MOOD_LABEL[m]}
-              </button>
-            ))}
-            {mood !== null ? (
-              <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => choose(null)}>
-                Not asked yet
-              </button>
-            ) : null}
-          </div>
-
-          {serviceCheck(mood).followUp ? (
-            <p className="t-xs c-warn" style={{ marginTop: 10, lineHeight: 1.55 }}>
-              {serviceCheck(mood).note}
-            </p>
-          ) : null}
-
-          {error ? <p className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
-        </div>
+    <div className={`${s.check} ${mood === null ? "" : s.checkQuiet}`}>
+      <div className={s.checkTitle}>
+        {mood === null ? `Have you asked ${name} how it went?` : check.followUp ? `Follow-up owed to ${name}` : `${name}: ${MOOD_LABEL.good.toLowerCase()}`}
       </div>
+      {mood === null ? (
+        <p className={s.checkText}>
+          In private. The answer decides whether you owe them a follow-up, never whether they are asked for a
+          review: everyone who reaches a review moment is asked the same way.
+        </p>
+      ) : null}
+      {check.followUp ? <p className={s.checkNote}>{check.note}</p> : null}
+
+      <div className={s.buttons}>
+        {(["good", "mixed", "bad"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={`btn btn-sm ${mood === m ? "btn-p" : "btn-g"}`}
+            aria-pressed={mood === m}
+            disabled={pending}
+            onClick={() => choose(m)}
+          >
+            {MOOD_LABEL[m]}
+          </button>
+        ))}
+        {mood !== null ? (
+          <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => choose(null)}>
+            Not asked yet
+          </button>
+        ) : null}
+      </div>
+      {error ? <p className={s.error} role="alert">{error}</p> : null}
     </div>
   );
 }
 
+const STATE_TAG: Partial<Record<MomentState, { word: string; tone: TagTone }>> = {
+  due: { word: "Ask now", tone: "acc" },
+  held: { word: "Held back", tone: "warn" },
+  passed: { word: "Window passed", tone: "none" },
+};
+
 export function MomentRow({
-  leadId, momentId, occurrence, label, ask, why, state, blockedBecause, review,
+  leadId, momentId, occurrence, label, ask, why, state, blockedBecause, review, timing, closing,
 }: {
   leadId: string;
   momentId: MomentId;
@@ -87,10 +87,14 @@ export function MomentRow({
   state: MomentState;
   blockedBecause: string | null;
   review: boolean;
+  /** "Closed 4 days ago", said on the server so the clock is Georgia's. */
+  timing: string | null;
+  /** "Ask within 9 days": how long the ask stays reasonable. */
+  closing: { text: string; urgent: boolean } | null;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const chip = STATE_CHIP[state];
+  const tag = STATE_TAG[state] ?? { word: state, tone: "none" as TagTone };
 
   const decide = (next: MomentState) =>
     start(async () => {
@@ -100,44 +104,42 @@ export function MomentRow({
     });
 
   return (
-    <div className="card p-4">
-      <div className="between wrap gap-2">
-        <div className="grow" style={{ minWidth: 220 }}>
-          <div className="row gap-2 wrap">
-            <span className="t-sm w6">{label}</span>
-            <span className={`chip ${chip.c}`}>{chip.l}</span>
-            {occurrence > 0 ? <span className="chip">Year {occurrence}</span> : null}
-            {review ? <span className="chip">Includes a review request</span> : null}
-          </div>
-          <p className="t-sm" style={{ marginTop: 6, lineHeight: 1.55 }}>{ask}</p>
-          <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.55 }}>{why}</p>
-          {blockedBecause ? (
-            <p className="t-xs c-warn" style={{ marginTop: 6, lineHeight: 1.55 }}>{blockedBecause}</p>
-          ) : null}
-          {error ? <p className="t-xs c-neg" style={{ marginTop: 6 }}>{error}</p> : null}
-        </div>
+    <div className={s.moment}>
+      <div className={s.momentTop}>
+        <span className={s.momentLabel}>{label}{occurrence > 0 ? `, year ${occurrence}` : ""}</span>
+        <Tag tone={tag.tone}>{tag.word}</Tag>
+        {review ? <Tag tone="info">Includes a review request</Tag> : null}
+        {closing ? <Tag tone={closing.urgent ? "warn" : "none"}>{closing.text}</Tag> : null}
+      </div>
+      {timing ? <div className={s.timing}>{timing}</div> : null}
+      <p className={s.ask}>{ask}</p>
+      <details className={s.why}>
+        <summary>Why now</summary>
+        <p>{why}</p>
+      </details>
+      {blockedBecause ? <p className={s.blocked}>{blockedBecause}</p> : null}
+      {error ? <p className={s.error} role="alert">{error}</p> : null}
 
-        {/* Nothing here sends anything. Recording what happened is the
-            product's job; saying it is Kaleb's, in his own words, through
-            whatever he actually uses. A button labelled "Send" on a moment
-            this delicate would be a promise about tone that no template
-            can keep. */}
-        <div className="row gap-2 wrap" style={{ flex: "none" }}>
-          <>
-              <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("sent")}>
-                Asked
-              </button>
-              <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("acted")}>
-                They acted
-              </button>
-              <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("declined")}>
-                Declined
-              </button>
-              <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("held")}>
-                Hold back
-              </button>
-          </>
-        </div>
+      {/* Nothing here sends anything. Recording what happened is the
+          product's job; saying it is Kaleb's, in his own words, through
+          whatever he actually uses. A button labelled "Send" on a moment
+          this delicate would be a promise about tone that no template
+          can keep. */}
+      <div className={s.buttons}>
+        <button type="button" className="btn btn-sm btn-p" disabled={pending} onClick={() => decide("sent")}>
+          I asked
+        </button>
+        <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("acted")}>
+          They acted
+        </button>
+        <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("declined")}>
+          They declined
+        </button>
+        {state === "held" ? null : (
+          <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("held")}>
+            Hold back
+          </button>
+        )}
       </div>
     </div>
   );
