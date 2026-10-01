@@ -18,6 +18,7 @@ import {
   type Representation, type Standing, type Status as RepStatus,
 } from "@/lib/core/representation";
 import { georgiaDay } from "@/lib/core/day";
+import { isTerminal } from "@/lib/core/people";
 
 export { STAGE_NAMES };
 export type { Stage, NoteKind, LeadNote, ManagedLead, Finished };
@@ -79,8 +80,11 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
     nextAction: (r.next_action as string | null) ?? null,
     nextDue: (r.next_due as string | null) ?? null,
     /* Only meaningful once somebody has been placed on the board. A lead with
-       no stage is not "moving slowly", it is simply not being worked yet. */
-    stall: stage && !r.archived_at ? stallOf(stage, daysSince(stageSince, now)) : null,
+       no stage is not "moving slowly", it is simply not being worked yet.
+       Nor is a finished one: Closed and Lost have no normal dwell, so
+       `ruleFor` fell back to 45 days and every closed client went "Stalled"
+       six weeks after closing. */
+    stall: stage && !r.archived_at && !isTerminal(stage) ? stallOf(stage, daysSince(stageSince, now)) : null,
   };
 }
 
