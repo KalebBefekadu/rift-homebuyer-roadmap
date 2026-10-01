@@ -167,15 +167,19 @@ export async function currentAgentId(): Promise<string | null> {
  * signed in. There is one agent (see `currentAgentId` above, which refuses
  * outright when that stops being true), so this is his address.
  *
- * Cached alongside the id and on the same terms: a success is kept, an
- * absence is not. Returns null rather than throwing, so a deployment with no
- * database sends no alert instead of failing a capture: the lead is worth
- * more than the notification about it.
+ * A success is kept for five minutes, an absence not at all. It was kept for
+ * the life of the instance, which was right while nothing could change it;
+ * the settings page can now, and a warm instance would have gone on sending
+ * every new-lead alert to the old address until it happened to be recycled.
+ * Returns null rather than throwing, so a deployment with no database sends
+ * no alert instead of failing a capture: the lead is worth more than the
+ * notification about it.
  */
-let agentEmail: string | null = null;
+const PROFILE_TTL_MS = 5 * 60_000;
+let agentEmail: { value: string; at: number } | null = null;
 
 export async function currentAgentEmail(): Promise<string | null> {
-  if (agentEmail) return agentEmail;
+  if (agentEmail && Date.now() - agentEmail.at < PROFILE_TTL_MS) return agentEmail.value;
 
   const id = await currentAgentId();
   if (!id) return null;
@@ -190,11 +194,11 @@ export async function currentAgentEmail(): Promise<string | null> {
   const email = (result.data as { email?: string } | null)?.email;
   if (!email) return null;
 
-  agentEmail = email;
-  return agentEmail;
+  agentEmail = { value: email, at: Date.now() };
+  return email;
 }
 
-let agentPublic: { name: string } | null = null;
+let agentPublic: { name: string; at: number } | null = null;
 
 /**
  * The agent's name, for a page rendered to somebody who is not signed in.
@@ -210,7 +214,8 @@ let agentPublic: { name: string } | null = null;
  * page that calls it.
  */
 export async function currentAgentPublic(): Promise<{ name: string } | null> {
-  if (agentPublic) return agentPublic;
+  /* Five minutes, like the email above and for the same reason. */
+  if (agentPublic && Date.now() - agentPublic.at < PROFILE_TTL_MS) return { name: agentPublic.name };
 
   const id = await currentAgentId();
   if (!id) return null;
@@ -225,6 +230,6 @@ export async function currentAgentPublic(): Promise<{ name: string } | null> {
   const name = (result.data as { name?: string } | null)?.name;
   if (!name) return null;
 
-  agentPublic = { name };
-  return agentPublic;
+  agentPublic = { name, at: Date.now() };
+  return { name };
 }

@@ -1,0 +1,226 @@
+/* Settings only. The shared Operations pieces (PageHead, Section, Notice) are
+   in ../ui.tsx and app/prototype/rift.css; this is the page's own layout: a
+   contents list beside the sections on a wide screen, above them on a phone. */
+
+.layout {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.body { min-width: 0; max-width: 780px; }
+
+/* ---- Contents ---- */
+
+.nav {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.navLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.navLink:hover { background: var(--sunk); color: var(--ink); }
+
+/* ---- Sections: a little more air than a list page ---- */
+
+.body > section { scroll-margin-top: 24px; }
+.body > section + section { margin-top: 44px; }
+
+/* ---- The setup list ---- */
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.list {
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  box-shadow: var(--sh-1);
+}
+.item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 14px 16px;
+  align-items: start;
+}
+.item + .item { border-top: 1px solid var(--line-3); }
+.itemIco { margin-top: 2px; }
+.itemTitle { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.itemGroup { font-size: 11.5px; font-weight: 500; color: var(--ink-4); }
+.itemText { margin-top: 3px; font-size: 13px; line-height: 1.55; color: var(--ink-3); }
+.itemSide { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.state { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 550; white-space: nowrap; }
+
+.steps { grid-column: 2 / -1; margin-top: 2px; }
+.steps summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--ink-2);
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.steps summary::-webkit-details-marker { display: none; }
+.steps[open] summary svg { transform: rotate(90deg); }
+.steps ol {
+  margin-top: 8px;
+  padding: 10px 14px 10px 30px;
+  background: var(--sunk);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  list-style: decimal;
+  overflow-wrap: anywhere;
+}
+
+.done {
+  margin-top: 10px;
+}
+.done > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-3);
+  padding: 4px 0;
+}
+.done > summary::-webkit-details-marker { display: none; }
+.done[open] > summary .chev { transform: rotate(90deg); }
+.doneList { margin-top: 6px; display: grid; gap: 2px; }
+.doneRow { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink-3); padding: 3px 0; }
+
+/* ---- Rows of facts and forms inside a card ---- */
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  box-shadow: var(--sh-1);
+}
+.row {
+  padding: 16px 18px;
+}
+.row + .row { border-top: 1px solid var(--line-3); }
+.rowHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.rowTitle { font-size: 13.5px; font-weight: 600; color: var(--ink); display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.rowText { margin-top: 4px; font-size: 13px; line-height: 1.55; color: var(--ink-3); max-width: 560px; }
+.rowNote { margin-top: 5px; font-size: 12px; line-height: 1.5; color: var(--ink-4); max-width: 560px; display: flex; gap: 6px; align-items: flex-start; }
+.rowNote svg { flex: none; margin-top: 2px; }
+.rowNoteWarn { color: var(--warn); }
+.rowControl { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+
+.linkish {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-4);
+}
+.linkish:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- Profile form ---- */
+
+.fields { display: grid; gap: 0; }
+.field {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 6px 20px;
+  padding: 14px 18px;
+  align-items: start;
+}
+.field + .field { border-top: 1px solid var(--line-3); }
+.fieldLabel { font-size: 13px; font-weight: 600; color: var(--ink); padding-top: 7px; }
+.fieldLabel span { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--ink-4); line-height: 1.45; }
+.fieldInput { width: 100%; max-width: 420px; height: 34px; font-size: 13.5px; }
+.fieldInputBad { border-color: var(--neg) !important; }
+.formFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line-2);
+  background: var(--canvas);
+  border-radius: 0 0 var(--r) var(--r);
+}
+.message { font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; }
+
+.historyHead { margin-top: 16px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.history { margin-top: 6px; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-3); }
+.history li { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; }
+.historyChange { overflow-wrap: anywhere; }
+/* The base styles make svg a block, which put the arrow on a line of its own. */
+.historyChange svg { display: inline-block; vertical-align: -1px; margin: 0 5px; }
+.historyChange em { display: inline; }
+.historyWhen { color: var(--ink-4); white-space: nowrap; }
+
+/* ---- Tables of plain facts (retention) ---- */
+
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; font-weight: 550; font-size: 12px; color: var(--ink-4); padding: 10px 18px 8px; border-bottom: 1px solid var(--line-2); }
+.table td { padding: 10px 18px; border-top: 1px solid var(--line-3); vertical-align: top; color: var(--ink-2); line-height: 1.5; }
+.table tr:first-child td { border-top: 0; }
+.table td:last-child { white-space: nowrap; color: var(--ink); font-weight: 550; }
+
+/* ---- Phone and narrow windows ---- */
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  /* The contents become a row that scrolls sideways inside itself, never the page. */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 2px;
+    margin: 0 -4px;
+    padding: 6px 4px;
+    background: var(--canvas);
+    border-bottom: 1px solid var(--line-2);
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .navLink { flex: none; }
+  .body > section { scroll-margin-top: 64px; }
+}
+
+@media (max-width: 640px) {
+  .item { grid-template-columns: 20px minmax(0, 1fr); }
+  .itemSide { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px 10px; }
+  .field { grid-template-columns: minmax(0, 1fr); padding: 12px 14px; }
+  .fieldLabel { padding-top: 0; }
+  .fieldInput { max-width: none; }
+  .row { padding: 14px; }
+  .rowControl { align-items: flex-start; }
+  .table th, .table td { padding-left: 14px; padding-right: 14px; }
+  .table td:last-child { white-space: normal; }
+  .history li { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 0; }
+  .historyWhen { white-space: normal; }
+}
