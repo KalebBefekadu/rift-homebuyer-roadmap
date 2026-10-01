@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { buildReadout, buildTouch, buildResume, buildNewLead } from "@/lib/db/email";
-import { programLines, programsCopy } from "@/lib/core/nurture";
+import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead } from "@/lib/db/email";
+import { programLines, programsCopy, touchCopy, SEQUENCES } from "@/lib/core/nurture";
 import { PROGRAMS } from "@/lib/core/registry";
 
 export const runtime = "nodejs";
@@ -20,6 +20,9 @@ export const dynamic = "force-dynamic";
  *
  *   /api/dev/email-preview?type=readout
  *   /api/dev/email-preview?type=touch
+ *   /api/dev/email-preview?type=plan-touch             (day-zero copy)
+ *   /api/dev/email-preview?type=plan-touch&programs=1  (the n4 step)
+ *   /api/dev/email-preview?type=plan-touch&side=sell
  *   /api/dev/email-preview?type=resume&last=1
  *   /api/dev/email-preview?type=readout-sell
  *   /api/dev/email-preview?type=readout-underwater
@@ -57,6 +60,22 @@ export async function GET(req: Request) {
           value: 325_000,
           source: url.searchParams.get("source") ?? "readout",
           studioUrl: `${url.origin}/operations`,
+        })
+      : type === "plan-touch"
+      ? buildPlanTouch({
+          to: "maya@example.com",
+          name: "Maya O'Brien",
+          /* The copy a saved plan really gets: the programs step's own, or
+             the day-zero step's plan variant. */
+          ...(url.searchParams.get("programs") === "1"
+            ? programsCopy(PROGRAMS.slice(0, 2).map((p) => p.name))!
+            : touchCopy(SEQUENCES[0].steps[0], "plan")),
+          ...(url.searchParams.get("programs") === "1" ? { programs: programLines(PROGRAMS.slice(0, 2)) } : {}),
+          /* A hostile token, so the escaping of the link is visible. */
+          planUrl: `${url.origin}/saved/sample"token`,
+          againUrl: `${url.origin}/buy/cash-to-close`,
+          savedOn: "2026-09-28",
+          side: url.searchParams.get("side") === "sell" ? "sell" : "buy",
         })
       : type === "touch"
       ? buildTouch({

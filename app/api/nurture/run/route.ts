@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
 import { trackedCron } from "@/lib/db/jobs";
 import { due, claimStep, markTouch, stillOwed, stop, matchedPrograms } from "@/lib/db/nurture";
-import { sendTouch, sendResume, blockedContacts } from "@/lib/db/email";
+import { sendTouch, sendPlanTouch, sendResume, blockedContacts } from "@/lib/db/email";
 import { currentAgentId } from "@/lib/db/service";
-import { runOptions, blockedStop, listsPrograms, programsCopy, type ProgramLine } from "@/lib/core/nurture";
+import { runOptions, blockedStop, listsPrograms, programsCopy, type ProgramLine, type TouchKind } from "@/lib/core/nurture";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -75,10 +75,14 @@ async function run(req: Request) {
      skipped with its reason, never sent, and not a failure: there was nothing
      true to say. */
   let nothingToList = 0;
+  /* What was sent, by which email. A run that reports "sent: 12" cannot show
+     that all twelve were the wrong one, which is how every saved plan was
+     answered with "pick up where you left off" and nothing said so. */
+  const sentAs: Record<TouchKind, number> = { readout: 0, plan: 0, resume: 0 };
   const programCache = new Map<string, Promise<ProgramLine[]>>();
   /* A dry run's only output. Who, which step, and what would have gone: the
      three things you need to decide whether to let it loose. */
-  const plan: { to: string; stepId: string; band: string; kind: "readout" | "resume" }[] = [];
+  const plan: { to: string; stepId: string; band: string; kind: TouchKind }[] = [];
 
   for (const t of queue.data) {
     if (!t.auto) { held++; continue; }
@@ -107,23 +111,29 @@ async function run(req: Request) {
        matched" to somebody who matched none is the zero-in-the-figure defect
        again, in words. Claimed and marked skipped so it is not owed tomorrow
        and the agent can see why it did not go. */
-    const programs = listsPrograms(t.stepId) ? await matchedPrograms(t, programCache) : null;
+    /* A seller matches nothing: these are buyers' programs, and listing them
+       to somebody selling is the wrong email, whatever their county. */
+    const programs = listsPrograms(t.stepId)
+      ? t.side === "sell" ? [] : await matchedPrograms(t, programCache)
+      : null;
     const copy = programs ? programsCopy(programs.map((p) => p.name)) : null;
     if (programs && !copy) {
       nothingToList++;
       if (!dry) {
         const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
         if (claim.ok && "data" in claim && claim.data.claimed) {
-          await markTouch(t.enrolmentId, t.stepId, "skipped", t.county
-            ? "Not sent: they matched no programs, so there were none to list"
-            : "Not sent: no county on record to match programs against");
+          await markTouch(t.enrolmentId, t.stepId, "skipped", t.side === "sell"
+            ? "Not sent: the programs are for buyers, and they are selling"
+            : t.county
+              ? "Not sent: they matched no programs, so there were none to list"
+              : "Not sent: no county on record to match programs against");
         }
       }
       continue;
     }
 
     if (dry) {
-      plan.push({ to: t.email, stepId: t.stepId, band: t.band, kind: t.figures ? "readout" : "resume" });
+      plan.push({ to: t.email, stepId: t.stepId, band: t.band, kind: t.kind });
       continue;
     }
 
@@ -147,15 +157,18 @@ async function run(req: Request) {
 
     const origin = new URL(req.url).origin;
 
-    /* Two kinds of touch, because two kinds of person.
+    /* Three kinds of touch, because three kinds of person (`t.kind`).
        
-       Somebody who finished has a readout, and the email leads with their
-       figures. Somebody who stopped has none: that is why they are in the
-       dormant sequence at all, so leading with figures would refuse to send
-       and the largest population in the funnel would never hear from us. They
-       get a resume link and how far they got, and nothing about what they
-       might be missing. Recovery, not pursuit. */
-    const res = t.figures
+       Somebody who finished a readout gets their figures from its snapshot.
+       Somebody who saved a plan gets the plan's link and no figure: its
+       figures are the browser's text, never ours to quote, and recomputing
+       them would show a number they were never shown. Somebody who stopped
+       has neither: that is why they are in the dormant sequence at all, so
+       leading with figures would refuse to send and the largest population
+       in the funnel would never hear from us. They get a resume link and how
+       far they got, and nothing about what they might be missing. Recovery,
+       not pursuit. */
+    const res = t.kind === "readout"
       ? await sendTouch({
           to: t.email,
           name: t.name,
@@ -167,6 +180,18 @@ async function run(req: Request) {
           againUrl: `${origin}/buy/cash-to-close`,
           county: t.county,
           figures: t.figures,
+          ...(programs ? { programs } : {}),
+        })
+      : t.kind === "plan"
+      ? await sendPlanTouch({
+          to: t.email,
+          name: t.name,
+          says: copy?.says ?? t.says,
+          body: copy?.body ?? t.body,
+          planUrl: `${origin}/saved/${encodeURIComponent(t.planToken ?? "")}`,
+          againUrl: `${origin}${t.againPath ?? `/${t.side}`}`,
+          savedOn: t.planSavedOn,
+          side: t.side,
           ...(programs ? { programs } : {}),
         })
       : await sendResume({
@@ -182,7 +207,7 @@ async function run(req: Request) {
           last: t.stepId === "d2",
         });
 
-    if (res.ok && !("skipped" in res)) { sent++; continue; }
+    if (res.ok && !("skipped" in res)) { sent++; sentAs[t.kind]++; continue; }
     if (res.ok) {
       /* Recorded as skipped WITH its reason, so "email is switched off" and
          "this person has no readout to talk about" stay distinguishable in the
@@ -209,6 +234,7 @@ async function run(req: Request) {
     max,
     due: queue.data.length,
     sent,
+    sentAs,
     /* Steps waiting on the agent are reported, never hidden. A queue that only
        counts what it did makes the human half invisible. */
     heldForAgent: held,
