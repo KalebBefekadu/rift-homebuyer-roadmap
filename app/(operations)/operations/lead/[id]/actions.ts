@@ -244,6 +244,7 @@ export async function openClientPlan(leadId: string, disclosed = false) {
     drifts: snap.drifts,
     disclosed,
     trustStates: snap.trustStates,
+    snapshotFrom: snap.from ?? undefined,
   });
 
   if (!check.ok) {
