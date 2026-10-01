@@ -33,10 +33,11 @@ const STATES = new Set<MomentState>(["waiting", "due", "sent", "acted", "decline
  *
  * `client_token` is read as a boolean rather than carried: whether a plan is
  * published is the fact the engine wants, and the token itself is a capability
- * that has no business travelling into a referral calculation.
+ * that has no business travelling into a referral calculation. `plan_saved_at`
+ * is read for the same reason instead of `plan_token`.
  */
 export const LIFECYCLE_COLUMNS =
-  "id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,referred_by" as const;
+  "id,name,email,side,stage,closed_on,mood,mood_at,client_token,assessment_id,plan_saved_at,referred_by" as const;
 
 export interface Relationship {
   leadId: string;
@@ -59,8 +60,11 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
   return {
     stage: (row.stage as string | null) ?? "",
     closedOn: (row.closed_on as string | null) ?? null,
-    /* Whether a readout exists for their assessment: it is what the
-       assessment produced and what the person was shown.
+    /* Whether they were given their numbers: a readout for their
+       assessment, or a saved plan (Blueprint v5 §5.5). Since D31 a new lead
+       has no assessment, so reading readouts alone meant "value delivered"
+       never fired for anybody who arrived after the values replaced the
+       questionnaire, and the one ask the product makes of them never came up.
 
        This asked for `rift_leads.figure_id`, WHICH DOES NOT EXIST. `figure_id`
        is a column on rift_review_items; the intent was copied from there onto
@@ -73,7 +77,7 @@ function lifecycleOf(row: Record<string, unknown>, withReadout: Set<string>): Li
        `scripts/verify-queries.mjs` caught it the first time these queries were
        added to it. That is the entire reason that script exists: a column list
        is a STRING, and neither TypeScript nor the build can check one. */
-    readoutDelivered: assessmentId != null && withReadout.has(assessmentId),
+    readoutDelivered: (assessmentId != null && withReadout.has(assessmentId)) || row.plan_saved_at != null,
     planPublished: row.client_token != null,
     mood: ((row.mood as string | null) ?? null) as Mood,
   };

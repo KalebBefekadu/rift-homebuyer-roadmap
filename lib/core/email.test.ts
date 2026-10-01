@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReadout, buildTouch, buildResume, escapeHtml } from "./email";
+import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildSavedPlan, escapeHtml } from "./email";
 
 /**
  * The emails, against the real builders.
@@ -164,5 +164,80 @@ describe("the cadence's own emails still behave", () => {
     });
     expect(built.html).toMatch(/3 of 7 questions/);
     expect(built.html).toMatch(/last email/);
+  });
+});
+
+/**
+ * The follow-up for somebody who saved a plan (Blueprint v5 §5.5). Since D31
+ * that is every new lead, and until this existed each of them was sent the
+ * "pick up where you left off" email about a plan they had finished.
+ */
+describe("the saved plan's follow-up", () => {
+  const base = {
+    to: "a@b.com", says: "Your saved plan", body: "Your plan is saved exactly as you saw it.",
+    planUrl: "https://x/saved/tok", againUrl: "https://x/buy/cash-to-close", savedOn: "2026-09-28", side: "buy" as const,
+  };
+
+  it("links the plan and a way to work it out again, and says the plan does not change", () => {
+    const built = buildPlanTouch(base);
+    expect(built.subject).toBe("Your saved plan");
+    expect(built.html).toContain('href="https://x/saved/tok"');
+    expect(built.html).toContain('href="https://x/buy/cash-to-close"');
+    expect(built.html).toMatch(/as they were on September 28, 2026, and they stay that way/);
+    expect(built.html).toMatch(/today's rates/);
+    expect(built.html).not.toMatch(/up to date/i);
+  });
+
+  it("quotes no figure at all: the plan's are the browser's text, not ours", () => {
+    /* Nothing in its input can carry one, and nothing in its copy invents one. */
+    const text = buildPlanTouch(base).html.replace(/<[^>]*>/g, "").replace(/September 28, 2026/, "");
+    expect(text).not.toMatch(/\$\s?\d/);
+    expect(text).not.toMatch(/\d/);
+  });
+
+  it("says no day rather than a wrong one", () => {
+    expect(buildPlanTouch({ ...base, savedOn: null }).html).toMatch(/as they were, and they stay that way/);
+    expect(buildPlanTouch({ ...base, savedOn: "yesterday<b>" }).html).not.toContain("yesterday");
+  });
+
+  it("escapes every link and the name", () => {
+    const built = buildPlanTouch({
+      ...base, name: "<script>x</script>",
+      planUrl: 'https://x/saved/t"><script>alert(1)</script>', againUrl: "https://x/buy?a=1&b=2",
+    });
+    expect(built.html).not.toContain("<script>");
+    expect(built.html).toContain('href="https://x/buy?a=1&amp;b=2"');
+  });
+
+  it("warns that the link opens the plan, as the save email does", () => {
+    expect(buildPlanTouch(base).html).toMatch(/Anyone with the link can open the\s+plan/);
+  });
+
+  it("lists the programs step's programs the same way the readout touch does", () => {
+    const programs = [{ name: "Georgia Dream <b>", state: "Waiting list", needs: ["Homebuyer education course required."] }];
+    const plan = buildPlanTouch({ ...base, programs }).html;
+    const readout = buildTouch({
+      to: "a@b.com", says: "s", body: "b", shareUrl: "https://x", againUrl: "https://x/again", county: "DeKalb",
+      figures: { cashToClose: 1, gap: 0 }, programs,
+    })!.html;
+    const list = (h: string) => h.slice(h.indexOf("<ul"), h.indexOf("</ul>"));
+    expect(list(plan)).toContain("<strong>Georgia Dream &lt;b&gt;</strong> (Waiting list)");
+    expect(list(plan)).toBe(list(readout));
+    expect(buildPlanTouch(base).html).not.toContain("<ul");
+  });
+
+  it("does not call a seller's estimate a lending commitment", () => {
+    expect(buildPlanTouch(base).html).toMatch(/not a lending commitment/);
+    const sell = buildPlanTouch({ ...base, side: "sell" }).html;
+    expect(sell).toMatch(/not an appraisal or an offer/);
+    expect(sell).not.toMatch(/lending/);
+  });
+});
+
+describe("the other links a customer is sent are escaped too", () => {
+  it("the resume link and the saved plan link", () => {
+    const hostile = 'https://x/"><script>alert(1)</script>';
+    expect(buildResume({ to: "a@b.com", says: "s", body: "b", resumeUrl: hostile, answered: 1, of: 7 }).html).not.toContain("<script>");
+    expect(buildSavedPlan({ to: "a@b.com", planUrl: hostile, values: [], review: false }).html).not.toContain("<script>");
   });
 });

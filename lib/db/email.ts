@@ -71,14 +71,14 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan,
+  type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
 export {
-  buildReadout, buildTouch, buildResume, buildNewLead, buildOfferChosen,
-  type ReadoutEmail, type TouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen,
+  type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail,
 };
 
 /**
@@ -164,6 +164,17 @@ export async function blockedContacts(): Promise<BlockList> {
     captureOpError(error, { op: "email.blocklist" });
     return { ok: false, error: error instanceof Error ? error.message : "the block list could not be read" };
   }
+}
+
+/** A touch for somebody who saved a plan. Tagged like the readout touch: it is the same cadence. */
+export async function sendPlanTouch(t: PlanTouchEmail): Promise<SendResult> {
+  const { subject, html } = buildPlanTouch(t);
+  return send({
+    to: [{ email: t.to, ...(t.name ? { name: t.name } : {}) }],
+    subject,
+    htmlContent: html,
+    tags: ["nurture"],
+  }, "email.planTouch");
 }
 
 export async function sendResume(r: ResumeEmail): Promise<SendResult> {

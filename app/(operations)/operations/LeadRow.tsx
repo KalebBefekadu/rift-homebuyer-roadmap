@@ -6,6 +6,7 @@ import { Ico } from "@/components/rift/icons";
 import { BAND_LABEL, BAND_TONE, type Band } from "@/lib/core/lead";
 import { STOPS, type StopId } from "@/lib/core/nurture";
 import { money } from "@/lib/core/compute";
+import { showDay } from "@/lib/core/day";
 import { stopSequence, markRepliedTo } from "./actions";
 
 /**
@@ -28,6 +29,7 @@ export function LeadRow({ lead, last, compact = false }: {
     stopped?: string | null;
     figures?: Record<string, string | number> | null;
     shareToken?: string | null;
+    saved?: { savedAt: string; values: { label: string; figure: string }[] } | null;
     capturedScore?: number;
     humanRepliedAt?: string | null;
     /** How the speed-to-lead clock currently reads for this lead. */
@@ -144,6 +146,23 @@ export function LeadRow({ lead, last, compact = false }: {
               Open their readout ↗
             </a>
           ) : null}
+        </div>
+      ) : lead.saved?.values.length ? (
+        /* A saved plan, for everybody who arrived after the values replaced
+           the questionnaire (D31). Its figures are what their browser showed
+           them that day, so the row says whose figures they are and when. */
+        <div className="card p-3" style={{ marginTop: 9, background: "var(--sunk)" }}>
+          <div className="row wrap gap-3">
+            {lead.saved.values.map((v) => (
+              <div key={v.label}>
+                <div className="t-2xs c-4 w6" style={{ letterSpacing: ".06em", textTransform: "uppercase" }}>{v.label}</div>
+                <div className="num t-sm">{v.figure}</div>
+              </div>
+            ))}
+          </div>
+          <p className="t-2xs c-3" style={{ marginTop: 6 }}>
+            As their saved plan showed them on {showDay(lead.saved.savedAt, { month: "short", day: "numeric" })}.
+          </p>
         </div>
       ) : null}
 
