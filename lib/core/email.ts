@@ -18,6 +18,7 @@
  */
 
 import { money } from "./compute";
+import { showDay } from "./day";
 import { BAND_LABEL, type Band, type Signal } from "./lead";
 import type { ProgramLine } from "./nurture";
 
@@ -327,15 +328,7 @@ export function buildTouch(t: TouchEmail): { subject: string; html: string } | n
   const gap = Number(t.figures.gap) || 0;
   const where = t.county ? `${escapeHtml(t.county)} County` : "your area";
 
-  /* The itemised list the programs step promises in its subject. Names and
-     conditions come from the registry, which is edited by hand, so they are
-     escaped like anything else a person typed. */
-  const programs = t.programs?.length ? `
-  <ul style="font-size:15px;padding-left:20px">
-    ${t.programs.map((p) => `<li style="margin-bottom:10px"><strong>${escapeHtml(p.name)}</strong>${
-      p.state ? ` (${escapeHtml(p.state)})` : ""
-    }${p.needs.length ? `<br><span style="font-size:14px;color:#444">${p.needs.map((n) => escapeHtml(n.replace(/\.\s*$/, ""))).join("; ")}.</span>` : ""}</li>`).join("\n    ")}
-  </ul>` : "";
+  const programs = programList(t.programs);
 
   const html = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
@@ -359,6 +352,70 @@ export function buildTouch(t: TouchEmail): { subject: string; html: string } | n
   <p style="font-size:12px;color:#888">
     You asked for your readout at Rift. We do not run a newsletter and we do not sell anything
     on. <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a>: one click, and it stops
+    everything.
+  </p>
+</div>`.trim();
+
+  return { subject: t.says, html };
+}
+
+export interface PlanTouchEmail {
+  to: string;
+  name?: string;
+  says: string;
+  body: string;
+  /** Their saved plan's private page. */
+  planUrl: string;
+  /** A value's own page, bare, to work it out again from new answers. */
+  againUrl: string;
+  /** The Georgia day the plan was saved, YYYY-MM-DD. Null says no day rather than a wrong one. */
+  savedOn: string | null;
+  side: "buy" | "sell";
+  /** For the programs step: what they matched, itemised. */
+  programs?: ProgramLine[];
+}
+
+/**
+ * One step of the cadence, for somebody who saved a plan instead of finishing
+ * a readout.
+ *
+ * It quotes no figure, and that is the design, not a gap. The plan's figures
+ * are stored as the text the browser sent, so quoting one would email words
+ * about somebody's money that nothing here computed, and would let anyone
+ * who can post to the save route put text of their choosing into our mail.
+ * Recomputing one is no better: a follow-up that shows a different number
+ * from the one they saw is the product changing its story (rule 4). So it
+ * points at the plan, which shows what they saw with its day, and says where
+ * today's figure is.
+ *
+ * The plan's link is its credential, so the footer says what the save email
+ * says about keeping it to yourself. Every link is escaped as an attribute.
+ */
+export function buildPlanTouch(t: PlanTouchEmail): { subject: string; html: string } {
+  const day = t.savedOn && /^\d{4}-\d{2}-\d{2}$/.test(t.savedOn)
+    ? ` on ${showDay(t.savedOn, { month: "long", day: "numeric", year: "numeric" })}`
+    : "";
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">${t.name ? `${escapeHtml(t.name)},` : "Hello,"}</p>
+  <p style="font-size:15px">${escapeHtml(t.body)}</p>${programList(t.programs)}
+  <p style="font-size:15px">
+    <a href="${escapeHtml(t.planUrl)}" style="color:#e8442a">Open your plan</a>. It shows your
+    figures as they were${day}, and they stay that way. Opening any one of them works it out
+    again with today's rates.
+  </p>
+  <p style="font-size:15px">
+    If your situation has changed since, <a href="${escapeHtml(t.againUrl)}" style="color:#e8442a">start
+    it again</a> with new answers.
+  </p>
+  <p style="font-size:13px;color:#666">
+    Every figure is a planning estimate, not ${t.side === "sell" ? "an appraisal or an offer" : "a lending commitment or approval"}.
+    Nothing here requires you to work with us.
+  </p>
+  <p style="font-size:12px;color:#888">
+    You saved a plan at Rift and gave us this address for it. Anyone with the link can open the
+    plan, so keep it to yourself. We do not run a newsletter and we do not sell anything on.
+    <a href="{{ unsubscribe }}" style="color:#888">Unsubscribe</a>: one click, and it stops
     everything.
   </p>
 </div>`.trim();
@@ -401,7 +458,7 @@ export function buildResume(r: ResumeEmail): { subject: string; html: string } {
   <p style="font-size:15px">${escapeHtml(r.body)}</p>
   <p style="font-size:15px">
     You got through ${progress}.
-    <a href="${r.resumeUrl}" style="color:#e8442a">Pick it up where you stopped</a>, about two
+    <a href="${escapeHtml(r.resumeUrl)}" style="color:#e8442a">Pick it up where you stopped</a>, about two
     minutes from here, or don't. Either is fine.
   </p>
   ${r.last ? `<p style="font-size:15px">
@@ -417,6 +474,20 @@ export function buildResume(r: ResumeEmail): { subject: string; html: string } {
 </div>`.trim();
 
   return { subject: r.says, html };
+}
+
+/**
+ * The itemised list the programs step promises in its subject, the same in
+ * either touch. Names and conditions come from the registry, which is edited
+ * by hand, so they are escaped like anything else a person typed.
+ */
+function programList(programs: ProgramLine[] | undefined): string {
+  return programs?.length ? `
+  <ul style="font-size:15px;padding-left:20px">
+    ${programs.map((p) => `<li style="margin-bottom:10px"><strong>${escapeHtml(p.name)}</strong>${
+      p.state ? ` (${escapeHtml(p.state)})` : ""
+    }${p.needs.length ? `<br><span style="font-size:14px;color:#444">${p.needs.map((n) => escapeHtml(n.replace(/\.\s*$/, ""))).join("; ")}.</span>` : ""}</li>`).join("\n    ")}
+  </ul>` : "";
 }
 
 /** Minimal escaping. Names come from a public form and end up in markup. */
@@ -449,7 +520,7 @@ export function buildSavedPlan(p: SavedPlanEmail): { subject: string; html: stri
     ? "Kaleb has your numbers and will reply with what he would do next, usually the same business day. Here is your plan, saved."
     : "Here is your plan, saved. The link opens it on any device."}</p>
   ${rows ? `<table style="width:100%;border-collapse:collapse;font-size:15px;margin:8px 0 16px">${rows}</table>` : ""}
-  <p style="font-size:15px"><a href="${p.planUrl}" style="color:#c2351e">Open my plan</a></p>
+  <p style="font-size:15px"><a href="${escapeHtml(p.planUrl)}" style="color:#c2351e">Open my plan</a></p>
   <p style="font-size:12px;color:#888">
     The figures are as they were on the day you saved them; opening one works it out again with
     today's rates. Anyone with the link can open the plan, so keep it to yourself.

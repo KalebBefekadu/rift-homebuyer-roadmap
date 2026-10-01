@@ -143,3 +143,30 @@ describe("recording a decision", () => {
     expect(db.calls.filter((c) => c.verb === "upsert")).toHaveLength(0);
   });
 });
+
+describe("value delivered, since leads save plans (D31)", () => {
+  const fresh = (over: Record<string, unknown>) => ({
+    id: "l3", name: "Saver", email: "s@example.com", side: "buy", stage: "Exploring",
+    closed_on: null, mood: null, client_token: null, assessment_id: null, plan_saved_at: null, referred_by: null,
+    ...over,
+  });
+  const valueDelivered = async (row: Record<string, unknown>, readouts: unknown[] = []) => {
+    build({ rift_leads: { data: row }, rift_referral_moments: { data: [] }, rift_readouts: { data: readouts } });
+    const r = await momentsForLead("l3", NOW);
+    return ("data" in r ? r.data : null)!.life.readoutDelivered;
+  };
+
+  it("reads when the plan was saved, and never the plan's link", () => {
+    expect(LIFECYCLE_COLUMNS).toContain("plan_saved_at");
+    expect(LIFECYCLE_COLUMNS).not.toContain("plan_token");
+  });
+
+  it("counts a saved plan as their numbers delivered", async () => {
+    expect(await valueDelivered(fresh({ plan_saved_at: "2026-09-20T15:00:00Z" }))).toBe(true);
+  });
+
+  it("still counts a v4 readout, and still counts nothing as nothing", async () => {
+    expect(await valueDelivered(fresh({ assessment_id: "a1" }), [{ assessment_id: "a1" }])).toBe(true);
+    expect(await valueDelivered(fresh({}))).toBe(false);
+  });
+});

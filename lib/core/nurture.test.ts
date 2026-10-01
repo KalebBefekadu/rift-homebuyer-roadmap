@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines } from "./nurture";
+import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines, touchCopy } from "./nurture";
 import { PROGRAMS } from "./registry";
 import { BUY_FUNNEL } from "./funnel";
 
@@ -205,5 +205,48 @@ describe("the step that lists their programs", () => {
     const [line] = programLines([open, { ...open, funding: "closed" }]);
     expect(line).toEqual({ name: open.name, state: null, needs: open.conditions });
     expect(programLines([{ ...open, funding: "closed" }])[0]!.state).toBe("Funding closed");
+  });
+});
+
+/**
+ * The copy somebody who saved a plan reads (Blueprint v5 §5.5). Every step
+ * whose own words would be untrue for them carries a plan variant, and the
+ * variant follows the same rules as the rest of the copy.
+ */
+describe("the copy for a saved plan", () => {
+  it("replaces every opening that claims a readout or an unfinished answer", () => {
+    for (const seq of SEQUENCES) {
+      for (const step of seq.steps) {
+        if (!step.auto) continue;
+        const read = touchCopy(step, "plan");
+        const where = `${seq.band}/${step.id}`;
+        expect(read.says, `${where} tells a plan saver about a readout`).not.toMatch(/\breadout\b/i);
+        expect(read.body, `${where} tells a plan saver about a readout`).not.toMatch(/\breadout\b/i);
+        expect(read.says, `${where} tells a plan saver they did not finish`).not.toMatch(/most of the way|where you left/i);
+        expect(read.body, `${where} tells a plan saver they did not finish`).not.toMatch(/where you left them/i);
+      }
+    }
+  });
+
+  it("is written to the reader, like every other line", () => {
+    for (const seq of SEQUENCES) {
+      for (const step of seq.steps) {
+        if (!step.plan) continue;
+        expect(step.plan.body.length).toBeGreaterThan(20);
+        expect(step.plan.body).not.toMatch(/\btheir\b|\bthe person\b|recovery, not pursuit|\bcadence\b|\bsequence\b/i);
+      }
+    }
+  });
+
+  it("leaves a readout's and a resume's copy exactly as defined", () => {
+    const n1 = SEQUENCES[0].steps[0];
+    expect(touchCopy(n1, "readout")).toEqual({ says: n1.says, body: n1.body });
+    expect(touchCopy(n1, "resume")).toEqual({ says: n1.says, body: n1.body });
+    expect(touchCopy(n1, "plan")).toEqual(n1.plan);
+  });
+
+  it("uses a step's own copy when it is already true for a plan", () => {
+    const d2 = SEQUENCES.find((s) => s.band === "nurture")!.steps.find((s) => s.id === "d2")!;
+    expect(touchCopy(d2, "plan")).toEqual({ says: d2.says, body: d2.body });
   });
 });
