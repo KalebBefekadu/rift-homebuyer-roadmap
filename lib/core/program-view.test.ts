@@ -2,8 +2,47 @@ import { describe, it, expect } from "vitest";
 import { GEORGIA_PROGRAMS, type ProgramRecord } from "./assistance";
 import { applyChecks, type SourceCheck, type SourceReview } from "./program-check";
 import {
-  amountView, areaText, buyerStatus, checkLine, groupByArea, historyFor, keyRules, largestShown, STATUS_LABEL,
+  amountView, areaText, buyerStatus, changeView, checkLine, groupByArea, historyFor, isMeaningfulLine, keyRules, largestShown, STATUS_LABEL,
 } from "./program-view";
+
+describe("what changed on a page, the part worth reading", () => {
+  it("drops a site's menu and keeps the lines a record could hold", () => {
+    const menu = [
+      "Home", "Departments", "Pay a Bill",
+      "Georgia Dream | Georgia Department of Community Affairs",
+      "Down Payment Assistance Programs for Homebuyers",
+      "© 2026 Georgia DCA. All rights reserved.",
+      /* From the real Georgia DCA page: its menu is full of years and percentages. */
+      "2024-2025 QAP Documents Posted for Public Comment",
+      "2024 QAP Scoring Documents and Data",
+      "Subnavigation toggle for Submit an Application",
+      "10% Test Documents",
+      "2022 CoC Special NOFO: Closed",
+      "2026 PIT Count: Getting Involved",
+      "QAPs: 2023 and Prior",
+    ];
+    for (const l of menu) expect(isMeaningfulLine(l), l).toBe(false);
+    const facts = [
+      "Assistance amount: up to $12,500 for eligible buyers.",
+      "Income limit is 80% of area median income",
+      "Household income limits updated for the 2026 program year.",
+      "Applications close October 31",
+      "Effective July 8, 2026:",
+      "A homebuyer education course is required before closing.",
+      "Must live in the home for 5 years",
+      "$347,000",
+    ];
+    for (const l of facts) expect(isMeaningfulLine(l), l).toBe(true);
+  });
+
+  it("keeps every changed line for show-all, and counts them", () => {
+    const v = changeView({ removed: ["Home", "Up to $10,000"], added: ["About us", "Up to $12,500", "Contact"] });
+    expect(v.removed).toEqual(["Up to $10,000"]);
+    expect(v.added).toEqual(["Up to $12,500"]);
+    expect(v.total).toBe(5);
+    expect(v.all.added).toHaveLength(3);
+  });
+});
 
 const bySlug = (s: string) => GEORGIA_PROGRAMS.find((p) => p.slug === s)!;
 const at = (day: string) => new Date(`${day}T15:00:00Z`);

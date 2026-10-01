@@ -10,7 +10,7 @@ import { mayFit } from "@/lib/core/alerts";
 import { alertSubscribers } from "@/lib/db/saved-plan";
 import { applyChecks, openFlags, textDiff, type CheckOutcome, type Flag } from "@/lib/core/program-check";
 import {
-  amountView, areaText, buyerStatus, checkLine, formText, groupByArea, keyRules, largestShown,
+  amountView, areaText, buyerStatus, changeView, checkLine, formText, groupByArea, keyRules, largestShown,
   STATUS_ORDER, type BuyerStatus,
 } from "@/lib/core/program-view";
 import { money } from "@/lib/core/compute";
@@ -199,10 +199,27 @@ function flagHint(flags: Flag[]): string {
   return [changed ? `${page(changed)} changed` : "", unread ? `${page(unread)} could not be read` : ""].filter(Boolean).join(", ");
 }
 
+function DiffColumns({ removed, added }: { removed: string[]; added: string[] }) {
+  return (
+    <div className={s.diff}>
+      <div className={`${s.diffCol} ${s.removed}`}>
+        <div className={s.boxTitle}>No longer on the page</div>
+        <ul>{removed.length ? removed.map((l, i) => <li key={i}>− {l}</li>) : <li className="c-4">Nothing removed</li>}</ul>
+      </div>
+      <div className={`${s.diffCol} ${s.added}`}>
+        <div className={s.boxTitle}>New on the page</div>
+        <ul>{added.length ? added.map((l, i) => <li key={i}>+ {l}</li>) : <li className="c-4">Nothing added</li>}</ul>
+      </div>
+    </div>
+  );
+}
+
 type Sub = { leadId: string; name: string | null };
 
 function FlagCard({ f, subs, agentName }: { f: Flag; subs: Sub[]; agentName: string }) {
-  const diff = textDiff(f.before?.text ?? null, f.check.text);
+  /* A generous limit: the filter below needs every changed line to find the
+     one that matters, and "show all" should mean all. */
+  const change = changeView(textDiff(f.before?.text ?? null, f.check.text, 400));
   return (
     <article className={s.flag} id={`flag-${f.check.id}`}>
       <div className={s.flagHead}>
@@ -229,22 +246,23 @@ function FlagCard({ f, subs, agentName }: { f: Flag; subs: Sub[]; agentName: str
       {f.check.outcome === "changed" ? (
         f.check.text === null ? (
           <p className={`${s.small} mt-3`}>This source is a PDF, so there is no text to compare. Open it and check the amounts, limits and dates against the record.</p>
-        ) : diff.removed.length || diff.added.length ? (
-          /* Folded when the comparison has already said what matters: forty
-             lines each side is the evidence, not the first thing to read. */
-          <details className={s.more} open={!f.check.summary}>
-            <summary>The page, line by line: {diff.removed.length} removed, {diff.added.length} added</summary>
-            <div className={s.diff}>
-              <div className={`${s.diffCol} ${s.removed}`}>
-                <div className={s.boxTitle}>No longer on the page</div>
-                <ul>{diff.removed.length ? diff.removed.map((l, i) => <li key={i}>− {l}</li>) : <li className="c-4">Nothing removed</li>}</ul>
-              </div>
-              <div className={`${s.diffCol} ${s.added}`}>
-                <div className={s.boxTitle}>New on the page</div>
-                <ul>{diff.added.length ? diff.added.map((l, i) => <li key={i}>+ {l}</li>) : <li className="c-4">Nothing added</li>}</ul>
-              </div>
-            </div>
-          </details>
+        ) : change.total ? (
+          <>
+            {change.removed.length || change.added.length ? (
+              <>
+                <div className={`${s.boxTitle} mt-3`}>Changed lines that mention an amount, a date, a limit, who can apply or funding</div>
+                <DiffColumns removed={change.removed} added={change.added} />
+              </>
+            ) : (
+              <p className={`${s.small} mt-3`}>None of the {change.total} changed lines mention an amount, a date, a limit, who can apply or funding. It is most likely the site&apos;s menu or layout; the full list is below.</p>
+            )}
+            {/* Everything else stays one click away: the filter decides what is
+                read first, never what can be seen. */}
+            <details className={s.more}>
+              <summary>Show all {change.total} changed {change.total === 1 ? "line" : "lines"}</summary>
+              <DiffColumns removed={change.all.removed} added={change.all.added} />
+            </details>
+          </>
         ) : (
           <p className={`${s.small} mt-3`}>Only the order or spacing of the text changed.</p>
         )

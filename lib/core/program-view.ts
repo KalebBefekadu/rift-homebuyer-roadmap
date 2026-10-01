@@ -257,3 +257,61 @@ export function historyFor(sourceUrl: string, checks: SourceCheck[], reviews: So
     .sort((a, b) => b.checkedAt.localeCompare(a.checkedAt))
     .map((check) => ({ check, review: byCheck.get(check.id) ?? null }));
 }
+
+/* ------------------------------------------------------------------ *
+ * What changed on a page, the part worth reading
+ * ------------------------------------------------------------------ */
+
+const MONEY = /\$\s?\d/;
+const PERCENT = /\d\s?%/;
+/* Weaker figures: a count with thousands, a year, a length of time, a
+   household size, a calendar date. Menus are full of years ("2024 QAP
+   Documents"), so these count only in a sentence. */
+const FIGURE = /\b\d{1,3}(,\d{3})+\b|\b(19|20)\d{2}\b|\b\d+\s?(years?|months?|days?|hours?|people|persons?)\b|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b/i;
+/* The words the record's facts are written in: amounts, limits, who, when, funding. */
+const TERMS = /\b(income|limits?|price|eligib\w*|first[- ]time|funds?|funding|grants?|loans?|forgiv\w*|defer\w*|repa\w*|credit|score|apply|applications?|deadline|effective|closed?|waitlist|waiting list|median|ami|household|down ?payment|closing costs?|minimum|maximum|up to|required?|must|lenders?|education|veterans?|educators?|teachers?|nurses?)\b/i;
+const BOILERPLATE = /©|copyright|all rights reserved|privacy policy|terms of use|cookie|toggle|skip to|navigation|\bmenu\b/i;
+
+/**
+ * Whether one changed line of an official page could bear on the record.
+ *
+ * A state or county site's text is mostly its menu: "Home", "Pay a Bill",
+ * "2024 QAP Scoring Documents and Data". A line-by-line difference of a page
+ * whose menu was rebuilt lists dozens of those, and the one line that moved
+ * the price cap is somewhere in the middle. Menus and headings are short and
+ * mostly capitalised; the facts a record holds are written in sentences. So a
+ * dollar figure always counts, a share of something counts beside one of the
+ * record's words or in a sentence, a year or date counts in a sentence that
+ * uses one of the record's words or runs to five words, and
+ * any other line needs one of the record's words and six words of sentence.
+ */
+export function isMeaningfulLine(line: string): boolean {
+  const text = line.trim();
+  if (!text || BOILERPLATE.test(text)) return false;
+  if (MONEY.test(text)) return true;
+  const words = text.split(/\s+/);
+  const sentence = words.filter((w) => /^[A-Z]/.test(w)).length / words.length <= 0.6;
+  const terms = TERMS.test(text);
+  if (PERCENT.test(text)) return terms || sentence;
+  if (FIGURE.test(text)) return sentence && (terms || words.length >= 5);
+  return terms && sentence && words.length >= 6;
+}
+
+export interface ChangeView {
+  /** The lines worth reading first, from each side. */
+  removed: string[];
+  added: string[];
+  /** Every changed line, for "show all". */
+  all: { removed: string[]; added: string[] };
+  total: number;
+}
+
+/** A line difference split into what bears on a record and everything else. */
+export function changeView(diff: { removed: string[]; added: string[] }): ChangeView {
+  return {
+    removed: diff.removed.filter(isMeaningfulLine),
+    added: diff.added.filter(isMeaningfulLine),
+    all: diff,
+    total: diff.removed.length + diff.added.length,
+  };
+}
