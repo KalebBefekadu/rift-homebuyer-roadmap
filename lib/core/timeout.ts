@@ -88,3 +88,20 @@ export const WRITE_DEADLINE_MS = 6_000;
  * outage from a slow page, which is the failure the deadline exists for.
  */
 export const AUTH_DEADLINE_MS = 6_000;
+
+/**
+ * How long the agent's own boards and reports wait for a read.
+ *
+ * Longer than a visitor read, and the reason is who is waiting. Two seconds is
+ * what a stranger on a phone will give a page before they leave, so a visitor
+ * path takes its fallback at two. The agent opening Reports is not leaving: a
+ * funnel that says "did not load; unknown, not empty" because a cold start
+ * ate the budget, when the query itself answers in fifty milliseconds, is a
+ * report that fails exactly when the function is cold and says nothing true.
+ * The deadline is wall-clock, so a cold compile or a busy event loop spends it
+ * before the query is even sent (the same effect `AUTH_DEADLINE_MS` records).
+ *
+ * Still bounded, and under the platform ceiling, so a real outage is reported
+ * as one rather than as a blank tab.
+ */
+export const REPORT_DEADLINE_MS = 8_000;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { withTimeout, READ_DEADLINE_MS, WRITE_DEADLINE_MS, AUTH_DEADLINE_MS } from "./timeout";
+import { withTimeout, READ_DEADLINE_MS, REPORT_DEADLINE_MS, WRITE_DEADLINE_MS, AUTH_DEADLINE_MS } from "./timeout";
 
 describe("deadlines", () => {
   it("returns the real value when work finishes in time", async () => {
@@ -53,8 +53,14 @@ describe("the three deadlines", () => {
     expect(AUTH_DEADLINE_MS).toBeGreaterThan(READ_DEADLINE_MS);
   });
 
-  it("bounds all three, because unbounded is a blank tab", () => {
-    for (const [name, ms] of Object.entries({ READ_DEADLINE_MS, WRITE_DEADLINE_MS, AUTH_DEADLINE_MS })) {
+  it("lets the agent's reports wait longer than a visitor does, and no longer than the platform will", () => {
+    /* Reports read dozens of rows in one burst; a cold start spent a visitor-sized budget before the first query left. */
+    expect(REPORT_DEADLINE_MS).toBeGreaterThan(READ_DEADLINE_MS);
+    expect(REPORT_DEADLINE_MS).toBeLessThan(10_000);
+  });
+
+  it("bounds every one, because unbounded is a blank tab", () => {
+    for (const [name, ms] of Object.entries({ READ_DEADLINE_MS, REPORT_DEADLINE_MS, WRITE_DEADLINE_MS, AUTH_DEADLINE_MS })) {
       expect(ms, `${name} is not a number of milliseconds`).toBeGreaterThan(0);
       /* Vercel's default function ceiling. A deadline past it is not a
          deadline: the platform kills the request first and the fallback

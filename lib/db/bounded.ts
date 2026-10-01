@@ -1,5 +1,5 @@
 import "server-only";
-import { withTimeout, READ_DEADLINE_MS, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
+import { withTimeout, READ_DEADLINE_MS, REPORT_DEADLINE_MS, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { failed, type DbResult } from "./result";
 
 /**
@@ -43,3 +43,7 @@ export const boundedRead = <T>(query: Query<T>, what: string) =>
 export const TRANSFER_DEADLINE_MS = 30_000;
 export const boundedTransfer = <T>(query: Query<T>, what: string) =>
   run(query, TRANSFER_DEADLINE_MS, what);
+
+/** For the agent's own boards and reports, which can wait longer than a visitor can. */
+export const boundedReport = <T>(query: Query<T>, what: string) =>
+  run(query, REPORT_DEADLINE_MS, what);
