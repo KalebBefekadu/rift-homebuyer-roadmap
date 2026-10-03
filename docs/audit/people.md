@@ -107,6 +107,56 @@ Layout
 - `grid-2` again: email and phone stack with no gap between them.
 - Hand-drawn header and back link to Today; the error is a hand-drawn card.
 
+## What was fixed (30 Sep to 2 Oct 2026)
+
+Relationships
+- The funnel band only shows while nobody has picked the person up (`bandIsLive`), so closed
+  and in-progress people no longer carry "Call today". Closed and Lost no longer compute a stall
+  (`shape` in `lib/db/clients.ts`), so a closed client is not "Stalled" after six weeks.
+- Due dates read "Overdue 4 days", "Due today", "Due in 5 days" or "Due Oct 20" with an icon
+  and the word; source is a phrase; "1 months ago" is "1 month ago". All in `lib/core/people.ts`
+  with tests.
+- Filters for stage group, next step (overdue, due in 7 days, none set) and last contact, a sort
+  (newest, next step due, longest since contact, name), and two quick chips with counts for
+  overdue next steps and people with no contact in 14 days. The whole book (up to 500) is read so
+  these narrow everyone, not a page; past 500 the page says so. Filters persist on the device.
+- The forecast is under the list. Its worked example uses the first month that has anybody in it.
+- Rows are one person each (side and source under the name); under 760 px a row is a card, so no
+  table is clipped. The panel shows next step with its due state, last contact, what they worked
+  out, journeys and notes, links the phone and email, scrolls into view on a phone, and each part
+  says when it could not be read. Failure, empty and skipped states use the kit.
+- Add someone is the page's primary action.
+
+The person record
+- Order: who and where they are, then Status and next step beside Record what happened, then
+  What they want and can afford (funnel answers in their words, saved plan answers and figures,
+  why they scored), then journeys, plan, offers, offer room, decisions, representation,
+  referrals, history. How to reach them, consent, follow-up state and details sit in a rail that
+  falls below the main column on a phone.
+- A stage cannot be changed by one stray click: choose it, then confirm "Move to X". Only the
+  stages of that side are offered. A next step can be changed, not only marked done. Overdue is
+  an icon and the words.
+- Consent per channel (agreed, said no, no answer), why you can contact them, and whether
+  automatic follow-up is running or stopped and why, are shown (`lib/db/lead-background.ts`).
+- A person can be restored from the archive (`restoreLead`), written to the history.
+- A history that could not be read says so; before, `readLead` swallowed the failure and the page
+  said "Nothing recorded yet".
+- Referrals' closing date is collapsed until there is a closing. Dates are words, not ISO.
+  Every panel uses the kit's Section and Notice; the warning-sign text warnings are Notices.
+- Mobile: no horizontal scroll (the offer room button row wraps).
+
+Add someone
+- A second record for the same email or phone is refused with who it would duplicate, until the
+  agent says "add anyway"; phones compare by digits. If the check cannot run it does not block.
+- Lost is not offered as a starting stage; stages follow the side; the button says what is missing.
+
+Left, and why
+- `grid-2` is still used by `app/(rift)/sell/unclaimed/Unclaimed.tsx` (outside this scope).
+- Row click opens the panel only from the name; a whole-row link needs `position: relative` on
+  table rows, which is not reliable enough to depend on.
+- Stall rules in `lib/core/pipeline.ts` use one dwell table for both sides; that is the
+  specification's call and was not changed.
+
 ## Outside this scope, noticed in passing
 - `grid-2` is used elsewhere and does not exist in `app/prototype/rift.css`.
 - The browser pane is shared between agents; tabs are navigated by other sessions.
