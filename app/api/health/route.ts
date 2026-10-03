@@ -6,6 +6,7 @@ import { currentRate } from "@/lib/db/rates";
 import { overdue } from "@/lib/db/retention";
 import { KEYS, WRONG_IN_AM, unreviewedAm } from "@/lib/core/i18n";
 import { authoriseCron } from "@/lib/core/cron";
+import { askBrevoAboutSender, SENDER_HEALTH } from "@/lib/db/sender";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,18 +70,13 @@ async function retentionCheck(): Promise<string> {
  * had never delivered, and would never deliver: the scheduler bug again, in a
  * different coat.
  *
- * Cached for ten minutes. This endpoint is public, and a health check that
- * spends the sender's API quota on every monitor ping is its own outage.
- * Only a status word leaves this function: never the key, never an address.
+ * The asking is lib/db/sender.ts, shared with the settings page so the two
+ * cannot disagree, and cached there for ten minutes. Only a status word
+ * leaves this function: never the key, never an address.
  */
-const EMAIL_TTL_MS = 10 * 60_000;
-let emailCache: { at: number; value: string } | null = null;
-
 async function emailCheck(deep: boolean): Promise<string> {
-  const key = process.env.BREVO_API_KEY;
-  const from = process.env.BREVO_FROM_EMAIL;
-  if (!key) return "missing";
-  if (!from) return "no verified sender";
+  if (!process.env.BREVO_API_KEY) return "missing";
+  if (!process.env.BREVO_FROM_EMAIL) return "no verified sender";
 
   /* Only when asked by somebody holding the cron secret.
 
@@ -93,33 +89,8 @@ async function emailCheck(deep: boolean): Promise<string> {
      owner wonder whether he has been breached is not a health check. */
   if (!deep) return "set, not verified (deep check requires the cron secret)";
 
-  const now = Date.now();
-  if (emailCache && now - emailCache.at < EMAIL_TTL_MS) return emailCache.value;
-
-  let value: string;
-  try {
-    const res = await fetch("https://api.brevo.com/v3/senders", {
-      headers: { accept: "application/json", "api-key": key },
-      signal: AbortSignal.timeout(4000),
-    });
-    const body = await res.text();
-    if (res.status === 401 && /unrecognised IP/i.test(body)) {
-      value = "blocked: Brevo's IP allowlist refuses this server";
-    } else if (!res.ok) {
-      value = `refused by Brevo (${res.status})`;
-    } else {
-      const senders = (JSON.parse(body).senders ?? []) as { email?: string; active?: boolean }[];
-      const match = senders.find((s) => String(s.email).toLowerCase() === from.toLowerCase());
-      value = !match ? "sender not registered in Brevo"
-        : match.active ? "ready" : "sender awaiting verification";
-    }
-  } catch {
-    /* A timeout is not a verdict. Uncached, so it clears on the next ping. */
-    return "unknown: Brevo did not answer";
-  }
-
-  emailCache = { at: now, value };
-  return value;
+  const verdict = await askBrevoAboutSender();
+  return verdict ? SENDER_HEALTH[verdict] : "missing";
 }
 
 /**

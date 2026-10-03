@@ -61,7 +61,7 @@ describe("PostgREST query shapes", () => {
     }
 
     expect(out, "the verifier did not report a result").toMatch(/All \d+ query paths OK/);
-  });
+  }, 30_000); // one probe per column list: it grows with the data layer and slows under load
 
   it("is wired into npm run verify, so it cannot be forgotten again", async () => {
     /* The script existed for two weeks and was in neither `test` nor `verify`.

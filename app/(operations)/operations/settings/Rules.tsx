@@ -5,6 +5,7 @@ import { Ico } from "@/components/rift/icons";
 import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, type BusinessRules, type StoredRule } from "@/lib/core/settings";
 import { decideRule, undecideRule } from "./actions";
 import { showDay } from "@/lib/core/day";
+import s from "./settings.module.css";
 
 /**
  * Editing a decision, one at a time.
@@ -19,6 +20,8 @@ import { showDay } from "@/lib/core/day";
  * The two the broker owns say so above the field, not in a footnote: the
  * moment to find out that client retention has a legal floor is before typing
  * a number into it, not after.
+ *
+ * Each row carries an id (`rule-<key>`) so the setup list can point at it.
  */
 export function Rules({ rules, undecided, decided }: {
   rules: BusinessRules;
@@ -29,7 +32,7 @@ export function Rules({ rules, undecided, decided }: {
   const by = new Map(decided.map((d) => [d.key, d]));
 
   return (
-    <div className="col gap-3" style={{ marginTop: 20 }}>
+    <div className={s.card}>
       {keys.map((k) => (
         <Row
           key={k}
@@ -86,43 +89,43 @@ function Row({ k, value, isDefault, provenance }: {
       : String(value);
 
   return (
-    <div className="card p-4">
-      <div className="between wrap gap-2" style={{ alignItems: "flex-start" }}>
-        <div style={{ minWidth: 200 }}>
-          <div className="row gap-2 wrap">
-            <span className="t-sm w6">{RULE_LABEL[k]}</span>
+    <div className={s.row} id={`rule-${k}`} style={{ scrollMarginTop: 80 }}>
+      <div className={s.rowHead}>
+        <div style={{ minWidth: 0, flex: "1 1 320px" }}>
+          <div className={s.rowTitle}>
+            <span>{RULE_LABEL[k]}</span>
             {isDefault
               ? <span className="chip chip-warn t-2xs"><Ico.alert size={10} />Still on the default</span>
               : <span className="chip chip-pos t-2xs"><Ico.check size={10} />Yours</span>}
           </div>
-          <p className="t-xs c-3" style={{ marginTop: 6, lineHeight: 1.6, maxWidth: 460 }}>{rule.affects}</p>
-          <p className="t-xs c-4" style={{ marginTop: 5, lineHeight: 1.55, maxWidth: 460 }}>
-            <strong>Who decides:</strong> {rule.owner}
-          </p>
-          {/* Said out loud, per rule. Five of these six currently change
-              nothing a person can see, and a page of dials that quietly go
-              nowhere is exactly the failure this product keeps having:
-              except built deliberately. A recorded decision is still worth
-              having; pretending it is in force is not. */}
-          <p className={`t-xs row-t gap-2 ${RULE_REACH[k].live ? "c-4" : "c-warn"}`} style={{ marginTop: 5, lineHeight: 1.55, maxWidth: 460 }}>
-            {RULE_REACH[k].live
-              ? <Ico.checkCircle size={11} style={{ flex: "none", marginTop: 3 }} />
-              : <Ico.alert size={11} style={{ flex: "none", marginTop: 3 }} />}
-            <span>{RULE_REACH[k].live ? "In force. " : "Recorded, not yet in force. "}{RULE_REACH[k].where}</span>
+          <p className={s.rowText}>{rule.affects}</p>
+          <p className={s.rowNote}><span><strong className="w6">Who decides:</strong> {rule.owner}</span></p>
+          {/* Said out loud, per rule. Some of these change nothing a person
+              can see yet, and a page of dials that quietly go nowhere is
+              exactly the failure this product keeps having: except built
+              deliberately. A recorded decision is still worth having;
+              pretending it is in force is not. */}
+          <p className={`${s.rowNote}${RULE_REACH[k].live ? "" : ` ${s.rowNoteWarn}`}`}>
+            {RULE_REACH[k].live ? <Ico.checkCircle size={11} /> : <Ico.alert size={11} />}
+            {/* Every dormant rule's text already opens "Recorded only.", so
+                a prefix here said it twice. */}
+            <span>{RULE_REACH[k].live ? "In force. " : ""}{RULE_REACH[k].where}</span>
           </p>
           {provenance?.decidedBy ? (
-            <p className="t-2xs c-4" style={{ marginTop: 5 }}>
+            <p className={s.rowNote}>
               Set by {provenance.decidedBy}
               {provenance.decidedAt ? ` on ${showDay(provenance.decidedAt, { day: "numeric", month: "long", year: "numeric" })}` : ""}
             </p>
           ) : null}
         </div>
 
-        <div className="col gap-2" style={{ flex: "none", alignItems: "flex-end" }}>
+        <div className={s.rowControl}>
           {kind === "boolean" ? (
             <button
-              className={`btn btn-sm ${value ? "btn-p" : "btn-g"}`}
+              className={`btn btn-sm ${value ? "btn-p" : "btn-s"}`}
               disabled={pending}
+              aria-pressed={Boolean(value)}
+              aria-label={`${RULE_LABEL[k]}: ${value ? "on" : "off"}. Switch ${value ? "off" : "on"}`}
               onClick={() => save(!value)}
             >
               {pending ? "Saving…" : value ? "On" : "Off"}
@@ -130,9 +133,10 @@ function Row({ k, value, isDefault, provenance }: {
           ) : open ? (
             <div className="row gap-2">
               <input
-                className="input"
-                style={{ maxWidth: 140 }}
+                className="input input-sm"
+                style={{ width: 130 }}
                 autoFocus
+                aria-label={RULE_LABEL[k]}
                 inputMode={kind === "number" ? "decimal" : "text"}
                 value={draft}
                 onChange={(e) => { setDraft(e.target.value); setError(""); }}
@@ -143,15 +147,14 @@ function Row({ k, value, isDefault, provenance }: {
               </button>
             </div>
           ) : (
-            <button className="btn btn-g btn-sm" onClick={() => { setDraft(String(value)); setOpen(true); }}>
+            <button className="btn btn-s btn-sm" aria-label={`Change ${RULE_LABEL[k]}, now ${shown}`} onClick={() => { setDraft(String(value)); setOpen(true); }}>
               {shown}<Ico.chevR size={12} />
             </button>
           )}
 
           {!isDefault ? (
             <button
-              className="t-2xs c-4"
-              style={{ background: "transparent", border: 0, cursor: "pointer" }}
+              className={s.linkish}
               disabled={pending}
               onClick={() => {
                 setError("");
