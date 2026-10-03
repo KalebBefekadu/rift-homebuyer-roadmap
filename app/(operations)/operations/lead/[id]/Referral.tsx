@@ -5,6 +5,8 @@ import { georgiaDay } from "@/lib/core/day";
 import { setClosingDate } from "./actions";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
+import { Section, Notice } from "../../ui";
+import css from "./record.module.css";
 
 /**
  * The link this person can hand to somebody else, and what it has produced.
@@ -57,12 +59,8 @@ export function Referral({
   };
 
   return (
-    <section style={{ marginTop: 28 }}>
-      <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
-        Referrals
-      </div>
-
-      <div className="card p-4" style={{ marginTop: 10 }}>
+    <Section id="referrals" title="Referrals" hint="Who sent them, who they have sent, and a link they can pass on. You decide when to offer it.">
+      <div className="card p-4">
         <ClosedOn leadId={leadId} closedOn={closedOn} />
         {/* Who sent THEM. Read before who they sent, because it is the fact
             most likely to change how the agent treats the relationship. */}
@@ -88,8 +86,8 @@ export function Referral({
               situation.
             </p>
             <div className="row gap-2 wrap" style={{ marginTop: 10, alignItems: "center" }}>
-              <code className="t-xs c-3 trunc" style={{
-                background: "var(--sunk)", padding: "6px 9px", borderRadius: 6, maxWidth: 380,
+              <code className={`t-xs c-3 ${css.code}`} style={{
+                background: "var(--sunk)", padding: "6px 9px", borderRadius: 6, maxWidth: "100%",
               }}>{link}</code>
               <button type="button" className="btn btn-g btn-sm" onClick={copy}>
                 <Ico.share size={13} />{copied ? "Copied" : "Copy link"}
@@ -126,7 +124,7 @@ export function Referral({
           </div>
         ) : null}
       </div>
-    </section>
+    </Section>
   );
 }
 
@@ -141,7 +139,7 @@ function ClosedOn({ leadId, closedOn }: { leadId: string; closedOn: string | nul
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   if (closedOn === undefined) {
-    return <p className="t-xs c-warn" style={{ marginBottom: 14 }}>⚠ The closing date did not load, so the moments after a closing cannot be shown or changed here right now.</p>;
+    return <div style={{ marginBottom: 14 }}><Notice tone="warn" title="The closing date did not load">The moments after a closing cannot be shown or changed here right now.</Notice></div>;
   }
   const save = (next: string | null) => start(async () => {
     const r = await setClosingDate(leadId, next);
@@ -149,8 +147,8 @@ function ClosedOn({ leadId, closedOn }: { leadId: string; closedOn: string | nul
     setValue(next ?? "");
     setMsg({ ok: true, text: next ? "Saved. The moments after the closing count from this day." : "Cleared. No moment after a closing is due until a date is set." });
   });
-  return (
-    <div style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--line-3)" }}>
+  const form = (
+    <>
       <div className="row gap-2 wrap" style={{ alignItems: "flex-end" }}>
         <label className="col gap-1 t-xs">Closed on
           <input type="date" className="input input-sm" value={value} max={georgiaDay()} onChange={(e) => setValue(e.target.value)} />
@@ -161,7 +159,21 @@ function ClosedOn({ leadId, closedOn }: { leadId: string; closedOn: string | nul
       <p className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55 }}>
         {closedOn ? "The Advocacy moments after a closing count from this day." : "Not closed. Recording the contract as closed on the journey sets this; set it here for a closing handled before Rift."}
       </p>
-      {msg ? <p role="status" className={`t-xs ${msg.ok ? "c-pos" : "c-neg"}`} style={{ marginTop: 4 }}>{msg.ok ? "✓" : "✕"} {msg.text}</p> : null}
+      {msg ? <p role="status" className={`t-xs ${msg.ok ? "c-pos" : "c-neg"}`} style={{ marginTop: 4 }}>{msg.ok ? <Ico.check size={12} style={{ verticalAlign: -2 }} /> : <Ico.x size={12} style={{ verticalAlign: -2 }} />} {msg.text}</p> : null}
+    </>
+  );
+
+  /* Collapsed until there is a closing to speak of. An empty "Closed on" date
+     at the top of every record, including a lead who arrived this morning,
+     asks a question that is not theirs yet. */
+  return (
+    <div style={{ marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--line-3)" }}>
+      {closedOn || msg ? form : (
+        <details>
+          <summary className="t-xs c-3" style={{ cursor: "pointer" }}>Closed before Rift? Set the closing date</summary>
+          <div style={{ marginTop: 8 }}>{form}</div>
+        </details>
+      )}
     </div>
   );
 }
