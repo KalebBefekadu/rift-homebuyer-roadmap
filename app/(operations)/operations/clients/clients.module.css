@@ -1,0 +1,70 @@
+/* Relationships: a toolbar, a table that becomes cards on a phone, and one
+   person beside it. */
+
+.bar { display: grid; gap: 10px; margin-bottom: 14px; }
+.find {
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--paper);
+}
+.find:focus-within { border-color: var(--ink-4); box-shadow: 0 0 0 3px rgba(13, 14, 16, .05); }
+.find input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 14px; outline: none; }
+.filters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.filters label { display: grid; gap: 3px; font-size: 11.5px; color: var(--ink-4); min-width: 0; }
+.filters select { height: 32px; font-size: 13px; padding: 0 8px; min-width: 0; width: 100%; }
+.state { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12.5px; color: var(--ink-4); }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.split.open { grid-template-columns: minmax(0, 1fr) 360px; }
+.panel { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th {
+  text-align: left; font-size: 11.5px; font-weight: 600; color: var(--ink-3); padding: 9px 12px;
+  border-bottom: 1px solid var(--line-2); white-space: nowrap; background: var(--paper);
+}
+.tbl td { padding: 11px 12px; border-bottom: 1px solid var(--line-3); vertical-align: top; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tbody tr:hover { background: var(--sunk); }
+.tbl tr[aria-selected="true"] { background: var(--sunk); box-shadow: inset 3px 0 0 var(--ink); }
+.name { font-weight: 600; color: var(--ink); }
+.sub { margin-top: 2px; font-size: 12px; color: var(--ink-4); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.nowrap { white-space: nowrap; }
+.next { max-width: 260px; }
+.due { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 12px; }
+.due.overdue { color: var(--neg); font-weight: 600; }
+.due.today { color: var(--warn); font-weight: 600; }
+.due.soon, .due.later { color: var(--ink-4); }
+
+/* Under 1100px the panel stacks above the list; under 760px a row is a card,
+   so nothing is clipped inside a horizontally scrolling table. */
+@media (max-width: 1100px) {
+  .split.open { grid-template-columns: minmax(0, 1fr); }
+  .panel { position: static; max-height: none; order: -1; }
+  .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tbl thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100%; }
+  .tbl tr { padding: 12px; border-bottom: 1px solid var(--line-3); }
+  .tbl tr:last-child { border-bottom: 0; }
+  .tbl td { padding: 2px 0; border: 0; }
+  .tbl td[data-label]::before {
+    content: attr(data-label); display: inline-block; min-width: 92px; font-size: 11.5px; color: var(--ink-4);
+  }
+  .tbl td.first { padding-bottom: 6px; }
+  .tbl td.first::before { display: none; }
+  .next { max-width: none; }
+}
+
+.panelHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.panelName { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; min-width: 0; overflow-wrap: anywhere; }
+.panelBlock { margin-top: 16px; }
+.panelH { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-bottom: 6px; }
+.panelList { display: grid; gap: 6px; font-size: 13px; }
+.panelNote { font-size: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-3); }
+.panelNote:last-child { border-bottom: 0; }
+
+.after { margin-top: 32px; }

@@ -137,7 +137,7 @@ export type ContactFilter = (typeof CONTACT_FILTERS)[number];
 export const CONTACT_FILTER_LABEL: Record<ContactFilter, string> = {
   any: "Any last contact",
   recent: `In the last ${QUIET_DAYS} days`,
-  quiet: `Over ${QUIET_DAYS} days ago`,
+  quiet: `None in ${QUIET_DAYS} days`,
   never: "Never logged",
 };
 

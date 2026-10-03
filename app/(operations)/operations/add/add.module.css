@@ -1,0 +1,14 @@
+/* Add someone: one narrow form, grouped so the three things that are
+   required read as required and the rest read as optional. */
+.form { display: grid; gap: 28px; }
+.group { display: grid; gap: 14px; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.legend { font-size: 13px; font-weight: 600; color: var(--ink); }
+.req { color: var(--ink-4); font-weight: 400; margin-left: 6px; font-size: 12px; }
+.help { font-size: 12.5px; line-height: 1.55; color: var(--ink-4); }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.footer { display: grid; gap: 10px; padding-top: 4px; }
+.missing { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.same { display: grid; gap: 6px; margin-top: 8px; }
+.sameRow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 13px; }
+@media (max-width: 560px) { .pair { grid-template-columns: minmax(0, 1fr); } }

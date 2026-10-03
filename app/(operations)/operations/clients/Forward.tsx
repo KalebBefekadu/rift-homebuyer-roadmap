@@ -9,6 +9,7 @@ import {
 } from "@/lib/core/pipeline";
 import { money } from "@/lib/core/compute";
 import type { Live } from "@/lib/db/clients";
+import { Empty } from "../ui";
 
 /**
  * What is likely to close, and how much of that is evidence.
@@ -60,20 +61,20 @@ export function Forward({
 
   if (!live.length) {
     return (
-      <div className="card p-5" style={{ marginBottom: 14 }}>
-        <div className="t-sm w6">Nothing to forecast yet</div>
-        <p className="t-xs c-4" style={{ marginTop: 6, lineHeight: 1.55, maxWidth: 520 }}>
-          This fills in as people are given a stage. It is a weighted view: what the
-          stages historically produce, not a list of everyone you hope will close.
-        </p>
-      </div>
+      <Empty title="Nothing to forecast yet">
+        This fills in as people are given a stage. It is a weighted view: what the
+        stages historically produce, not a list of everyone you hope will close.
+      </Empty>
     );
   }
 
+  /* The example in the explainer comes from the first month that has anybody
+     in it. Quoting an empty month ("0 of 0 means...") explains nothing. */
+  const example = buckets.find((b) => b.count > 0) ?? buckets[0];
+
   return (
-    <div className="card" style={{ marginBottom: 14, overflow: "hidden" }}>
+    <div className="card" style={{ overflow: "hidden" }}>
       <div className="between wrap gap-2" style={{ padding: "12px 16px", borderBottom: "1px solid var(--line-2)" }}>
-        <span className="t-sm w6">Likely to close</span>
         <span className="t-xs c-4">
           Weighted by stage ·{" "}
           <span title={commissionDecided ? undefined : "Still the default. Set it in Settings."}>
@@ -120,7 +121,7 @@ export function Forward({
 
       <div style={{ padding: "10px 16px", background: "var(--sunk)" }}>
         <p className="t-xs c-4" style={{ lineHeight: 1.55 }}>
-          &ldquo;{buckets[0].expected} of {buckets[0].count}&rdquo; means the stages those
+          &ldquo;{example.expected} of {example.count}&rdquo; in {example.month} means the stages those
           relationships are in historically produce that many closings. It is deliberately
           lower than the headcount, and a forecast that matches the headcount is not a forecast.
         </p>
