@@ -92,9 +92,9 @@ Visual
 ## Search
 
 - A flat list of cards, sorted by what is owed, which is right, but:
-- **Terminated, completed and paused journeys are listed as "Write the brief"** (07 Nia Johnson,
-  who closed in September; 06 Ethan, in Close; 11 James is a *buy journey for the next purchase*
-  and fine). A closed journey is not an active search and should not be.
+- **Closed and under-contract journeys are listed as "Write the brief"**: 07 Nia Johnson, who
+  closed in September, and 06 Ethan Walker, in Close, both read as searches owed a brief. A
+  journey past Offer, or completed or cancelled, is not an active search and should not be.
 - **The "need something from you" count includes those**, so "7 of 11 need something" overstates.
 - The summary says "Set up" means recorded; the status chip repeats a long label that already
   says it. Dates are "Sep 20", never "6 days ago", so a search that has been waiting two weeks
@@ -116,3 +116,28 @@ Visual
 - The write forms inside the tabs (SearchSetup, Offers, Showings, Progress, Dates) behave
   correctly; they are restyled only through their containers.
 - The stored values of other tables.
+
+## Fixed (see commits on this branch)
+
+- One journey head on every tab (kit PageHead, stage path, next-action bar, scrolling tab bar with
+  counts of what needs the agent per tab). Pure rules in `lib/core/journey-focus.ts`, tested.
+- Overview "What needs you" now reads search status, showings, offers, listing, sale offers and
+  preparation as well as dates and workstreams; paused and finished journeys say so and why.
+- Lead next action shows "3 days overdue", not an ISO date; recent activity reads "13 days ago".
+- Seller household uses Seller / Co-seller and offers only the price scope; seller property form
+  uses the real property types (the old "single-family" option was refused by the facts check).
+- Compare: Type in words (`propertyTypeLabel`), page on the kit, empty state links to Homes.
+- Listing: "Live on the MLS" names the recorded detail, link and day; other sites row added.
+- History, pricing, proceeds, offer terms and brief sources: days in words, not ISO.
+- Search: lists only searches still active (`lib/core/search-list.ts`, `journeyStates` in
+  `lib/db/progress.ts`), grouped Needs you / Running / Paused / All in the address, with stage,
+  what it needs, age and the Matrix status with icon and word.
+
+## Left, and why
+
+- `prompt()` for "why is it coming off the list" on Homes: needs its own dialog component.
+- Seller Offers and Preparation are still worked on the person's record (server actions on the
+  journey page can hang, see journey/ops.ts); the tab now says so and puts the link first.
+- Free text typed by the agent (evidence, dependency notes, history notes) can contain ISO dates;
+  that is their text, not a rendering defect.
+- Showing, Offers, Dates, SearchSetup and Brief editor forms keep their markup inside the new panels.
