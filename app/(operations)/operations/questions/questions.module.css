@@ -85,7 +85,12 @@
 .publish { display: grid; gap: 12px; padding: 14px; border-top: 1px solid var(--line-2); }
 .errors { margin: 0; padding-left: 18px; font-size: 13px; color: var(--neg); line-height: 1.6; }
 
-.live { display: inline-flex; align-items: center; gap: 4px; }
+/* The table scrolls inside its card. Positioned, so the screen-reader-only header
+   (absolutely placed) is contained by it and cannot widen the page on a phone. */
+.tableCard { position: relative; overflow-x: auto; }
+
+/* Long on a phone: who published it must wrap, not be cut off. */
+.liveChip { height: auto; min-height: 24px; padding-top: 3px; padding-bottom: 3px; white-space: normal; line-height: 1.4; }
 
 @media (max-width: 860px) {
   .editor { grid-template-columns: minmax(0, 1fr); }

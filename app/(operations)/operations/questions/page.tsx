@@ -10,6 +10,7 @@ import { Ico } from "@/components/rift/icons";
 import { Unavailable } from "../Unavailable";
 import { PageHead, Section, Notice } from "../ui";
 import { Editor, Diff } from "./Editor";
+import s from "./questions.module.css";
 
 export const metadata: Metadata = { title: "Questions", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -93,7 +94,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Pr
       <PageHead
         title="Questions"
         lede="Exactly what a visitor is asked, in words you can change. Publish and the values ask in your words within a minute; what each answer feeds stays fixed."
-        meta={<span className="chip t-xs"><Ico.checkCircle size={12} className="c-pos" />{liveLine}</span>}
+        meta={<span className={`chip t-xs ${s.liveChip}`}><Ico.checkCircle size={12} className="c-pos" />{liveLine}</span>}
       />
 
       {blocked}
@@ -130,7 +131,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Pr
       )}
 
       <Section title="Versions" hint="Every publish, never edited. A lead's record names the version its page showed.">
-        <div className="card" style={{ overflowX: "auto" }}>
+        <div className={`card ${s.tableCard}`}>
           <table className="ops-table">
             <thead><tr><th>Version</th><th>Published</th><th>By</th><th>Note</th><th><span className="sr-only">Open</span></th></tr></thead>
             <tbody>

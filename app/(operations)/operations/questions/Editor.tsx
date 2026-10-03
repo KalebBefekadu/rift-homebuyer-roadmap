@@ -278,12 +278,13 @@ export function Diff({ changes }: { changes: Change[] }) {
   );
 }
 
-function StateChip({ kind }: { kind: "edited" | "mine" | "builtin" | "off" | "new" }) {
+/** `old` is an earlier version being read: its words were not live now, so never say they are. */
+function StateChip({ kind, old }: { kind: "edited" | "mine" | "builtin" | "off" | "new"; old?: boolean }) {
   const map = {
     edited: { cls: s.stateEdited, icon: <Ico.clock size={11} />, word: "Not published" },
     new: { cls: s.stateEdited, icon: <Ico.plus size={11} />, word: "New, not published" },
-    mine: { cls: s.stateMine, icon: <Ico.check size={11} />, word: "Your words, live" },
-    builtin: { cls: "", icon: <Ico.doc size={11} />, word: "Built-in words, live" },
+    mine: { cls: s.stateMine, icon: <Ico.check size={11} />, word: old ? "Your words" : "Your words, live" },
+    builtin: { cls: "", icon: <Ico.doc size={11} />, word: old ? "Built-in words" : "Built-in words, live" },
     off: { cls: s.stateOff, icon: <Ico.pause size={11} />, word: "Off" },
   }[kind];
   return <span className={`${s.state} ${map.cls}`}>{map.icon}{map.word}</span>;
@@ -330,7 +331,7 @@ function BuiltinCard({ n, k, side, draft, clean, live, mine, open, readOnly, onO
           </p>
         </div>
         <div className={s.headActions}>
-          <StateChip kind={edited ? "edited" : mine ? "mine" : "builtin"} />
+          <StateChip old={readOnly} kind={edited ? "edited" : mine ? "mine" : "builtin"} />
           {!readOnly ? (
             <button type="button" className="btn btn-s btn-sm" aria-expanded={open} onClick={onOpen}>
               {open ? <>Close<Ico.chevD size={12} style={{ transform: "rotate(180deg)" }} /></> : <>Edit<Ico.chevD size={12} /></>}
@@ -402,7 +403,7 @@ function BuiltinCard({ n, k, side, draft, clean, live, mine, open, readOnly, onO
               {merged.why ? <p className={s.previewWhy}>{merged.why}</p> : null}
               {def.type === "choice" ? (
                 <div className={`${s.previewOpts} ${merged.options!.length > 5 ? s.previewOpts2 : ""}`} aria-hidden>
-                  {merged.options!.slice(0, k === "county" ? 6 : 12).map((o) => (
+                  {merged.options!.map((o) => (
                     <div key={o.value} className={s.previewOpt}><span>{o.label}{o.hint ? <small>{o.hint}</small> : null}</span><Ico.chevR size={13} className="c-4" /></div>
                   ))}
                 </div>
@@ -411,7 +412,6 @@ function BuiltinCard({ n, k, side, draft, clean, live, mine, open, readOnly, onO
                   <MoneyField key={merged.unitLabel} def={merged} value={Number(def.fallback)} onDone={() => {}} />
                 </div>
               )}
-              {k === "county" ? <p className={s.previewNote}>And the rest of Georgia&apos;s 159 counties.</p> : null}
             </div>
           </div>
         </div>

@@ -1,4 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { cleanPlan } from "./saved-plan";
+import { ALLOWED_META, sanitise } from "./telemetry";
 import { ASKS, parseAnswers } from "./asks";
 import type { InputKey } from "./values";
 import {
@@ -83,6 +87,27 @@ describe("custom questions feed nothing (rule 5)", () => {
   it("an answer to one is never a compute answer", () => {
     const a = cleanCustomAnswers([custom()], { x_abc123: "a", price: 900000 });
     expect(a).toEqual([{ key: "x_abc123", question: "How did you hear about Kaleb?", answer: "a", label: "A friend" }]);
+  });
+});
+
+describe("custom answers cannot reach a figure, by construction", () => {
+  const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
+
+  it("nothing that computes imports the wording or its answers", () => {
+    for (const f of ["lib/core/compute.ts", "lib/core/asks.ts", "lib/core/values.ts", "lib/core/afford.ts", "lib/core/assistance.ts", "lib/core/saved-plan.ts"]) {
+      expect(read(f), `${f} must not know about the agent's own questions`).not.toMatch(/from\s+"[^"]*question-wording"|rift_custom_answers|custom_answers/);
+    }
+  });
+
+  it("the plan a visitor saves never carries one, even if one is sent as an answer", () => {
+    const plan = cleanPlan({ side: "buy", values: [], answers: { price: 300000, x_abc123: "a", custom: { x_abc123: "a" } } });
+    expect(JSON.stringify(plan)).not.toContain("x_abc123");
+    expect(Object.keys(plan.answers)).toEqual(["price"]);
+  });
+
+  it("telemetry refuses every key a custom answer could ride on", () => {
+    expect(ALLOWED_META as readonly string[]).not.toContain("answer");
+    expect(sanitise({ tool: "cash", x_abc123: "a", answer: "Online" })).toEqual({ tool: "cash" });
   });
 });
 
