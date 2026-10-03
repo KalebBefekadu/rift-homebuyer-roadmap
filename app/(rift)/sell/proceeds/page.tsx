@@ -4,6 +4,7 @@ import { sellerNet } from "@/lib/core/seller";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { ProceedsFlow } from "@/components/rift/value/artifacts";
@@ -27,13 +28,15 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("proceeds")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="sell" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="sell" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -57,7 +60,7 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
         sentence={sentence}
         art={<ProceedsFlow price={price} net={r.net} parts={[{ label: "Loan payoff", amount: payoff }, ...r.costs.lines.map((l) => ({ label: l.short, amount: l.amount }))]} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
 
       {!r.costs.commissionKnown ? (
         <p className="t-sm c-2 mt-3 measure row-t gap-2" style={{ lineHeight: 1.6 }}>
@@ -82,6 +85,7 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
       <WorkedOut assumptions={r.assumptions} couldBeWrong={r.couldBeWrong} />
 
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: underwater ? `${money(r.shortfall)} short` : money(r.net), href: `${def.href}?${answersToQuery(a, def.asks)}` }}

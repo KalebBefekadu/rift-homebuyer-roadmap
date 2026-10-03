@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
-import { ASK_SHORT, answerLabel, answersToQuery, type Answers } from "@/lib/core/asks";
+import { ASK_SHORT, answerLabel, answersToQuery, type Answers, type AskDef } from "@/lib/core/asks";
 import type { Assumption } from "@/lib/core/compute";
 import type { InputKey, ValueDef } from "@/lib/core/values";
 
@@ -44,16 +44,16 @@ export function AnswerHead({ def, figure, sentence, art, tone }: {
   );
 }
 
-/** What the answer used, each with a way to change it. */
-export function BasedOn({ def, answers }: { def: ValueDef; answers: Answers }) {
+/** What the answer used, each with a way to change it, in the published words. */
+export function BasedOn({ def, answers, defs }: { def: ValueDef; answers: Answers; defs?: Partial<Record<InputKey, AskDef>> }) {
   const q = answersToQuery(answers, def.asks);
   return (
     <div className="row wrap gap-2 mt-4" aria-label="Based on your answers">
       <span className="t-sm c-4">Based on</span>
       {def.asks.map((k: InputKey) => (
         <Link key={k} href={`${def.href}?${q}&ask=${k}`} className="chip" style={{ height: 28, padding: "0 10px", fontSize: 12.5 }}
-          aria-label={`${ASK_SHORT[k]}: ${answerLabel(k, answers[k])}. Change it`}>
-          <span className="c-4">{ASK_SHORT[k]}</span> {answerLabel(k, answers[k])}
+          aria-label={`${ASK_SHORT[k]}: ${answerLabel(k, answers[k], defs?.[k])}. Change it`}>
+          <span className="c-4">{ASK_SHORT[k]}</span> {answerLabel(k, answers[k], defs?.[k])}
           <Ico.chevD size={11} className="c-4" />
         </Link>
       ))}

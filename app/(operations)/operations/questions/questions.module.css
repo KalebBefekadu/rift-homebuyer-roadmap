@@ -1,0 +1,106 @@
+/* Questions (D37): each question a card, an inline editor with the visitor's
+   view beside it, one bar that says what is not yet published. Tokens only;
+   the page kit's classes do the headers, notices and tabs. */
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+
+.list { display: grid; gap: 10px; }
+
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+.card[data-open="true"] { border-color: var(--ink-5); box-shadow: var(--sh-2); }
+.card[data-off="true"] .title { color: var(--ink-4); }
+
+.head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+.headText { min-width: 0; flex: 1; }
+.num { font-size: 11.5px; color: var(--ink-4); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+.title { font-size: 14.5px; font-weight: 600; line-height: 1.4; color: var(--ink); letter-spacing: -0.008em; }
+.why { margin-top: 3px; font-size: 13px; line-height: 1.55; color: var(--ink-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.choice { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: var(--sunk); border: 1px solid var(--line-2); color: var(--ink-2); }
+.choice span { color: var(--ink-4); }
+.meta { margin-top: 8px; font-size: 12px; color: var(--ink-4); line-height: 1.5; }
+.meta strong { color: var(--ink-3); font-weight: 550; }
+.headActions { display: flex; align-items: center; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+
+.state { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 550; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--ink-3); background: var(--canvas); white-space: nowrap; }
+.stateEdited { color: var(--warn); background: var(--warn-wash); border-color: var(--warn-line); }
+.stateMine { color: var(--pos); background: var(--pos-wash); border-color: var(--pos-line); }
+.stateOff { color: var(--ink-3); background: var(--sunk); }
+
+.editor { border-top: 1px solid var(--line-2); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); }
+.fields { padding: 16px; display: grid; gap: 14px; align-content: start; }
+.fieldHint { display: block; margin-top: 4px; font-size: 12px; color: var(--ink-4); line-height: 1.45; }
+.textarea { min-height: 64px; }
+
+.opts { display: grid; gap: 6px; }
+.optRow { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.sends { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ink-4); white-space: nowrap; }
+.optRowCustom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+
+.fixed { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: var(--sunk); border: 1px solid var(--line-2); font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.fixed strong { color: var(--ink-2); font-weight: 600; }
+.fixed svg { flex: none; margin-top: 2px; color: var(--ink-4); }
+
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.check { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; background: var(--paper); cursor: pointer; }
+.check[data-on="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+
+.seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunk); border: 1px solid var(--line-2); border-radius: 9px; }
+.segBtn { height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; color: var(--ink-3); }
+.segBtn[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1), 0 0 0 1px var(--line-2); }
+
+.editActions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* The visitor's view: the public site's type and spacing, on its canvas. */
+.preview { padding: 16px; background: var(--canvas); border-left: 1px solid var(--line-2); border-radius: 0 0 var(--r) 0; font-family: Switzer, "Helvetica Neue", -apple-system, system-ui, sans-serif; }
+.previewLabel { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+.previewTitle { font-size: 24px; line-height: 1.15; letter-spacing: -0.02em; text-align: center; }
+.previewWhy { margin-top: 8px; font-size: 13.5px; line-height: 1.55; color: var(--ink-3); text-align: center; }
+.previewOpts { display: grid; gap: 6px; margin-top: 16px; }
+.previewOpts2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.previewOpt { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); font-size: 14px; font-weight: 550; text-align: left; }
+.previewOpt small { display: block; font-size: 11.5px; font-weight: 400; color: var(--ink-4); margin-top: 1px; }
+.previewMoney { margin-top: 16px; }
+.previewSaved { padding: 14px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); }
+.previewNote { margin-top: 10px; font-size: 12px; color: var(--ink-4); line-height: 1.5; }
+
+.add { width: 100%; justify-content: center; border-style: dashed; }
+
+/* What is not published yet: always in view while there is any. */
+.bar { position: sticky; bottom: 12px; z-index: 4; margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px 10px 16px; background: var(--ink); color: #fff; border-radius: var(--r); box-shadow: var(--sh-3); }
+.barText { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 550; }
+.barActions { display: flex; gap: 6px; flex-wrap: wrap; }
+.barGhost { background: transparent; color: rgba(255, 255, 255, 0.78); border: 1px solid rgba(255, 255, 255, 0.24); }
+.barGhost:hover { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+.barMain { background: #fff; color: var(--ink); }
+
+.diff { display: grid; gap: 0; }
+.diffRow { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line-3); font-size: 13px; }
+.diffRow:last-child { border-bottom: 0; }
+.diffQ { color: var(--ink-2); font-weight: 550; line-height: 1.45; }
+.diffWhat { font-size: 12px; color: var(--ink-4); margin-top: 2px; }
+.diffChange { line-height: 1.5; display: grid; gap: 3px; }
+.from { color: var(--ink-4); text-decoration: line-through; text-decoration-color: var(--ink-5); }
+.to { color: var(--ink); }
+.publish { display: grid; gap: 12px; padding: 14px; border-top: 1px solid var(--line-2); }
+.errors { margin: 0; padding-left: 18px; font-size: 13px; color: var(--neg); line-height: 1.6; }
+
+/* The table scrolls inside its card. Positioned, so the screen-reader-only header
+   (absolutely placed) is contained by it and cannot widen the page on a phone. */
+.tableCard { position: relative; overflow-x: auto; }
+
+/* Long on a phone: who published it must wrap, not be cut off. */
+.liveChip { height: auto; min-height: 24px; padding-top: 3px; padding-bottom: 3px; white-space: normal; line-height: 1.4; }
+
+@media (max-width: 860px) {
+  .editor { grid-template-columns: minmax(0, 1fr); }
+  .preview { border-left: 0; border-top: 1px solid var(--line-2); border-radius: 0 0 var(--r) var(--r); }
+  .diffRow { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+@media (max-width: 560px) {
+  .head { flex-direction: column; }
+  .headActions { justify-content: flex-start; }
+  .optRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sends { grid-column: 1 / -1; }
+  .previewOpts2 { grid-template-columns: minmax(0, 1fr); }
+}
