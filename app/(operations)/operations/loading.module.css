@@ -1,0 +1,10 @@
+/* The shape of an Operations page while it loads: a title, a row of figures and a card. */
+.bar { display: block; border-radius: 6px; background: var(--line-2); animation: pulse 1.4s ease-in-out infinite; }
+.title { width: 160px; height: 26px; }
+.lede { width: min(520px, 90%); height: 14px; margin-top: 12px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 24px; }
+.stat { height: 92px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); padding: 16px; }
+.card { margin-top: 32px; border-radius: var(--r); border: 1px solid var(--line); background: var(--paper); padding: 16px; display: grid; gap: 14px; }
+.line { height: 14px; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .bar { animation: none; } }
