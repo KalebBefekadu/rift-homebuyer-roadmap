@@ -1,8 +1,8 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedRead, boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
-import { SLUG, cleanRecipe, liveVersion, recipeErrors, versionFor, type Publication, type PublicationAction, type Recipe } from "@/lib/core/campaign";
+import { SLUG, cleanRecipe, liveVersion, recipeErrors, tagIsCampaign, versionFor, type Publication, type PublicationAction, type Recipe } from "@/lib/core/campaign";
 import { isUuid } from "@/lib/core/ids";
 
 /**
@@ -144,4 +144,49 @@ export async function publish(campaignId: string, action: PublicationAction, ver
   }), "what is live");
   if (!w.ok) return /duplicate key/.test(w.error) ? done({ live: action === "unpublish" ? null : version }) : w;
   return done({ live: action === "unpublish" ? null : version });
+}
+
+export interface CampaignResult { visitors: number; leads: number }
+
+/**
+ * What each campaign brought in over the last `days`: the browser sessions
+ * whose first visit carried its tag, and the leads those sessions became.
+ * First touch only (rule 7): a visit that arrived another way and later
+ * clicked through is not this campaign's. Keyed by slug.
+ *
+ * Two reads whatever the number of campaigns. Counts are labelled as visits
+ * and leads, never as conversions of anything else, because the tag is all
+ * the page can know.
+ */
+export async function campaignResults(slugs: string[], days = 90): Promise<DbResult<Map<string, CampaignResult>>> {
+  const s = await scope();
+  if (!s.db) return skipped(s.why!);
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const visits = await boundedReport(
+    s.db.from("rift_attributions").select("session_id,first_campaign").eq("agent_id", s.agentId)
+      .not("first_campaign", "is", null).gte("first_at", since).limit(20_000),
+    "the campaign visits",
+  );
+  if (!visits.ok) return visits;
+  const list = rows(visits) as { session_id: string; first_campaign: string }[];
+  const out = new Map<string, CampaignResult>(slugs.map((slug) => [slug, { visitors: 0, leads: 0 }]));
+  const sessionsOf = new Map<string, string>();
+  for (const v of list) {
+    const slug = slugs.find((x) => tagIsCampaign(v.first_campaign, x));
+    if (!slug) continue;
+    out.get(slug)!.visitors += 1;
+    sessionsOf.set(v.session_id, slug);
+  }
+  if (sessionsOf.size) {
+    const leads = await boundedReport(
+      s.db.from("rift_leads").select("session_id").eq("agent_id", s.agentId).in("session_id", [...sessionsOf.keys()].slice(0, 400)).limit(2000),
+      "the campaign leads",
+    );
+    if (!leads.ok) return leads;
+    for (const l of rows(leads) as { session_id: string }[]) {
+      const slug = sessionsOf.get(l.session_id);
+      if (slug) out.get(slug)!.leads += 1;
+    }
+  }
+  return done(out);
 }
