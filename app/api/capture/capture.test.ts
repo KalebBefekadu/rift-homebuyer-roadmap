@@ -88,3 +88,37 @@ describe("POST /api/capture: the readout email", () => {
     expect(sent).not.toContain("<");
   });
 });
+
+describe("POST /api/capture: an Equb seat request", () => {
+  const seat = (over: Record<string, unknown> = {}) => ({
+    name: "Hana",
+    lead: { side: "buy", timing: "3 to 9 months", source: "equb", note: "Equb seat request · household of 4", value: 350_000 },
+    ...over,
+  });
+
+  it("is stored with its source, timing and note for the agent", async () => {
+    const res = await post(seat());
+    expect((await res.json()).stored).toBe(true);
+    expect(seen.captured[0]!.lead).toMatchObject({
+      side: "buy", timing: "3 to 9 months", source: "equb", note: "Equb seat request · household of 4", value: 350_000,
+    });
+  });
+
+  it("clamps a note a stranger made enormous, and ignores one that is not text", async () => {
+    await post(seat({ lead: { side: "buy", source: "equb", note: "x".repeat(5_000) } }));
+    expect(String((seen.captured[0]!.lead as { note: string }).note).length).toBe(300);
+    await post(seat({ lead: { side: "buy", source: "equb", note: { not: "text" } } }));
+    expect("note" in (seen.captured[1]!.lead as object)).toBe(false);
+  });
+
+  it("will not store a phone number without the consent box, even from this page", async () => {
+    const res = await post(seat({ email: "", phone: "4045550100", phoneConsent: false }));
+    expect(res.status).toBe(400);
+    expect(seen.captured).toEqual([]);
+  });
+
+  it("needs a way to reach the person", async () => {
+    const res = await post(seat({ email: "", phone: "" }));
+    expect(res.status).toBe(400);
+  });
+});

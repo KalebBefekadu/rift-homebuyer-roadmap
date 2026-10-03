@@ -32,6 +32,13 @@ export interface LeadInput {
   contactable: boolean;
   /** Where they came from. */
   source: string;
+  /**
+   * What they told us that the scorer has no field for, in one line: an Equb
+   * seat request's household size and language, say. Shown to the agent beside
+   * the score and never scored: a free-text line cannot be allowed to move a
+   * ranking nobody can audit.
+   */
+  note?: string;
 }
 
 export interface Signal {
@@ -83,6 +90,8 @@ export function scoreLead(l: LeadInput): LeadScore {
     points: timingPts,
     note: l.timing || "Not answered",
   });
+
+  if (l.note) signals.push({ label: "In their request", points: 0, note: l.note });
 
   /* Readiness: can they actually transact when they say they want to. */
   const readyPts =
