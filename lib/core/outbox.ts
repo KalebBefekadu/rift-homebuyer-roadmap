@@ -67,6 +67,40 @@ export interface OutboxEvent { state: OutboxState; at: string; by: string; hash:
 export const currentState = (events: OutboxEvent[]): OutboxState =>
   [...events].sort((a, b) => a.at.localeCompare(b.at)).at(-1)?.state ?? "prepared";
 
+/**
+ * Why an approved message did not go, when the last check held it back.
+ *
+ * The reason is recorded on the approval step ("Held back: ..."), because
+ * that is the only step a held send writes, and it used to be shown only for
+ * failed and unknown messages. An approved message therefore read as one the
+ * agent had not got round to sending, and pressing Send hit the same refusal.
+ * Null when the latest step is not an approval, or carries no hold: a hold that
+ * a later step has moved past is history, not a reason.
+ */
+export function heldReason(events: OutboxEvent[]): string | null {
+  const last = [...events].sort((a, b) => a.at.localeCompare(b.at)).at(-1);
+  if (!last || last.state !== "approved") return null;
+  const m = /^Held back:\s*(.+)$/.exec(last.detail ?? "");
+  if (!m) return null;
+  const why = m[1]!.trim();
+  return `${why.charAt(0).toUpperCase()}${why.slice(1)}`;
+}
+
+/**
+ * Which waiting message to deal with first. A message that may have sent comes
+ * before everything because pressing through it sends a second copy; one the
+ * last check refused comes next, because Send meets the same refusal; then
+ * ones that failed, then approved, then fresh drafts. Arrival order put a
+ * "may have sent" between two routine drafts.
+ */
+export function waitingRank(state: OutboxState, held: boolean): number {
+  if (state === "unknown") return 0;
+  if (state === "approved" && held) return 1;
+  if (state === "failed") return 2;
+  if (state === "approved") return 3;
+  return 4;
+}
+
 export interface SendCheck {
   /** The hash of the draft as stored now. */
   hash: string;

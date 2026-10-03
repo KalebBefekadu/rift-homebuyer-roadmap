@@ -29,9 +29,10 @@
 
 import type { Commitment } from "./agenda";
 import type { ContractSummary, DateAttention, Waiting } from "./transactions";
-import { LATE_DAYS, type CadenceDue, type PricingAnswer } from "./seller-cadence";
+import { LATE_DAYS, REVIEW_EVERY_DAYS, STOPPED_DAYS, type CadenceDue, type PricingAnswer } from "./seller-cadence";
 import { activityLine, type Activity as ClientActivity } from "./summary";
 import { daysBetween } from "./day";
+import { relativeDay, spanOf } from "./when";
 
 export type Group = "attention" | "approval" | "today" | "waiting" | "upcoming";
 export const GROUPS: Group[] = ["attention", "approval", "today", "waiting", "upcoming"];
@@ -69,8 +70,8 @@ export interface DeskItem {
   evidence: string | null;
   due: string | null;
   next: string;
-  /** Where the next action is taken. */
-  href: string;
+  /** Where the next action is taken; null when it is done somewhere Rift cannot open (a command, a phone call). */
+  href: string | null;
   tone: Tone;
   /** A contract date is never snoozed. */
   snoozable: boolean;
@@ -87,7 +88,8 @@ export interface DeskInput {
   waiting: Waiting[];
   commitments: Commitment[];
   touches: { leadId: string; name: string; says: string; channel: string; daysLate: number }[];
-  outbox: { id: string; state: "prepared" | "approved" | "failed" | "unknown"; subject: string; to: string }[];
+  /** `held` is why the last check refused an approved message (lib/core/outbox.ts heldReason), or null. */
+  outbox: { id: string; state: "prepared" | "approved" | "failed" | "unknown"; subject: string; to: string; held?: string | null }[];
   programFlags: string[];
   /** Records nobody re-verified in time, and who owns re-verifying them (a setting). */
   programsWithheld: { names: string[]; owner: string; withinDays: number };
@@ -106,6 +108,7 @@ export interface DeskInput {
 
 const daysFrom = daysBetween;
 const short = (day: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
+const md = (day: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`));
 const lead = (id: string, label: string) => ({ label, href: `/operations/lead/${id}` });
 const journey = (id: string, label: string) => ({ label, href: `/operations/journey/${id}` });
 
@@ -116,18 +119,40 @@ export function deskItems(input: DeskInput): DeskItem[] {
 
   /* A seller asking to talk about the price is asking the agent for something. */
   for (const a of (input.pricingAnswers ?? []).filter((x) => x.response === "discuss")) {
-    push({ key: `sale-discuss:${a.journeyId}:${a.version}`, group: "approval", title: `${a.by} wants to talk about the price`, why: `Their answer to pricing version ${a.version}, from their page`, owner: me, about: journey(a.journeyId, `${a.person}, ${a.label}`), evidence: a.note ? `“${a.note}”` : null, due: null, next: "Talk it through; a new pricing version answers it", href: `/operations/journey/${a.journeyId}?tab=pricing`, tone: "warn", order: 6 });
+    push({ key: `sale-discuss:${a.journeyId}:${a.version}`, group: "approval", title: `${a.by} wants to talk about the price`, why: `Their answer to pricing version ${a.version}, from their page`, owner: me, about: journey(a.journeyId, `${a.person}, ${a.label}`), evidence: a.note ? `“${a.note}”` : null, due: null, next: "Talk it through; a new pricing version answers it", href: `/operations/journey/${a.journeyId}?tab=pricing`, tone: "warn", order: 2 });
   }
 
   /* A sale's promised reviews: due today, or a whole cycle missed. */
   for (const d of input.sales ?? []) {
     const missed = d.late >= LATE_DAYS;
+    /* Four cycles behind is not "late", it has stopped, and "40 days ago"
+       says nothing a person can act on. Worded as the decision it is. */
+    const stopped = d.late >= STOPPED_DAYS;
     const about = journey(d.journeyId, `${d.person}, ${d.label}`);
-    const evidence = d.late ? `Due ${short(d.due)}, ${d.late} day${d.late === 1 ? "" : "s"} ago` : "Due today";
+    const lateness = d.late ? `Due ${relativeDay(-d.late)}, ${md(d.due)}` : "Due today";
     if (d.kind === "weekly-review") {
-      push({ key: `sale-week:${d.journeyId}:${d.due}`, group: missed ? "attention" : "today", title: `Weekly review: ${d.label}`, why: "The listing is live, and the seller hears from you every week", owner: me, about, evidence, due: d.due, next: "Record the week's numbers, and ask whether to keep or change course", href: `/operations/journey/${d.journeyId}?tab=listing`, tone: missed ? "neg" : "warn", order: 20 - d.late });
+      /* Names the listing it is about. A label like "Selling 1402 Briarcliff
+         Rd" is the sale; the MLS record is the thing the seller is being
+         told about, and a relist or a second home is told apart by it. */
+      const l = d.listing;
+      const evidence = l
+        ? `${l.detail}, live since ${md(l.liveOn)}; ${l.lastReviewOn ? `last reviewed ${md(l.lastReviewOn)}` : "not reviewed yet"}`
+        : lateness;
+      push({
+        key: `sale-week:${d.journeyId}:${d.due}`, group: missed ? "attention" : "today",
+        title: stopped ? `No weekly review for ${spanOf(d.late + REVIEW_EVERY_DAYS)}: ${d.label}` : `Weekly review: ${d.label}`,
+        why: stopped ? "The listing is live and the seller is owed a review every week" : `The listing is live, and the seller hears from you every week. ${lateness}`,
+        owner: me, about, evidence, due: null,
+        next: stopped ? "Record this week's numbers, or withdraw the listing if it is no longer being marketed" : "Record the week's numbers, and ask whether to keep or change course",
+        href: `/operations/journey/${d.journeyId}?tab=listing`, tone: missed ? "neg" : "warn", order: 20 - d.late,
+      });
     } else {
-      push({ key: `sale-price:${d.journeyId}:${d.version ?? 0}`, group: missed ? "attention" : "today", title: `Review pricing with ${d.person}`, why: `The day pricing version ${d.version} said it would be reviewed with them`, owner: me, about, evidence, due: d.due, next: "Go through it with them, then record the next version with its own review day", href: `/operations/journey/${d.journeyId}?tab=pricing`, tone: missed ? "neg" : "warn", order: 20 - d.late });
+      push({
+        key: `sale-price:${d.journeyId}:${d.version ?? 0}`, group: missed ? "attention" : "today", title: `Review pricing with ${d.person}`,
+        why: `The day pricing version ${d.version} said it would be reviewed with them`, owner: me, about, evidence: lateness, due: null,
+        next: "Go through it with them, then record the next version with its own review day",
+        href: `/operations/journey/${d.journeyId}?tab=pricing`, tone: missed ? "neg" : "warn", order: 20 - d.late,
+      });
     }
   }
 
@@ -136,19 +161,20 @@ export function deskItems(input: DeskInput): DeskItem[] {
     const about = journey(d.journeyId, `${d.person}, ${d.address}`);
     const base = { key: `date:${d.deadlineId}`, owner: me, about, href: `/operations/journey/${d.journeyId}?tab=contract`, snoozable: false };
     if (d.why === "missed") {
-      push({ ...base, group: "attention", title: `${d.label} passed`, why: "Contract date, not recorded as met", evidence: d.when, due: d.when, next: "Record what actually happened: met, extended or released", tone: "neg", order: 0 });
+      push({ ...base, group: "attention", title: `Passed: ${d.label} for ${d.person}`, why: "Contract date, not recorded as met", evidence: `Passed ${relativeDay(d.days ?? -1)}`, due: d.when, next: "Record what actually happened: met, extended or released", tone: "neg", order: 0 });
     } else if (d.why === "unchecked") {
-      push({ ...base, group: "approval", title: `Check ${d.label} against the contract`, why: "Entered, not yet checked against the document, so the client does not see it", evidence: d.when, due: d.when, next: "Open the document and confirm the date", tone: "warn", order: 10 + (d.days ?? 0) });
+      push({ ...base, group: "approval", title: `Check ${d.label} against the contract`, why: "Entered, not yet checked against the document, so the client does not see it", evidence: null, due: d.when, next: "Open the document and confirm the date", tone: "warn", order: 10 + (d.days ?? 0) });
     } else {
       const today = d.days === 0;
-      push({ ...base, group: today ? "today" : "upcoming", title: d.label, why: "Checked contract date", evidence: d.when, due: d.when, next: "Make sure whoever owns it is on track", tone: today ? "warn" : "none", order: d.days ?? 99 });
+      /* The person is in the title: "Closing" alone, twice, is two rows nobody can tell apart. */
+      push({ ...base, group: today ? "today" : "upcoming", title: `${d.label} for ${d.person}`, why: "Checked contract date", evidence: d.when, due: relativeDay(d.days ?? 0), next: "Make sure whoever owns it is on track", tone: (d.days ?? 99) <= 1 ? "warn" : "none", order: d.days ?? 99 });
     }
   }
 
   for (const c of input.contracts.filter((x) => !x.outcome)) {
     for (const w of c.work.filter((x) => x.state === "blocked")) {
       push({
-        key: `work:${c.id}:${w.workstream}`, group: "attention", title: `${w.label} is blocked`, why: "A workstream on an open contract",
+        key: `work:${c.id}:${w.workstream}`, group: "attention", title: `${w.label} is blocked for ${c.person}`, why: "A workstream on an open contract",
         owner: w.owner === "other" ? w.ownerName ?? "Someone else" : w.owner === "client" ? c.person : me,
         about: journey(c.journeyId, `${c.person}, ${c.address}`), evidence: w.note, due: null,
         next: "Clear the block, or tell the buyer what it means", href: `/operations/journey/${c.journeyId}?tab=contract`, tone: "neg", order: 1,
@@ -157,13 +183,18 @@ export function deskItems(input: DeskInput): DeskItem[] {
   }
 
   for (const p of input.jobProblems) {
-    push({ key: `job:${p.slice(0, 40).replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}`, group: "attention", title: "A scheduled job needs you", why: "Rift runs these on its own; nothing is retried by itself", owner: me, about: null, evidence: p, due: null, next: "Check the Vercel cron log and Sentry", href: "/operations", tone: "neg", order: 2 });
+    push({ key: `job:${p.slice(0, 40).replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}`, group: "attention", title: "A scheduled job needs you", why: "Rift runs these on its own; nothing is retried by itself", owner: me, about: null, evidence: p, due: null, next: "Check the Vercel cron log and Sentry", href: "/operations/settings#todo", tone: "neg", order: 2 });
   }
 
   for (const m of input.outbox) {
     const about = { label: m.to, href: "/operations/outbox" };
     if (m.state === "unknown") {
       push({ key: `outbox:${m.id}`, group: "attention", title: `May have sent: ${m.subject}`, why: "The provider did not confirm it", owner: me, about, evidence: null, due: null, next: "Check whether it arrived before sending again", href: "/operations/outbox", tone: "neg", order: 3 });
+    } else if (m.held) {
+      /* Approved and then refused at the last check. It is not waiting for
+         a click: sending it again meets the same refusal, so it needs a look
+         at what changed, and the reason is the evidence. */
+      push({ key: `outbox:${m.id}`, group: "attention", title: `Held back: ${m.subject}`, why: "Approved, then stopped by the last check before sending", owner: me, about, evidence: m.held, due: null, next: "Read what changed, then send or discard", href: "/operations/outbox", tone: "warn", order: 3 });
     } else {
       push({ key: `outbox:${m.id}`, group: "approval", title: m.subject, why: m.state === "failed" ? "Did not send; waiting for you to try again or discard" : m.state === "approved" ? "Approved, not sent yet" : "Prepared, not sent (D04)", owner: me, about, evidence: null, due: null, next: m.state === "prepared" ? "Send, edit or discard" : "Send or discard", href: "/operations/outbox", tone: m.state === "failed" ? "warn" : "none", order: 20 });
     }
@@ -183,7 +214,7 @@ export function deskItems(input: DeskInput): DeskItem[] {
   }
 
   for (const c of input.choices) {
-    push({ key: `choice:${c.leadId}`, group: "approval", title: `${c.name} chose ${c.from}`, why: "A seller chose an offer from their plan page; a choice is not an acceptance", owner: me, about: lead(c.leadId, c.name), evidence: c.note ? `“${c.note}”` : null, due: "Before the buyer's deadline", next: "Prepare the paperwork", href: `/operations/lead/${c.leadId}`, tone: "warn", order: 5 });
+    push({ key: `choice:${c.leadId}`, group: "approval", title: `${c.name} chose ${c.from}`, why: "A seller chose an offer from their plan page; a choice is not an acceptance", owner: me, about: lead(c.leadId, c.name), evidence: c.note ? `“${c.note}”` : null, due: "Before the buyer's deadline", next: "Prepare the paperwork", href: `/operations/lead/${c.leadId}`, tone: "warn", order: 1 });
   }
 
   for (const l of input.lapsing) {
@@ -191,7 +222,7 @@ export function deskItems(input: DeskInput): DeskItem[] {
   }
 
   if (input.rate.stale) {
-    push({ key: "rate:stale", group: "attention", title: `The rate everyone is shown is ${input.rate.pct.toFixed(2)}%`, why: "Every monthly figure depends on it", owner: me, about: null, evidence: input.rate.age, due: null, next: "Record this week's rate: npm run rift:rate -- 6.72", href: "/operations", tone: "warn", order: 8 });
+    push({ key: "rate:stale", group: "attention", title: `The rate everyone is shown is ${input.rate.pct.toFixed(2)}%`, why: "Every monthly figure depends on it", owner: me, about: null, evidence: input.rate.age, due: null, next: "Record this week's rate with npm run rift:rate -- <rate>; there is no screen for it yet", href: null, tone: "warn", order: 8 });
   }
 
   for (const c of input.commitments) {
@@ -223,7 +254,7 @@ export function deskItems(input: DeskInput): DeskItem[] {
   for (const w of input.waiting) {
     const days = daysFrom(input.today, w.checkIn);
     push({
-      key: `work:${w.transactionId}:${w.workstream}`, group: "waiting", title: w.label, why: w.stale ? "No word for a week or more" : `With ${w.on}`,
+      key: `work:${w.transactionId}:${w.workstream}`, group: "waiting", title: `${w.label} for ${w.person}`, why: w.stale ? "No word for a week or more" : `With ${w.on}`,
       owner: w.on, about: journey(w.journeyId, `${w.person}, ${w.address}`),
       evidence: w.lastWord ? `Last word ${short(w.lastWord.on)} from ${w.lastWord.from}` : "No word yet",
       due: days <= 0 ? "Check in today" : `Check in ${short(w.checkIn)}`,
@@ -233,6 +264,26 @@ export function deskItems(input: DeskInput): DeskItem[] {
   }
 
   return out;
+}
+
+/**
+ * The one sentence at the top of Today: is the day calm or on fire, and where
+ * to start. Counts only; it names no item, so it can never disagree with the
+ * groups below it. Null when nothing needs anyone, so the page says so in its
+ * own words rather than this inventing a reassurance.
+ */
+export function deskHeadline(c: { waiting: number; late: number; attention: number; approval: number; today: number }): string | null {
+  const parts: string[] = [];
+  if (c.waiting) {
+    parts.push(`${c.waiting} new ${c.waiting === 1 ? "lead is" : "leads are"} waiting for a first reply${c.late ? `, ${c.late} past the target` : ""}`);
+  }
+  if (c.attention) parts.push(`${c.attention} ${c.attention === 1 ? "thing needs" : "things need"} attention`);
+  if (c.approval) parts.push(`${c.approval} ${c.approval === 1 ? "needs" : "need"} your approval`);
+  if (c.today) parts.push(`${c.today} ${c.today === 1 ? "is" : "are"} due today`);
+  if (!parts.length) return null;
+  const last = parts.pop()!;
+  const head = parts.length ? `${parts.join("; ")}; and ${last}` : last;
+  return `${head.charAt(0).toUpperCase()}${head.slice(1)}.`;
 }
 
 /* ------------------------------------------------------------------ *

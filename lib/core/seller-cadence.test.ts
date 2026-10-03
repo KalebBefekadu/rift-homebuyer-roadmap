@@ -38,6 +38,15 @@ describe("what a sale owes the agent on a schedule (S04, S09)", () => {
     expect(cadenceDue([{ ...s, stage: null }], "2026-09-28")).toHaveLength(2);
   });
 
+  it("leaves the pricing review to the offers once the sale is at Review offers, and keeps the weekly one, naming the listing", () => {
+    const s = sale({ stage: "offers", latestOpinion: { version: 2, reviewOn: "2026-09-14" }, lastReviewAt: "2026-09-17T20:00:00Z" });
+    const due = cadenceDue([s], "2026-09-28");
+    expect(due.map((d) => d.kind)).toEqual(["weekly-review"]);
+    expect(due[0]?.listing).toEqual({ detail: "x", liveOn: "2026-09-10", lastReviewOn: "2026-09-17", url: "https://example.com/l" });
+    /* Still owed while marketing, at any stage before offers. */
+    expect(cadenceDue([{ ...s, stage: "market" }], "2026-09-28").map((d) => d.kind).sort()).toEqual(["pricing-review", "weekly-review"]);
+  });
+
   it("uses Georgia's day: a listing live at 9pm counts from that evening, not the next day", () => {
     /* 01:00 UTC on 11 Sep is 9pm on 10 Sep in Atlanta. */
     const [d] = cadenceDue([sale({ listing: [ev("mls-live", "2026-09-11T01:00:00Z")] })], "2026-09-17");

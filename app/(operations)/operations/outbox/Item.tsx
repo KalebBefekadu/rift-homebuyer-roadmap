@@ -2,8 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Ico } from "@/components/rift/icons";
 import { outboxAction } from "./actions";
 import type { Notice } from "./notice";
+import { Tag, type TagTone } from "../_business/Tag";
+import s from "./outbox.module.css";
 
 /**
  * One message waiting in the outbox, with what each button did said under it.
@@ -14,25 +17,32 @@ import type { Notice } from "./notice";
  * approving sends the prepared words, not what is in the box: with the box
  * changed, "Approve and send" would send something other than what is on the
  * screen, so it waits until the change is saved as a new draft or put back.
+ *
+ * A stuck message says why in a block of its own, above the words. That is
+ * the failure reason, the "may have sent" warning, or the reason the last check
+ * held an approved message back: without it an approved message reads as one
+ * nobody has got round to sending.
  */
-export function OutboxItem({ id, state, stateLabel, chip, to, leadId, subject, body, problem }: {
+export function OutboxItem({ id, state, stateLabel, tone, to, toName, leadId, subject, body, reason }: {
   id: string;
   state: string;
   stateLabel: string;
-  chip: string;
+  tone: TagTone;
+  /** The address, shown with the name when there is one. */
   to: string;
+  toName: string | null;
   leadId: string | null;
   subject: string;
   body: string;
-  /** The last step's detail when it failed or may have sent. */
-  problem: string | null;
+  /** Why it is stuck: the last step's detail when it failed or may have sent, or the reason a send was held back. */
+  reason: { kind: "failed" | "unknown" | "held"; text: string } | null;
 }) {
-  const [s, setS] = useState(subject);
+  const [sub, setSub] = useState(subject);
   const [b, setB] = useState(body);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [acting, setActing] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const dirty = s !== subject || b !== body;
+  const dirty = sub !== subject || b !== body;
 
   const run = (what: string, ask?: string) => {
     if (ask && !window.confirm(ask)) return;
@@ -40,7 +50,7 @@ export function OutboxItem({ id, state, stateLabel, chip, to, leadId, subject, b
     setActing(what);
     start(async () => {
       try {
-        setNotice(await outboxAction({ id, what, subject: s, body: b }));
+        setNotice(await outboxAction({ id, what, subject: sub, body: b }));
       } catch {
         /* No answer is not "nothing happened" for a send: it may have gone. */
         setNotice({
@@ -55,29 +65,44 @@ export function OutboxItem({ id, state, stateLabel, chip, to, leadId, subject, b
   const busy = (what: string, label: string, doing: string) => (pending && acting === what ? doing : label);
 
   return (
-    <article className="card p-4">
-      <div className="between wrap gap-2">
-        <div className="t-sm">To <strong>{to}</strong>{leadId ? <> · <Link className="u" href={`/operations/lead/${leadId}`}>their record</Link></> : null}</div>
-        <span className={`chip t-2xs ${chip}`}>{stateLabel}</span>
+    <article className={s.item} aria-label={`Message to ${toName ?? to}: ${subject}`}>
+      <div className={s.top}>
+        <div>
+          <div className={s.to}>To <strong>{toName ?? to}</strong>{leadId ? <> · <Link href={`/operations/lead/${leadId}`}>their record</Link></> : null}</div>
+          <div className={s.sub}>{toName ? to : null}</div>
+        </div>
+        <Tag tone={tone}>{stateLabel}</Tag>
       </div>
-      {problem ? <p className="t-xs c-neg mt-1">{problem}</p> : null}
+
+      {reason ? (
+        <div className={`${s.reason} ${reason.kind === "held" ? s.reasonWarn : s.reasonNeg}`} role="note">
+          <Ico.alert size={14} />
+          <span>
+            <b>{reason.kind === "held" ? "Held back at the last check: " : reason.kind === "unknown" ? "Not confirmed: " : "Did not send: "}</b>
+            {reason.text}
+          </span>
+        </div>
+      ) : null}
+
       {state === "unknown" ? (
-        <div className="row gap-2 wrap mt-2">
-          <span className="t-xs c-3">Check the Brevo log, then say what happened. It is not sent again on its own.</span>
-          <button type="button" className="btn btn-g btn-sm" disabled={pending} onClick={() => run("sent")}>{busy("sent", "It was sent", "Recording…")}</button>
-          <button type="button" className="btn btn-g btn-sm" disabled={pending} onClick={() => run("not-sent")}>{busy("not-sent", "It was not sent", "Recording…")}</button>
+        <div className={s.form}>
+          <p className={s.help}>Check the Brevo log, then say what happened. It is not sent again on its own.</p>
+          <div className={s.actions}>
+            <button type="button" className="btn btn-s btn-sm" disabled={pending} onClick={() => run("sent")}>{busy("sent", "It was sent", "Recording…")}</button>
+            <button type="button" className="btn btn-s btn-sm" disabled={pending} onClick={() => run("not-sent")}>{busy("not-sent", "It was not sent", "Recording…")}</button>
+          </div>
         </div>
       ) : (
-        <div className="col gap-2 mt-3">
-          <label className="field"><span className="label">Subject</span>
-            <input className="input" value={s} maxLength={200} onChange={(e) => setS(e.target.value)} disabled={pending} /></label>
-          <label className="field"><span className="label">Message</span>
-            <textarea className="input" rows={9} value={b} maxLength={5000} onChange={(e) => setB(e.target.value)} disabled={pending} /></label>
-          <div className="row gap-2 wrap">
+        <div className={s.form}>
+          <label className={s.field}><span className={s.label}>Subject</span>
+            <input className="input" value={sub} maxLength={200} onChange={(e) => setSub(e.target.value)} disabled={pending} /></label>
+          <label className={s.field}><span className={s.label}>Message</span>
+            <textarea className={`input ${s.body}`} rows={9} value={b} maxLength={5000} onChange={(e) => setB(e.target.value)} disabled={pending} /></label>
+          <div className={s.actions}>
             <button type="button" className="btn btn-p btn-sm" disabled={pending || dirty} onClick={() => run("send")}>
-              {busy("send", "Approve and send as it was prepared", "Sending…")}
+              {busy("send", reason?.kind === "held" ? "Try sending again" : "Approve and send as it was prepared", "Sending…")}
             </button>
-            <button type="button" className="btn btn-g btn-sm" disabled={pending || !dirty || !s.trim() || !b.trim()} onClick={() => run("edit")}>
+            <button type="button" className="btn btn-s btn-sm" disabled={pending || !dirty || !sub.trim() || !b.trim()} onClick={() => run("edit")}>
               {busy("edit", "Save my changes as a new draft", "Saving…")}
             </button>
             <button type="button" className="btn btn-g btn-sm" disabled={pending}
@@ -86,18 +111,18 @@ export function OutboxItem({ id, state, stateLabel, chip, to, leadId, subject, b
             </button>
           </div>
           {dirty ? (
-            <span className="t-2xs c-warn">
+            <span className={`${s.help} ${s.helpWarn}`}>
               You changed the words, so approving waits: save them as a new draft and approve that, or{" "}
-              <button type="button" className="u" disabled={pending} onClick={() => { setS(subject); setB(body); }}>put back what was prepared</button>.
+              <button type="button" className="u" disabled={pending} onClick={() => { setSub(subject); setB(body); }}>put back what was prepared</button>.
             </span>
           ) : (
-            <span className="t-2xs c-4">Approving sends exactly the words above. Change them and save, and the new draft needs its own approval.</span>
+            <span className={s.help}>Approving sends exactly the words above. Change them and save, and the new draft needs its own approval.</span>
           )}
         </div>
       )}
       {notice ? (
-        <p role={notice.ok ? "status" : "alert"} className={`t-xs mt-2 ${notice.ok ? "c-pos" : "c-neg"}`}>
-          {notice.ok ? "✓" : "✕"} {notice.text}
+        <p role={notice.ok ? "status" : "alert"} className={`${s.result} ${notice.ok ? s.resultOk : s.resultBad}`}>
+          {notice.ok ? <Ico.checkCircle size={14} /> : <Ico.alert size={14} />}<span>{notice.text}</span>
         </p>
       ) : null}
     </article>

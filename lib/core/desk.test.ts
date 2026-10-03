@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activity, arrange, deskItems, markError, markOf, type DeskInput, type Mark } from "./desk";
+import { activity, arrange, deskHeadline, deskItems, markError, markOf, type DeskInput, type Mark } from "./desk";
 import { contractFlags, datesNeeding, nextDate, waitingOnOthers, type ContractSummary } from "./transactions";
 import { deadlineView, type Revision } from "./deadline";
 import { workstreamView, WORKSTREAMS, type WorkUpdate } from "./progress";
@@ -119,6 +119,39 @@ describe("a sale's promised reviews on Today (S04, S09)", () => {
     expect(price?.evidence).toContain("10 days ago");
   });
 
+  it("names the listing a weekly review is about, and words a cycle that stopped as a stop", () => {
+    const listing = { detail: "Live on FMLS as #7405561", liveOn: "2026-09-01", lastReviewOn: "2026-09-22", url: null };
+    const items = deskItems(base({
+      sales: [
+        { journeyId: "j1", person: "Sam", label: "Selling 12 Oak St", kind: "weekly-review", due: "2026-09-29", late: 1, listing },
+        { journeyId: "j2", person: "Ann", label: "Selling 3 Elm Rd", kind: "weekly-review", due: "2026-08-10", late: 49, listing: { ...listing, lastReviewOn: null } },
+      ],
+    }));
+    const recent = items.find((i) => i.key.startsWith("sale-week:j1"));
+    expect(recent?.evidence).toBe("Live on FMLS as #7405561, live since Sep 1; last reviewed Sep 22");
+    expect(recent?.why).toContain("Due yesterday");
+    const stopped = items.find((i) => i.key.startsWith("sale-week:j2"));
+    expect(stopped).toMatchObject({ group: "attention", tone: "neg", title: "No weekly review for 8 weeks: Selling 3 Elm Rd" });
+    expect(stopped?.next).toContain("withdraw the listing");
+    expect(stopped?.evidence).toContain("not reviewed yet");
+    /* No raw date and no bare "N days ago" on either. */
+    for (const i of [recent, stopped]) expect([i?.title, i?.why, i?.evidence, i?.due].join(" ")).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+
+  it("puts an approved message the last check refused where the agent will read why", () => {
+    const items = deskItems(base({
+      outbox: [
+        { id: "o1", state: "approved", subject: "DeKalb HomeStart is taking applications", to: "Sofia", held: "They replied after this was approved; read their reply first" },
+        { id: "o2", state: "approved", subject: "Plain approval", to: "Luis", held: null },
+      ],
+    }));
+    expect(items.find((i) => i.key === "outbox:o1")).toMatchObject({
+      group: "attention", tone: "warn", title: "Held back: DeKalb HomeStart is taking applications",
+      evidence: "They replied after this was approved; read their reply first",
+    });
+    expect(items.find((i) => i.key === "outbox:o2")?.group).toBe("approval");
+  });
+
   it("asks the agent to talk when a seller wants to discuss the price, and reports an agreement as news", () => {
     const answers = [
       { journeyId: "j1", person: "Sam", label: "Sale of 12 Oak St", version: 3, response: "discuss" as const, note: "Feels high", by: "Sam", at: "2026-09-28T12:00:00Z" },
@@ -138,6 +171,19 @@ describe("a sale's promised reviews on Today (S04, S09)", () => {
     }, NOW);
     expect(news[0]).toMatchObject({ href: "/operations/journey/j9", auto: false });
     expect(news[0]!.text).toBe("Buying in Decatur: Maya asked to see 4 Pine Ct. Nothing is booked until you arrange it.");
+  });
+});
+
+describe("the sentence at the top of Today", () => {
+  it("counts what is waiting, in the order the agent should look", () => {
+    expect(deskHeadline({ waiting: 13, late: 11, attention: 13, approval: 13, today: 7 }))
+      .toBe("13 new leads are waiting for a first reply, 11 past the target; 13 things need attention; 13 need your approval; and 7 are due today.");
+    expect(deskHeadline({ waiting: 1, late: 0, attention: 0, approval: 0, today: 0 })).toBe("1 new lead is waiting for a first reply.");
+    expect(deskHeadline({ waiting: 0, late: 0, attention: 1, approval: 0, today: 2 })).toBe("1 thing needs attention; and 2 are due today.");
+  });
+
+  it("says nothing when nothing needs anyone", () => {
+    expect(deskHeadline({ waiting: 0, late: 0, attention: 0, approval: 0, today: 0 })).toBeNull();
   });
 });
 

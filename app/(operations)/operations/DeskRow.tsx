@@ -8,12 +8,16 @@ import type { DeskItem, ItemMark, MarkKind, Tone } from "@/lib/core/desk";
 import { markItem } from "./actions";
 import { showTime } from "@/lib/core/day";
 import { newRequestId } from "@/lib/core/ids";
+import { Tag } from "./_business/Tag";
+import s from "./today.module.css";
 
-const TONE: Record<Tone, { chip: string; word: string }> = {
-  neg: { chip: "chip-neg", word: "Urgent" },
-  warn: { chip: "chip-warn", word: "Soon" },
-  pos: { chip: "chip-pos", word: "Set" },
-  none: { chip: "chip-out", word: "Open" },
+/* Every state is an icon and a word (rule 10). An item with nothing wrong with
+   it is the neutral case and carries no tag: a row of identical "Open" tags
+   says nothing, and made the ones that were urgent harder to see. */
+const TONE: Partial<Record<Tone, { tone: "neg" | "warn" | "pos"; word: string }>> = {
+  neg: { tone: "neg", word: "Urgent" },
+  warn: { tone: "warn", word: "Soon" },
+  pos: { tone: "pos", word: "Set" },
 };
 
 const when = (iso: string) => showTime(iso, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -32,6 +36,10 @@ function at(days: number, hour: number) {
  * the evidence, when it is due and the next action, with snooze, pin and
  * delegate (OPS-02). A contract date offers no snooze: the product never
  * hides a date's reminder in a way that could read as moving the date.
+ *
+ * The person it is about has its own line and is never clamped. The meta line
+ * used to be cut to one row, which removed exactly the part that told two
+ * "Title" rows apart.
  */
 export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { mark: ItemMark | null }; agentName: string; marksReady: boolean }) {
   const router = useRouter();
@@ -61,69 +69,75 @@ export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { ma
 
   const m = item.mark;
   return (
-    <li className="desk-row">
-      <div className="row gap-2" style={{ alignItems: "baseline" }}>
-        <span className={`chip t-2xs ${t.chip}`} style={{ flex: "none" }}>{t.word}</span>
-        <Link href={item.href} className="w6" style={{ minWidth: 0 }}>{item.title}</Link>
-        {m?.kind === "pinned" ? <span className="chip t-2xs chip-acc" title={m.reason} style={{ flex: "none" }}><Ico.bolt size={10} />Pinned</span> : null}
+    <li className={s.item}>
+      <div className={s.itemTop}>
+        {t ? <Tag tone={t.tone}>{t.word}</Tag> : null}
+        {m?.kind === "pinned" ? <Tag tone="acc" title={m.reason}>Pinned</Tag> : null}
+        {item.href
+          ? <Link href={item.href} className={s.itemTitle}>{item.title}</Link>
+          : <span className={s.itemTitle}>{item.title}</span>}
       </div>
-      <div className="desk-meta">
-        {item.why}{item.about ? <> · <Link className="u" href={item.about.href}>{item.about.label}</Link></> : null} · {item.owner}{item.due ? ` · ${item.due}` : ""}
+      <div className={s.itemAbout}>
+        {item.about ? <Link href={item.about.href}>{item.about.label}</Link> : null}
+        {item.about ? <span className={s.dot} aria-hidden>·</span> : null}
+        <span>{item.owner}</span>
+        {item.due ? <><span className={s.dot} aria-hidden>·</span><span>{item.due}</span></> : null}
       </div>
-      {item.evidence ? <div className="desk-meta" title={item.evidence}>{item.evidence}</div> : null}
-      {m?.kind === "pinned" ? <div className="desk-meta">Pinned until {when(m.until)}: {m.reason}</div> : null}
-      {m?.kind === "snoozed" ? <div className="desk-meta">Snoozed until {when(m.until)}; {m.owner} picks it up</div> : null}
+      <div className={s.itemWhy}>{item.why}</div>
+      {item.evidence ? <div className={s.itemEvidence}>{item.evidence}</div> : null}
+      {m?.kind === "pinned" ? <div className={s.itemMark}>Pinned until {when(m.until)}: {m.reason}</div> : null}
+      {m?.kind === "snoozed" ? <div className={s.itemMark}>Snoozed until {when(m.until)}; {m.owner} picks it up</div> : null}
       {m?.kind === "delegated" ? (
-        <div className="desk-meta">
-          <span className={`chip t-2xs ${m.accepted ? "chip-pos" : "chip-warn"}`}>{m.accepted ? `Accepted by ${m.to}` : `Delegated to ${m.to}, not accepted yet`}</span>
+        <div className={s.itemMark}>
+          <Tag tone={m.accepted ? "pos" : "warn"}>{m.accepted ? `Accepted by ${m.to}` : `Delegated to ${m.to}, not accepted yet`}</Tag>
         </div>
       ) : null}
-      <div className="between gap-2" style={{ fontSize: 12, marginTop: 2 }}>
-        <span className="trunc" title={item.next}><span className="w6">Next:</span> {item.next}</span>
+      <div className={s.itemFoot}>
+        <span className={s.next}><b>Next:</b> {item.next}</span>
         {marksReady ? (
-          <span className="row gap-2 c-3" style={{ flex: "none" }}>
+          <span className={s.marks}>
             {m ? (
               <>
-                {m.kind === "delegated" && !m.accepted ? <button type="button" className="u" disabled={pending} onClick={() => send("accept", { person: m.to })}>{m.to} accepted</button> : null}
-                <button type="button" className="u" disabled={pending} onClick={() => send("clear")}>{m.kind === "pinned" ? "Unpin" : m.kind === "snoozed" ? "Bring back now" : "Take back"}</button>
+                {m.kind === "delegated" && !m.accepted ? <button type="button" className="btn btn-s btn-sm" disabled={pending} onClick={() => send("accept", { person: m.to })}>{m.to} accepted</button> : null}
+                <button type="button" className="btn btn-s btn-sm" disabled={pending} onClick={() => send("clear")}>{m.kind === "pinned" ? "Unpin" : m.kind === "snoozed" ? "Bring back now" : "Take back"}</button>
               </>
             ) : menu ? (
               <>
                 {item.snoozable
-                  ? <button type="button" className="u" onClick={() => setOpen(open === "snooze" ? null : "snooze")} aria-expanded={open === "snooze"}>Snooze</button>
-                  : <span title="A contract date is never snoozed; record what happened instead" className="c-4">No snooze</span>}
-                <button type="button" className="u" onClick={() => setOpen(open === "delegate" ? null : "delegate")} aria-expanded={open === "delegate"}>Delegate</button>
-                <button type="button" className="u" onClick={() => setOpen(open === "pin" ? null : "pin")} aria-expanded={open === "pin"}>Pin</button>
+                  ? <button type="button" className="btn btn-s btn-sm" onClick={() => setOpen(open === "snooze" ? null : "snooze")} aria-expanded={open === "snooze"}>Snooze</button>
+                  : <span title="A contract date is never snoozed; record what happened instead" className="t-xs c-4" style={{ alignSelf: "center" }}>Dates are not snoozed</span>}
+                <button type="button" className="btn btn-s btn-sm" onClick={() => setOpen(open === "delegate" ? null : "delegate")} aria-expanded={open === "delegate"}>Delegate</button>
+                <button type="button" className="btn btn-s btn-sm" onClick={() => setOpen(open === "pin" ? null : "pin")} aria-expanded={open === "pin"}>Pin</button>
               </>
             ) : (
-              <button type="button" className="u" onClick={() => setMenu(true)} aria-label={`Snooze, delegate or pin: ${item.title}`}>Mark</button>
+              <button type="button" className="btn btn-s btn-sm" onClick={() => setMenu(true)} aria-label={`Snooze, delegate or pin: ${item.title}`}>Mark</button>
             )}
           </span>
         ) : null}
       </div>
 
       {open === "snooze" ? (
-        <form className="desk-form" onSubmit={onSubmit("snooze")}>
+        <form className={s.form} onSubmit={onSubmit("snooze")}>
           <label>Back on <input className="input input-sm" type="datetime-local" name="until" required defaultValue={at(1, 9)} /></label>
           <label>Who picks it up <input className="input input-sm" name="person" required defaultValue={agentName} maxLength={120} /></label>
           <button className="btn btn-p btn-sm" disabled={pending}>Snooze</button>
         </form>
       ) : null}
       {open === "pin" ? (
-        <form className="desk-form" onSubmit={onSubmit("pin")}>
+        <form className={s.form} onSubmit={onSubmit("pin")}>
           <label>Why <input className="input input-sm" name="reason" required maxLength={300} placeholder="Closing this week" /></label>
           <label>Until <input className="input input-sm" type="datetime-local" name="until" required defaultValue={at(7, 17)} /></label>
           <button className="btn btn-p btn-sm" disabled={pending}>Pin</button>
         </form>
       ) : null}
       {open === "delegate" ? (
-        <form className="desk-form" onSubmit={onSubmit("delegate")}>
+        <form className={s.form} onSubmit={onSubmit("delegate")}>
           <label>To <input className="input input-sm" name="person" required maxLength={120} placeholder="Sam, transaction coordinator" /></label>
           <button className="btn btn-p btn-sm" disabled={pending}>Delegate</button>
           <span className="c-4">Shows as not accepted until they say yes.</span>
         </form>
       ) : null}
-      {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 4 }}>{error}</p> : null}
+      {error ? <p role="alert" className={s.error}><Ico.alert size={13} style={{ flex: "none", marginTop: 2 }} />{error}</p> : null}
     </li>
   );
 }
