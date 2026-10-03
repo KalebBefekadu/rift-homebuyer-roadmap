@@ -1,6 +1,7 @@
 import { funnelReport } from "@/lib/db/events";
 import { abandoned } from "@/lib/db/recovery";
 import { BUY_FUNNEL, SELL_FUNNEL } from "@/lib/core/funnel";
+import { valueById } from "@/lib/core/values";
 import { Notice, Empty, Section } from "../ui";
 import { Tag, type TagTone } from "../_business/Tag";
 import k from "../_business/kit.module.css";
@@ -50,7 +51,7 @@ export async function FunnelReports() {
 
       <Section
         title="Started, not finished"
-        hint="Last 30 days. A normal state rather than a failure. Most of these people gave no way to reach them, which is correct: a resume link goes only to somebody who gave an address for that purpose."
+        hint="Last 30 days. People who opened a value, or a retired assessment, and left without an answer or a saved plan. A normal state rather than a failure. Most of these people gave no way to reach them, which is correct: a resume link goes only to somebody who gave an address for that purpose."
       >
         {!partial.ok ? (
           <Notice tone="neg" title="This list did not load">That is not the same as it being empty.</Notice>
@@ -59,11 +60,12 @@ export async function FunnelReports() {
         ) : (
           <div className={k.list}>
             {started.slice(0, 20).map((a) => (
-              <div key={a.assessmentId} className={k.row}>
+              <div key={`${a.sessionId}-${a.tool ?? a.assessmentId}`} className={k.row}>
                 <div className={k.rowMain}>
                   <div className={k.rowTitle}>
                     {a.email ?? "No contact details"}
-                    <Tag>{a.side === "buy" ? "Buyer" : "Seller"}</Tag>
+                    <Tag>{a.side === "buy" ? "Buyer" : a.side === "sell" ? "Seller" : "Buyer abroad"}</Tag>
+                    {a.tool ? <Tag>{valueById(a.tool)?.name ?? a.tool}</Tag> : null}
                     {a.county ? <Tag>{a.county}</Tag> : null}
                   </div>
                   <div className={k.rowSub}>{a.answered} question{a.answered === 1 ? "" : "s"} answered, quiet for {a.hoursSince < 48 ? `${a.hoursSince} hours` : `${Math.floor(a.hoursSince / 24)} days`}</div>

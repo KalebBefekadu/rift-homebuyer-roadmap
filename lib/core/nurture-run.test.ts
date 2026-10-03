@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { runOptions, DEFAULT_MAX_PER_RUN } from "@/lib/core/nurture";
+import { runOptions, DEFAULT_MAX_PER_RUN, SEQUENCES, skipReason } from "@/lib/core/nurture";
 
 /**
  * The nurture cron is the only thing in this product that reaches a person
@@ -204,8 +204,20 @@ describe("the programs step for somebody who matched none", () => {
     expect(planSend).toMatch(/says: copy\?\.says \?\? t\.says[\s\S]{0,400}programs \? \{ programs \}/);
   });
 
-  it("never lists buyers' programs to somebody selling", () => {
-    expect(src).toMatch(/t\.side === "sell" \? \[\] : await matchedPrograms/);
+  it("never lists buyers' programs to somebody selling, or to a buyer abroad", () => {
+    /* Not by a check beside the list: the step is skipped for them in its own
+       definition (n4's `sell` and `abroad`, tested in nurture.test.ts), and
+       the run honours that before it can reach the programs, before it holds
+       a step for the agent, and before it counts anything against the cap. */
+    expect(src).toMatch(/if \(t\.skip\) \{[\s\S]*?skipStep\(t, t\.skip\)[\s\S]*?continue;\s*\}\s*if \(!t\.auto\)/);
+    const n4 = SEQUENCES.flatMap((s) => s.steps).find((x) => x.id === "n4")!;
+    expect(skipReason(n4, "sell")).toMatch(/^Not sent: /);
+    expect(skipReason(n4, "abroad")).toMatch(/^Not sent: /);
+  });
+
+  it("skips a step that does not apply without sending, claiming a send, or spending the cap", () => {
+    const skipBlock = src.slice(src.indexOf("if (t.skip) {"), src.indexOf("if (!t.auto)"));
+    expect(skipBlock).not.toMatch(/sendTouch|sendPlanTouch|sendResume|sent\+\+|plan\.push/);
   });
 });
 

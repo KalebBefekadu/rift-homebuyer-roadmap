@@ -3,6 +3,7 @@ import { clientIp, limited, readJson, visitorSession } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { attachPlan } from "@/lib/db/saved-plan";
 import { sendNewLead, sendSavedPlan } from "@/lib/db/email";
+import { recordSaveEmail } from "@/lib/db/nurture";
 import { currentAgentEmail } from "@/lib/db/service";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { cleanPlan, planSummary } from "@/lib/core/saved-plan";
@@ -73,6 +74,9 @@ export async function POST(req: Request) {
     },
     ip: clientIp(req),
     userAgent: req.headers.get("user-agent") ?? undefined,
+    /* The wording their page was rendered with (D37). Only an id; captureLead
+       keeps the lead if the database does not know it. */
+    questionVersionId: typeof b.wordingVersion === "string" ? b.wordingVersion : null,
   });
 
   if (!r.ok) {
@@ -85,8 +89,9 @@ export async function POST(req: Request) {
 
   const base = siteUrl() ?? "";
   let url: string | null = null;
+  let token: string | null = null;
   const attached = await attachPlan(r.data.id, plan);
-  if (attached.ok && "data" in attached) url = `${base}/saved/${attached.data.token}`;
+  if (attached.ok && "data" in attached) { token = attached.data.token; url = `${base}/saved/${token}`; }
   else if (!attached.ok) captureOpError(new Error(attached.error), { op: "plan.attach" });
 
   /* The instant new-lead alert, as every public capture sends (D07a). */
@@ -113,7 +118,23 @@ export async function POST(req: Request) {
     });
     emailed = sent.ok && !("skipped" in sent);
     if (!sent.ok) captureOpError(new Error(sent.error), { op: "email.plan" });
+
+    /* What became of it, recorded so the day-zero follow-up (which carries
+       the same link) is skipped on a fact and not on an assumption that this
+       email always goes. Three outcomes, kept apart: a switched-off sender
+       and a failure must not read as a send, or somebody is left without
+       their link. A record that cannot be written costs only a duplicate
+       email, so it is reported and the visitor is not told. */
+    const rec = await recordSaveEmail(
+      r.data.id,
+      emailed ? "sent" : sent.ok ? "skipped" : "failed",
+      sent.ok ? ("reason" in sent ? sent.reason : undefined) : sent.error,
+    );
+    if (!rec.ok) captureOpError(new Error(rec.error), { op: "email.planRecord" });
   }
 
-  return NextResponse.json({ ok: true, emailed, url });
+  /* The plan's link is also what answers the agent's own questions after
+     saving (/api/plan/answers): the same credential the page and "delete all
+     of it" already accept, so it grants nothing the person does not hold. */
+  return NextResponse.json({ ok: true, emailed, url, answerWith: token });
 }

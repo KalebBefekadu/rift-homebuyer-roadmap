@@ -1,0 +1,27 @@
+/* The Search list: one row per active search, a grid on a laptop and a stack on a phone. */
+.list, .head { --cols: minmax(0, 1.25fr) 112px minmax(0, 1.5fr) 210px 64px; }
+.list { margin: 0; padding: 0; list-style: none; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); overflow: hidden; }
+.head { display: grid; grid-template-columns: var(--cols); gap: 16px; padding: 9px 16px; background: var(--sunk); border-bottom: 1px solid var(--line-2); font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+.row { display: grid; grid-template-columns: var(--cols); gap: 16px; align-items: start; padding: 14px 16px; border-bottom: 1px solid var(--line-3); color: inherit; }
+.items { margin: 0; padding: 0; list-style: none; }
+.items > li:last-child .row { border-bottom: 0; }
+.row:hover { background: var(--sunk); }
+.who { min-width: 0; }
+.name, .what { display: block; }
+.name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.what { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); overflow-wrap: anywhere; }
+.stage { font-size: 13px; color: var(--ink-2); }
+.next { font-size: 13.5px; color: var(--ink); line-height: 1.45; }
+.age { margin-top: 2px; font-size: 12.5px; color: var(--ink-4); }
+.go { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+.row:hover .go { color: var(--ink); }
+.status { display: inline-flex; align-items: center; gap: 5px; min-height: 22px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--line-2); background: var(--sunk); color: var(--ink-3); line-height: 1.3; }
+.status[data-tone="warn"] { color: var(--warn); background: var(--warn-wash); border-color: var(--warn-line); }
+.status[data-tone="pos"] { color: var(--pos); background: var(--pos-wash); border-color: var(--pos-line); }
+.label { display: none; }
+
+@media (max-width: 860px) {
+  .head { display: none; }
+  .row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .label { display: inline; color: var(--ink-4); font-size: 12px; margin-right: 6px; }
+}

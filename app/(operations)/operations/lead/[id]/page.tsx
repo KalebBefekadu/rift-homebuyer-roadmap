@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../../Unavailable";
@@ -15,7 +14,19 @@ import { Decisions } from "./Decisions";
 import { Referral } from "./Referral";
 import { offersFor } from "@/lib/db/offers";
 import { siteUrl } from "@/lib/core/site";
-import { Record as ClientRecord } from "./Record";
+import { Actions } from "./Record";
+import { Contact, Details } from "./Rail";
+import { History } from "./History";
+import { Wants } from "./Wants";
+import { backgroundOf } from "@/lib/db/lead-background";
+import { lastContacts } from "@/lib/db/clients";
+import { ArchiveBox } from "./Record";
+import { STALL_CHIP } from "@/lib/core/pipeline";
+import { BAND_LABEL } from "@/lib/core/lead";
+import { ago, bandIsLive, sourceLabel } from "@/lib/core/people";
+import { Ico } from "@/components/rift/icons";
+import { PageHead, Section, Notice } from "../../ui";
+import css from "./record.module.css";
 import { Plan } from "./Plan";
 import { Offers } from "./Offers";
 import { Take } from "./Take";
@@ -26,7 +37,8 @@ import { STATUS_LABEL } from "@/lib/core/search";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { Journeys, type JourneySummary } from "./Journeys";
 import { savedPlanFor } from "@/lib/db/saved-plan";
-import { SavedPlan } from "./SavedPlan";
+import { leadQuestions } from "@/lib/db/questions";
+import { TheirAnswers } from "./TheirAnswers";
 import { isUuid } from "@/lib/core/ids";
 import type { DbResult } from "@/lib/db/result";
 
@@ -37,10 +49,12 @@ export const dynamic = "force-dynamic";
  * One person.
  *
  * The screen the agent is actually on while the phone is ringing, so it is
- * ordered by what he needs in that moment: who they are and how to reach them,
- * where they are and how long they have been there, then everything that has
- * ever been said: newest first, because the last conversation is the one he
- * is continuing.
+ * ordered by what he needs in that moment: who they are and where they are,
+ * what is owed next and a place to write down what just happened, then what
+ * they want and can afford, the working panels, and last the history, newest
+ * first because the last conversation is the one he is continuing. Reference
+ * facts (how to reach them, consent, details) sit in a rail beside the main
+ * column and fall below it on a phone.
  */
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await agentSession();
@@ -59,21 +73,18 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   if (!read.ok) {
     return (
       <main className="shell-w">
-        <h1 className="serif" style={{ fontSize: 26 }}>This record could not be loaded.</h1>
-        <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 560 }}>
-          The database did not answer. Nothing has been lost. This is a read, and the record is
-          still there. It has been reported, and the error was: {read.error}
-        </p>
-        <Link href="/operations" className="btn btn-p" style={{ marginTop: 18 }}>Back to Operations</Link>
+        <PageHead back={{ href: "/operations/clients", label: "Relationships" }} title="This record could not be loaded" />
+        <Notice tone="neg" title="The database did not answer">
+          Nothing has been lost: this is a read, and the record is still there. The error was: {read.error}
+        </Notice>
       </main>
     );
   }
   if ("skipped" in read) {
     return (
       <main className="shell-w">
-        <h1 className="serif" style={{ fontSize: 26 }}>Not available yet.</h1>
-        <p className="t-sm c-3" style={{ marginTop: 10 }}>{read.reason}</p>
-        <Link href="/operations" className="btn btn-p" style={{ marginTop: 18 }}>Back to Operations</Link>
+        <PageHead back={{ href: "/operations/clients", label: "Relationships" }} title="Not available yet" />
+        <Notice tone="info" title="Nothing is recorded on this deployment">{read.reason}.</Notice>
       </main>
     );
   }
@@ -83,7 +94,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
      for; the plan is a panel on it, and a slow second query must not be able
      to keep him from the phone number he is looking at the page to find. */
   const searchOn = buyerSearchOn(process.env);
-  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead, lifeRead] = await Promise.all([
+  const [plan, offers, refToken, refLinks, rep, rooms, offerRoom, journeyRead, savedRead, lifeRead, backgroundRead, contactRead, questionsRead] = await Promise.all([
     readPlanForAgent(id),
     offersFor(id),
     referralTokenFor(id),
@@ -94,10 +105,17 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     searchOn ? journeysFor(id) : Promise.resolve(null),
     savedPlanFor(id),
     momentsForLead(id),
+    backgroundOf(id),
+    lastContacts([id]),
+    leadQuestions(id),
   ]);
   /* Undefined when it could not be read, which the field says rather than showing an empty date. */
   const closedOn = lifeRead.ok && "data" in lifeRead ? (lifeRead.data?.life.closedOn ?? null) : undefined;
-  const saved = savedRead.ok && "data" in savedRead ? savedRead.data : null;
+  /* Undefined when it could not be read: "no saved plan" and "could not ask"
+     are different statements, and the panel says which. */
+  const saved = savedRead.ok && "data" in savedRead ? savedRead.data : undefined;
+  const background = backgroundRead.ok && "data" in backgroundRead ? backgroundRead.data : null;
+  const lastContact = contactRead.ok && "data" in contactRead ? (contactRead.data.get(id) ?? null) : undefined;
   const items = plan.ok && "data" in plan ? plan.data.items : [];
   const token = plan.ok && "data" in plan ? plan.data.token : null;
   const offerList = offers.ok && "data" in offers ? offers.data.offers : [];
@@ -145,74 +163,123 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       ? `Journeys did not load (${journeyRead.error}). That is not the same as having none.`
       : journeyRead && "skipped" in journeyRead ? journeyRead.reason : null;
 
+  const lead = read.data.lead;
+  const first = (lead.name ?? "").trim().split(/\s+/)[0] || null;
+  const agentFirst = agent.name.trim().split(/\s+/)[0] ?? "You";
+
   return (
-    <>
-      <ClientRecord lead={read.data.lead} notes={read.data.notes} />
-      <div className="shell-w" style={{ paddingBottom: 40 }}>
-        {saved ? <SavedPlan plan={saved.plan} savedAt={saved.savedAt} /> : null}
-        <Journeys
-          leadId={id}
-          side={read.data.lead.side}
-          journeys={journeySummaries}
-          unavailable={journeysUnavailable}
-        />
-        <Plan
-          leadId={id}
-          items={items}
-          token={token}
-          origin={siteUrl()}
-          agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
-          clientFirst={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
-          unavailable={planUnavailable}
-        />
-        {/* Sellers only. A buyer has no offers ON them, and a panel that
-            renders empty on every buyer record is a panel he learns to skip. */}
-        {read.data.lead.side === "sell" ? (
-          <Offers
-            leadId={id}
-            offers={offerList}
-            costs={sellerCosts}
-            agentFirst={agent.name.trim().split(/\s+/)[0] ?? "You"}
-            unavailable={offersUnavailable}
+    <main className="shell-w">
+      <PageHead
+        back={{ href: "/operations/clients", label: "Relationships" }}
+        title={lead.name?.trim() || lead.email || "Unnamed"}
+        meta={
+          <>
+            <span className="chip">{lead.side === "buy" ? "Buyer" : "Seller"}</span>
+            <span className="chip chip-ink">{lead.stage ?? "Not picked up yet"}</span>
+            {lead.stall && lead.stall.level !== "moving" ? (
+              <span className={`chip ${STALL_CHIP[lead.stall.level].c}`}><Ico.alert size={11} />{STALL_CHIP[lead.stall.level].l}</span>
+            ) : null}
+            {bandIsLive(lead) ? <span className="chip chip-acc"><Ico.bolt size={11} />{BAND_LABEL[lead.band]}</span> : null}
+            {lead.archivedAt ? <span className="chip"><Ico.pause size={11} />Archived</span> : null}
+            <span className="t-xs c-4">
+              {sourceLabel(lead.source)} {ago(lead.createdAt)}
+              {" · "}
+              {lastContact === undefined ? "last contact could not be read" : lastContact ? `last contact ${ago(lastContact)}` : "no contact logged"}
+            </span>
+          </>
+        }
+        actions={
+          <>
+            {lead.phone ? <a href={`tel:${lead.phone}`} className="btn btn-s btn-sm">Call {lead.phone}</a> : null}
+            {lead.email ? <a href={`mailto:${lead.email}`} className="btn btn-s btn-sm"><Ico.mail size={13} />Email</a> : null}
+          </>
+        }
+      />
+
+      {lead.archivedAt ? (
+        <Notice tone="info" title={`Archived ${ago(lead.archivedAt)}`} action={<ArchiveBox lead={lead} />}>
+          {lead.archivedReason}
+        </Notice>
+      ) : null}
+
+      <Actions lead={lead} />
+
+      <div className={css.cols}>
+        <div className={css.main}>
+          <Wants side={lead.side} source={lead.source} score={lead.score} band={lead.band} saved={saved} background={background} />
+          <TheirAnswers
+            data={questionsRead.ok && "data" in questionsRead ? questionsRead.data : null}
+            unavailable={missing(questionsRead, "Their answers to your questions")}
           />
-        ) : null}
-        {/* Not drawn over offers that did not load: with none to read it
-            would call an approved take hidden because "the offers changed",
-            which is false, and offer to draft from nothing. */}
-        {read.data.lead.side === "sell" && !offersUnavailable ? (
-          <Take leadId={id} offers={offerList} costs={sellerCosts} room={room} />
-        ) : null}
-        <Decisions
-          leadId={id}
-          decisions={decisions}
-          agentFirst={agent.name.trim().split(/\s+/)[0] ?? "your agent"}
-          unavailable={decisionsUnavailable}
-        />
-        {agreement ? (
-          <Agreement
+          <Journeys
             leadId={id}
-            side={read.data.lead.side}
-            status={agreement.status}
-            signedOn={agreement.signedOn}
-            expiresOn={agreement.expiresOn}
-            standing={standingOf(agreement)}
+            side={lead.side}
+            journeys={journeySummaries}
+            unavailable={journeysUnavailable}
           />
-        ) : agreementUnavailable ? (
-          <section style={{ marginTop: 28 }}>
-            <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>Representation</div>
-            <p role="status" className="card p-4 t-sm c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>⚠ {agreementUnavailable}</p>
-          </section>
-        ) : null}
-        <Referral
-          leadId={id}
-          closedOn={closedOn}
-          token={referralToken}
-          origin={siteUrl()}
-          firstName={(read.data.lead.name ?? "").trim().split(/\s+/)[0] || null}
-          sent={links.sent}
-          referrer={links.referrer}
-        />
+          <Plan
+            leadId={id}
+            items={items}
+            token={token}
+            origin={siteUrl()}
+            agentFirst={agentFirst}
+            clientFirst={first}
+            unavailable={planUnavailable}
+          />
+          {/* Sellers only. A buyer has no offers ON them, and a panel that
+              renders empty on every buyer record is a panel he learns to skip. */}
+          {lead.side === "sell" ? (
+            <Offers
+              leadId={id}
+              offers={offerList}
+              costs={sellerCosts}
+              agentFirst={agentFirst}
+              unavailable={offersUnavailable}
+            />
+          ) : null}
+          {/* Not drawn over offers that did not load: with none to read it
+              would call an approved take hidden because "the offers changed",
+              which is false, and offer to draft from nothing. */}
+          {lead.side === "sell" && !offersUnavailable ? (
+            <Take leadId={id} offers={offerList} costs={sellerCosts} room={room} />
+          ) : null}
+          <Decisions
+            leadId={id}
+            decisions={decisions}
+            agentFirst={agent.name.trim().split(/\s+/)[0] ?? "your agent"}
+            unavailable={decisionsUnavailable}
+          />
+          {agreement ? (
+            <Agreement
+              leadId={id}
+              side={lead.side}
+              status={agreement.status}
+              signedOn={agreement.signedOn}
+              expiresOn={agreement.expiresOn}
+              standing={standingOf(agreement)}
+            />
+          ) : agreementUnavailable ? (
+            <Section id="representation" title="Representation agreement">
+              <Notice tone="warn" title="The agreement did not load">{agreementUnavailable}</Notice>
+            </Section>
+          ) : null}
+          <Referral
+            leadId={id}
+            closedOn={closedOn}
+            token={referralToken}
+            origin={siteUrl()}
+            firstName={first}
+            sent={links.sent}
+            referrer={links.referrer}
+          />
+          <History notes={read.data.notes} unavailable={read.data.notesError ?? null} />
+        </div>
+
+        <aside className={css.rail} aria-label="Contact, consent and details">
+          <Contact lead={lead} background={background} />
+          <Details lead={lead} />
+        </aside>
       </div>
-    </>
+    </main>
   );
 }

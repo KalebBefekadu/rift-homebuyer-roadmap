@@ -6,6 +6,8 @@ import { useGo } from "@/components/rift/useRefresh";
 import { SIDE_LABEL, type Side } from "@/lib/core/journey";
 import { send } from "../../journey/send";
 import { showDay } from "@/lib/core/day";
+import { Ico } from "@/components/rift/icons";
+import { Section, Notice, Empty } from "../../ui";
 
 export interface JourneySummary {
   id: string;
@@ -51,27 +53,20 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
   };
 
   return (
-    <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="journeys-h">
-      <div className="between gap-2 wrap">
-        <div>
-          <div id="journeys-h" className="t-md w6">Journeys</div>
-          <div className="t-xs c-4" style={{ marginTop: 2 }}>
-            Each buying or selling goal, with its search brief, household and homes.
-          </div>
-        </div>
-        {!open && !unavailable ? (
-          <button className="btn btn-s btn-sm" onClick={() => setOpen(true)}>Start a journey</button>
-        ) : null}
-      </div>
-
+    <Section
+      id="journeys"
+      title="Journeys"
+      hint="Each buying or selling goal, with its search brief, household and homes."
+      actions={!open && !unavailable ? <button className="btn btn-s btn-sm" onClick={() => setOpen(true)}><Ico.plus size={13} />Start a journey</button> : undefined}
+    >
       {unavailable ? (
-        <p className="t-xs c-4" style={{ marginTop: 12 }}>{unavailable}</p>
+        <Notice tone="info" title="Journeys are not shown">{unavailable}</Notice>
       ) : journeys.length === 0 && !open ? (
-        <p className="t-xs c-4" style={{ marginTop: 12, lineHeight: 1.6 }}>
-          None yet. Start one to write their search brief and set up the Matrix search from it.
-        </p>
-      ) : (
-        <ul style={{ marginTop: 12, display: "grid", gap: 8 }}>
+        <Empty title="No journeys yet">
+          Start one to write their search brief and set up the Matrix search from it.
+        </Empty>
+      ) : journeys.length ? (
+        <ul style={{ display: "grid", gap: 8 }}>
           {journeys.map((j) => (
             <li key={j.id}>
               <Link href={`/operations/journey/${j.id}`} className="card p-3 between gap-2 wrap" style={{ display: "flex" }}>
@@ -79,15 +74,15 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
                   <span className="chip t-2xs">{SIDE_LABEL[j.side]}</span>
                   <span className="t-sm w6">{j.label}</span>
                 </span>
-                <span className="t-2xs c-4">{j.statusLabel ?? `Started ${showDay(j.createdAt, { month: "short", day: "numeric" })}`}</span>
+                <span className="t-xs c-4">{j.statusLabel ?? `Started ${showDay(j.createdAt, { month: "short", day: "numeric" })}`}</span>
               </Link>
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
 
       {open ? (
-        <div className="card p-3" style={{ marginTop: 12, background: "var(--sunk)" }}>
+        <div className="card p-4" style={{ marginTop: journeys.length ? 12 : 0, background: "var(--sunk)" }}>
           <div className="row gap-2 wrap">
             <label className="field" style={{ flex: "0 0 140px" }}>
               <span className="label">Goal</span>
@@ -107,7 +102,7 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
               <input className="input" value={label} maxLength={160} onChange={(e) => setLabel(e.target.value)} />
             </label>
           </div>
-          {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
+          {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}><Ico.alert size={12} style={{ verticalAlign: -2, marginRight: 4 }} />{error}</p> : null}
           <div className="row gap-2" style={{ marginTop: 10 }}>
             <button className="btn btn-p btn-sm" disabled={pending} onClick={create}>
               {pending ? "Starting…" : "Start"}
@@ -115,12 +110,12 @@ export function Journeys({ leadId, side, journeys, unavailable }: {
             <button className="btn btn-g btn-sm" disabled={pending} onClick={() => setOpen(false)}>Cancel</button>
           </div>
           {newSide === "sell" ? (
-            <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.6 }}>
+            <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.6 }}>
               A selling journey holds the property, pricing, preparation, the listing, the contract and the seller&apos;s proceeds.
             </p>
           ) : null}
         </div>
       ) : null}
-    </section>
+    </Section>
   );
 }

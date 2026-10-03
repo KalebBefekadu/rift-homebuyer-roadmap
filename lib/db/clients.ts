@@ -18,6 +18,7 @@ import {
   type Representation, type Standing, type Status as RepStatus,
 } from "@/lib/core/representation";
 import { georgiaDay } from "@/lib/core/day";
+import { isTerminal, sameContact } from "@/lib/core/people";
 
 export { STAGE_NAMES };
 export type { Stage, NoteKind, LeadNote, ManagedLead, Finished };
@@ -79,8 +80,11 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
     nextAction: (r.next_action as string | null) ?? null,
     nextDue: (r.next_due as string | null) ?? null,
     /* Only meaningful once somebody has been placed on the board. A lead with
-       no stage is not "moving slowly", it is simply not being worked yet. */
-    stall: stage && !r.archived_at ? stallOf(stage, daysSince(stageSince, now)) : null,
+       no stage is not "moving slowly", it is simply not being worked yet.
+       Nor is a finished one: Closed and Lost have no normal dwell, so
+       `ruleFor` fell back to 45 days and every closed client went "Stalled"
+       six weeks after closing. */
+    stall: stage && !r.archived_at && !isTerminal(stage) ? stallOf(stage, daysSince(stageSince, now)) : null,
   };
 }
 
@@ -305,10 +309,62 @@ export async function archiveLead(leadId: string, reason: string): Promise<DbRes
   return done({ id: leadId });
 }
 
+/**
+ * Bring an archived person back.
+ *
+ * Archiving was a one-way door on the page: the record said "nothing is
+ * deleted" and offered no way back, so a client who came back after six months
+ * stayed hidden from the board. The archive and the restore are both notes, so
+ * the history says when somebody was set aside and when they returned.
+ */
+export async function restoreLead(leadId: string): Promise<DbResult<{ id: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const res = await boundedWrite(
+    db.from("rift_leads")
+      .update({ archived_at: null, archived_reason: null })
+      .eq("id", leadId).eq("agent_id", agent_id).not("archived_at", "is", null)
+      .select("id").maybeSingle(),
+    "restoring them",
+  );
+  if (!res.ok || !("data" in res)) return res as DbResult<{ id: string }>;
+  if (!res.data) return failed("they are not archived");
+  await addNote(leadId, "note", "Restored from the archive.");
+  return done({ id: leadId });
+}
+
+/**
+ * Whoever is already on record with this email or phone, so adding the same
+ * person twice is a decision and not an accident. Phones are stored as typed,
+ * so the database narrows by the last four digits and `sameContact` decides.
+ */
+export async function lookalikes(email?: string | null, phone?: string | null): Promise<DbResult<{ id: string; name: string | null; email: string | null; phone: string | null; stage: string | null }[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agent_id = await currentAgentId();
+  if (!agent_id) return skipped("no agent row exists yet");
+
+  const e = escapeForOr((email ?? "").trim().toLowerCase());
+  const tail = (phone ?? "").replace(/\D/g, "").slice(-4);
+  const conds = [e ? `email.ilike.${e}` : null, tail.length === 4 ? `phone.ilike.*${tail.split("").join("*")}*` : null].filter(Boolean);
+  if (!conds.length) return done([]);
+
+  const res = await boundedRead(
+    db.from("rift_leads").select("id,name,email,phone,stage").eq("agent_id", agent_id).or(conds.join(",")).limit(25),
+    "checking for the same person",
+  );
+  if (!res.ok || !("data" in res)) return res as never;
+  const rows = res.data as { id: string; name: string | null; email: string | null; phone: string | null; stage: string | null }[];
+  return done(sameContact(rows, email, phone));
+}
+
 export async function readLead(
   leadId: string,
   now = new Date(),
-): Promise<DbResult<{ lead: ManagedLead; notes: LeadNote[] }>> {
+): Promise<DbResult<{ lead: ManagedLead; notes: LeadNote[]; notesError?: string | null }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const agent_id = await currentAgentId();
@@ -319,7 +375,7 @@ export async function readLead(
     "reading the record",
   );
   if (!leadRes.ok || !("data" in leadRes)) {
-    return leadRes as DbResult<{ lead: ManagedLead; notes: LeadNote[] }>;
+    return leadRes as DbResult<{ lead: ManagedLead; notes: LeadNote[]; notesError?: string | null }>;
   }
   const row = leadRes.data as Record<string, unknown> | null;
   if (!row) return failed("no such person");
@@ -346,7 +402,14 @@ export async function readLead(
       }))
     : [];
 
-  return done({ lead: shape(row, now), notes });
+  /* Said, not swallowed: an empty history over a failed read renders as
+     "nothing recorded yet", which tells the agent there is nothing to catch
+     up on when there may be a year of it. */
+  return done({
+    lead: shape(row, now),
+    notes,
+    notesError: notesRes.ok && "data" in notesRes ? null : notesRes.ok ? "no history on this deployment" : notesRes.error,
+  });
 }
 
 /**

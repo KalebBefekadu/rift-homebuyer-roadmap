@@ -7,6 +7,9 @@ import { ownerLabel, type Owner, type PlanItem } from "@/lib/core/plan";
 import { openClientPlan, closeClientPlan, addStep, tickStep, dropStep } from "./actions";
 import type { Drift } from "@/lib/core/seam";
 import { money } from "@/lib/core/compute";
+import { showDay } from "@/lib/core/day";
+import { Section, Notice } from "../../ui";
+import css from "./record.module.css";
 
 /**
  * The agent's end of the client's own page.
@@ -76,34 +79,26 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst, un
     }
   };
 
+  const openButton = !link ? (
+    <button className="btn btn-p btn-sm" disabled={pending}
+      onClick={() => start(async () => {
+        const r = await openClientPlan(leadId, false);
+        if (r.ok) { setLink(r.token); setWarns(r.warns ?? []); setDrifts([]); setError(null); return; }
+        /* A refusal because figures moved is not an error to print above
+           the panel that is about to list them: printing both says the
+           same thing twice and buries the part he can act on. */
+        const moved = r.drifts ?? [];
+        setDrifts(moved);
+        setError(moved.length ? null : r.error);
+      })}>
+      <Ico.share size={14} />Open their page
+    </button>
+  ) : undefined;
+
   return (
-    <section className="card p-4" style={{ marginTop: 18 }}>
-      <div className="between gap-2 wrap">
-        <div>
-          <div className="t-md w6">Their plan</div>
-          <div className="t-xs c-4" style={{ marginTop: 2 }}>
-            A page they can open. What is agreed, who owes it, and by when.
-          </div>
-        </div>
-
-        {!link ? (
-          <button className="btn btn-p btn-sm" disabled={pending}
-            onClick={() => start(async () => {
-              const r = await openClientPlan(leadId, false);
-              if (r.ok) { setLink(r.token); setWarns(r.warns ?? []); setDrifts([]); setError(null); return; }
-              /* A refusal because figures moved is not an error to print above
-                 the panel that is about to list them: printing both says the
-                 same thing twice and buries the part he can act on. */
-              const moved = r.drifts ?? [];
-              setDrifts(moved);
-              setError(moved.length ? null : r.error);
-            })}>
-            <Ico.share size={14} />Open their page
-          </button>
-        ) : null}
-      </div>
-
-      {error ? <p className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
+    <Section id="plan" title="Their plan" hint="A page they can open. What is agreed, who owes it, and by when." actions={openButton}>
+    <div className="card p-4">
+      {error ? <Notice tone="neg" title="That did not work">{error}</Notice> : null}
 
       {/* The disclosure. Publishing stops here until he has seen what moved:
           not as a warning he can scroll past, but as the thing standing
@@ -168,13 +163,9 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst, un
 
       {url ? (
         <div className="col gap-2" style={{ marginTop: 14 }}>
-          <div className="row gap-2 wrap" style={{
-            padding: "9px 12px", borderRadius: 8, background: "var(--sunk)", border: "1px solid var(--line-2)",
-          }}>
+          <div className={css.linkRow}>
             <Ico.share size={13} className="c-4" style={{ flex: "none" }} />
-            <code className="t-xs grow" style={{
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0,
-            }}>{url}</code>
+            <code className={`t-xs grow ${css.code}`}>{url}</code>
             <button className="btn btn-g btn-sm" onClick={copy} style={{ flex: "none" }}>
               {copied ? <><Ico.check size={13} />Copied</> : "Copy"}
             </button>
@@ -212,7 +203,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst, un
           and deciding to share it are separate decisions. */}
       <div className="col gap-1" style={{ marginTop: 18 }}>
         {unavailable ? (
-          <p role="status" className="t-xs c-warn">⚠ {unavailable}</p>
+          <Notice tone="warn" title="The steps did not load">{unavailable}</Notice>
         ) : items.length === 0 ? (
           <p className="t-xs c-4">No steps yet.</p>
         ) : items.map((item) => (
@@ -239,7 +230,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst, un
                   color: item.doneAt ? "var(--ink-4)" : undefined,
                 }}>{item.title}</div>
                 <div className="t-2xs c-4" style={{ marginTop: 2 }}>
-                  {ownerLabel(item, { agent: agentFirst, client: clientFirst }, "agent")}{item.dueOn ? ` · ${item.dueOn}` : " · no date"}
+                  {ownerLabel(item, { agent: agentFirst, client: clientFirst }, "agent")}{item.dueOn ? ` · ${showDay(item.dueOn, { month: "short", day: "numeric" })}` : " · no date"}
                 </div>
               </div>
             </div>
@@ -282,6 +273,7 @@ export function Plan({ leadId, items, token, origin, agentFirst, clientFirst, un
             organised is worse than none, because they measure you against it. */}
         <p className="t-2xs c-4">A date is optional. Without one it sits under “After that” on their page.</p>
       </div>
-    </section>
+    </div>
+    </Section>
   );
 }

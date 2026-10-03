@@ -121,7 +121,9 @@ export default async function OperationsToday() {
   const contracts = list(contractsRead);
   const drafts = list(outboxRead);
   const reviews = list(reviewRead).filter((r) => r.state === "pending-review");
-  const touches = list(dueRead);
+  /* A step that does not apply to them is skipped by the next run, not a task:
+     it must not sit on the desk as one until then. */
+  const touches = list(dueRead).filter((t) => !t.skip);
   const jobs = list(jobsRead);
   const choices = list(choicesRead);
   const marks = marksRead.ok && "data" in marksRead ? marksRead.data : null;

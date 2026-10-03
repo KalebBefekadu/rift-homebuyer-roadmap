@@ -1,4 +1,5 @@
 import { money } from "./compute";
+import { showDay } from "./day";
 /**
  * A buyer's offer on one home, from strategy to the other side's answer
  * (blueprint v4 W08; journey contracts B08 to B10; REQ-DEC-01 to 03).
@@ -156,6 +157,8 @@ export function termText(field: keyof Terms, t: Terms): string {
     case "downPct": return t.financing === "cash" ? "All cash" : `${t.downPct}%`;
     case "dueDiligenceDays": return t.dueDiligenceDays === null ? "None" : `${t.dueDiligenceDays} days`;
     case "financingContingency": case "appraisalContingency": return v ? "Yes" : "No";
+    /* A day as people read it, never 2026-10-29. */
+    case "closingDate": return t.closingDate ? showDay(t.closingDate, { month: "short", day: "numeric", year: "numeric" }) : "Not set";
     default: return (v as string | null) ?? "Not set";
   }
 }

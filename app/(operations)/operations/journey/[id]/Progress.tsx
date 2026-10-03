@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   STAGE_LABEL, STATUS_LABEL, WORK_STATES, WORK_STATE_LABEL,
-  afterClose, marketDay, ownerText, stageStrip, visitedStages, workSummary, BACK_TO, TERMINAL, type Side,
+  afterClose, marketDay, ownerText, workSummary, BACK_TO, TERMINAL, type Side,
   type Financing, type JourneyEvent, type JourneyStatus, type Owner, type Progress as ProgressState,
   type Stage, type WorkState, type WorkUpdate, type Workstream, type WorkstreamView,
 } from "@/lib/core/progress";
@@ -31,10 +31,6 @@ const CHIP: Record<WorkState, string> = {
   reported: "chip-warn", confirmed: "chip-pos", "not-applicable": "",
 };
 /* Stages the agent can pick by hand. Under contract and Own come from the contract record. */
-/* A stage not reached yet: dimmer ink and a dashed edge, never opacity. At
-   0.55 the label fell to 3:1, and the stages ahead are exactly the ones a
-   buyer reads to see what is coming. --ink-4 is the AA floor on --sunk. */
-const AHEAD = { color: "var(--ink-4)", borderStyle: "dashed" } as const;
 /* The stages the agent moves by hand; Under contract and the last stage come from the contract record. */
 const MANUAL: Record<Side, Stage[]> = {
   buy: ["prepare", "search", "tour", "offer", "close"],
@@ -99,16 +95,9 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
 
   return (
     <div>
-      <ol className="row gap-1 wrap" aria-label="Stages" style={{ listStyle: "none", padding: 0 }}>
-        {stageStrip(progress, visitedStages(events), side).map((s) => (
-          <li key={s.stage} className={`chip t-2xs ${s.state === "now" ? "chip-pos" : ""}`}
-            aria-current={s.state === "now" ? "step" : undefined} style={s.state === "ahead" ? AHEAD : undefined}>
-            {s.state === "done" ? "✓ " : ""}{s.label}{s.state === "skipped" ? " (not recorded)" : ""}
-          </li>
-        ))}
-      </ol>
-      <p className="t-xs c-3" style={{ marginTop: 8 }}>
-        <span className="w6">{STAGE_LABEL[progress.stage]}</span>
+      {/* The stage path is in the journey's head, on every tab; here is only how long it has been this way. */}
+      <p className="t-sm c-3">
+        <span className="w6 c-1">{STAGE_LABEL[progress.stage]}</span>
         {progress.stageSince ? ` since ${DAY(progress.stageSince)}` : ", nothing recorded yet"}
         {progress.status !== "active" ? <> · <span className="c-warn">{STATUS_LABEL[progress.status]}</span></> : null}
       </p>

@@ -27,6 +27,16 @@ describe("homes side by side (SEARCH-05)", () => {
     expect(row(rows, "Cash to buy it")!.cells[2]!.unknown).toBe(true);
   });
 
+  it("says the type of home in words, never the stored code", () => {
+    const typed: CompareHome[] = [
+      { id: "a", address: "1 Oak St", facts: facts({ propertyType: "detached" }) },
+      { id: "b", address: "2 Elm St", facts: facts({ propertyType: "multi-family" }) },
+      { id: "c", address: "3 Ash St", facts: facts({ propertyType: "single-family" as never }) },
+    ];
+    expect(row(compareHomes(typed, [], null), "Type")!.cells.map((c) => c.text))
+      .toEqual(["Single-family, detached", "Multi-family (2 to 4 units)", "Single-family, detached"]);
+  });
+
   it("works the money on the buyer's own terms, and names an HOA left out", () => {
     const rows = compareHomes(homes, criteria, plan);
     expect(row(rows, "Cash to buy it")!.cells[0]!.text).toBe(cashToClose({ ...plan.inputs, price: 300_000 }).total.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }));

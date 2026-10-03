@@ -8,6 +8,7 @@ import { searchState } from "@/lib/db/search";
 import { moneyFor } from "@/lib/db/money";
 import { CompareTable, chosen } from "@/components/rift/money/CompareTable";
 import { Unavailable } from "../../../Unavailable";
+import { PageHead, Notice, Empty } from "../../../ui";
 import { isUuid } from "@/lib/core/ids";
 
 export const metadata: Metadata = { title: "Compare homes", robots: { index: false } };
@@ -25,7 +26,15 @@ export default async function ComparePage({ params, searchParams }: { params: Pr
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const j = await journeyFor(id);
-  if (!j.ok) return <main className="shell-w"><p className="t-sm c-neg">This journey did not load ({j.error}).</p></main>;
+  const back = { href: `/operations/journey/${id}?tab=homes`, label: "Homes and showings" };
+  if (!j.ok) {
+    return (
+      <main className="shell-w">
+        <PageHead title="Compare homes" back={back} />
+        <Notice tone="neg" title="This journey did not load">That is not the same as there being no homes ({j.error}). Reload in a moment.</Notice>
+      </main>
+    );
+  }
   if ("skipped" in j) return <Unavailable reason={j.reason} />;
   if (!j.data || j.data.side !== "buy") notFound();
 
@@ -36,17 +45,31 @@ export default async function ComparePage({ params, searchParams }: { params: Pr
   const money = moneyRead.ok && "data" in moneyRead ? moneyRead.data : null;
   const base = `/operations/journey/${id}/compare`;
 
+  /* What the comparison is measured against, said in one place, in words. */
+  const against = revision
+    ? `Against brief revision ${revision.revision}${s?.active && revision.id === s.active.revisionId ? ", the one running in Matrix" : ", not yet set up in Matrix"}.`
+    : "No requirements are written down yet, so the homes are compared on facts and money only.";
+  const basis = money
+    ? (money.answersFrom ? "Money is worked on the plan they saved." : "Money is worked on Rift's starting figures: they have not saved a plan.")
+    : "The money did not load; the facts still compare.";
+
   return (
     <main className="shell-w">
-      <Link href={`/operations/journey/${id}?tab=homes`} className="t-sm c-3">← {j.data.label}</Link>
-      <h1 className="serif" style={{ marginTop: 6 }}>Compare homes</h1>
-      <p className="t-sm c-3" style={{ marginTop: 4, marginBottom: 12 }}>
-        {revision ? `Against brief revision ${revision.revision}${s?.active && revision.id === s.active.revisionId ? ", the one running in Matrix" : ""}.` : "No requirements written down yet."}{" "}
-        {money ? (money.answersFrom ? "Money on the plan they saved." : "Money on Rift's starting figures: they have not saved a plan.") : "The money did not load; the facts still compare."}
-      </p>
-      {all === null ? <p className="t-sm c-neg">The homes did not load. That is not the same as an empty list.</p>
-        : all.length < 2 ? <p className="t-sm c-3">Add at least two homes to compare them.</p>
-        : <CompareTable all={all} picked={chosen(all, (await searchParams).h)} criteria={revision?.brief.criteria ?? []} plan={money?.plan ?? null} base={base} />}
+      <PageHead
+        back={back}
+        title="Compare homes"
+        lede={<>{j.data.label} for {j.data.person}. {against} {basis}</>}
+        actions={<Link href={`/operations/journey/${id}?tab=homes`} className="btn btn-g btn-sm">Add or remove homes</Link>}
+      />
+      {all === null ? (
+        <Notice tone="neg" title="The homes did not load">That is not the same as an empty list. Reload in a moment.</Notice>
+      ) : all.length < 2 ? (
+        <Empty title="Two homes are needed to compare" action={<Link href={`/operations/journey/${id}?tab=homes`} className="btn btn-s btn-sm">Add a home</Link>}>
+          {all.length === 1 ? "There is one home on the list." : "There are no homes on the list."} Add another on the Homes and showings tab and it appears here.
+        </Empty>
+      ) : (
+        <CompareTable all={all} picked={chosen(all, (await searchParams).h)} criteria={revision?.brief.criteria ?? []} plan={money?.plan ?? null} base={base} />
+      )}
     </main>
   );
 }

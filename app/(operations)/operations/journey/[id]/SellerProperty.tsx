@@ -1,8 +1,8 @@
 "use client";
 
-import { Fragment } from "react";
 import { money } from "@/lib/core/compute";
-import type { PropertyFacts } from "@/lib/core/search";
+import { PROPERTY_TYPES, propertyTypeLabel, type PropertyFacts, type PropertyType } from "@/lib/core/search";
+import { Facts } from "../../ui";
 import { useWrite } from "./useWrite";
 import { georgiaDay } from "@/lib/core/day";
 import { typedNumber, unreadableField } from "@/lib/core/typed";
@@ -47,19 +47,21 @@ export function SellerProperty({ journeyId, property }: {
 
   if (property) {
     const x = property.facts;
-    const facts: [string, string | null][] = [
-      ["Bedrooms", x.bedrooms?.toString() ?? null], ["Bathrooms", x.bathrooms?.toString() ?? null], ["Type", x.propertyType],
-      ["City", x.city], ["Lot", x.lotAcres !== null ? `${x.lotAcres} acres` : null],
-      ["HOA", x.hoaMonthly !== null ? (x.hoaMonthly === 0 ? "None" : `${money(x.hoaMonthly)} a month`) : null],
-      ["Basement", x.basement], ["Garage", x.garageSpaces !== null ? `${x.garageSpaces} spaces` : null],
+    /* In words, never the stored value ("detached", "yes"), and "Not known" for a fact nobody has recorded. */
+    const known = (v: string | null): React.ReactNode => v ?? <span className="c-4">Not known</span>;
+    const facts: [string, React.ReactNode][] = [
+      ["Bedrooms", known(x.bedrooms?.toString() ?? null)], ["Bathrooms", known(x.bathrooms?.toString() ?? null)],
+      ["Type of home", known(x.propertyType ? propertyTypeLabel(x.propertyType) : null)],
+      ["City", known(x.city)], ["Lot", known(x.lotAcres !== null ? `${x.lotAcres} acres` : null)],
+      ["HOA", known(x.hoaMonthly !== null ? (x.hoaMonthly === 0 ? "None" : `${money(x.hoaMonthly)} a month`) : null)],
+      ["Basement", known(x.basement === "yes" ? "Yes" : x.basement === "no" ? "No" : null)],
+      ["Garage", known(x.garageSpaces !== null ? `${x.garageSpaces} space${x.garageSpaces === 1 ? "" : "s"}` : null)],
     ];
     return (
       <div>
         <div className="t-md w6">{property.address}</div>
-        <dl className="t-sm" style={{ marginTop: 8, display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 14px" }}>
-          {facts.map(([k, v]) => <Fragment key={k}><dt className="c-4">{k}</dt><dd className={v ? "" : "c-4"}>{v ?? "Not known"}</dd></Fragment>)}
-        </dl>
-        <p className="t-xs c-4" style={{ marginTop: 8 }}>From {property.factsSource}, as of {DAY(property.factsAsOf)}. A different claim from another source is kept beside this one, never averaged.</p>
+        <div style={{ marginTop: 14 }}><Facts items={facts} cols={4} /></div>
+        <p className="t-xs c-4" style={{ marginTop: 14 }}>From {property.factsSource}, as of {DAY(property.factsAsOf)}. A different claim from another source is kept beside this one, never averaged.</p>
       </div>
     );
   }
@@ -73,7 +75,9 @@ export function SellerProperty({ journeyId, property }: {
         <label className="col gap-1 t-xs">Bathrooms<input className="input" name="bathrooms" inputMode="decimal" /></label>
         <label className="col gap-1 t-xs">Type
           <select className="select" name="propertyType" defaultValue="">
-            <option value="">Not known</option><option value="single-family">Single-family</option><option value="townhouse">Townhouse</option><option value="condo">Condo</option>
+            {/* The same types the brief and the shortlist use. This list once offered "single-family", which the facts check refuses. */}
+            <option value="">Not known</option>
+            {(Object.keys(PROPERTY_TYPES) as PropertyType[]).map((t) => <option key={t} value={t}>{PROPERTY_TYPES[t]}</option>)}
           </select></label>
         <label className="col gap-1 t-xs">City<input className="input" name="city" maxLength={80} /></label>
         <label className="col gap-1 t-xs">Lot, acres<input className="input" name="lotAcres" inputMode="decimal" /></label>

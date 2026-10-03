@@ -21,7 +21,7 @@ describe("a journey's history", () => {
       },
     });
     expect(h.map((x) => x.text)).toEqual([
-      "Weekly review, week of 2026-09-28: keep the course",
+      "Weekly review, week of Sep 28, 2026: keep the course",
       "Live on the MLS at $425,000",
       expect.stringMatching(/^Proceeds: .* at \$425,000$/),
       "Pricing version 2: list at $425,000, range $410,000 to $440,000",

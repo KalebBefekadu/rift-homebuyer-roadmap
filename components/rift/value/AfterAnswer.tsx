@@ -8,6 +8,7 @@ import { readAnswers, answeredKeys } from "@/lib/rift/answers";
 import { rememberValue, readPlan, type PlanEntry } from "@/lib/rift/plan";
 import { missingPhrase, nextValues, valueById } from "@/lib/core/values";
 import type { Answers } from "@/lib/core/asks";
+import type { CustomQuestion } from "@/lib/core/question-wording";
 import { SavePlan } from "./SavePlan";
 import { ForgetMe } from "@/components/rift/Forget";
 
@@ -23,8 +24,10 @@ import { ForgetMe } from "@/components/rift/Forget";
  * plan taking shape and anything this visit sent us, gone in one press. The
  * privacy page promises this button at the bottom of every readout.
  */
-export function AfterAnswer({ tool, entry, answers }: {
+export function AfterAnswer({ tool, entry, answers, questions }: {
   tool: string;
+  /** The published wording (D37), carried to Save my plan. */
+  questions?: { custom: CustomQuestion[]; versionId: string | null };
   /** What this value adds to the plan taking shape. */
   entry: Omit<PlanEntry, "at">;
   answers: Answers;
@@ -127,6 +130,7 @@ export function AfterAnswer({ tool, entry, answers }: {
           side={def.side}
           mode={saving}
           plan={plan}
+          questions={questions}
           onClose={() => setSaving(null)}
         />
       ) : null}

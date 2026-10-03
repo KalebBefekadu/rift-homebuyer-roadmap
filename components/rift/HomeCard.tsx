@@ -1,5 +1,5 @@
 import { money } from "@/lib/core/compute";
-import { fitOf, PROPERTY_TYPES, REACTION_LABEL, type PropertyFacts, type Reaction, type SearchCriterion } from "@/lib/core/search";
+import { fitOf, propertyTypeLabel, REACTION_LABEL, type PropertyFacts, type Reaction, type SearchCriterion } from "@/lib/core/search";
 import { showDay } from "@/lib/core/day";
 
 export interface HomeCardData {
@@ -56,7 +56,7 @@ export function HomeCard({ home, criteria, children }: {
         {fact("Price", f.price !== null ? money(f.price) : null)}
         {fact("Beds", f.bedrooms !== null ? String(f.bedrooms) : null)}
         {fact("Baths", f.bathrooms !== null ? String(f.bathrooms) : null)}
-        {fact("Type", f.propertyType ? PROPERTY_TYPES[f.propertyType] : null)}
+        {fact("Type", f.propertyType ? propertyTypeLabel(f.propertyType) : null)}
         {fact("City", f.city)}
         {fact("Basement", f.basement)}
         {fact("Garage", f.garageSpaces !== null ? String(f.garageSpaces) : null)}

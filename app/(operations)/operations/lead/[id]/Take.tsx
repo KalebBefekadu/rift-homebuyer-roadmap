@@ -10,6 +10,7 @@ import {
 } from "@/lib/core/offer-room";
 import { approveOfferTake, withdrawOfferTake, reopenOfferChoice } from "./actions";
 import { showTime } from "@/lib/core/day";
+import { Section, Notice } from "../../ui";
 
 const AT = (iso: string) => showTime(iso, {
   month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
@@ -54,21 +55,17 @@ export function Take({ leadId, offers, costs, room }: {
   const chosen = room?.chosenSeen ?? null;
 
   return (
-    <section className="card p-4" style={{ marginTop: 18 }}>
-      <div className="t-md w6">Offer room</div>
-      <div className="t-xs c-4" style={{ marginTop: 2 }}>
-        Your take on the released offers, and which one the seller says they want.
-      </div>
+    <Section id="offer-room" title="Offer room" hint="Your take on the released offers, and which one the seller says they want.">
+    <div className="card p-4">
 
-      {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
+      {error ? <Notice tone="neg" title="That did not work">{error}</Notice> : null}
 
       {/* The seller's choice first, when there is one: it is the thing with a
           deadline attached. */}
       {room === null ? (
-        <p className="t-xs c-4" style={{ marginTop: 12 }}>
-          The offer room did not load. That is not the same as the seller not having chosen:
-          reload before telling anybody anything.
-        </p>
+        <Notice tone="warn" title="The offer room did not load">
+          That is not the same as the seller not having chosen: reload before telling anybody anything.
+        </Notice>
       ) : chosen && room.chosenAt ? (
         <div className="card p-4" style={{ marginTop: 14, borderColor: "var(--pos-line)", background: "var(--pos-wash)" }}>
           <div className="between gap-2 wrap" style={{ alignItems: "flex-start" }}>
@@ -131,7 +128,7 @@ export function Take({ leadId, offers, costs, room }: {
                 ? "Replace the bracketed line with what you would do."
                 : `${text.trim().length} / ${TAKE_MAX}`}
             </span>
-            <div className="row gap-2">
+            <div className="row gap-2 wrap">
               {draft && text !== draft ? (
                 <button className="btn btn-s btn-sm" disabled={pending} onClick={() => setText(draft)}>
                   Start from Rift&apos;s draft
@@ -173,6 +170,7 @@ export function Take({ leadId, offers, costs, room }: {
           </p>
         </div>
       )}
-    </section>
+    </div>
+    </Section>
   );
 }

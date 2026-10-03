@@ -15,6 +15,7 @@ import { ASKS, parseAnswers, answersToQuery, type Answers } from "./asks";
 import { valueById, type InputKey } from "./values";
 import { georgiaDay } from "./day";
 import { firstTimeFrom, ownershipOf } from "./funnel";
+import type { Occupation, Profile } from "./assistance";
 
 export interface SavedValue {
   tool: string;
@@ -85,6 +86,55 @@ export function planSummary(p: SavedPlan): string {
 }
 
 /**
+ * The profile a saved plan's programs are matched against: what the plan page
+ * shows under "My assistance plan", and what the follow-up email lists.
+ *
+ * One function for both, because two copies of "which answers make a profile"
+ * is how an email comes to list a program the page says the person does not
+ * fit. County and first-time status alone (what the email used to match on)
+ * ignore income, household size, price and work, which are most of what
+ * decides it.
+ *
+ * Every answer the programs check asks is needed, as on the page: with one
+ * missing the page shows no plan at all, so the email has nothing to agree
+ * with, and the result says which are missing rather than guessing a value.
+ * Read defensively, as `planFacts` is: the column is jsonb from whichever
+ * build saved it.
+ */
+export function assistanceProfile(
+  answers: Record<string, unknown>,
+): { profile: Profile } | { profile: null; missing: InputKey[] } {
+  const has = (key: "county" | "ownership" | "household" | "occupation") =>
+    ASKS[key].options?.some((o) => o.value === answers[key]) === true;
+  const ok: Record<string, boolean> = {
+    county: has("county"),
+    ownership: has("ownership"),
+    price: typeof answers.price === "number" && Number.isFinite(answers.price) && answers.price > 0,
+    income: typeof answers.income === "number" && Number.isFinite(answers.income) && answers.income >= 0,
+    household: has("household"),
+    occupation: has("occupation"),
+  };
+  const missing = (valueById("assistance")!.asks as InputKey[]).filter((k) => !ok[k]);
+  if (missing.length) return { profile: null, missing };
+  return {
+    profile: {
+      county: String(answers.county),
+      firstTime: firstTimeFrom(ownershipOf(answers.ownership)),
+      price: Number(answers.price),
+      income: Number(answers.income),
+      household: Number(answers.household),
+      occupation: String(answers.occupation) as Occupation | "other",
+    },
+  };
+}
+
+/** `assistanceProfile` of a stored plan, which may be anything the column holds. */
+export function planAssistance(plan: unknown) {
+  const p = plan && typeof plan === "object" ? (plan as Partial<SavedPlan>) : {};
+  return assistanceProfile(p.answers && typeof p.answers === "object" ? (p.answers as Record<string, unknown>) : {});
+}
+
+/**
  * What a follow-up may use from a saved plan: where they are buying, whether
  * they count as a first-time buyer, and the page that works a value out again.
  *
@@ -100,14 +150,17 @@ export function planSummary(p: SavedPlan): string {
  * as first-time, which fails towards showing somebody more help rather than
  * less, as `ownershipOf` does for a readout.
  */
-export function planFacts(plan: unknown): { county: string | null; firstTimeBuyer: boolean; againPath: string } | null {
+export function planFacts(plan: unknown): { county: string | null; firstTimeBuyer: boolean; againPath: string; side: "buy" | "sell" | "abroad" | null } | null {
   if (!plan || typeof plan !== "object") return null;
   const p = plan as Partial<SavedPlan>;
   const answers = (p.answers && typeof p.answers === "object" ? p.answers : {}) as Record<string, unknown>;
   const county = typeof answers.county === "string" && ASKS.county.options?.some((o) => o.value === answers.county)
     ? answers.county
     : null;
-  const side = p.side === "sell" ? "sell" : p.side === "abroad" ? "abroad" : "buy";
+  /* Null when the plan does not say, so a caller can fall back to the lead's
+     own side rather than read a missing field as "buy". */
+  const said = p.side === "sell" || p.side === "abroad" || p.side === "buy" ? p.side : null;
+  const side = said ?? "buy";
   /* The first value they saved, bare. Not `href`: that carries their answers
      in the query string (savings, income), and a link in an email is read by
      every mail scanner and forwarded with the message. The saved plan page
@@ -117,5 +170,6 @@ export function planFacts(plan: unknown): { county: string | null; firstTimeBuye
     county,
     firstTimeBuyer: firstTimeFrom(ownershipOf(answers.ownership)),
     againPath: first?.href ?? `/${side}`,
+    side: said,
   };
 }
