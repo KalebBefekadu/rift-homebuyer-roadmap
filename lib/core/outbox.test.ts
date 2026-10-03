@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canMove, canonical, currentState, heldReason, programAlertDraft, sendBlockers, type OutboxEvent } from "./outbox";
+import { canMove, canonical, currentState, heldReason, programAlertDraft, sendBlockers, waitingRank, type OutboxEvent } from "./outbox";
 
 const draft = programAlertDraft({ to: "Buyer@Example.com", name: "Test Buyer", program: "Georgia Dream", change: "the maximum is now $12,000.", sourceUrl: "https://dca.georgia.gov/x", planUrl: "https://rift.test/saved/abc", agentFirst: "Kaleb" });
 const ev = (state: OutboxEvent["state"], at: string, hash: string | null = null): OutboxEvent => ({ state, at: `2026-10-01T${at}:00Z`, by: "Kaleb", hash, detail: null });
@@ -37,6 +37,14 @@ describe("the outbox (Blueprint v5 §10.2, AUTO-01 to AUTO-03)", () => {
     expect(draft.body).toContain("https://dca.georgia.gov/x");
     expect(draft.body).toContain("Hi Test,");
     expect(draft.body).not.toMatch(/qualif|guarantee|you are eligible/i);
+  });
+});
+
+describe("which waiting message comes first", () => {
+  it("puts a possible double send before a refusal, a failure, an approval and a draft", () => {
+    const order: [OutboxEvent["state"], boolean][] = [["prepared", false], ["approved", false], ["failed", false], ["approved", true], ["unknown", false]];
+    expect(order.sort((a, b) => waitingRank(a[0], a[1]) - waitingRank(b[0], b[1])).map(([st, h]) => (h ? `${st} held` : st)))
+      .toEqual(["unknown", "approved held", "failed", "approved", "prepared"]);
   });
 });
 

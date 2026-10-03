@@ -86,6 +86,21 @@ export function heldReason(events: OutboxEvent[]): string | null {
   return `${why.charAt(0).toUpperCase()}${why.slice(1)}`;
 }
 
+/**
+ * Which waiting message to deal with first. A message that may have sent comes
+ * before everything because pressing through it sends a second copy; one the
+ * last check refused comes next, because Send meets the same refusal; then
+ * ones that failed, then approved, then fresh drafts. Arrival order put a
+ * "may have sent" between two routine drafts.
+ */
+export function waitingRank(state: OutboxState, held: boolean): number {
+  if (state === "unknown") return 0;
+  if (state === "approved" && held) return 1;
+  if (state === "failed") return 2;
+  if (state === "approved") return 3;
+  return 4;
+}
+
 export interface SendCheck {
   /** The hash of the draft as stored now. */
   hash: string;
