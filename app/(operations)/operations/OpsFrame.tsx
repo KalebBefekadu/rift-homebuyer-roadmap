@@ -20,7 +20,7 @@ import { jumpTo, signOut, type Jump } from "./actions";
  * On a phone the sidebar becomes a row across the top that scrolls sideways
  * inside itself, never the page.
  */
-export function OpsFrame({ agentName, undecided, children }: { agentName: string; undecided: number; children: React.ReactNode }) {
+export function OpsFrame({ agentName, toSetUp, children }: { agentName: string; toSetUp: number; children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -87,10 +87,10 @@ export function OpsFrame({ agentName, undecided, children }: { agentName: string
         <nav className="ops-nav" aria-label="Main">
           {MAIN.map((m) => link(m))}
           <div className="ops-rule" role="separator" />
-          {MORE.map((m) => link(m, m.href === "/operations/settings" && undecided
+          {MORE.map((m) => link(m, m.href === "/operations/settings" && toSetUp
             ? collapsed
-              ? <span className="ops-dot" aria-label={`${undecided} decision${undecided === 1 ? "" : "s"} still yours to make`} />
-              : <span className="chip chip-warn t-2xs" title={`${undecided} decision${undecided === 1 ? "" : "s"} still yours to make`}>{undecided}</span>
+              ? <span className="ops-dot" aria-label={`${toSetUp} thing${toSetUp === 1 ? "" : "s"} still to set up`} />
+              : <span className="chip chip-warn t-2xs" title={`${toSetUp} thing${toSetUp === 1 ? "" : "s"} still to set up`}>{toSetUp}</span>
             : null))}
         </nav>
         <div className="ops-foot">

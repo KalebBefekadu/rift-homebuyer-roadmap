@@ -1,0 +1,116 @@
+/* Programs (Blueprint v5 §6.5, §8.4): the list of records and one record.
+   Page-only styles; the frame, headings and notices come from ../ui.tsx. */
+
+/* ---------- the one-line states ---------- */
+.line { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.4; }
+.line > svg { flex: none; margin-top: 2px; }
+.lineQuiet { color: var(--ink-4); }
+.lineWarn { color: var(--warn); font-weight: 550; }
+.lineNeg { color: var(--neg); font-weight: 550; }
+.reading { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 550; }
+
+/* ---------- the list ---------- */
+.group + .group { margin-top: 28px; }
+.groupHead { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.groupTitle { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.groupCount { font-size: 12px; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+
+.card {
+  display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  padding: 16px 16px 12px; background: var(--paper); color: inherit;
+  border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1);
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.card:hover { border-color: var(--ink-5); box-shadow: 0 2px 8px rgba(13, 14, 16, 0.06); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cardMuted { background: var(--canvas); box-shadow: none; }
+
+.name { font-size: 14px; font-weight: 620; color: var(--ink); line-height: 1.35; letter-spacing: -0.005em; }
+.who { margin-top: 3px; font-size: 12.5px; color: var(--ink-4); line-height: 1.45; }
+
+.money { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.figure { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.figureNone { font-size: 15px; font-weight: 550; color: var(--ink-4); letter-spacing: 0; }
+.upto { font-size: 11.5px; font-weight: 500; color: var(--ink-4); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.basis { margin-top: 4px; font-size: 12.5px; color: var(--ink-3); }
+.form { font-size: 12px; color: var(--ink-3); padding: 2px 8px; border-radius: 999px; background: var(--sunk); border: 1px solid var(--line-2); white-space: nowrap; }
+.higher { margin-top: 6px; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.higherNot { color: var(--ink-4); font-style: italic; }
+
+.rules { display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.rules li { display: flex; gap: 8px; }
+.rules li::before { content: ""; flex: none; width: 4px; height: 4px; margin-top: 7px; border-radius: 50%; background: var(--ink-5); }
+.area { display: flex; gap: 6px; align-items: flex-start; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+.area > svg { flex: none; margin-top: 2px; color: var(--ink-4); }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.cardFoot { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-3); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.footStates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.go { flex: none; color: var(--ink-5); transition: color .12s ease, transform .12s ease; }
+.card:hover .go { color: var(--ink-2); transform: translateX(2px); }
+
+.fit { margin-top: 32px; }
+.fit :global(.ops-sec-head > .ops-actions) { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.fit :global(.ops-tabs) { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.footnote { margin-top: 28px; font-size: 12px; line-height: 1.6; color: var(--ink-4); max-width: 680px; }
+
+/* ---------- needs your review ---------- */
+.flags { display: grid; gap: 12px; }
+.flag { padding: 16px; background: var(--paper); border: 1px solid var(--warn-line); border-left: 3px solid var(--warn); border-radius: var(--r); box-shadow: var(--sh-1); scroll-margin-top: 16px; }
+.flagHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px 16px; flex-wrap: wrap; }
+.flagNames { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 14px; font-weight: 620; }
+.flagNames a:hover { text-decoration: underline; text-underline-offset: 2px; }
+.flagWhen { margin-top: 4px; }
+.box { margin-top: 12px; padding: 12px 14px; background: var(--sunk); border: 1px solid var(--line-2); border-radius: 8px; }
+.boxTitle { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.boxText { margin-top: 4px; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); white-space: pre-line; }
+.diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; margin-top: 12px; }
+.diffCol { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line-2); min-width: 0; }
+.diffCol ul { display: grid; gap: 3px; margin-top: 6px; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); overflow-wrap: anywhere; }
+.removed { background: var(--neg-wash); }
+.added { background: var(--pos-wash); }
+.more { margin-top: 12px; }
+.more > summary { cursor: pointer; font-size: 12.5px; font-weight: 550; color: var(--ink-3); width: fit-content; }
+.more > summary:hover { color: var(--ink); }
+.more > .diff { margin-top: 8px; }
+.people { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* ---------- one program ---------- */
+.detail { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px 32px; align-items: start; }
+.aside { display: grid; gap: 12px; position: sticky; top: 16px; }
+.panel { padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+.panelTitle { font-size: 12px; font-weight: 600; color: var(--ink-3); letter-spacing: .02em; }
+.panelBig { margin-top: 6px; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.panelText { margin-top: 4px; font-size: 12.5px; line-height: 1.55; color: var(--ink-3); }
+.hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 20px; padding: 18px 20px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); margin-bottom: 16px; }
+.heroFigure { font-size: 34px; font-weight: 650; letter-spacing: -0.025em; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.heroSide { padding-bottom: 3px; font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+.body { padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+.prose { font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+.small { font-size: 12.5px; line-height: 1.55; color: var(--ink-4); }
+.list { display: grid; gap: 6px; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.list li { display: flex; gap: 8px; }
+.list li > svg { flex: none; margin-top: 3px; color: var(--ink-4); }
+.amiTable { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; margin-top: 12px; }
+.amiTable th, .amiTable td { padding: 6px 8px; border-bottom: 1px solid var(--line-3); text-align: right; white-space: nowrap; }
+.amiTable th:first-child, .amiTable td:first-child { text-align: left; }
+.amiTable th { font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+.scroll { overflow-x: auto; }
+
+.history { display: grid; }
+.event { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--line-3); }
+.event:first-child { padding-top: 0; }
+.event:last-child { border-bottom: 0; padding-bottom: 0; }
+.when { font-size: 12.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; padding-top: 1px; }
+.review { margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: var(--sunk); font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+
+@media (max-width: 1000px) {
+  .detail { grid-template-columns: minmax(0, 1fr); }
+  .aside { position: static; }
+}
+@media (max-width: 560px) {
+  .event { grid-template-columns: minmax(0, 1fr); }
+  .heroFigure { font-size: 28px; }
+}

@@ -13,10 +13,10 @@ import { DEFAULT_RULES, RULE_LABEL, RULE_REACH, mergeRules, undecidedIn, type Bu
  * the difference that building a settings page is how you introduce it
  * deliberately.
  *
- * Five of the six rules currently reach nothing: the screens they price or
- * govern are prototype-only. That is fine and it is said on the page. What is
- * not fine is the claim drifting from the code, so these tests hold
- * RULE_REACH to the source.
+ * Some rules currently reach nothing: the screens they price or govern are
+ * prototype-only. That is fine and it is said on the page. What is not fine
+ * is the claim drifting from the code, in either direction, so these tests
+ * hold RULE_REACH to the source.
  */
 
 const keys = Object.keys(DEFAULT_RULES) as (keyof BusinessRules)[];
@@ -56,6 +56,14 @@ describe("every rule accounts for itself", () => {
     for (const k of keys) {
       if (!RULE_REACH[k].live) continue;
       expect(body.includes(k), `${k} is marked live but nothing outside settings reads it`).toBe(true);
+    }
+
+    /* And the other way. commissionPct said "recorded only" while the
+       forward view on Relationships priced every deal with it. A rule read
+       as `rules.<key>` is in force whatever this file says. */
+    for (const k of keys) {
+      if (RULE_REACH[k].live) continue;
+      expect(new RegExp(`rules\\.${k}\\b`).test(body), `${k} is read as rules.${k} but marked not in force`).toBe(false);
     }
   });
 });
