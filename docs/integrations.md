@@ -167,6 +167,21 @@ The rule is in `lib/core/cron.ts` and `lib/core/cron.test.ts` reads
 `vercel.json` and asserts that every scheduled path exports GET, so a third job
 cannot repeat it.
 
+**A step is written to who it is for, or skipped for them with the reason.** A
+sequence is chosen by band, and a band says nothing about whether somebody is
+buying, selling or buying from abroad, so each step in `lib/core/nurture.ts`
+carries a seller and an abroad version or a skip: a seller is not sent the rates
+text, the programs email or the savings target, and a buyer abroad is not sent
+the Georgia programs, which need the buyer to live in the home. The run records
+a skipped step as skipped with its reason (`notForThem` in the run's answer),
+before it holds anything for the agent and before it counts against the cap.
+The programs email (n4) is matched with the saved plan page's own profile and
+matcher, so it cannot list a program the page says they do not fit; a plan
+without the answers that page needs is skipped with the missing answers named.
+The day-zero touch (n1, s1, l1) is skipped when the "Your Rift plan" save email
+is recorded as sent (`rift_touches`, step `save`), because it carries the same
+link; a failed or switched-off save email leaves it to go.
+
 Only **automatic** steps are sent. Calls and steps marked "needs him" stay in
 the queue for the agent — a product that auto-dials on somebody's behalf has
 decided something that was not its to decide.

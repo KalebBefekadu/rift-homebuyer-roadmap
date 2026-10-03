@@ -23,8 +23,8 @@ vi.mock("./service", () => ({
   currentAgentId: async () => "agent-1",
 }));
 vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: vi.fn() }));
-const matchForVisitor = vi.fn();
-vi.mock("./match", () => ({ matchForVisitor: (...a: unknown[]) => matchForVisitor(...a) }));
+vi.mock("./program-checks", () => ({ currentPrograms: async () => [] }));
+vi.mock("./settings", () => ({ rulesOrDefaults: async () => ({ rules: { registryDays: { value: 90 } } }) }));
 
 const { claimStep, markTouch } = await import("./nurture");
 
@@ -207,8 +207,7 @@ describe("rechecking just before the send (AT37)", async () => {
 });
 
 describe("the programmes the n4 email lists", async () => {
-  const { due, matchedPrograms } = await import("./nurture");
-  const { PROGRAMS } = await import("@/lib/core/registry");
+  const { due } = await import("./nurture");
 
   it("reads first-time status from the ownership answer on their readout", async () => {
     const enrolment = (id: string, lead: string, assessment: string) => ({
@@ -234,20 +233,6 @@ describe("the programmes the n4 email lists", async () => {
     expect(by.get("renter")).toBe(true);
   });
 
-  it("matches nothing without a county, and does not ask the registry to guess", async () => {
-    matchForVisitor.mockReset();
-    expect(await matchedPrograms({ county: null, firstTimeBuyer: true }, new Map())).toEqual([]);
-    expect(matchForVisitor).not.toHaveBeenCalled();
-  });
-
-  it("matches fresh, once per county and status in a run", async () => {
-    matchForVisitor.mockReset();
-    matchForVisitor.mockResolvedValue({ match: { matched: [PROGRAMS[0]] } });
-    const cache = new Map();
-    const a = await matchedPrograms({ county: "DeKalb", firstTimeBuyer: true }, cache);
-    await matchedPrograms({ county: "DeKalb", firstTimeBuyer: true }, cache);
-    expect(a.map((p) => p.name)).toEqual([PROGRAMS[0]!.name]);
-    expect(matchForVisitor).toHaveBeenCalledTimes(1);
-    expect(matchForVisitor).toHaveBeenCalledWith("DeKalb", true);
-  });
+  /* What the step lists, and how it is matched, is in nurture-programs.test.ts:
+     it is the saved plan page's profile and matcher now, not county alone. */
 });

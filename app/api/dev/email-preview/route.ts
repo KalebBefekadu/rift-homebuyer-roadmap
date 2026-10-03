@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead } from "@/lib/db/email";
-import { programLines, programsCopy, touchCopy, SEQUENCES } from "@/lib/core/nurture";
+import { programLines, programsCopy, touchCopy, SEQUENCES, type Audience } from "@/lib/core/nurture";
 import { PROGRAMS } from "@/lib/core/registry";
 
 export const runtime = "nodejs";
@@ -22,7 +22,8 @@ export const dynamic = "force-dynamic";
  *   /api/dev/email-preview?type=touch
  *   /api/dev/email-preview?type=plan-touch             (day-zero copy)
  *   /api/dev/email-preview?type=plan-touch&programs=1  (the n4 step)
- *   /api/dev/email-preview?type=plan-touch&side=sell
+ *   /api/dev/email-preview?type=plan-touch&side=sell             (a seller's day zero)
+ *   /api/dev/email-preview?type=plan-touch&side=sell&step=s2     (any step, for buy, sell or abroad)
  *   /api/dev/email-preview?type=resume&last=1
  *   /api/dev/email-preview?type=readout-sell
  *   /api/dev/email-preview?type=readout-underwater
@@ -35,6 +36,8 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const type = url.searchParams.get("type") ?? "readout";
+  /* Who a plan touch is written to: ?side=sell or ?side=abroad. */
+  const audience: Audience = url.searchParams.get("side") === "sell" ? "sell" : url.searchParams.get("side") === "abroad" ? "abroad" : "buy";
 
   /* Deliberately awkward sample data: a name with an apostrophe and one with a
      script tag, so the escaping is visible rather than assumed. */
@@ -69,13 +72,17 @@ export async function GET(req: Request) {
              the day-zero step's plan variant. */
           ...(url.searchParams.get("programs") === "1"
             ? programsCopy(PROGRAMS.slice(0, 2).map((p) => p.name))!
-            : touchCopy(SEQUENCES[0].steps[0], "plan")),
+            : touchCopy(
+                SEQUENCES.flatMap((s) => s.steps).find((x) => x.id === url.searchParams.get("step")) ?? SEQUENCES[0].steps[0],
+                "plan",
+                audience,
+              )),
           ...(url.searchParams.get("programs") === "1" ? { programs: programLines(PROGRAMS.slice(0, 2)) } : {}),
           /* A hostile token, so the escaping of the link is visible. */
           planUrl: `${url.origin}/saved/sample"token`,
           againUrl: `${url.origin}/buy/cash-to-close`,
           savedOn: "2026-09-28",
-          side: url.searchParams.get("side") === "sell" ? "sell" : "buy",
+          side: audience === "sell" ? "sell" : "buy",
         })
       : type === "touch"
       ? buildTouch({

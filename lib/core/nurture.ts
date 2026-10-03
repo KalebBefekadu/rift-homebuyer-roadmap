@@ -30,6 +30,25 @@ import { FUNDING_LABEL, type AssistanceProgram } from "./registry";
 
 export type Channel = "email" | "text" | "call" | "task";
 
+/**
+ * Who a touch is written to. A sequence is chosen by band (how soon), and a
+ * band says nothing about what somebody is doing: a seller in the "soon" band
+ * was sent a buyer's closing-date email. The audience is read from what they
+ * saved, not guessed, and decides the words or whether the step is sent at all.
+ */
+export type Audience = "buy" | "sell" | "abroad";
+
+/** The subject and opening line a person reads. */
+export interface Copy { says: string; body: string }
+
+/**
+ * A step as it reads to somebody who is not buying a home in Georgia: its own
+ * words, or the statement that it has no honest version for them. A skip
+ * carries its reason so the touch is recorded as skipped WITH it, never
+ * dropped silently and never sent in the wrong words.
+ */
+export type Version = (Copy & { plan?: Copy }) | { skip: string };
+
 export const CHANNEL_LABEL: Record<Channel, string> = {
   email: "Email",
   text: "Text",
@@ -73,6 +92,19 @@ export interface Step {
    * replaces. A step without one reads the same either way.
    */
   plan?: { says: string; body: string };
+  /**
+   * What this step is for a seller, and for a buyer abroad. The definition's
+   * own words are the buyer's. A step with neither is true for everybody, and
+   * the test on vocabulary (nurture.test.ts) is what holds it to that.
+   */
+  sell?: Version;
+  abroad?: Version;
+  /**
+   * The step only carries the plan's link, which the save email already
+   * carried. Not sent to somebody whose save email is recorded as sent: it
+   * would be the same link, again, within the day.
+   */
+  coveredBySaveEmail?: true;
 }
 
 export interface Sequence {
@@ -123,6 +155,29 @@ const SAVED_PLAN_OPENING = {
   body: "Your plan is saved exactly as you saw it. It stays at this link and it stays yours.",
 };
 
+/* Why a step is not sent to a seller or a buyer abroad. Written as the
+   touches table shows it, so each starts the way every other skip does. */
+const SELLER_NO_RATES = "Not sent: it is about mortgage rates moving a buyer's monthly payment, and rates do not change what a seller keeps";
+const SELLER_NO_PROGRAMS = "Not sent: these are programs for people buying a home, and they are selling";
+const SELLER_NO_TARGET = "Not sent: it is the monthly savings target that closes a buyer's gap, and a seller has no gap to close";
+/* From lib/core/abroad.ts: the reason that page exists. */
+const ABROAD_NO_PROGRAMS = "Not sent: Georgia's programs for buyers need the buyer to live in the home and most ask for a Social Security number, so they do not fit a buyer abroad";
+const ABROAD_NO_TARGET = "Not sent: it is a savings target for a purchase date, which a plan for buying from abroad does not have";
+
+/* The day-zero opening for a seller, and for a buyer abroad. */
+const SELLER_OPENING: Version = {
+  says: "Your readout, and what selling would leave you",
+  body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.",
+  plan: {
+    says: "Your saved plan, and how to check it before you decide",
+    body: "Your plan is saved exactly as you saw it. It stays at this link and it stays yours.",
+  },
+};
+const ABROAD_OPENING: Version = {
+  says: "Your readout, and what buying from abroad would take",
+  body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.",
+};
+
 export const SEQUENCES: Sequence[] = [
   {
     band: "now",
@@ -130,13 +185,15 @@ export const SEQUENCES: Sequence[] = [
     why: "They are transacting inside 90 days. The only job is getting a conversation booked before somebody else does. Short, and it stops the moment a human replies.",
     ends: "After day 9, drops to the 'This week' cadence rather than going quiet.",
     steps: [
-      { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.", plan: SAVED_PLAN_OPENING },
+      { id: "n1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked. They keep it whether or not they answer.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.", plan: SAVED_PLAN_OPENING, sell: SELLER_OPENING, abroad: ABROAD_OPENING, coveredBySaveEmail: true },
       { id: "n2", day: 1, channel: "text", auto: false, says: "Two windows this week if you want to go through it: Wed 6pm or Thu 12pm.", gives: "Two concrete times. An open-ended 'let me know when' is a decision they have to make alone.", body: "If it would help to go through this with somebody, there are two windows this week." },
-      { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not. Say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date." },
+      { id: "n3", day: 3, channel: "call", auto: false, says: "One call. Voicemail if not. Say the gap figure out loud so it lands.", gives: "The actual answer to the thing they asked about, spoken.", body: "Calling about the one thing standing between you and a date.",
+        sell: { says: "One call. Voicemail if not. Say the net figure out loud so it lands.", body: "Calling about the one number that decides whether selling works for you." },
+        abroad: { says: "One call. Voicemail if not. Say what they would need to send out loud so it lands.", body: "Calling about the one thing that decides whether buying from abroad works for you." } },
       /* The count and the names are the person's own, worked out at send time
          (programsCopy below). This step used to say "the two programs" to
          everybody, including people who matched one, three, or none. */
-      { id: "n4", day: 6, channel: "email", auto: true, lists: "programs", says: "The programs you matched, and what each would need from you", gives: "The matched assistance, itemised: new information, not a repeat of the readout. Not sent to anybody who matched none.", body: "The Georgia programs that look like they fit your answers, and what each one would ask of you." },
+      { id: "n4", day: 6, channel: "email", auto: true, lists: "programs", says: "The programs you matched, and what each would need from you", gives: "The matched assistance, itemised: new information, not a repeat of the readout. Not sent to anybody who matched none.", body: "The Georgia programs that look like they fit your answers, and what each one would ask of you.", sell: { skip: SELLER_NO_PROGRAMS }, abroad: { skip: ABROAD_NO_PROGRAMS } },
       { id: "n5", day: 9, channel: "task", auto: false, says: "Decide: still live, or move to the slower cadence?", gives: "An honest reclassification instead of a permanent 'urgent' that stops meaning anything.", body: "Checking whether this is still something you are working towards, so we know how often to be in touch." },
     ],
   },
@@ -146,10 +203,16 @@ export const SEQUENCES: Sequence[] = [
     why: "They are 3 to 9 months out and genuinely working on it. Value beats urgency here: the person who taught them something is the person they call when they are ready.",
     ends: "Rolls into the long horizon after day 45 unless something changed.",
     steps: [
-      { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.", plan: SAVED_PLAN_OPENING },
-      { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date, ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date.", body: "Three things move your closing date more than anything else, and they are not the ones most people focus on." },
-      { id: "s3", day: 9, channel: "text", auto: false, says: "Rates moved this week. Here is what it does to your monthly.", gives: "A recomputed monthly figure, only sent when the change is material.", body: "Rates moved this week, which changes the monthly figure on your readout." },
-      { id: "s4", day: 21, channel: "email", auto: true, says: "The assistance programs in your county, and their deadlines", gives: "Deadlines they would otherwise miss. This is the touch that most often gets replied to.", body: "The assistance programs in your county have deadlines, and they are the sort that pass quietly." },
+      { id: "s1", day: 0, channel: "email", auto: true, says: "Your readout, and the one number that decides your timeline", gives: "The readout itself, permanently linked.", body: "Here are your numbers, worked out from what you told us. They stay at this link and they stay yours.", plan: SAVED_PLAN_OPENING, sell: SELLER_OPENING, abroad: ABROAD_OPENING, coveredBySaveEmail: true },
+      { id: "s2", day: 2, channel: "email", auto: true, says: "What actually moves your closing date, ranked", gives: "The specific levers from their own numbers, ordered by how much each moves the date.", body: "Three things move your closing date more than anything else, and they are not the ones most people focus on.",
+        sell: { says: "What decides what you keep, in order", body: "Three costs decide most of what reaches you when you sell: your loan payoff, your commission and the Georgia costs of selling. Your plan shows each one." },
+        abroad: { says: "What decides the cash you would send, and what owning costs", body: "Your status, how you will use the home and the price decide most of what you would send and what owning costs each year. Your plan shows how each one moves it." } },
+      { id: "s3", day: 9, channel: "text", auto: false, says: "Rates moved this week. Here is what it does to your monthly.", gives: "A recomputed monthly figure, only sent when the change is material.", body: "Rates moved this week, which changes the monthly figure on your readout.",
+        sell: { skip: SELLER_NO_RATES },
+        abroad: { says: "Rates moved this week. Here is what it does to your costs.", body: "Rates moved this week, which changes the cost figures on your readout." } },
+      { id: "s4", day: 21, channel: "email", auto: true, says: "The assistance programs in your county, and their deadlines", gives: "Deadlines they would otherwise miss. This is the touch that most often gets replied to.", body: "The assistance programs in your county have deadlines, and they are the sort that pass quietly.",
+        sell: { says: "The exemptions and appeal deadlines on your home", body: "Georgia homeowners miss exemptions and property tax appeal deadlines, and the deadlines pass quietly. There is a short check for which apply to your home." },
+        abroad: { skip: ABROAD_NO_PROGRAMS } },
       { id: "s5", day: 45, channel: "call", auto: false, says: "Checkpoint: are the numbers still the numbers?", gives: "A re-run of their assessment against what has changed since.", body: "It has been a few weeks. Worth checking whether the numbers you gave us are still the numbers." },
     ],
   },
@@ -159,10 +222,12 @@ export const SEQUENCES: Sequence[] = [
     why: "Nine months to two years. The failure mode is talking to them monthly until they mute you. Four touches a year, each one worth opening, is worth more than twenty that are not.",
     ends: "Repeats quarterly, indefinitely, until a stop fires.",
     steps: [
-      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout: keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to.", plan: { says: "Your saved plan: keep this, it stays yours", body: "Your plan is saved as you left it. Nothing needed from you; it is yours to keep and come back to." } },
-      { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date.", body: "The one figure that decides how long this takes, and what it would take to shorten it." },
+      { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout: keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to.", plan: { says: "Your saved plan: keep this, it stays yours", body: "Your plan is saved as you left it. Nothing needed from you; it is yours to keep and come back to." }, coveredBySaveEmail: true },
+      { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date.", body: "The one figure that decides how long this takes, and what it would take to shorten it.", sell: { skip: SELLER_NO_TARGET }, abroad: { skip: ABROAD_NO_TARGET } },
       { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check: what changed in your county", gives: "Local price and programme movement, recomputed against their saved position.", body: "A quarter on, here is what has changed in your county and what it does to your position." },
-      { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached.", body: "Half a year on, your gap recomputed. No ask attached to this one." },
+      { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached.", body: "Half a year on, your gap recomputed. No ask attached to this one.",
+        sell: { says: "Half-year: what selling would leave you, recomputed", body: "Half a year on, your numbers may have moved. Open your plan to work out what selling would leave you again. No ask attached to this one." },
+        abroad: { says: "Half-year: your costs, recomputed", body: "Half a year on, your numbers may have moved. Open your plan to work out what buying would cost you again. No ask attached to this one." } },
     ],
   },
   {
@@ -193,9 +258,45 @@ export const sequenceFor = (band: Band) => SEQUENCES.find((s) => s.band === band
  */
 export type TouchKind = "readout" | "plan" | "resume";
 
-/** The subject and opening a person of this kind reads for this step. */
-export function touchCopy(step: Pick<Step, "says" | "body" | "plan">, kind: TouchKind): { says: string; body: string } {
+/**
+ * The subject and opening a person reads for this step: their kind (what they
+ * have on file) and their audience (what they are doing) both decide it.
+ *
+ * Audience first. A seller's version of a step replaces the buyer's whole,
+ * including the buyer's plan variant, because the plan variant is the buyer's
+ * words too. A step with no version for them reads as defined, which is what
+ * the vocabulary test in nurture.test.ts holds to being true for them.
+ */
+export function touchCopy(
+  step: Pick<Step, "says" | "body" | "plan" | "sell" | "abroad">,
+  kind: TouchKind,
+  audience: Audience = "buy",
+): Copy {
+  const v = audience === "buy" ? undefined : step[audience];
+  if (v && !("skip" in v)) {
+    return kind === "plan" && v.plan ? v.plan : { says: v.says, body: v.body };
+  }
   return kind === "plan" && step.plan ? step.plan : { says: step.says, body: step.body };
+}
+
+/**
+ * The step id under which the "Your Rift plan" save email is recorded in
+ * rift_touches (lib/db/nurture.ts `recordSaveEmail`). It is in no sequence,
+ * so it can never read as a follow-up already sent; it is there so a step
+ * that would repeat the save email's link can be skipped on a fact.
+ */
+export const SAVE_EMAIL_STEP = "save";
+
+/**
+ * Why a step is not sent to this audience, or null when it is.
+ *
+ * The runner records the touch as skipped with this reason and moves on. A
+ * step with no honest version for somebody is never sent in the buyer's
+ * words instead, and never dropped without a trace.
+ */
+export function skipReason(step: Pick<Step, "sell" | "abroad">, audience: Audience): string | null {
+  const v = audience === "buy" ? undefined : step[audience];
+  return v && "skip" in v ? v.skip : null;
 }
 
 /* ------------------------------------------------------------------ *

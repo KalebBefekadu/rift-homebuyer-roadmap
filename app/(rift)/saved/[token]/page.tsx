@@ -5,11 +5,9 @@ import { valueById, valuesFor, missingPhrase } from "@/lib/core/values";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { Ico } from "@/components/rift/icons";
-import { hrefFor } from "@/lib/core/saved-plan";
-import { matchAssistance, KIND_LABEL, CAUTION, type Occupation } from "@/lib/core/assistance";
+import { hrefFor, assistanceProfile } from "@/lib/core/saved-plan";
+import { matchAssistance, KIND_LABEL, CAUTION } from "@/lib/core/assistance";
 import { assistancePlan } from "@/lib/core/assistance-plan";
-import { firstTimeFrom, type Ownership } from "@/lib/core/funnel";
-import { hasAll } from "@/lib/core/asks";
 import { currentPrograms } from "@/lib/db/program-checks";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { currentAgentId } from "@/lib/db/service";
@@ -69,12 +67,11 @@ export default async function SavedPlanPage({ params }: { params: Promise<{ toke
   const a = plan.answers;
   let assist: ReturnType<typeof assistancePlan> | null = null;
   let combination: ReturnType<typeof matchAssistance>["combination"] = null;
-  if (plan.side === "buy" && hasAll(a, valueById("assistance")!.asks)) {
+  /* The profile is the follow-up email's too (lib/core/saved-plan.ts), so the
+     two cannot disagree about who fits what. */
+  const { profile } = plan.side === "buy" ? assistanceProfile(a) : { profile: null };
+  if (profile) {
     const [{ rules }, programs] = await Promise.all([rulesOrDefaults(await currentAgentId()), currentPrograms()]);
-    const profile = {
-      county: String(a.county), firstTime: firstTimeFrom(String(a.ownership) as Ownership), price: Number(a.price),
-      income: Number(a.income), household: Number(a.household), occupation: String(a.occupation) as Occupation | "other",
-    };
     const r = matchAssistance(profile, { today: new Date(), windowDays: rules.registryDays.value, programs });
     combination = r.combination;
     assist = r.matches.length ? assistancePlan(r.matches, profile) : null;

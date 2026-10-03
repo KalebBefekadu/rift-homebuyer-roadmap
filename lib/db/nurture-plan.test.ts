@@ -24,11 +24,10 @@ vi.mock("./service", () => ({
   currentAgentId: async () => "agent-1",
 }));
 vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: vi.fn() }));
-const matchForVisitor = vi.fn();
-vi.mock("./match", () => ({ matchForVisitor: (...a: unknown[]) => matchForVisitor(...a) }));
+vi.mock("./program-checks", () => ({ currentPrograms: async () => [] }));
+vi.mock("./settings", () => ({ rulesOrDefaults: async () => ({ rules: { registryDays: { value: 90 } } }) }));
 
-const { due, matchedPrograms } = await import("./nurture");
-const { PROGRAMS } = await import("@/lib/core/registry");
+const { due } = await import("./nurture");
 const { SEQUENCES } = await import("@/lib/core/nurture");
 
 const NOW = new Date("2026-09-24T12:00:00Z");
@@ -52,7 +51,7 @@ const queue = async () => {
   return new Map((q.ok && "data" in q ? q.data : []).map((t) => [t.leadId, t]));
 };
 
-beforeEach(() => { vi.clearAllMocks(); matchForVisitor.mockReset(); });
+beforeEach(() => { vi.clearAllMocks(); });
 
 describe("the queue reads the saved plan", () => {
   it("asks for the plan on the same query as the lead, not in a second round trip", async () => {
@@ -101,7 +100,7 @@ describe("the queue reads the saved plan", () => {
     expect(t.says).not.toMatch(/most of the way/i);
   });
 
-  it("feeds the plan's county and ownership to the programs step (n4)", async () => {
+  it("reads the plan's county and ownership for the programs step (n4), and no profile when the rest is missing", async () => {
     build({
       "select rift_enrolments": {
         data: [enrolment("owner", {
@@ -115,10 +114,13 @@ describe("the queue reads the saved plan", () => {
     expect(t.stepId).toBe("n4");
     expect(t.kind).toBe("plan");
 
-    matchForVisitor.mockResolvedValue({ match: { matched: [PROGRAMS[0]] } });
-    const listed = await matchedPrograms(t, new Map());
-    expect(matchForVisitor).toHaveBeenCalledWith("Gwinnett", false);
-    expect(listed.map((p) => p.name)).toEqual([PROGRAMS[0]!.name]);
+    expect(t.county).toBe("Gwinnett");
+    expect(t.firstTimeBuyer).toBe(false);
+    /* The page needs income, household and work as well and this plan has
+       none, so it shows no assistance plan and the email has nothing to agree
+       with (nurture-programs.test.ts covers the full profile). */
+    expect(t.profile).toBeNull();
+    expect(t.profileGap).toMatch(/missing: price, income, household, occupation/);
   });
 
   it("counts a plan without its link as nothing to point at", async () => {

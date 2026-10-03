@@ -1,5 +1,39 @@
 import { describe, it, expect } from "vitest";
-import { cleanPlan, planSummary, planFacts } from "./saved-plan";
+import { cleanPlan, planSummary, planFacts, assistanceProfile } from "./saved-plan";
+
+/**
+ * The profile the saved plan page matches programs against, and the follow-up
+ * email matches against too. One function, because two copies of "which
+ * answers make a profile" is how an email comes to list a program the page
+ * says the person does not fit.
+ */
+describe("the programs profile of a saved plan", () => {
+  const FULL = { county: "Fulton", ownership: "none", price: 310_000, income: 62_000, household: "3", occupation: "other" };
+
+  it("is built from every answer the programs check asks, as the plan page builds it", () => {
+    expect(assistanceProfile(FULL)).toEqual({
+      profile: { county: "Fulton", firstTime: true, price: 310_000, income: 62_000, household: 3, occupation: "other" },
+    });
+  });
+
+  it("counts somebody who owns their home as not a first-time buyer, and everybody else as one", () => {
+    expect(assistanceProfile({ ...FULL, ownership: "primary" }).profile?.firstTime).toBe(false);
+    expect(assistanceProfile({ ...FULL, ownership: "investment" }).profile?.firstTime).toBe(true);
+  });
+
+  it("is no profile, naming what is missing, rather than a guess at income or household", () => {
+    const r = assistanceProfile({ county: "Fulton", ownership: "none", price: 310_000 });
+    expect(r.profile).toBeNull();
+    expect("missing" in r && r.missing).toEqual(["income", "household", "occupation"]);
+  });
+
+  it("does not accept an answer the programs check would not have offered", () => {
+    expect(assistanceProfile({ ...FULL, occupation: "wizard" }).profile).toBeNull();
+    expect(assistanceProfile({ ...FULL, county: "Atlantis" }).profile).toBeNull();
+    expect(assistanceProfile({ ...FULL, price: "lots" }).profile).toBeNull();
+    expect(assistanceProfile({ ...FULL, household: "40" }).profile).toBeNull();
+  });
+});
 
 describe("a saved plan, as stored (Blueprint v5 §5.5, D14)", () => {
   it("records program alerts only when asked, and only for buyers", () => {
@@ -32,7 +66,7 @@ describe("what a follow-up may read from a saved plan", () => {
     const p = cleanPlan({ side: "buy", answers: { county: "Cobb", ownership: "primary" }, values: [
       { tool: "cash", label: "x", figure: "$24,788", href: "/buy/cash-to-close?c=Cobb&s=9000" },
     ] });
-    expect(planFacts(p)).toEqual({ county: "Cobb", firstTimeBuyer: false, againPath: "/buy/cash-to-close" });
+    expect(planFacts(p)).toEqual({ county: "Cobb", firstTimeBuyer: false, againPath: "/buy/cash-to-close", side: "buy" });
   });
 
   it("links a value's bare page, never one carrying their answers", () => {
@@ -45,8 +79,16 @@ describe("what a follow-up may read from a saved plan", () => {
   it("fails towards more help, and towards no county rather than a wrong one", () => {
     /* The column is jsonb from whichever build saved it. */
     expect(planFacts({ side: "buy", answers: { county: "Atlantis", ownership: "castle" }, values: [] }))
-      .toEqual({ county: null, firstTimeBuyer: true, againPath: "/buy" });
-    expect(planFacts({ side: "sell", values: [{ tool: "nope" }] })).toEqual({ county: null, firstTimeBuyer: true, againPath: "/sell" });
+      .toEqual({ county: null, firstTimeBuyer: true, againPath: "/buy", side: "buy" });
+    expect(planFacts({ side: "sell", values: [{ tool: "nope" }] })).toEqual({ county: null, firstTimeBuyer: true, againPath: "/sell", side: "sell" });
+  });
+
+  it("says which side the plan is for, and says nothing when it does not say", () => {
+    /* A plan with no side must not read as a buyer's: the caller falls back to
+       the lead's own side, which may be selling. */
+    expect(planFacts({ side: "abroad" })!.side).toBe("abroad");
+    expect(planFacts({ values: [] })!.side).toBeNull();
+    expect(planFacts({ side: "elsewhere" })!.side).toBeNull();
   });
 
   it("is nothing without a plan", () => {

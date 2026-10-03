@@ -3,6 +3,7 @@ import { clientIp, limited, readJson, visitorSession } from "@/lib/db/guard";
 import { captureLead } from "@/lib/db/leads";
 import { attachPlan } from "@/lib/db/saved-plan";
 import { sendNewLead, sendSavedPlan } from "@/lib/db/email";
+import { recordSaveEmail } from "@/lib/db/nurture";
 import { currentAgentEmail } from "@/lib/db/service";
 import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
 import { cleanPlan, planSummary } from "@/lib/core/saved-plan";
@@ -117,6 +118,19 @@ export async function POST(req: Request) {
     });
     emailed = sent.ok && !("skipped" in sent);
     if (!sent.ok) captureOpError(new Error(sent.error), { op: "email.plan" });
+
+    /* What became of it, recorded so the day-zero follow-up (which carries
+       the same link) is skipped on a fact and not on an assumption that this
+       email always goes. Three outcomes, kept apart: a switched-off sender
+       and a failure must not read as a send, or somebody is left without
+       their link. A record that cannot be written costs only a duplicate
+       email, so it is reported and the visitor is not told. */
+    const rec = await recordSaveEmail(
+      r.data.id,
+      emailed ? "sent" : sent.ok ? "skipped" : "failed",
+      sent.ok ? ("reason" in sent ? sent.reason : undefined) : sent.error,
+    );
+    if (!rec.ok) captureOpError(new Error(rec.error), { op: "email.planRecord" });
   }
 
   /* The plan's link is also what answers the agent's own questions after

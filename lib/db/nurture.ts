@@ -3,11 +3,13 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead, boundedWrite } from "./bounded";
 import { journeyTablesMissing } from "./journeys";
-import { sequenceFor, resolveChannel, programLines, touchCopy, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
+import { sequenceFor, resolveChannel, programLines, touchCopy, skipReason, SAVE_EMAIL_STEP, type Audience, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
 import { BUY_FUNNEL, firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
-import { planFacts } from "@/lib/core/saved-plan";
-import { georgiaDay } from "@/lib/core/day";
-import { matchForVisitor } from "./match";
+import { planFacts, planAssistance } from "@/lib/core/saved-plan";
+import { georgiaDay, showDay } from "@/lib/core/day";
+import { currentPrograms } from "./program-checks";
+import { rulesOrDefaults } from "./settings";
+import { matchAssistance, toLegacy, type Profile, type ProgramRecord } from "@/lib/core/assistance";
 import type { Band } from "@/lib/core/lead";
 
 /**
@@ -118,10 +120,29 @@ export interface DueTouch {
   county: string | null;
   /** From the ownership answer on their readout or plan. What the programs step matches on, with the county. */
   firstTimeBuyer: boolean;
+  /**
+   * What the programs step matches against: the saved plan page's own profile
+   * for a plan, the readout's inputs for a v4 lead. Null with `profileGap`
+   * saying why when there is not enough to match on.
+   */
+  profile: Profile | null;
+  profileGap: string | null;
   /** How far they got, for the recovery touch. Everything, for somebody who saved a plan. */
   answered: number;
   of: number;
   side: "buy" | "sell";
+  /**
+   * What they are doing, read from their saved plan before the lead's side:
+   * the save route files a buyer from abroad as a buyer, and the plan is
+   * where the difference is kept. Decides the copy.
+   */
+  audience: Audience;
+  /**
+   * Why this step is not sent to them, when it is not. The runner records the
+   * touch as skipped with this, and sends nothing: the alternative is the
+   * buyer's words, or silence nobody can see.
+   */
+  skip: string | null;
 }
 
 /**
@@ -144,7 +165,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
          assessment at all, so without them every real lead read as somebody
          who had started and stopped, and was sent "pick up where you left
          off" about a plan they had finished and saved. */
-      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side,plan,plan_token,plan_saved_at),rift_touches(step_id)")
+      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side,plan,plan_token,plan_saved_at),rift_touches(step_id,outcome,sent_at)")
       .eq("agent_id", agent_id)
       .is("stopped_at", null);
     if (error) return failed(error.message);
@@ -163,7 +184,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         name: string | null; email: string | null; assessment_id: string | null; side: "buy" | "sell";
         plan?: unknown; plan_token?: string | null; plan_saved_at?: string | null;
       } | null;
-      rift_touches: { step_id: string }[];
+      rift_touches: { step_id: string; outcome?: string; sent_at?: string }[];
     }[]).filter((r) => !isClient.has(r.lead_id));
 
     /* One query for the whole queue rather than one per enrolment. */
@@ -187,7 +208,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
       }
     }
 
-    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null; firstTimeBuyer: boolean }>();
+    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null; firstTimeBuyer: boolean; price: number | null }>();
     if (assessmentIds.length) {
       const { data: reads, error: readErr } = await db
         .from("rift_readouts")
@@ -209,6 +230,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
             token: r.share_token,
             county: r.rift_assessments?.county ?? null,
             firstTimeBuyer: firstTimeFrom(ownershipOf(r.inputs?.ownership)),
+            price: typeof r.inputs?.price === "number" && Number.isFinite(r.inputs.price) && r.inputs.price > 0 ? r.inputs.price : null,
           });
         }
       }
@@ -246,7 +268,11 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
          token, because the token is the only way back to it. */
       const saved = !s && lead?.plan_token ? planFacts(lead.plan) : null;
       const kind: TouchKind = s ? "readout" : saved ? "plan" : "resume";
-      const copy = touchCopy(step, kind);
+      /* The plan's side even when a readout wins the kind: it is the person
+         who is selling or abroad, not the email. Falls back to the lead's. */
+      const audience: Audience = planFacts(lead?.plan)?.side ?? lead?.side ?? "buy";
+      const copy = touchCopy(step, kind, audience);
+      const forPrograms = programsProfile(s, saved ? lead!.plan : null);
 
       out.push({
         enrolmentId: row.id,
@@ -270,9 +296,13 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         againPath: saved?.againPath ?? null,
         county: s?.county ?? saved?.county ?? null,
         firstTimeBuyer: s?.firstTimeBuyer ?? saved?.firstTimeBuyer ?? true,
+        profile: forPrograms.profile,
+        profileGap: forPrograms.gap,
         answered: saved ? of : lead?.assessment_id ? progress.get(lead.assessment_id) ?? 0 : 0,
         of,
         side: lead?.side ?? "buy",
+        audience,
+        skip: skipReason(step, audience) ?? (kind === "plan" && step.coveredBySaveEmail ? savedEmailCovers(row.rift_touches) : null),
       });
     }
 
@@ -284,30 +314,115 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 }
 
 /**
- * The programmes this person matches today, for the step that lists them.
+ * Why a day-zero touch is not sent: the save email already carried its link.
  *
- * A fresh match rather than the list stored on their readout, through the
- * same `matchForVisitor` every page uses. The readout is a snapshot of the day
- * it was made; this email goes out days later, and a programme that has since
- * closed or gone unverified must not arrive in an inbox as something that fits
- * them, for the same reason the page stops showing it.
- *
- * No county means nothing to match on, which is an empty list, not a guess.
- * `cache` is per run: most of a cohort shares a county, and the registry does
- * not change between two people in the same minute.
+ * Only on a RECORDED send. A failed save email, a switched-off sender, and a
+ * plan saved before the outcome was recorded all leave the follow-up as the
+ * one email with the link in it, and one duplicate is better than somebody
+ * who never received it.
  */
-export async function matchedPrograms(
-  t: Pick<DueTouch, "county" | "firstTimeBuyer">,
-  cache: Map<string, Promise<ProgramLine[]>>,
-): Promise<ProgramLine[]> {
-  if (!t.county) return [];
-  const key = `${t.county}|${t.firstTimeBuyer}`;
-  let lines = cache.get(key);
-  if (!lines) {
-    lines = matchForVisitor(t.county, t.firstTimeBuyer).then((r) => programLines(r.match.matched));
-    cache.set(key, lines);
+function savedEmailCovers(touches: { step_id: string; outcome?: string; sent_at?: string }[] | undefined): string | null {
+  const sent = touches?.find((t) => t.step_id === SAVE_EMAIL_STEP && t.outcome === "sent");
+  if (!sent) return null;
+  const day = sent.sent_at && Number.isFinite(Date.parse(sent.sent_at))
+    ? ` on ${showDay(georgiaDay(new Date(sent.sent_at)), { month: "long", day: "numeric" })}`
+    : "";
+  return `Not sent: the plan's save email already went out${day} with the same link`;
+}
+
+/**
+ * Records what became of the "Your Rift plan" save email, on the lead's
+ * sequence, as a touch no sequence has a step for.
+ *
+ * The least invasive place that is also a fact: nothing here changes what the
+ * cadence owes, and the unique (enrolment, step) key means a second record
+ * for the same enrolment is `recorded: false`, not an error. A lead with no
+ * sequence (it could not be enrolled) has nothing to record against, and says
+ * so rather than inventing one.
+ */
+export async function recordSaveEmail(
+  leadId: string,
+  outcome: "sent" | "skipped" | "failed",
+  detail?: string,
+): Promise<DbResult<{ recorded: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const e = await boundedRead(db.from("rift_enrolments").select("id").eq("lead_id", leadId).maybeSingle(), "the sequence");
+  if (!e.ok) return e;
+  const row = ("data" in e ? e.data : null) as { id: string } | null;
+  if (!row) return skipped("this lead has no follow-up sequence to record the save email against");
+  try {
+    const { error } = await db.from("rift_touches").insert({
+      enrolment_id: row.id, step_id: SAVE_EMAIL_STEP, channel: "email", outcome, detail: detail ?? null,
+    });
+    if (error) {
+      if (error.code === "23505") return done({ recorded: false });
+      return failed(error.message);
+    }
+    return done({ recorded: true });
+  } catch (err) {
+    return failed(err);
   }
-  return lines;
+}
+
+/**
+ * What the programs step can be matched against, and when it cannot, why.
+ *
+ * A saved plan is matched on the page's own profile, which needs every answer
+ * the programs check asks; one that lacks them gets no list on its page, so an
+ * email listing programs would have nothing to agree with. A v4 readout has
+ * only county, ownership and price, so those are all that is matched, and the
+ * matcher treats what it was not told (income, household, work) as "needs
+ * checking", not as a pass or a fail.
+ */
+function programsProfile(
+  readout: { county: string | null; firstTimeBuyer: boolean; price: number | null } | undefined,
+  savedPlan: unknown,
+): { profile: Profile; gap: null } | { profile: null; gap: string } {
+  if (readout) {
+    if (!readout.county) return { profile: null, gap: "no county on their readout to check programs against" };
+    if (!readout.price) return { profile: null, gap: "no price on their readout to check programs against" };
+    return { profile: { county: readout.county, firstTime: readout.firstTimeBuyer, price: readout.price }, gap: null };
+  }
+  if (savedPlan) {
+    const r = planAssistance(savedPlan);
+    if (r.profile) return { profile: r.profile, gap: null };
+    return { profile: null, gap: `their saved plan does not have what the programs check needs (missing: ${r.missing.join(", ")})` };
+  }
+  return { profile: null, gap: "nothing on record to check programs against" };
+}
+
+/**
+ * The registry as the saved plan page reads it, once for a run: the programs
+ * after the reviewers' withdrawals, and the window past which a record is
+ * withheld. Most of a cohort is matched against the same book, and it does not
+ * change between two people in the same minute.
+ */
+export interface ProgramBook { programs: ProgramRecord[]; windowDays: number }
+
+export async function programBook(): Promise<ProgramBook> {
+  const [{ rules }, programs] = await Promise.all([rulesOrDefaults(await currentAgentId()), currentPrograms()]);
+  return { programs, windowDays: rules.registryDays.value };
+}
+
+/**
+ * The programs this person matches today, for the step that lists them.
+ *
+ * Through `matchAssistance` with the same profile and the same registry the
+ * saved plan page uses, so the email cannot list a program the page says they
+ * do not fit. It used to match on county and first-time status alone, which
+ * ignores income, household size, price and work: most of what decides it.
+ *
+ * A fresh match rather than anything stored: this email goes out days after
+ * the plan was saved, and a program that has since closed or gone unverified
+ * must not arrive in an inbox as something that fits them, for the same
+ * reason the page stops showing it. No profile means nothing to match on,
+ * which is an empty list, not a guess; the runner records why.
+ */
+export function matchedPrograms(t: Pick<DueTouch, "profile">, book: ProgramBook, today = new Date()): ProgramLine[] {
+  if (!t.profile) return [];
+  const r = matchAssistance(t.profile, { today, windowDays: book.windowDays, programs: book.programs });
+  return programLines(r.matches.map((m) => toLegacy(m.program)));
 }
 
 async function journeyLeads(db: NonNullable<ReturnType<typeof serviceClient>>, agentId: string): Promise<DbResult<Set<string>>> {
@@ -376,6 +491,26 @@ export async function claimStep(enrolmentId: string, stepId: string, channel: Du
   } catch (e) {
     return failed(e);
   }
+}
+
+/**
+ * Records a step as skipped, with why, so it is not owed again tomorrow and
+ * the agent can read the reason in the touches table.
+ *
+ * The same claim-then-mark the send uses, so two workers cannot both record
+ * it, and a step already claimed (by a send, or by the other worker) is left
+ * as it is: `recorded: false` says nothing was written.
+ */
+export async function skipStep(
+  t: Pick<DueTouch, "enrolmentId" | "stepId" | "channel" | "downgraded">,
+  why: string,
+): Promise<DbResult<{ recorded: boolean }>> {
+  const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
+  if (!claim.ok || "skipped" in claim) return claim;
+  if (!claim.data.claimed) return done({ recorded: false });
+  const marked = await markTouch(t.enrolmentId, t.stepId, "skipped", why);
+  if (!marked.ok) return marked;
+  return done({ recorded: true });
 }
 
 export async function markTouch(enrolmentId: string, stepId: string, outcome: "sent" | "skipped" | "failed", detail?: string) {
