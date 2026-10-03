@@ -25,6 +25,13 @@ export const LATE_DAYS = 7;
 
 const DONE_MARKETING: Stage[] = ["under-contract", "close", "continue"];
 
+/**
+ * A cadence this far behind has not been missed once, it has stopped (four
+ * cycles). It stays on Today, because a live listing nobody reviews is a
+ * decision to make, but it is worded as a stop rather than as "40 days ago".
+ */
+export const STOPPED_DAYS = 28;
+
 export interface SaleCadence {
   journeyId: string;
   person: string;
@@ -72,6 +79,8 @@ export interface CadenceDue {
   /** Whole days since it fell due; 0 means today. */
   late: number;
   version?: number;
+  /** For a weekly review: which listing it is about, and when it went live and was last reviewed. */
+  listing?: { detail: string; liveOn: string; lastReviewOn: string | null; url: string | null };
 }
 
 const dayOf = (iso: string) => georgiaDay(new Date(iso));
@@ -89,10 +98,20 @@ export function cadenceDue(sales: SaleCadence[], today: string): CadenceDue[] {
       const last = s.lastReviewAt ? dayOf(s.lastReviewAt) : null;
       const from = last && last > live ? last : live;
       const due = addDays(from, REVIEW_EVERY_DAYS);
-      if (due <= today) out.push({ ...base, kind: "weekly-review", due, late: daysBetween(due, today) });
+      if (due <= today) {
+        out.push({
+          ...base, kind: "weekly-review", due, late: daysBetween(due, today),
+          listing: { detail: l.live.detail, liveOn: live, lastReviewOn: last, url: l.live.url },
+        });
+      }
     }
 
-    if (s.latestOpinion && s.latestOpinion.reviewOn <= today) {
+    /* At Review offers the seller has an offer in front of them: that
+       conversation is the pricing review, and a reminder to "go through
+       version 2" about a price they are already being asked to act on only
+       grows older until somebody dismisses it. The weekly review stays,
+       because the listing is still live and the seller still hears weekly. */
+    if (s.stage !== "offers" && s.latestOpinion && s.latestOpinion.reviewOn <= today) {
       out.push({ ...base, kind: "pricing-review", due: s.latestOpinion.reviewOn, late: daysBetween(s.latestOpinion.reviewOn, today), version: s.latestOpinion.version });
     }
   }

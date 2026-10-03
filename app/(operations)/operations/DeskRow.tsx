@@ -64,7 +64,7 @@ export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { ma
     <li className="desk-row">
       <div className="row gap-2" style={{ alignItems: "baseline" }}>
         <span className={`chip t-2xs ${t.chip}`} style={{ flex: "none" }}>{t.word}</span>
-        <Link href={item.href} className="w6" style={{ minWidth: 0 }}>{item.title}</Link>
+        {item.href ? <Link href={item.href} className="w6" style={{ minWidth: 0 }}>{item.title}</Link> : <span className="w6" style={{ minWidth: 0 }}>{item.title}</span>}
         {m?.kind === "pinned" ? <span className="chip t-2xs chip-acc" title={m.reason} style={{ flex: "none" }}><Ico.bolt size={10} />Pinned</span> : null}
       </div>
       <div className="desk-meta">

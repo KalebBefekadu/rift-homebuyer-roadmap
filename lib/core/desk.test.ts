@@ -119,6 +119,39 @@ describe("a sale's promised reviews on Today (S04, S09)", () => {
     expect(price?.evidence).toContain("10 days ago");
   });
 
+  it("names the listing a weekly review is about, and words a cycle that stopped as a stop", () => {
+    const listing = { detail: "Live on FMLS as #7405561", liveOn: "2026-09-01", lastReviewOn: "2026-09-22", url: null };
+    const items = deskItems(base({
+      sales: [
+        { journeyId: "j1", person: "Sam", label: "Selling 12 Oak St", kind: "weekly-review", due: "2026-09-29", late: 1, listing },
+        { journeyId: "j2", person: "Ann", label: "Selling 3 Elm Rd", kind: "weekly-review", due: "2026-08-10", late: 49, listing: { ...listing, lastReviewOn: null } },
+      ],
+    }));
+    const recent = items.find((i) => i.key.startsWith("sale-week:j1"));
+    expect(recent?.evidence).toBe("Live on FMLS as #7405561, live since Sep 1; last reviewed Sep 22");
+    expect(recent?.why).toContain("Due yesterday");
+    const stopped = items.find((i) => i.key.startsWith("sale-week:j2"));
+    expect(stopped).toMatchObject({ group: "attention", tone: "neg", title: "No weekly review for 8 weeks: Selling 3 Elm Rd" });
+    expect(stopped?.next).toContain("withdraw the listing");
+    expect(stopped?.evidence).toContain("not reviewed yet");
+    /* No raw date and no bare "N days ago" on either. */
+    for (const i of [recent, stopped]) expect([i?.title, i?.why, i?.evidence, i?.due].join(" ")).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+
+  it("puts an approved message the last check refused where the agent will read why", () => {
+    const items = deskItems(base({
+      outbox: [
+        { id: "o1", state: "approved", subject: "DeKalb HomeStart is taking applications", to: "Sofia", held: "They replied after this was approved; read their reply first" },
+        { id: "o2", state: "approved", subject: "Plain approval", to: "Luis", held: null },
+      ],
+    }));
+    expect(items.find((i) => i.key === "outbox:o1")).toMatchObject({
+      group: "attention", tone: "warn", title: "Held back: DeKalb HomeStart is taking applications",
+      evidence: "They replied after this was approved; read their reply first",
+    });
+    expect(items.find((i) => i.key === "outbox:o2")?.group).toBe("approval");
+  });
+
   it("asks the agent to talk when a seller wants to discuss the price, and reports an agreement as news", () => {
     const answers = [
       { journeyId: "j1", person: "Sam", label: "Sale of 12 Oak St", version: 3, response: "discuss" as const, note: "Feels high", by: "Sam", at: "2026-09-28T12:00:00Z" },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { canMove, canonical, currentState, programAlertDraft, sendBlockers, type OutboxEvent } from "./outbox";
+import { canMove, canonical, currentState, heldReason, programAlertDraft, sendBlockers, type OutboxEvent } from "./outbox";
 
 const draft = programAlertDraft({ to: "Buyer@Example.com", name: "Test Buyer", program: "Georgia Dream", change: "the maximum is now $12,000.", sourceUrl: "https://dca.georgia.gov/x", planUrl: "https://rift.test/saved/abc", agentFirst: "Kaleb" });
 const ev = (state: OutboxEvent["state"], at: string, hash: string | null = null): OutboxEvent => ({ state, at: `2026-10-01T${at}:00Z`, by: "Kaleb", hash, detail: null });
@@ -37,5 +37,20 @@ describe("the outbox (Blueprint v5 §10.2, AUTO-01 to AUTO-03)", () => {
     expect(draft.body).toContain("https://dca.georgia.gov/x");
     expect(draft.body).toContain("Hi Test,");
     expect(draft.body).not.toMatch(/qualif|guarantee|you are eligible/i);
+  });
+});
+
+describe("why an approved message did not go", () => {
+  const held: OutboxEvent = { ...ev("approved", "12:00"), detail: "Held back: they replied after this was approved; read their reply first" };
+
+  it("reads the reason off the approval the last check held back", () => {
+    expect(heldReason([ev("prepared", "11:00"), held])).toBe("They replied after this was approved; read their reply first");
+  });
+
+  it("has none for a plain approval, a failure, or a hold a later step has moved past", () => {
+    expect(heldReason([ev("prepared", "11:00"), ev("approved", "12:00")])).toBeNull();
+    expect(heldReason([ev("prepared", "11:00"), held, { ...ev("failed", "13:00"), detail: "Brevo said no" }])).toBeNull();
+    expect(heldReason([ev("prepared", "11:00"), held, ev("cancelled", "13:00")])).toBeNull();
+    expect(heldReason([])).toBeNull();
   });
 });

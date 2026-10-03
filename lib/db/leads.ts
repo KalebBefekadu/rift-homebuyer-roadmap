@@ -306,6 +306,8 @@ export interface RankedLead {
    */
   figures: Record<string, string | number> | null;
   shareToken: string | null;
+  /** What they typed: the price they gave and when they want to move. For the strip on Today, on either side. */
+  facts: { value: number | null; timing: string | null };
   /**
    * What they saved, for a lead with a saved plan (Blueprint v5 §5.5) and no
    * readout, which since D31 is every new lead. The figures are the text
@@ -451,6 +453,10 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
         .rift_enrolments?.[0]?.stop_reason ?? null,
       figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
       shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
+      facts: {
+        value: typeof (r.lead_input as LeadInput | null)?.value === "number" ? (r.lead_input as LeadInput).value : null,
+        timing: (r.lead_input as LeadInput | null)?.timing?.trim() || null,
+      },
       saved: savedOf(r.plan, r.plan_saved_at as string | null),
       completion: (r.lead_input as LeadInput | null)?.completion ?? 0,
       /* From the row, not assumed. A lead with neither an email nor a phone
