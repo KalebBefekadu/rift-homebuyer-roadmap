@@ -152,9 +152,8 @@ export interface Reach {
  * Whether a setting is connected to anything.
  *
  * This exists because the alternative is worse than not having a settings
- * page. Five of these six currently reach nothing: the forward view that
- * `commissionPct` prices is a prototype screen, Rift Offer does not exist
- * outside the prototype either, the retention sweep's windows are fixed in
+ * page. Three of these six currently reach nothing: Rift Offer does not exist
+ * outside the prototype, the retention sweep's windows are fixed in
  * lib/db/retention.ts rather than read from here, and `autoEmailReadout`
  * describes a delivery that only ever happens when somebody asks for it.
  *
@@ -170,8 +169,11 @@ export interface Reach {
  */
 export const RULE_REACH: Record<keyof BusinessRules, Reach> = {
   commissionPct: {
-    live: false,
-    where: "Recorded only. The forward view it prices lives in the prototype; nothing in Operations renders a revenue figure yet.",
+    /* Said "recorded only" for weeks after the forward view moved into
+       Operations and began pricing with it: the one row on this page that
+       claimed less than it did, which is the rarer and still wrong direction. */
+    live: true,
+    where: "Prices the forward view on Relationships: the expected commission over the coming months, marked \"assumed\" until you decide it.",
   },
   autoEmailReadout: {
     live: false,
