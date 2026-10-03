@@ -427,7 +427,7 @@ for (const [name, table, cols] of [
   ["allContracts: workstreams", "rift_workstream_updates", "transaction_id,workstream,seq,state,owner,owner_name,source,confirmed_on,note,actor_kind,actor_label,created_at"],
   ["allContracts: dates", "rift_deadlines", "id,transaction_id,label,kind,workstream"],
   ["allContracts: date revisions", "rift_deadline_revisions", "deadline_id,seq,state,due_date,due_time,timezone,due_at,rule,trigger_label,trigger_date,days,source_term,source_page,source_document_id,amendment,verified,note,actor_label,created_at"],
-  ["allContracts: journeys", "rift_journeys", "id,label,origin_lead_id"],
+  ["allContracts: journeys", "rift_journeys", "id,label,origin_lead_id,side"],
   ["allContracts: homes", "rift_shortlist_homes", "id,address"],
   ["allContracts: history", "rift_journey_events", "journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at"],
 ]) {
@@ -467,6 +467,25 @@ await check("saleCadences: reviews", () => db.from("rift_listing_reviews").selec
 await check("saleCadences: pricing", () => db.from("rift_pricing_opinions").select("id,journey_id,version,review_on").eq("agent_id", NIL).in("journey_id", [NIL]).order("version").limit(1));
 await check("saleCadences: stages", () => db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", NIL).eq("kind", "stage").in("journey_id", [NIL]).order("seq").limit(1));
 await check("saleCadences: sellers", () => db.from("rift_leads").select("id,name,email").eq("agent_id", NIL).in("id", [NIL]));
+
+/* The Offers board (lib/db/offer-board.ts): buyers' offers, sellers' offers and rooms, in a bounded number of reads. */
+for (const [name, table, cols] of [
+  ["offerBoard: journeys", "rift_journeys", "id,origin_lead_id,side,created_at"],
+  ["offerBoard: homes", "rift_shortlist_homes", "id,journey_id,address,withdrawn_at"],
+  ["offerBoard: bids", "rift_bids", "id,journey_id,home_id,created_at"],
+  ["offerBoard: bid steps", "rift_bid_steps", "bid_id,seq,kind,version,terms,origin,required,document_ids,note,actor_label,created_at"],
+  ["offerBoard: bid responses", "rift_bid_responses", "bid_id,member_id,version,instruction,note,told_agent,created_at"],
+  ["offerBoard: contracts", "rift_transactions", "home_id"],
+  ["offerBoard: sellers' offers", "rift_offers", "id,lead_id,offered_by,price_cents,released_at,created_at"],
+  ["offerBoard: rooms", "rift_offer_rooms", "lead_id,approved_at,approved_for,chosen_offer_id,chosen_at"],
+  ["offerBoard: people", "rift_leads", "id,name,email,human_replied_at"],
+  /* The business report (lib/db/business-report.ts) and the campaign results (lib/db/campaigns.ts). */
+  ["businessRead: leads", "rift_leads", "id,source,stage,session_id,created_at,archived_at,closed_on,lead_input"],
+  ["businessRead: visits", "rift_attributions", "session_id,first_source,first_medium,first_referrer,first_ref,first_at"],
+  ["campaignResults: visits", "rift_attributions", "session_id,first_campaign"],
+]) {
+  await check(name, () => db.from(table).select(cols).eq("agent_id", NIL).limit(1));
+}
 
 for (const [status, name, err] of results) {
   console.log(`${status.padEnd(6)} ${name}${err ? "  → " + err.slice(0, 140) : ""}`);

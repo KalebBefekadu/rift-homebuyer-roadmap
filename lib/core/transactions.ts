@@ -32,6 +32,8 @@ export interface ContractSummary {
   financing: Financing;
   stage: Stage;
   recordedAt: string;
+  /** Which side of a deal the journey is on. Absent on a read that did not ask for it. */
+  side?: "buy" | "sell";
   outcome: { outcome: ContractOutcome; at: string } | null;
   work: WorkstreamView[];
   dates: ContractDate[];
@@ -133,4 +135,84 @@ export function waitingOnOthers(contracts: ContractSummary[], today: string): Wa
     }
   }
   return out.sort((a, b) => a.checkIn.localeCompare(b.checkIn));
+}
+
+/* ------------------------------------------------------------------ *
+ * The Transactions table
+ * ------------------------------------------------------------------ */
+
+export interface DateAhead {
+  label: string;
+  when: string;
+  days: number;
+  /** Checked against the document. An unchecked date is still shown, and says so. */
+  verified: boolean;
+  missed: boolean;
+}
+
+/**
+ * The date to look at on a contract: one that has passed without being
+ * recorded as met, otherwise the soonest still ahead, checked or not.
+ *
+ * `nextDate` above only counts checked dates, which is right for Today (an
+ * unchecked date must not be presented as a fact) and wrong for this table:
+ * a contract whose every date is unchecked read "None checked ahead", which
+ * sounds like nothing is due when the dates are there and are the more urgent
+ * for being unchecked.
+ */
+export function nextAhead(c: ContractSummary): DateAhead | null {
+  const live = c.dates.filter((d) => active(d) && d.view.days !== null);
+  const missed = live.filter((d) => d.view.missed).sort((a, b) => a.view.days! - b.view.days!)[0];
+  const ahead = live.filter((d) => !d.view.missed && d.view.days! >= 0).sort((a, b) => a.view.days! - b.view.days!)[0];
+  const d = missed ?? ahead;
+  return d ? { label: d.label, when: d.view.when, days: d.view.days!, verified: d.view.verified, missed: d.view.missed } : null;
+}
+
+export interface Progress {
+  /** Workstreams confirmed done. */
+  settled: number;
+  /** Workstreams that apply to this contract. */
+  total: number;
+  blocked: number;
+  reported: number;
+}
+
+/** How far along the contract's workstreams are. "Does not apply" is not counted either way. */
+export function progressOf(c: ContractSummary): Progress {
+  const applies = c.work.filter((w) => w.state !== "not-applicable");
+  return {
+    settled: applies.filter((w) => w.state === "confirmed").length,
+    total: applies.length,
+    blocked: applies.filter((w) => w.state === "blocked").length,
+    reported: applies.filter((w) => w.state === "reported").length,
+  };
+}
+
+/**
+ * How much a contract needs the agent, lowest first: 0 something is stuck or a
+ * date was missed, 1 something is unchecked or unconfirmed, 2 quiet for a
+ * week, 3 nothing flagged.
+ */
+export function urgencyOf(c: ContractSummary): 0 | 1 | 2 | 3 {
+  const p = progressOf(c);
+  if (p.blocked || c.dates.some((d) => active(d) && d.view.missed)) return 0;
+  if (p.reported || c.dates.some((d) => active(d) && !d.view.verified)) return 1;
+  if (c.work.some((w) => w.stale && !isSettled(w.state))) return 2;
+  return 3;
+}
+
+/**
+ * Open contracts first, most urgent first and then the nearest date, and
+ * ended ones after, most recently ended first. The table used to be in the
+ * order the contracts were recorded, so the one closing tomorrow could sit
+ * under one with nothing due for a week.
+ */
+export function orderContracts(list: ContractSummary[]): ContractSummary[] {
+  const openOnes = list.filter(open).sort((a, b) => {
+    const u = urgencyOf(a) - urgencyOf(b);
+    if (u) return u;
+    return (nextAhead(a)?.days ?? Infinity) - (nextAhead(b)?.days ?? Infinity);
+  });
+  const ended = list.filter((c) => !open(c)).sort((a, b) => b.outcome!.at.localeCompare(a.outcome!.at));
+  return [...openOnes, ...ended];
 }
