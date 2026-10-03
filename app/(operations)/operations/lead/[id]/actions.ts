@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { currentAgent } from "@/lib/db/session";
-import { addNote, setStage, archiveLead, setNextAction, representationOf, setRepresentation, type NoteKind, type Stage, type RepStatus } from "@/lib/db/clients";
+import { addNote, setStage, archiveLead, restoreLead, setNextAction, representationOf, setRepresentation, type NoteKind, type Stage, type RepStatus } from "@/lib/db/clients";
 import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
 import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer } from "@/lib/db/offers";
 import { approveTake, withdrawTake, reopenChoice } from "@/lib/db/offer-room";
@@ -57,6 +57,20 @@ export async function archive(leadId: string, reason: string) {
   const r = await archiveLead(leadId, reason);
   revalidatePath(`/operations/lead/${leadId}`);
   revalidatePath("/operations");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+export async function restore(leadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+
+  const r = await restoreLead(leadId);
+  revalidatePath(`/operations/lead/${leadId}`);
+  revalidatePath("/operations");
+  revalidatePath("/operations/clients");
 
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };

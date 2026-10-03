@@ -1,0 +1,67 @@
+/* The person record. Read top to bottom: who and where they are, what is owed
+   next, what they want and can afford, then the working panels, then the
+   history. The right-hand rail holds the reference facts that never change
+   the day's work (how to reach them, consent, details). Under 1000px the rail
+   drops below the main column, so the order on a phone is the order above. */
+
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 8px; }
+.top > section { margin-top: 0; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; margin-top: 8px; }
+.main { min-width: 0; }
+.rail { min-width: 0; position: sticky; top: 12px; }
+.rail > section:first-child, .main > section:first-child { margin-top: 24px; }
+@media (max-width: 1000px) {
+  .top { grid-template-columns: minmax(0, 1fr); }
+  .cols { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .rail { position: static; }
+}
+
+.lead { display: grid; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sep { height: 1px; background: var(--line-3); margin: 4px 0; }
+.label { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.stageRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.stageRow select { height: 32px; width: auto; min-width: 180px; max-width: 100%; font-size: 13px; padding: 0 8px; }
+.since { font-size: 12px; color: var(--ink-4); }
+.stall { font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.stall b { font-weight: 600; }
+.action { font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.due { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; }
+.due.overdue { color: var(--neg); font-weight: 600; }
+.due.today { color: var(--warn); font-weight: 600; }
+.due.soon, .due.later { color: var(--ink-3); }
+.form { display: grid; gap: 10px; }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.hint { font-size: 12px; line-height: 1.55; color: var(--ink-4); }
+.err { margin: 0; }
+
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
+.facts dt { font-size: 12px; color: var(--ink-4); }
+.facts dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 550; overflow-wrap: anywhere; }
+.facts.one { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 560px) { .facts { grid-template-columns: minmax(0, 1fr); } }
+
+.figs { display: grid; margin-top: 12px; }
+.fig { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line-3); font-size: 13px; }
+.fig .num { font-size: 14px; }
+.why summary { cursor: pointer; font-size: 12.5px; color: var(--ink-3); }
+.why ul { display: grid; gap: 4px; margin-top: 8px; font-size: 12.5px; }
+.why li { display: flex; justify-content: space-between; gap: 12px; }
+
+.hist { display: grid; }
+.entry { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line-3); }
+.entry:last-child { border-bottom: 0; }
+.entry.stage { background: var(--sunk); }
+.entryHead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 12px; color: var(--ink-4); }
+.entryHead b { color: var(--ink-2); font-weight: 600; }
+.entryBody { margin-top: 3px; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.consent { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.45; }
+.consent + .consent { margin-top: 8px; }
+.railList { display: grid; gap: 10px; }
+.links { display: grid; gap: 4px; font-size: 13.5px; }
+.links a { overflow-wrap: anywhere; }
+
+.panelCard { padding: 16px; }
+.code { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.linkRow { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 8px; background: var(--sunk); border: 1px solid var(--line-2); min-width: 0; }

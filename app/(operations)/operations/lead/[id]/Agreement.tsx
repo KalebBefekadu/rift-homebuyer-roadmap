@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { recordRepresentation } from "./actions";
 import { STATUSES, STATUS_RULES, GATE, type Status, type Standing } from "@/lib/core/representation";
 import { Ico } from "@/components/rift/icons";
+import { Section } from "../../ui";
 
 /**
  * The representation agreement, as a lifecycle state rather than a side channel.
@@ -57,21 +58,17 @@ export function Agreement({
   };
 
   return (
-    <section style={{ marginTop: 28 }}>
-      <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
-        Representation
-      </div>
-
-      <div className="card p-4" style={{ marginTop: 10 }}>
+    <Section id="representation" title="Representation agreement" hint="The signed paper, recorded here. Rift never signs or sends for signature.">
+      <div className="card p-4">
         <div className="between gap-3 wrap" style={{ alignItems: "flex-start" }}>
           <div style={{ minWidth: 0 }}>
             <div className="row gap-2 wrap" style={{ alignItems: "center" }}>
-              <span className={`chip ${rule.chip}`}>{rule.label}</span>
+              <span className={`chip ${rule.chip}`}>{standing.covered ? <Ico.checkCircle size={11} /> : <Ico.alert size={11} />}{rule.label}</span>
               {/* The lapse warning is a chip of its own, not a colour change
                   on the one above. A "Signed" chip that turns amber is the
                   no-colour-alone rule being broken in the one place where the
                   difference is a legal one. */}
-              {standing.lapsingSoon ? <span className="chip chip-warn">Running out</span> : null}
+              {standing.lapsingSoon ? <span className="chip chip-warn"><Ico.clock size={11} />Running out</span> : null}
             </div>
             <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6, maxWidth: 520 }}>
               {standing.note}
@@ -167,6 +164,6 @@ export function Agreement({
           </div>
         ) : null}
       </div>
-    </section>
+    </Section>
   );
 }

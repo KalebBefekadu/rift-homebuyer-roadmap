@@ -12,6 +12,7 @@ import {
 import { DecisionRoom } from "@/components/rift/DecisionRoom";
 import { Ico } from "@/components/rift/icons";
 import { typedSignedNumber } from "@/lib/core/typed";
+import { Section, Notice, Empty } from "../../ui";
 
 /**
  * Assembling a decision room, and releasing it.
@@ -43,37 +44,33 @@ export function Decisions({
   const [adding, setAdding] = useState(false);
 
   return (
-    <section style={{ marginTop: 28 }}>
-      <div className="between gap-2 wrap" style={{ alignItems: "center" }}>
-        <div className="t-2xs c-4 w6" style={{ letterSpacing: ".07em", textTransform: "uppercase" }}>
-          Decisions
-        </div>
-        <button type="button" className="btn btn-g btn-sm" onClick={() => setAdding((a) => !a)}>
+    <Section
+      id="decisions"
+      title="Decisions"
+      hint="For when somebody stalls: two or more options, each with its number and trade-off."
+      actions={
+        <button type="button" className="btn btn-s btn-sm" onClick={() => setAdding((a) => !a)}>
           <Ico.plus size={13} />{adding ? "Cancel" : "New decision"}
         </button>
-      </div>
-
+      }
+    >
       {adding ? <NewRoom leadId={leadId} onDone={() => setAdding(false)} /> : null}
 
       {unavailable ? (
-        <p role="status" className="card p-4 t-sm c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>⚠ {unavailable}</p>
+        <Notice tone="warn" title="The decisions did not load">{unavailable}</Notice>
       ) : decisions.length === 0 && !adding ? (
-        <div className="card p-4" style={{ marginTop: 10 }}>
-          <p className="t-sm c-3" style={{ lineHeight: 1.6, maxWidth: 560 }}>
-            Nothing here yet. A decision room is for the moments somebody actually stalls:
-            which price to target, which offer nets more, whether to sell first. Two or more
-            options, each with its number and its trade-off, and the answer written down once
-            it is made.
-          </p>
-        </div>
+        <Empty title="No decisions yet">
+          Create one when you are stuck on which price to target, which offer nets more, or whether to sell first.
+          The answer is written down once it is made.
+        </Empty>
       ) : null}
 
-      <div className="col gap-4" style={{ marginTop: 12 }}>
+      <div className="col gap-4" style={{ marginTop: decisions.length && !unavailable ? 0 : 12 }}>
         {decisions.map((d) => (
           <Room key={d.id} leadId={leadId} decision={d} agentFirst={agentFirst} />
         ))}
       </div>
-    </section>
+    </Section>
   );
 }
 

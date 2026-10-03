@@ -22,7 +22,7 @@
  * authority on it. Rift never signs, and never sends for signature.
  */
 
-import { daysUntil } from "./day";
+import { daysUntil, showDay } from "./day";
 
 export const STATUSES = [
   "none",
@@ -156,7 +156,7 @@ export function standingOf(rep: Representation, today = new Date()): Standing {
       : `The agreement runs out in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`;
   } else if (covered) {
     note = rep.expiresOn
-      ? `Signed and in force until ${rep.expiresOn}.`
+      ? `Signed and in force until ${showDay(rep.expiresOn, { month: "short", day: "numeric", year: "numeric" })}.`
       : "Signed, with no end date recorded.";
   } else {
     note = STATUS_RULES[effective].meaning;

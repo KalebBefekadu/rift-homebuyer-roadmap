@@ -9,6 +9,8 @@ import {
 } from "@/lib/core/offers";
 import { recordOffer, releaseOffer, deleteOffer, saveSellerCosts } from "./actions";
 import { typedNumber } from "@/lib/core/typed";
+import { showDay } from "@/lib/core/day";
+import { Section, Notice } from "../../ui";
 
 /**
  * The offer table.
@@ -78,32 +80,24 @@ export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }
      figures that may well be on file. */
   if (unavailable) {
     return (
-      <section className="card p-4" style={{ marginTop: 18 }}>
-        <div className="t-md w6">Offers</div>
-        <p role="status" className="t-xs c-warn" style={{ marginTop: 10, lineHeight: 1.6 }}>
-          ⚠ {unavailable} The offer room is hidden until they load.
-        </p>
-      </section>
+      <Section id="offers" title="Offers">
+        <Notice tone="warn" title="The offers did not load">{unavailable} The offer room is hidden until they load.</Notice>
+      </Section>
     );
   }
 
   return (
-    <section className="card p-4" style={{ marginTop: 18 }}>
-      <div className="between gap-2 wrap">
-        <div>
-          <div className="t-md w6">Offers</div>
-          <div className="t-xs c-4" style={{ marginTop: 2 }}>
-            Ranked by what reaches them, not by the price on the front page.
-          </div>
-        </div>
-        {!adding ? (
-          <button className="btn btn-p btn-sm" onClick={() => setAdding(true)}>
-            <Ico.plus size={14} />Record an offer
-          </button>
-        ) : null}
-      </div>
-
-      {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 10 }}>{error}</p> : null}
+    <Section
+      id="offers"
+      title="Offers"
+      hint="Ranked by what reaches them, not by the price on the front page."
+      actions={!adding ? (
+        <button className="btn btn-p btn-sm" onClick={() => setAdding(true)}>
+          <Ico.plus size={14} />Record an offer
+        </button>
+      ) : undefined}
+    >
+      {error ? <Notice tone="neg" title="That did not work">{error}</Notice> : null}
 
       {/* Without these two figures the comparison is not wrong, it is
           meaningless, and a net computed against an assumed payoff of zero
@@ -176,7 +170,7 @@ export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }
                       {money(o.price)} offered
                       {o.concessions > 0 ? ` · ${money(o.concessions)} concessions` : ""}
                       {o.repairCredit > 0 ? ` · ${money(o.repairCredit)} repair credit` : ""}
-                      {o.closeOn ? ` · closes ${o.closeOn}` : " · no closing date"}
+                      {o.closeOn ? ` · closes ${showDay(o.closeOn, { month: "short", day: "numeric", year: "numeric" })}` : " · no closing date"}
                     </div>
                     {o.contingencies.length ? (
                       <div className="t-xs c-4" style={{ marginTop: 3 }}>
@@ -304,6 +298,6 @@ export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }
           </div>
         </div>
       ) : null}
-    </section>
+    </Section>
   );
 }
