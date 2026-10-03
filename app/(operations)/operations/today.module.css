@@ -1,0 +1,93 @@
+/*
+ * Today's own pieces: a card per group, a row per item, a row per new lead.
+ * Kept beside the page so nothing here reaches another page's layout. Spacing
+ * is a 4 px scale (4, 8, 12, 16, 24), text is 12 / 13 / 14 px, and every row
+ * says who it is about on its own line, because a row's identity is the person
+ * and a clamped meta line used to cut it off.
+ */
+
+.stack { display: grid; gap: 24px; }
+
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); overflow: hidden; }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px 12px; border-bottom: 1px solid var(--line-2); }
+.cardTitle { display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink); }
+.count { font-size: 12.5px; font-weight: 500; color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.cardHint { margin-top: 2px; font-size: 12.5px; color: var(--ink-4); line-height: 1.45; }
+.cardEmpty { padding: 16px; font-size: 13px; color: var(--ink-4); }
+.cardFoot { padding: 10px 16px; border-top: 1px solid var(--line-3); font-size: 12.5px; color: var(--ink-4); display: flex; align-items: center; gap: 6px; }
+
+.groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; align-items: start; }
+
+/* A row of Today: the state and title first, who it is about second, then why. */
+.item { padding: 12px 16px; border-bottom: 1px solid var(--line-3); }
+.item:last-child { border-bottom: 0; }
+.itemTop { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.itemTitle { font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
+a.itemTitle:hover { text-decoration: underline; text-underline-offset: 2px; }
+.itemAbout { margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
+.itemAbout a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.itemAbout a:hover { text-decoration-color: currentColor; }
+.dot { color: var(--ink-5); margin: 0 4px; }
+.itemWhy { margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.itemEvidence { margin-top: 4px; padding-left: 10px; border-left: 2px solid var(--line); font-size: 12.5px; line-height: 1.5; color: var(--ink-3); overflow-wrap: anywhere; }
+.itemMark { margin-top: 6px; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.itemFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-top: 8px; }
+.next { min-width: 0; flex: 1 1 220px; font-size: 13px; line-height: 1.45; color: var(--ink); }
+.next b { font-weight: 650; }
+.marks { display: flex; flex-wrap: wrap; gap: 6px; flex: none; }
+.form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; margin-top: 10px; padding: 10px 12px; background: var(--sunk); border: 1px solid var(--line-2); border-radius: 8px; font-size: 12.5px; }
+.form label { display: flex; flex-direction: column; gap: 4px; color: var(--ink-3); }
+.error { margin-top: 8px; display: flex; gap: 6px; font-size: 12.5px; color: var(--neg); }
+.more summary { cursor: pointer; padding: 10px 16px; font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--line-3); }
+.more summary:hover { color: var(--ink); background: var(--sunk); }
+
+/* New leads. */
+.lead { padding: 14px 16px; border-bottom: 1px solid var(--line-3); }
+.lead:last-child { border-bottom: 0; }
+.leadTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.leadWho { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+.leadName { font-size: 14px; font-weight: 600; color: var(--ink); }
+a.leadName:hover { text-decoration: underline; text-underline-offset: 2px; }
+.leadAct { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.score { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; min-width: 28px; }
+.scoreWas { font-size: 12px; font-weight: 400; color: var(--ink-4); margin-right: 6px; }
+.strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 12px 16px; margin-top: 10px; padding: 10px 12px; background: var(--sunk); border: 1px solid var(--line-2); border-radius: 8px; }
+.fact dt { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--ink-4); }
+.fact dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.told { margin-top: 10px; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.told b { font-weight: 600; color: var(--ink-3); }
+.signals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.leadFoot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; }
+.why { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--ink-3); }
+.whyRow { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Recent activity. */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feedRow { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 12px; padding: 10px 16px; border-bottom: 1px solid var(--line-3); font-size: 13px; line-height: 1.45; }
+.feedRow:last-child { border-bottom: 0; }
+.feedAt { color: var(--ink-4); font-size: 12.5px; }
+.feedText { min-width: 0; overflow-wrap: anywhere; color: var(--ink-2); }
+.feedText a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.feedText a:hover { text-decoration-color: currentColor; }
+.auto { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; font-size: 12px; font-weight: 550; color: var(--ink-3); }
+
+/* A figure to check. */
+.review { padding: 14px 16px; border-bottom: 1px solid var(--line-3); }
+.review:last-child { border-bottom: 0; }
+.reviewTop { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.reviewWho { font-size: 14px; font-weight: 600; color: var(--ink); }
+.reviewClaim { margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--ink); max-width: 760px; }
+.reviewWhat { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); }
+.assumes { margin-top: 10px; padding: 10px 12px; background: var(--sunk); border: 1px solid var(--line-2); border-radius: 8px; max-width: 760px; }
+.assumesTitle { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--ink-4); }
+.assumeRow { display: flex; justify-content: space-between; gap: 16px; margin-top: 6px; font-size: 13px; }
+.assumeRow span:first-child { color: var(--ink-3); }
+.assumeRow span:last-child { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.assumeWrong { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.note { margin-top: 8px; display: flex; gap: 6px; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); }
+.note svg { flex: none; margin-top: 2px; }
+
+@media (max-width: 760px) {
+  .feedRow { grid-template-columns: minmax(0, 1fr); }
+  .leadAct { width: 100%; }
+}

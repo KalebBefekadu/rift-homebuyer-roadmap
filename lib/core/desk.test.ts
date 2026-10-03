@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activity, arrange, deskItems, markError, markOf, type DeskInput, type Mark } from "./desk";
+import { activity, arrange, deskHeadline, deskItems, markError, markOf, type DeskInput, type Mark } from "./desk";
 import { contractFlags, datesNeeding, nextDate, waitingOnOthers, type ContractSummary } from "./transactions";
 import { deadlineView, type Revision } from "./deadline";
 import { workstreamView, WORKSTREAMS, type WorkUpdate } from "./progress";
@@ -171,6 +171,19 @@ describe("a sale's promised reviews on Today (S04, S09)", () => {
     }, NOW);
     expect(news[0]).toMatchObject({ href: "/operations/journey/j9", auto: false });
     expect(news[0]!.text).toBe("Buying in Decatur: Maya asked to see 4 Pine Ct. Nothing is booked until you arrange it.");
+  });
+});
+
+describe("the sentence at the top of Today", () => {
+  it("counts what is waiting, in the order the agent should look", () => {
+    expect(deskHeadline({ waiting: 13, late: 11, attention: 13, approval: 13, today: 7 }))
+      .toBe("13 new leads are waiting for a first reply, 11 past the target; 13 things need attention; 13 need your approval; and 7 are due today.");
+    expect(deskHeadline({ waiting: 1, late: 0, attention: 0, approval: 0, today: 0 })).toBe("1 new lead is waiting for a first reply.");
+    expect(deskHeadline({ waiting: 0, late: 0, attention: 1, approval: 0, today: 2 })).toBe("1 thing needs attention; and 2 are due today.");
+  });
+
+  it("says nothing when nothing needs anyone", () => {
+    expect(deskHeadline({ waiting: 0, late: 0, attention: 0, approval: 0, today: 0 })).toBeNull();
   });
 });
 

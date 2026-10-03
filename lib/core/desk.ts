@@ -161,20 +161,20 @@ export function deskItems(input: DeskInput): DeskItem[] {
     const about = journey(d.journeyId, `${d.person}, ${d.address}`);
     const base = { key: `date:${d.deadlineId}`, owner: me, about, href: `/operations/journey/${d.journeyId}?tab=contract`, snoozable: false };
     if (d.why === "missed") {
-      push({ ...base, group: "attention", title: `${d.label} passed: ${d.person}`, why: "Contract date, not recorded as met", evidence: d.when, due: d.when, next: "Record what actually happened: met, extended or released", tone: "neg", order: 0 });
+      push({ ...base, group: "attention", title: `Passed: ${d.label} for ${d.person}`, why: "Contract date, not recorded as met", evidence: `Passed ${relativeDay(d.days ?? -1)}`, due: d.when, next: "Record what actually happened: met, extended or released", tone: "neg", order: 0 });
     } else if (d.why === "unchecked") {
-      push({ ...base, group: "approval", title: `Check ${d.label} against the contract`, why: "Entered, not yet checked against the document, so the client does not see it", evidence: d.when, due: d.when, next: "Open the document and confirm the date", tone: "warn", order: 10 + (d.days ?? 0) });
+      push({ ...base, group: "approval", title: `Check ${d.label} against the contract`, why: "Entered, not yet checked against the document, so the client does not see it", evidence: null, due: d.when, next: "Open the document and confirm the date", tone: "warn", order: 10 + (d.days ?? 0) });
     } else {
       const today = d.days === 0;
       /* The person is in the title: "Closing" alone, twice, is two rows nobody can tell apart. */
-      push({ ...base, group: today ? "today" : "upcoming", title: `${d.label}: ${d.person}`, why: "Checked contract date", evidence: d.when, due: relativeDay(d.days ?? 0), next: "Make sure whoever owns it is on track", tone: (d.days ?? 99) <= 1 ? "warn" : "none", order: d.days ?? 99 });
+      push({ ...base, group: today ? "today" : "upcoming", title: `${d.label} for ${d.person}`, why: "Checked contract date", evidence: d.when, due: relativeDay(d.days ?? 0), next: "Make sure whoever owns it is on track", tone: (d.days ?? 99) <= 1 ? "warn" : "none", order: d.days ?? 99 });
     }
   }
 
   for (const c of input.contracts.filter((x) => !x.outcome)) {
     for (const w of c.work.filter((x) => x.state === "blocked")) {
       push({
-        key: `work:${c.id}:${w.workstream}`, group: "attention", title: `${w.label} is blocked: ${c.person}`, why: "A workstream on an open contract",
+        key: `work:${c.id}:${w.workstream}`, group: "attention", title: `${w.label} is blocked for ${c.person}`, why: "A workstream on an open contract",
         owner: w.owner === "other" ? w.ownerName ?? "Someone else" : w.owner === "client" ? c.person : me,
         about: journey(c.journeyId, `${c.person}, ${c.address}`), evidence: w.note, due: null,
         next: "Clear the block, or tell the buyer what it means", href: `/operations/journey/${c.journeyId}?tab=contract`, tone: "neg", order: 1,
@@ -254,7 +254,7 @@ export function deskItems(input: DeskInput): DeskItem[] {
   for (const w of input.waiting) {
     const days = daysFrom(input.today, w.checkIn);
     push({
-      key: `work:${w.transactionId}:${w.workstream}`, group: "waiting", title: `${w.label}: ${w.person}`, why: w.stale ? "No word for a week or more" : `With ${w.on}`,
+      key: `work:${w.transactionId}:${w.workstream}`, group: "waiting", title: `${w.label} for ${w.person}`, why: w.stale ? "No word for a week or more" : `With ${w.on}`,
       owner: w.on, about: journey(w.journeyId, `${w.person}, ${w.address}`),
       evidence: w.lastWord ? `Last word ${short(w.lastWord.on)} from ${w.lastWord.from}` : "No word yet",
       due: days <= 0 ? "Check in today" : `Check in ${short(w.checkIn)}`,
@@ -264,6 +264,26 @@ export function deskItems(input: DeskInput): DeskItem[] {
   }
 
   return out;
+}
+
+/**
+ * The one sentence at the top of Today: is the day calm or on fire, and where
+ * to start. Counts only; it names no item, so it can never disagree with the
+ * groups below it. Null when nothing needs anyone, so the page says so in its
+ * own words rather than this inventing a reassurance.
+ */
+export function deskHeadline(c: { waiting: number; late: number; attention: number; approval: number; today: number }): string | null {
+  const parts: string[] = [];
+  if (c.waiting) {
+    parts.push(`${c.waiting} new ${c.waiting === 1 ? "lead is" : "leads are"} waiting for a first reply${c.late ? `, ${c.late} past the target` : ""}`);
+  }
+  if (c.attention) parts.push(`${c.attention} ${c.attention === 1 ? "thing needs" : "things need"} attention`);
+  if (c.approval) parts.push(`${c.approval} ${c.approval === 1 ? "needs" : "need"} your approval`);
+  if (c.today) parts.push(`${c.today} ${c.today === 1 ? "is" : "are"} due today`);
+  if (!parts.length) return null;
+  const last = parts.pop()!;
+  const head = parts.length ? `${parts.join("; ")}; and ${last}` : last;
+  return `${head.charAt(0).toUpperCase()}${head.slice(1)}.`;
 }
 
 /* ------------------------------------------------------------------ *
