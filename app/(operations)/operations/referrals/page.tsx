@@ -9,6 +9,7 @@ import { inDays } from "@/lib/core/deadline";
 import { daysUntil } from "@/lib/core/day";
 import { PageHead, Section, Notice, Empty, Stats, Stat } from "../ui";
 import { Tag } from "../_business/Tag";
+import { say } from "../_business/say";
 import { MoodCheck, MomentRow } from "./Moment";
 import s from "./moment.module.css";
 
@@ -68,7 +69,7 @@ export default async function ReferralsPage() {
 
       {failed ? (
         <Notice tone="neg" title="The queue did not load">
-          {failed}. That is not the same as having nothing to do; we do not know either way.
+          {say(failed)} That is not the same as having nothing to do; we do not know either way.
         </Notice>
       ) : unavailable ? (
         <Notice tone="warn" title="Nothing to read from">{unavailable}.</Notice>

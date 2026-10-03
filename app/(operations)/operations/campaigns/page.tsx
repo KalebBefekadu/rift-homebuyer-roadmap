@@ -8,6 +8,7 @@ import { siteUrl } from "@/lib/core/site";
 import { Unavailable } from "../Unavailable";
 import { PageHead, Section, Notice, Empty } from "../ui";
 import { Tag } from "../_business/Tag";
+import { say } from "../_business/say";
 import k from "../_business/kit.module.css";
 import { NewCampaign } from "./NewCampaign";
 
@@ -48,7 +49,7 @@ export default async function CampaignsPage() {
           <Section title={list.length ? "Your campaigns" : "Start a campaign"} hint={list.length ? `Results are the last ${RESULT_DAYS} days, first visits that carried the page's tag and the leads those visits became.` : "The first starts as the assistance page for a county, then you compose it."}>
             {list.length ? (
               <>
-                {results && !counts ? <Notice tone="warn" title="Results did not load">{results.ok ? "" : results.error}. The visits and leads below are not shown rather than shown as zero.</Notice> : null}
+                {results && !counts ? <Notice tone="warn" title="Results did not load">{results.ok ? "" : say(results.error)} The visits and leads below are not shown rather than shown as zero.</Notice> : null}
                 <div className={k.tableCard}>
                   <table className={`${k.table} ${k.stack}`}>
                     <thead><tr><th>Campaign</th><th>Address</th><th>Status</th><th className="num">Versions</th><th className="num">Visits</th><th className="num">Leads</th></tr></thead>

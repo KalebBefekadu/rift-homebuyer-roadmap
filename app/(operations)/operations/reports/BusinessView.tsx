@@ -12,6 +12,7 @@ import { rulesOrDefaults } from "@/lib/db/settings";
 import { Notice, Empty, Section, Stats, Stat } from "../ui";
 import { Tag, type TagTone } from "../_business/Tag";
 import k from "../_business/kit.module.css";
+import { say } from "../_business/say";
 import s from "./reports.module.css";
 
 const BASIS: Record<Basis, { word: string; tone: TagTone; title: string }> = {
@@ -34,7 +35,7 @@ export async function BusinessView({ days, agentId, now }: { days: Period; agent
   ]);
 
   if (!read.ok) {
-    return <Notice tone="neg" title="The business figures did not load">{read.error}. That is not the same as there being no leads.</Notice>;
+    return <Notice tone="neg" title="The business figures did not load">{say(read.error)} That is not the same as there being no leads.</Notice>;
   }
   if (!("data" in read)) return <Notice tone="info" title="Nothing to read from">{read.reason}.</Notice>;
 
@@ -198,7 +199,7 @@ export async function BusinessView({ days, agentId, now }: { days: Period; agent
 
       <Section title="What visitors do on the site" hint={`Period: ${days === 365 ? "12 months" : `${days} days`}. A visitor is a browser session; this counts what was opened and answered, never what was answered with.`}>
         {!ladder ? (
-          <Notice tone="neg" title="The value counts did not load">{ladderRead.ok ? ("reason" in ladderRead ? ladderRead.reason : "") : `${ladderRead.error}. That is not the same as nobody visiting.`}</Notice>
+          <Notice tone="neg" title="The value counts did not load">{ladderRead.ok ? ("reason" in ladderRead ? ladderRead.reason : "") : `${say(ladderRead.error)} That is not the same as nobody visiting.`}</Notice>
         ) : (
           <>
             <p className={s.kv}>

@@ -9,6 +9,7 @@ import { aiConfigured } from "@/lib/db/ai";
 import { Unavailable } from "../../Unavailable";
 import { PageHead, Section, Notice, Stats, Stat } from "../../ui";
 import { Tag } from "../../_business/Tag";
+import { say } from "../../_business/say";
 import { Composer } from "./Composer";
 import { isUuid } from "@/lib/core/ids";
 
@@ -27,7 +28,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
     return (
       <main className="shell-w">
         <PageHead title="Campaign" back={{ href: "/operations/campaigns", label: "Campaigns" }} />
-        <Notice tone="neg" title="This campaign did not load">{read.error}. That is not the same as it not existing.</Notice>
+        <Notice tone="neg" title="This campaign did not load">{say(read.error)} That is not the same as it not existing.</Notice>
       </main>
     );
   }

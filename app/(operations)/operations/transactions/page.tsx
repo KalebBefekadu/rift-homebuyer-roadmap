@@ -11,6 +11,7 @@ import { Ico } from "@/components/rift/icons";
 import { Unavailable } from "../Unavailable";
 import { PageHead, Tabs, Notice, Empty, Stats, Stat } from "../ui";
 import { Tag } from "../_business/Tag";
+import { say } from "../_business/say";
 import k from "../_business/kit.module.css";
 import s from "./transactions.module.css";
 
@@ -75,7 +76,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       />
 
       {!read.ok ? (
-        <Notice tone="neg" title="The contracts did not load">{read.error}. That is not the same as there being none; reload in a moment.</Notice>
+        <Notice tone="neg" title="The contracts did not load">{say(read.error)} That is not the same as there being none; reload in a moment.</Notice>
       ) : "skipped" in read ? (
         <Notice tone="info" title="Nothing is recorded on this deployment">{read.reason}.</Notice>
       ) : all === null ? (

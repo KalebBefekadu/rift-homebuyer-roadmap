@@ -10,6 +10,7 @@ import { showDay, showTime } from "@/lib/core/day";
 import { Notice, Empty, Section } from "../ui";
 import { Tag, type TagTone } from "../_business/Tag";
 import k from "../_business/kit.module.css";
+import { say } from "../_business/say";
 import s from "./reports.module.css";
 import { Check } from "./Check";
 
@@ -55,7 +56,7 @@ export async function PilotView({ now }: { now: Date }) {
 
   const report = await pilotReport(now);
   if (!report.ok) {
-    return <Notice tone="neg" title="The pilot report did not load">{report.error}. This is not an empty report; it is one we could not read.</Notice>;
+    return <Notice tone="neg" title="The pilot report did not load">{say(report.error)} This is not an empty report; it is one we could not read.</Notice>;
   }
   if ("skipped" in report) return <Notice tone="info" title="Nothing to read from">{report.reason}.</Notice>;
   const data = report.data;

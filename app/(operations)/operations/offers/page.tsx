@@ -9,6 +9,7 @@ import { daysUntil, georgiaDay, showDay } from "@/lib/core/day";
 import { Unavailable } from "../Unavailable";
 import { PageHead, Notice, Empty, Stats, Stat, Tabs, Section } from "../ui";
 import { Tag } from "../_business/Tag";
+import { say } from "../_business/say";
 import { InboundCards } from "./Inbound";
 import k from "../_business/kit.module.css";
 import s from "./offers.module.css";
@@ -69,7 +70,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
 
       {!q.ok ? (
         <Notice tone="neg" title="The offers did not load">
-          {q.error}. That is not the same as there being none: somebody may be waiting on a reply.
+          {say(q.error)} That is not the same as there being none: somebody may be waiting on a reply.
         </Notice>
       ) : !board ? (
         <Notice tone="info" title="Nothing to read from">{"reason" in q ? q.reason : "No database is configured"}.</Notice>
@@ -77,7 +78,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
         <>
           {board.problems.map((p) => (
             <Notice key={p.part} tone="neg" title={`${p.part} did not load`}>
-              {p.error}. What is listed below leaves them out, so it is not the whole picture.
+              {say(p.error)} What is listed below leaves them out, so it is not the whole picture.
             </Notice>
           ))}
 
