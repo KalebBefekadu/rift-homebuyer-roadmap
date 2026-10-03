@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
 import { Tibeb } from "@/components/rift/art";
@@ -8,6 +8,9 @@ import { LiveRegion } from "@/components/rift/Live";
 import { useTrack, useCaptureTouch, track, flush } from "@/lib/rift/track";
 import { sessionId } from "@/lib/rift/session";
 import { ETHIOPIC_STACK } from "@/lib/core/i18n";
+import { money } from "@/lib/core/compute";
+import { EQUB_EXAMPLE, EQUB_TIMELINES, equbNote, equbPayout, parsePrice } from "@/lib/core/equb";
+import { Circle, Ladder, Ledger, StepIcon, ToClosing } from "@/components/rift/equb-art";
 
 /**
  * Bet Equb: a savings group that ends in a home.
@@ -51,10 +54,6 @@ const FAQ: [string, string][] = [
   ["Can I use down payment assistance too?", "Yes. We help you find and combine programs you qualify for."],
 ];
 
-/* Free text on purpose: these are choices a person makes about their own
-   plan, and a dropdown that guesses the range wrong loses the lead. */
-const TIMELINES = ["Within 6 months", "6 to 12 months", "1 to 2 years", "Just exploring"];
-
 const sentence = (s: string) => {
   const t = s.trim();
   if (!t) return t;
@@ -77,11 +76,21 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
   const [household, setHousehold] = useState("");
   const [lang, setLang] = useState<"English" | "አማርኛ">("English");
   const [price, setPrice] = useState("");
-  const [timeline, setTimeline] = useState("");
+  const [timeline, setTimeline] = useState<string>("");
+  /* The ring in the hero turns on its own. Reduced-motion readers get it
+     still: it is decoration, and a page should not move for somebody who has
+     said they do not want that. */
+  const [turn, setTurn] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setTurn((t) => t + 1), 1800);
+    return () => window.clearInterval(id);
+  }, []);
   const [consent, setConsent] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [error, setError] = useState("");
 
+  const payout = equbPayout(EQUB_EXAMPLE);
   const phoneOk = phone.replace(/\D/g, "").length >= 10;
   const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   /* A seat request is answered by phone or email; either will do, but the
@@ -96,16 +105,11 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
     setError("");
     try {
       /* The capture API has no columns for an Equb's answers, and adding them
-         is a migration. They travel in the lead's `timing` line, which is
-         stored with the lead and quoted verbatim in the agent's alert: so the
-         agent sees them, and nothing here touches telemetry. */
-      const detail = [
-        "Equb seat",
-        household && `household ${household}`,
-        `language ${lang}`,
-        price && `target ${price}`,
-        timeline && `timeline ${timeline}`,
-      ].filter(Boolean).join(" · ");
+         is a migration. The timeline goes in `timing`, in the scorer's own
+         words so it ranks, the price in `value`, and the rest in a note the
+         agent reads beside the score and the score never sees. Nothing here
+         touches telemetry. */
+      const value = parsePrice(price);
       const res = await fetch("/api/capture", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -113,7 +117,11 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
           assessmentId: "",
           sessionId: sessionId(),
           name, email: emailOk ? email : "", phone, phoneConsent: consent,
-          lead: { side: "buy", timing: detail, completion: 1, source: "equb" },
+          lead: {
+            side: "buy", timing: timeline, completion: 1, source: "equb",
+            ...(value ? { value } : {}),
+            note: equbNote({ household, language: lang, price: value ? money(value) : "" }),
+          },
         }),
       });
       const d = await res.json();
@@ -153,6 +161,7 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
 
       <main>
         <section className="shell-w" style={{ paddingTop: "clamp(34px,5vw,64px)" }}>
+          <div className="split-w" style={{ alignItems: "center" }}>
           <div style={{ maxWidth: 720 }}>
             <h1 className="serif" style={{ fontSize: "clamp(32px,4.8vw,58px)", lineHeight: 1.06, letterSpacing: "-0.028em" }}>
               The Equb your family trusted, built to buy you a home.
@@ -169,6 +178,8 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
               onClick={() => track({ name: "hero_answer", side: "buy", meta: { qid: "equb_cta", page: "equb" } })}>
               Reserve My Seat <Ico.arrowR size={15} />
             </a>
+          </div>
+          <Circle className="c-brand" members={8} turn={turn} style={{ maxWidth: 360, margin: "0 auto" }} />
           </div>
         </section>
 
@@ -217,9 +228,9 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
                 padding: "16px 20px", alignItems: "flex-start",
                 borderBottom: i === STEPS.length - 1 ? undefined : "1px solid var(--line-3)",
               }}>
-                <span className="chip chip-brand" style={{ flex: "none" }} aria-hidden>{i + 1}</span>
+                <StepIcon n={(i + 1) as 1 | 2 | 3 | 4 | 5} className="c-brand" />
                 <div>
-                  <div className="t-md w6">{t}</div>
+                  <div className="t-md w6"><span className="c-4">{i + 1}. </span>{t}</div>
                   <p className="t-sm c-3" style={{ marginTop: 3, lineHeight: 1.6 }}>{b}</p>
                 </div>
               </li>
@@ -228,26 +239,36 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
         </section>
 
         <section className="shell-w sec">
-          <div className="card p-5" style={{ maxWidth: 560 }}>
-            <div className="kicker c-brand">Example group</div>
-            <table className="t-md" style={{ width: "100%", marginTop: 12, borderCollapse: "collapse" }}>
-              <tbody>
-                {[
-                  ["Members", "24 families"],
-                  ["Monthly contribution", "$2,000"],
-                  ["Cycle", "24 months"],
-                  ["Each member receives", "~$48,000 toward their home"],
-                ].map(([k, v]) => (
-                  <tr key={k} style={{ borderBottom: "1px solid var(--line-3)" }}>
-                    <th scope="row" className="c-3 w5" style={{ textAlign: "left", padding: "9px 0", fontWeight: 500 }}>{k}</th>
-                    <td className="w6" style={{ textAlign: "right", padding: "9px 0" }}>{v}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="t-xs c-4" style={{ marginTop: 12 }}>
-              Example for illustration. Group sizes and amounts vary.
-            </p>
+          <div className="split-w" style={{ alignItems: "center" }}>
+            <div className="card p-5" style={{ maxWidth: 560 }}>
+              <div className="kicker c-brand">Example group</div>
+              <table className="t-md" style={{ width: "100%", marginTop: 12, borderCollapse: "collapse" }}>
+                <tbody>
+                  {[
+                    ["Members", `${EQUB_EXAMPLE.members} families`],
+                    ["Monthly contribution", money(EQUB_EXAMPLE.monthly)],
+                    ["Cycle", `${EQUB_EXAMPLE.months} months`],
+                    ["Each member receives", payout === null ? "Varies" : `~${money(payout)} toward their home`],
+                  ].map(([k, v]) => (
+                    <tr key={k} style={{ borderBottom: "1px solid var(--line-3)" }}>
+                      <th scope="row" className="c-3 w5" style={{ textAlign: "left", padding: "9px 0", fontWeight: 500 }}>{k}</th>
+                      <td className="w6" style={{ textAlign: "right", padding: "9px 0" }}>{v}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="t-xs c-4" style={{ marginTop: 12 }}>
+                Example for illustration. Group sizes and amounts vary.
+              </p>
+            </div>
+            <div>
+              <Ladder months={EQUB_EXAMPLE.months} focus={(turn % EQUB_EXAMPLE.months) + 1} className="c-brand"
+                label={`${EQUB_EXAMPLE.months} months, one household paid each month, every payout the same size`} />
+              <p className="t-xs c-3" style={{ marginTop: 10, lineHeight: 1.6, maxWidth: 420 }}>
+                One household is paid each month, and every payout is the same size. Going
+                earlier or later changes when you receive it, not how much.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -264,6 +285,12 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
                 </div>
               );
             })}
+          </div>
+          <div className="pair" style={{ marginTop: 18 }}>
+            <div className="card p-4"><Ledger className="c-brand" style={{ maxWidth: 300, margin: "0 auto" }} />
+              <p className="t-xs c-3" style={{ marginTop: 10, textAlign: "center" }}>Every member sees every payment.</p></div>
+            <div className="card p-4"><ToClosing className="c-brand" style={{ maxWidth: 300, margin: "0 auto" }} />
+              <p className="t-xs c-3" style={{ marginTop: 10, textAlign: "center" }}>Funds go to your closing attorney, not to a person.</p></div>
           </div>
         </section>
 
@@ -363,11 +390,17 @@ export function Landing({ phoneConsent, emailNote }: { phoneConsent: string; ema
                 <span className="label">Target home price</span>
                 <input className="input" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d$,]/g, "").slice(0, 12))} placeholder="$350,000" />
               </label>
-              <label className="field" style={{ marginTop: 12 }}>
-                <span className="label">Current timeline</span>
-                <input className="input" list="eq-timelines" value={timeline} onChange={(e) => setTimeline(e.target.value.slice(0, 60))} placeholder="Within 6 months" />
-                <datalist id="eq-timelines">{TIMELINES.map((x) => <option key={x} value={x} />)}</datalist>
-              </label>
+              <div className="field" style={{ marginTop: 12 }}>
+                <span className="label" id="eq-time">When would you like to be in a home?</span>
+                <div className="g2 gap-2" style={{ marginTop: 6 }} role="radiogroup" aria-labelledby="eq-time">
+                  {EQUB_TIMELINES.map((x) => (
+                    <label key={x} className="opt" data-on={timeline === x}>
+                      <input type="radio" name="timeline" checked={timeline === x} onChange={() => setTimeline(x)} />
+                      <span className="t-sm">{x}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               <LiveRegion kind="alert">
                 {error ? (

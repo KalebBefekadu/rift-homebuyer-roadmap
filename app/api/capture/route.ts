@@ -80,6 +80,9 @@ export async function POST(req: Request) {
     coBuyer: lead.coBuyer === true,
     contactable: Boolean(email || phone),
     source: typeof lead.source === "string" ? lead.source.slice(0, 40) : "direct",
+    /* Clamped like the timing beside it: it is stored in the lead's jsonb and
+       shown to the agent verbatim, and never reaches the score. */
+    ...(typeof lead.note === "string" && lead.note.trim() ? { note: lead.note.trim().slice(0, 300) } : {}),
   };
 
   /* The session, so the person can later be erased.
