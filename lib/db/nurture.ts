@@ -5,9 +5,11 @@ import { boundedRead, boundedWrite } from "./bounded";
 import { journeyTablesMissing } from "./journeys";
 import { sequenceFor, resolveChannel, programLines, touchCopy, skipReason, type Audience, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
 import { BUY_FUNNEL, firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
-import { planFacts } from "@/lib/core/saved-plan";
+import { planFacts, planAssistance } from "@/lib/core/saved-plan";
 import { georgiaDay } from "@/lib/core/day";
-import { matchForVisitor } from "./match";
+import { currentPrograms } from "./program-checks";
+import { rulesOrDefaults } from "./settings";
+import { matchAssistance, toLegacy, type Profile, type ProgramRecord } from "@/lib/core/assistance";
 import type { Band } from "@/lib/core/lead";
 
 /**
@@ -118,6 +120,13 @@ export interface DueTouch {
   county: string | null;
   /** From the ownership answer on their readout or plan. What the programs step matches on, with the county. */
   firstTimeBuyer: boolean;
+  /**
+   * What the programs step matches against: the saved plan page's own profile
+   * for a plan, the readout's inputs for a v4 lead. Null with `profileGap`
+   * saying why when there is not enough to match on.
+   */
+  profile: Profile | null;
+  profileGap: string | null;
   /** How far they got, for the recovery touch. Everything, for somebody who saved a plan. */
   answered: number;
   of: number;
@@ -199,7 +208,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
       }
     }
 
-    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null; firstTimeBuyer: boolean }>();
+    const snap = new Map<string, { figures: Record<string, string | number>; token: string; county: string | null; firstTimeBuyer: boolean; price: number | null }>();
     if (assessmentIds.length) {
       const { data: reads, error: readErr } = await db
         .from("rift_readouts")
@@ -221,6 +230,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
             token: r.share_token,
             county: r.rift_assessments?.county ?? null,
             firstTimeBuyer: firstTimeFrom(ownershipOf(r.inputs?.ownership)),
+            price: typeof r.inputs?.price === "number" && Number.isFinite(r.inputs.price) && r.inputs.price > 0 ? r.inputs.price : null,
           });
         }
       }
@@ -262,6 +272,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
          who is selling or abroad, not the email. Falls back to the lead's. */
       const audience: Audience = planFacts(lead?.plan)?.side ?? lead?.side ?? "buy";
       const copy = touchCopy(step, kind, audience);
+      const forPrograms = programsProfile(s, saved ? lead!.plan : null);
 
       out.push({
         enrolmentId: row.id,
@@ -285,6 +296,8 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         againPath: saved?.againPath ?? null,
         county: s?.county ?? saved?.county ?? null,
         firstTimeBuyer: s?.firstTimeBuyer ?? saved?.firstTimeBuyer ?? true,
+        profile: forPrograms.profile,
+        profileGap: forPrograms.gap,
         answered: saved ? of : lead?.assessment_id ? progress.get(lead.assessment_id) ?? 0 : 0,
         of,
         side: lead?.side ?? "buy",
@@ -301,30 +314,63 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
 }
 
 /**
- * The programmes this person matches today, for the step that lists them.
+ * What the programs step can be matched against, and when it cannot, why.
  *
- * A fresh match rather than the list stored on their readout, through the
- * same `matchForVisitor` every page uses. The readout is a snapshot of the day
- * it was made; this email goes out days later, and a programme that has since
- * closed or gone unverified must not arrive in an inbox as something that fits
- * them, for the same reason the page stops showing it.
- *
- * No county means nothing to match on, which is an empty list, not a guess.
- * `cache` is per run: most of a cohort shares a county, and the registry does
- * not change between two people in the same minute.
+ * A saved plan is matched on the page's own profile, which needs every answer
+ * the programs check asks; one that lacks them gets no list on its page, so an
+ * email listing programs would have nothing to agree with. A v4 readout has
+ * only county, ownership and price, so those are all that is matched, and the
+ * matcher treats what it was not told (income, household, work) as "needs
+ * checking", not as a pass or a fail.
  */
-export async function matchedPrograms(
-  t: Pick<DueTouch, "county" | "firstTimeBuyer">,
-  cache: Map<string, Promise<ProgramLine[]>>,
-): Promise<ProgramLine[]> {
-  if (!t.county) return [];
-  const key = `${t.county}|${t.firstTimeBuyer}`;
-  let lines = cache.get(key);
-  if (!lines) {
-    lines = matchForVisitor(t.county, t.firstTimeBuyer).then((r) => programLines(r.match.matched));
-    cache.set(key, lines);
+function programsProfile(
+  readout: { county: string | null; firstTimeBuyer: boolean; price: number | null } | undefined,
+  savedPlan: unknown,
+): { profile: Profile; gap: null } | { profile: null; gap: string } {
+  if (readout) {
+    if (!readout.county) return { profile: null, gap: "no county on their readout to check programs against" };
+    if (!readout.price) return { profile: null, gap: "no price on their readout to check programs against" };
+    return { profile: { county: readout.county, firstTime: readout.firstTimeBuyer, price: readout.price }, gap: null };
   }
-  return lines;
+  if (savedPlan) {
+    const r = planAssistance(savedPlan);
+    if (r.profile) return { profile: r.profile, gap: null };
+    return { profile: null, gap: `their saved plan does not have what the programs check needs (missing: ${r.missing.join(", ")})` };
+  }
+  return { profile: null, gap: "nothing on record to check programs against" };
+}
+
+/**
+ * The registry as the saved plan page reads it, once for a run: the programs
+ * after the reviewers' withdrawals, and the window past which a record is
+ * withheld. Most of a cohort is matched against the same book, and it does not
+ * change between two people in the same minute.
+ */
+export interface ProgramBook { programs: ProgramRecord[]; windowDays: number }
+
+export async function programBook(): Promise<ProgramBook> {
+  const [{ rules }, programs] = await Promise.all([rulesOrDefaults(await currentAgentId()), currentPrograms()]);
+  return { programs, windowDays: rules.registryDays.value };
+}
+
+/**
+ * The programs this person matches today, for the step that lists them.
+ *
+ * Through `matchAssistance` with the same profile and the same registry the
+ * saved plan page uses, so the email cannot list a program the page says they
+ * do not fit. It used to match on county and first-time status alone, which
+ * ignores income, household size, price and work: most of what decides it.
+ *
+ * A fresh match rather than anything stored: this email goes out days after
+ * the plan was saved, and a program that has since closed or gone unverified
+ * must not arrive in an inbox as something that fits them, for the same
+ * reason the page stops showing it. No profile means nothing to match on,
+ * which is an empty list, not a guess; the runner records why.
+ */
+export function matchedPrograms(t: Pick<DueTouch, "profile">, book: ProgramBook, today = new Date()): ProgramLine[] {
+  if (!t.profile) return [];
+  const r = matchAssistance(t.profile, { today, windowDays: book.windowDays, programs: book.programs });
+  return programLines(r.matches.map((m) => toLegacy(m.program)));
 }
 
 async function journeyLeads(db: NonNullable<ReturnType<typeof serviceClient>>, agentId: string): Promise<DbResult<Set<string>>> {

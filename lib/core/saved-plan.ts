@@ -15,6 +15,7 @@ import { ASKS, parseAnswers, answersToQuery, type Answers } from "./asks";
 import { valueById, type InputKey } from "./values";
 import { georgiaDay } from "./day";
 import { firstTimeFrom, ownershipOf } from "./funnel";
+import type { Occupation, Profile } from "./assistance";
 
 export interface SavedValue {
   tool: string;
@@ -82,6 +83,55 @@ export function planSummary(p: SavedPlan): string {
   const plan = typeof p.answers.price === "number" ? `a $${Math.round(p.answers.price / 1000)}k plan` : "a plan";
   const alerts = p.alerts ? "; asked for program alerts" : "";
   return `${p.mode === "review" ? `Asked for a review of ${plan}` : `Saved ${plan}`}: ${parts.join(", ")}${alerts}`;
+}
+
+/**
+ * The profile a saved plan's programs are matched against: what the plan page
+ * shows under "My assistance plan", and what the follow-up email lists.
+ *
+ * One function for both, because two copies of "which answers make a profile"
+ * is how an email comes to list a program the page says the person does not
+ * fit. County and first-time status alone (what the email used to match on)
+ * ignore income, household size, price and work, which are most of what
+ * decides it.
+ *
+ * Every answer the programs check asks is needed, as on the page: with one
+ * missing the page shows no plan at all, so the email has nothing to agree
+ * with, and the result says which are missing rather than guessing a value.
+ * Read defensively, as `planFacts` is: the column is jsonb from whichever
+ * build saved it.
+ */
+export function assistanceProfile(
+  answers: Record<string, unknown>,
+): { profile: Profile } | { profile: null; missing: InputKey[] } {
+  const has = (key: "county" | "ownership" | "household" | "occupation") =>
+    ASKS[key].options?.some((o) => o.value === answers[key]) === true;
+  const ok: Record<string, boolean> = {
+    county: has("county"),
+    ownership: has("ownership"),
+    price: typeof answers.price === "number" && Number.isFinite(answers.price) && answers.price > 0,
+    income: typeof answers.income === "number" && Number.isFinite(answers.income) && answers.income >= 0,
+    household: has("household"),
+    occupation: has("occupation"),
+  };
+  const missing = (valueById("assistance")!.asks as InputKey[]).filter((k) => !ok[k]);
+  if (missing.length) return { profile: null, missing };
+  return {
+    profile: {
+      county: String(answers.county),
+      firstTime: firstTimeFrom(ownershipOf(answers.ownership)),
+      price: Number(answers.price),
+      income: Number(answers.income),
+      household: Number(answers.household),
+      occupation: String(answers.occupation) as Occupation | "other",
+    },
+  };
+}
+
+/** `assistanceProfile` of a stored plan, which may be anything the column holds. */
+export function planAssistance(plan: unknown) {
+  const p = plan && typeof plan === "object" ? (plan as Partial<SavedPlan>) : {};
+  return assistanceProfile(p.answers && typeof p.answers === "object" ? (p.answers as Record<string, unknown>) : {});
 }
 
 /**

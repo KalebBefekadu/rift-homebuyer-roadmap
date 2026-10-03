@@ -1,5 +1,39 @@
 import { describe, it, expect } from "vitest";
-import { cleanPlan, planSummary, planFacts } from "./saved-plan";
+import { cleanPlan, planSummary, planFacts, assistanceProfile } from "./saved-plan";
+
+/**
+ * The profile the saved plan page matches programs against, and the follow-up
+ * email matches against too. One function, because two copies of "which
+ * answers make a profile" is how an email comes to list a program the page
+ * says the person does not fit.
+ */
+describe("the programs profile of a saved plan", () => {
+  const FULL = { county: "Fulton", ownership: "none", price: 310_000, income: 62_000, household: "3", occupation: "other" };
+
+  it("is built from every answer the programs check asks, as the plan page builds it", () => {
+    expect(assistanceProfile(FULL)).toEqual({
+      profile: { county: "Fulton", firstTime: true, price: 310_000, income: 62_000, household: 3, occupation: "other" },
+    });
+  });
+
+  it("counts somebody who owns their home as not a first-time buyer, and everybody else as one", () => {
+    expect(assistanceProfile({ ...FULL, ownership: "primary" }).profile?.firstTime).toBe(false);
+    expect(assistanceProfile({ ...FULL, ownership: "investment" }).profile?.firstTime).toBe(true);
+  });
+
+  it("is no profile, naming what is missing, rather than a guess at income or household", () => {
+    const r = assistanceProfile({ county: "Fulton", ownership: "none", price: 310_000 });
+    expect(r.profile).toBeNull();
+    expect("missing" in r && r.missing).toEqual(["income", "household", "occupation"]);
+  });
+
+  it("does not accept an answer the programs check would not have offered", () => {
+    expect(assistanceProfile({ ...FULL, occupation: "wizard" }).profile).toBeNull();
+    expect(assistanceProfile({ ...FULL, county: "Atlantis" }).profile).toBeNull();
+    expect(assistanceProfile({ ...FULL, price: "lots" }).profile).toBeNull();
+    expect(assistanceProfile({ ...FULL, household: "40" }).profile).toBeNull();
+  });
+});
 
 describe("a saved plan, as stored (Blueprint v5 §5.5, D14)", () => {
   it("records program alerts only when asked, and only for buyers", () => {

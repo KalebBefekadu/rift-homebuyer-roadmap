@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
 import { trackedCron } from "@/lib/db/jobs";
-import { due, claimStep, markTouch, skipStep, stillOwed, stop, matchedPrograms } from "@/lib/db/nurture";
+import { due, claimStep, markTouch, skipStep, stillOwed, stop, matchedPrograms, programBook, type ProgramBook } from "@/lib/db/nurture";
 import { sendTouch, sendPlanTouch, sendResume, blockedContacts } from "@/lib/db/email";
 import { currentAgentId } from "@/lib/db/service";
-import { runOptions, blockedStop, listsPrograms, programsCopy, type ProgramLine, type TouchKind } from "@/lib/core/nurture";
+import { runOptions, blockedStop, listsPrograms, programsCopy, type TouchKind } from "@/lib/core/nurture";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 export const runtime = "nodejs";
@@ -84,7 +84,9 @@ async function run(req: Request) {
      that all twelve were the wrong one, which is how every saved plan was
      answered with "pick up where you left off" and nothing said so. */
   const sentAs: Record<TouchKind, number> = { readout: 0, plan: 0, resume: 0 };
-  const programCache = new Map<string, Promise<ProgramLine[]>>();
+  /* Read on the first programs step, not for a run that has none: the book is
+     the registry the saved plan page matches against, once for the whole run. */
+  let book: Promise<ProgramBook> | null = null;
   /* A dry run's only output. Who, which step, and what would have gone: the
      three things you need to decide whether to let it loose. */
   const plan: { to: string; stepId: string; band: string; kind: TouchKind }[] = [];
@@ -133,16 +135,16 @@ async function run(req: Request) {
        and the agent can see why it did not go. */
     /* A seller and a buyer abroad never reach here for this step: it is
        skipped for them above, with its reason. */
-    const programs = listsPrograms(t.stepId) ? await matchedPrograms(t, programCache) : null;
+    const programs = listsPrograms(t.stepId) ? matchedPrograms(t, await (book ??= programBook())) : null;
     const copy = programs ? programsCopy(programs.map((p) => p.name)) : null;
     if (programs && !copy) {
       nothingToList++;
       if (!dry) {
         const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
         if (claim.ok && "data" in claim && claim.data.claimed) {
-          await markTouch(t.enrolmentId, t.stepId, "skipped", t.county
+          await markTouch(t.enrolmentId, t.stepId, "skipped", t.profile
             ? "Not sent: they matched no programs, so there were none to list"
-            : "Not sent: no county on record to match programs against");
+            : `Not sent: ${t.profileGap ?? "nothing on record to check programs against"}`);
         }
       }
       continue;
