@@ -107,6 +107,27 @@ happened to anything that did not go.
   sentence and a blank screen, with no shape of what is coming and no announcement for a
   screen reader.
 
+## What was done, and what was left
+
+Done, in the order of the commits: held reasons on Today (Needs attention, with the reason as
+the evidence) and on the Outbox (a block above the words, and "Try sending again" in place of
+"Approve"); a figure strip for every new lead, buyer or seller, from `lib/core/lead-strip.ts`
+(only stored or typed figures; nothing computed); the pricing review left to the offers once
+a sale is at Review offers, a weekly review that names its MLS record, last review and live
+date, and a cycle four weeks behind worded as stopped with "withdraw the listing" as the
+alternative; sale dates as "2 days ago" instead of ISO; dead links removed (a failing job
+opens Settings, the rate item no longer links to the page it is on); the person in every
+title that was a bare noun; Today, Outbox and Calendar on the page kit with icon-and-word
+states; Outbox ordered by what must not be pressed through; contract dates on the Calendar;
+a loading state with the shape of the page.
+
+Left, and why: the rate has no screen to record it on (the next action is still a command);
+`app/prototype/rift.css` still carries the old `.desk-*` rules, which nothing uses now, because
+that file is shared and was not mine to edit; booked calls and showings are not on the
+Calendar (Cal.com has no key here; showings live on the sale's journey); the new-lead strip
+for sellers shows the price they gave and when, and the net only when a readout stored one
+as a figure, because the seller readout stores its net inside a sentence.
+
 ## Order of work
 
 1. Logic: held reason shown (Today, Outbox); seller strip; cadence items age, stop at
