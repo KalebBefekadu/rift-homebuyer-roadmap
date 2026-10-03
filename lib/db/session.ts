@@ -18,7 +18,10 @@ import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
  */
 export interface AgentSession {
   userId: string;
+  /** The agent row's address: where alerts go. */
   email: string;
+  /** The address this login signs in with, which is not the same field and may differ. */
+  loginEmail: string;
   agentId: string;
   name: string;
 }
@@ -114,6 +117,7 @@ async function readSession(): Promise<SessionState> {
     agent: {
       userId: data.user.id,
       email: (agent.email as string) ?? data.user.email ?? "",
+      loginEmail: data.user.email ?? "",
       agentId: agent.id as string,
       name: (agent.name as string) ?? "Agent",
     },
