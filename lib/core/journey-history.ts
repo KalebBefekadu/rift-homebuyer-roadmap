@@ -12,12 +12,16 @@
  */
 
 import { money } from "./compute";
+import { showDay } from "./day";
 import { STAGE_LABEL, STATUS_LABEL, type JourneyEvent, type JourneyStatus, type Stage } from "./progress";
 import { FIGURE_LABEL, type Figure } from "./proceeds";
 import { LISTING_LABEL, type ListingEvent, type Review } from "./listing";
 import type { Opinion } from "./pricing";
 
 export interface HistoryRow { at: string; key: string; text: string; who: string; note: string }
+
+/* Days are said as people read them, never as 2026-09-28. */
+const DAY: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
 
 const word = (e: JourneyEvent, v: string) =>
   e.kind === "stage" ? STAGE_LABEL[v as Stage] ?? v : STATUS_LABEL[v as JourneyStatus] ?? v;
@@ -41,12 +45,12 @@ export function journeyHistory(input: {
     ...(input.opinions ?? []).map((o) => ({
       at: o.at, key: `p${o.version}`, who: o.by,
       text: `Pricing version ${o.version}: list at ${money(o.listPrice)}, range ${money(o.low)} to ${money(o.high)}`,
-      note: `Review with them on ${o.reviewOn}`,
+      note: `Review with them on ${showDay(o.reviewOn, DAY)}`,
     })),
     ...(input.figures ?? []).map((f, i) => ({
       at: f.at, key: `f${i}`, who: f.by,
       text: `Proceeds: ${FIGURE_LABEL[f.kind]} at ${money(f.price)}`,
-      note: `From ${f.source}, as of ${f.asOf}`,
+      note: `From ${f.source}, as of ${showDay(f.asOf, DAY)}`,
     })),
     ...(input.listing?.events ?? []).map((e, i) => ({
       at: e.at, key: `l${i}`, who: e.by,
@@ -55,7 +59,7 @@ export function journeyHistory(input: {
     })),
     ...(input.listing?.reviews ?? []).map((r, i) => ({
       at: r.at, key: `w${i}`, who: r.by,
-      text: `Weekly review, week of ${r.weekOf}: ${DECISION[r.decision]}`,
+      text: `Weekly review, week of ${showDay(r.weekOf, DAY)}: ${DECISION[r.decision]}`,
       note: [r.summary, r.decisionNote].filter(Boolean).join(" · "),
     })),
   ];

@@ -1,0 +1,94 @@
+/* The journey workspace: what the shared kit does not cover. Kept beside the
+   page so no other page's CSS moves when this one does. */
+
+/* Where the journey is, on every tab. A path rather than a percentage:
+   a stage is ticked only if the journey was recorded at it. */
+.strip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.strip li { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 12.5px; color: var(--ink-4); background: var(--paper); white-space: nowrap; }
+.strip li[data-state="done"] { color: var(--ink-2); }
+.strip li[data-state="now"] { color: var(--ink); font-weight: 650; border-color: var(--ink); background: var(--paper); box-shadow: 0 0 0 1px var(--ink); }
+.strip li[data-state="skipped"] { border-style: dashed; }
+.mark { display: inline-grid; place-items: center; width: 14px; height: 14px; font-size: 11px; line-height: 1; }
+.stripCount { display: none; font-size: 12.5px; color: var(--ink-3); }
+
+/* The one thing to do next, above the tabs so it shows whichever tab is open. */
+.next { display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--paper); box-shadow: var(--sh-1); }
+.next[data-tone="neg"] { background: var(--neg-wash); border-color: color-mix(in srgb, var(--neg) 25%, transparent); }
+.next[data-tone="warn"] { background: var(--warn-wash); border-color: var(--warn-line); }
+.nextIco { flex: none; margin-top: 2px; }
+.next[data-tone="neg"] .nextIco { color: var(--neg); }
+.next[data-tone="warn"] .nextIco { color: var(--warn); }
+.nextBody { flex: 1; min-width: 0; }
+.nextLabel { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.nextText { margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.45; }
+.nextMore { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.nextAct { flex: none; align-self: center; }
+
+/* The tabs. A line under the current one rather than a filled button, and a
+   scroll inside the bar (never the page) when there are more than fit. */
+.tabs { display: flex; gap: 2px; margin-top: 16px; border-bottom: 1px solid var(--line-2); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px; font-size: 13.5px; color: var(--ink-3); white-space: nowrap; border-radius: 6px 6px 0 0; }
+.tab:hover { color: var(--ink); background: var(--sunk); }
+.tab[aria-current="page"] { color: var(--ink); font-weight: 650; }
+.tab[aria-current="page"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; background: var(--ink); border-radius: 2px; }
+.badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 11px; font-weight: 650; font-variant-numeric: tabular-nums; background: var(--warn-wash); color: var(--warn); border: 1px solid var(--warn-line); }
+
+.body { margin-top: 24px; }
+
+/* A block of content under a Section heading. */
+.panel { padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+.panel + .panel { margin-top: 12px; }
+.panelTight { padding: 4px 18px; }
+.cols { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 0 28px; align-items: start; }
+.cols > div > .ops-sec:first-child, .cols > div > section:first-child { margin-top: 0; }
+
+/* Things that need the agent: one row each, a word and an icon before the text. */
+.attn { margin: 0; padding: 0; list-style: none; }
+.attn li { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line-3); }
+.attn li:first-child { padding-top: 2px; }
+.attn li:last-child { border-bottom: 0; padding-bottom: 2px; }
+.attnText { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
+.attnDetail { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.attnGo { flex: none; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; padding-top: 1px; }
+.attnGo:hover { color: var(--ink); }
+.tag { flex: none; display: inline-flex; align-items: center; gap: 4px; min-width: 76px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--line-2); color: var(--ink-3); background: var(--sunk); justify-content: center; white-space: nowrap; }
+.tag[data-tone="neg"] { color: var(--neg); background: var(--neg-wash); border-color: color-mix(in srgb, var(--neg) 25%, transparent); }
+.tag[data-tone="warn"] { color: var(--warn); background: var(--warn-wash); border-color: var(--warn-line); }
+
+.rows { margin: 0; padding: 0; list-style: none; }
+.rows li { padding: 9px 0; border-bottom: 1px solid var(--line-3); font-size: 13.5px; line-height: 1.45; }
+.rows li:first-child { padding-top: 0; }
+.rows li:last-child { border-bottom: 0; padding-bottom: 0; }
+.sub { display: block; margin-top: 2px; font-size: 12.5px; color: var(--ink-3); }
+.rel { color: var(--ink-4); font-variant-numeric: tabular-nums; }
+.state { display: inline-flex; align-items: center; gap: 6px; }
+
+/* History: when, then what and who. */
+.hist { margin: 0; padding: 0; list-style: none; }
+.hist li { display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 4px 16px; padding: 11px 0; border-bottom: 1px solid var(--line-3); font-size: 13.5px; line-height: 1.5; }
+.hist li:first-child { padding-top: 0; }
+.hist li:last-child { border-bottom: 0; padding-bottom: 0; }
+.histWhen { color: var(--ink-3); font-size: 12.5px; font-variant-numeric: tabular-nums; padding-top: 1px; }
+.histWho { color: var(--ink-4); }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.foot { margin-top: 32px; max-width: 640px; font-size: 12px; line-height: 1.6; color: var(--ink-4); }
+.stack { display: grid; gap: 12px; }
+.line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+@media (max-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .strip li:not([data-state="now"]) { display: none; }
+  .stripCount { display: inline; margin-left: 4px; }
+  .strip { align-items: center; }
+  .next { flex-wrap: wrap; }
+  .nextAct { align-self: flex-start; }
+  .attn li { flex-wrap: wrap; }
+  .attnText { flex-basis: calc(100% - 96px); }
+  .attnGo { margin-left: 86px; flex-basis: 100%; }
+  .hist li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .panel { padding: 14px; }
+}

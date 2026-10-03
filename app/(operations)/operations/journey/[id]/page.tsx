@@ -3,13 +3,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { agentSession } from "@/lib/db/session";
 import { Unavailable } from "../../Unavailable";
+import { PageHead, Section, Notice, Empty } from "../../ui";
 import { journeyFor, membersOf } from "@/lib/db/journeys";
-import { searchState, readoutStart, type Revision, type SearchState } from "@/lib/db/search";
+import { searchState, searchStatuses, readoutStart, type Revision, type SearchState } from "@/lib/db/search";
 import { homesOf } from "@/lib/db/shortlist";
 import { toursOf } from "@/lib/db/tours";
 import { readLead } from "@/lib/db/clients";
-import { buyerSearchOn, SIDE_LABEL } from "@/lib/core/journey";
-import { describe, diffBriefs, FIELDS, STRENGTH_LABEL } from "@/lib/core/search";
+import { buyerSearchOn } from "@/lib/core/journey";
+import { describe, diffBriefs, FIELDS, STATUS_LABEL as SEARCH_STATUS_LABEL, STRENGTH_LABEL } from "@/lib/core/search";
 import { AgentBrief } from "./AgentBrief";
 import { SearchSetup } from "./SearchSetup";
 import { Household } from "./Household";
@@ -19,13 +20,13 @@ import { Homes } from "./Homes";
 import { Showings } from "./Showings";
 import { Progress } from "./Progress";
 import { progressFor } from "@/lib/db/progress";
-import { STAGE_LABEL, STATUS_LABEL, WORK_STATE_LABEL, isSettled } from "@/lib/core/progress";
+import { STAGE_LABEL, WORK_STATE_LABEL, STATUS_LABEL, isSettled, type WorkState } from "@/lib/core/progress";
 import { bidsFor } from "@/lib/db/bids";
 import { documentsFor } from "@/lib/db/documents";
 import { Offers } from "./Offers";
 import { Dates } from "./Dates";
 import { deadlinesFor } from "@/lib/db/deadlines";
-import { TAB_LABEL, tabFrom, tabsFor, type Tab } from "./tabs";
+import { TAB_LABEL, tabFrom } from "./tabs";
 import { moneyFor } from "@/lib/db/money";
 import { LedgerView } from "@/components/rift/money/LedgerView";
 import { MoneyFacts } from "./MoneyFacts";
@@ -45,9 +46,16 @@ import { proceedsLine, viewFigures } from "@/lib/core/proceeds";
 import { journeyHistory } from "@/lib/core/journey-history";
 import { dependenciesFor } from "@/lib/db/dependencies";
 import { journeysFor } from "@/lib/db/journeys";
-import { stateOf } from "@/lib/core/dependency";
-import { showDay, showTime } from "@/lib/core/day";
+import { lineFor, stateOf } from "@/lib/core/dependency";
+import { checklist, listingLine, listingStatus } from "@/lib/core/listing";
+import { agoWords, journeyAttention, stageFocus, tabCounts } from "@/lib/core/journey-focus";
+import { inDays } from "@/lib/core/deadline";
+import { georgiaDay, showDay, showTime } from "@/lib/core/day";
 import { isUuid } from "@/lib/core/ids";
+import { Ico } from "@/components/rift/icons";
+import { JourneyHead } from "./Frame";
+import { AttentionList, NeedsUpdate, Panel, Unread } from "./Bits";
+import s from "./journey.module.css";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -56,15 +64,28 @@ const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year
 const WHEN = (iso: string) => showTime(iso, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const settled = <T,>(p: Promise<T> | null) => p ?? Promise.resolve(null);
 
+/* A shape per state as well as a colour, so a workstream reads without colour (rule 10). */
+const GLYPH: Record<WorkState, { g: string; c: string }> = {
+  "not-started": { g: "○", c: "c-4" },
+  "in-progress": { g: "◔", c: "c-2" },
+  waiting: { g: "⏸", c: "c-warn" },
+  blocked: { g: "✕", c: "c-neg" },
+  reported: { g: "◑", c: "c-warn" },
+  confirmed: { g: "✓", c: "c-pos" },
+  "not-applicable": { g: "–", c: "c-4" },
+};
+
 /**
  * One buying (or selling) goal, as a workspace (Blueprint v5 §8.6): a fixed
- * header with who, the stage, the status, the next action and the household,
- * and tabs for the rest. It replaced one long page of nine stacked sections.
+ * head with who, the status, where in the path it is, the one next action
+ * and the tabs for the rest. It replaced one long page of nine stacked
+ * sections.
  *
- * Each tab reads only what it shows. A read that fails says so where it
- * would have rendered, rather than showing an empty section that means
- * "none". Every write keeps its rules: history-only records, request ids,
- * server checks.
+ * Each tab reads what it shows, plus the small set every tab needs for the
+ * head: what is blocking and what is next is the same on every tab, so the
+ * reads behind it are too. A read that fails says so where it would have
+ * rendered, rather than showing an empty section that means "none". Every
+ * write keeps its rules: history-only records, request ids, server checks.
  */
 export default async function JourneyPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
   const session = await agentSession();
@@ -75,11 +96,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   if (!buyerSearchOn(process.env)) {
     return (
       <main className="shell-w">
-        <h1 className="serif">Journeys are switched off.</h1>
-        <p className="t-sm c-3" style={{ marginTop: 10, maxWidth: 560, lineHeight: 1.6 }}>
-          RIFT_BUYER_SEARCH is set to off on this deployment. Nothing has been deleted; switching it back on brings
-          every journey back as it was.
-        </p>
+        <PageHead title="Journeys are switched off" lede="RIFT_BUYER_SEARCH is set to off on this deployment. Nothing has been deleted; switching it back on brings every journey back as it was." />
       </main>
     );
   }
@@ -90,8 +107,8 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   if (!j.ok) {
     return (
       <main className="shell-w">
-        <h1 className="serif">This journey could not be loaded.</h1>
-        <p className="t-sm c-3" style={{ marginTop: 10 }}>The database did not answer ({j.error}). Nothing has been lost.</p>
+        <PageHead title="This journey could not be loaded" back={{ href: "/operations/search", label: "Search" }} />
+        <Unread what="journey" error={j.error} />
       </main>
     );
   }
@@ -100,32 +117,35 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const journey = j.data;
   const buying = journey.side === "buy";
   const tab = tabFrom((await searchParams).tab, buying);
-  /* What this tab reads. `buyer` marks reads that only a purchase has. */
-  const needs = (...ts: Tab[]) => ts.includes(tab);
-  const buyerNeeds = (...ts: Tab[]) => buying && needs(...ts);
+  const needs = (...ts: string[]) => ts.includes(tab);
+  const buyerNeeds = (...ts: string[]) => buying && needs(...ts);
+  const today = georgiaDay();
 
   const agentFirst = agent.name.trim().split(/\s+/)[0] ?? agent.name;
   const person = journey.person.split(/\s+/)[0] ?? journey.person;
-  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead, listingRead, offersRead, roomRead, planRead] = await Promise.all([
+  /* The head reads search, showings, offers, dates and the sale's own records on
+     every tab, because "what is blocking" must not depend on which tab is open. */
+  const [members, lead, progress, search, start, homes, tours, bids, docs, deadlines, summaryRead, moneyRead, depsRead, siblings, sellerRead, listingRead, offersRead, roomRead, planRead, statusRead] = await Promise.all([
     membersOf(id),
     readLead(journey.leadId),
     progressFor(id),
-    settled(buyerNeeds("search", "homes", "history") ? searchState(id) : null),
+    settled(buyerNeeds("search", "history") ? searchState(id) : null),
     settled(buyerNeeds("search") ? readoutStart(journey.leadId) : null),
     settled(needs("homes", "offers", "property") ? homesOf(id) : null),
-    settled(buyerNeeds("homes") ? toursOf(id) : null),
-    settled(buyerNeeds("overview", "offers", "contract") ? bidsFor(id, agentFirst) : null),
+    settled(buying ? toursOf(id) : null),
+    settled(buying ? bidsFor(id, agentFirst) : null),
     settled(needs("offers", "contract") ? documentsFor(id) : null),
-    settled(needs("overview", "contract") ? deadlinesFor(id) : null),
+    deadlinesFor(id),
     tab === "household" ? summaryLinksFor(id) : Promise.resolve(null),
     settled(buyerNeeds("money") ? moneyFor(id) : null),
     dependenciesFor(id),
     settled(tab === "overview" ? journeysFor(journey.leadId) : null),
     settled(!buying && needs("pricing", "proceeds", "history") ? sellerMoneyFor(id) : null),
-    settled(!buying && needs("listing", "overview", "history") ? listingOf(id, agent.agentId) : null),
-    settled(!buying && needs("seller-offers") ? offersFor(journey.leadId) : null),
-    settled(!buying && needs("seller-offers") ? roomFor(journey.leadId) : null),
-    settled(!buying && needs("prep") ? readPlanForAgent(journey.leadId) : null),
+    settled(!buying ? listingOf(id, agent.agentId) : null),
+    settled(!buying ? offersFor(journey.leadId) : null),
+    settled(!buying ? roomFor(journey.leadId) : null),
+    settled(!buying ? readPlanForAgent(journey.leadId) : null),
+    settled(buying ? searchStatuses([id]) : null),
   ]);
   const listing = listingRead && listingRead.ok && "data" in listingRead ? listingRead.data : null;
   const seller = sellerRead && sellerRead.ok && "data" in sellerRead ? sellerRead.data : null;
@@ -139,9 +159,9 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const memberList = members.ok && "data" in members ? members.data : null;
   const leadRow = lead.ok && "data" in lead ? lead.data?.lead ?? null : null;
   const prog = progress && progress.ok && "data" in progress ? progress.data : null;
-  const s = search && search.ok && "data" in search ? search.data : null;
-  const latest = s?.revisions[0] ?? null;
-  const previous = s?.revisions[1] ?? null;
+  const s0 = search && search.ok && "data" in search ? search.data : null;
+  const latest = s0?.revisions[0] ?? null;
+  const previous = s0?.revisions[1] ?? null;
   const homeList = homes && homes.ok && "data" in homes ? homes.data : null;
   const liveHomes = (homeList ?? []).filter((h) => !h.withdrawnAt).map((h) => ({ id: h.id, address: h.address }));
   const tourData = tours && tours.ok && "data" in tours ? tours.data : null;
@@ -149,6 +169,9 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const docData = docs && docs.ok && "data" in docs ? docs.data : null;
   const dateData = deadlines && deadlines.ok && "data" in deadlines ? deadlines.data : null;
   const openDates = prog?.open && dateData ? dateData.deadlines.filter((d) => d.transactionId === prog.open!.id) : [];
+  const offerData = offersRead && offersRead.ok && "data" in offersRead ? offersRead.data : null;
+  const room = roomRead && roomRead.ok && "data" in roomRead ? roomRead.data : null;
+  const planItems = planRead && planRead.ok && "data" in planRead ? planRead.data.items : null;
 
   /* The stage never moves by itself (REQ-STATE-05); the page only says when
      the offers suggest it is behind. */
@@ -167,327 +190,357 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const missed = openDates.filter((d) => d.view.state === "active" && d.view.missed);
   const unchecked = openDates.filter((d) => d.view.state === "active" && !d.view.verified);
   const upcoming = openDates.filter((d) => d.view.state === "active" && d.view.verified && !d.view.missed && (d.view.days ?? -1) >= 0).slice(0, 4);
+  const statusEvent = [...(prog?.events ?? [])].reverse().find((e) => e.kind === "status");
+  const searchStatus = !buying ? null
+    : statusRead && statusRead.ok && "data" in statusRead ? statusRead.data.get(id)?.status ?? "unknown"
+      : statusRead ? "unknown" : null;
 
-  /* The one next action in the header: the most urgent thing first. */
-  const next = nobodyInvited ? { text: "Invite the household: nobody can sign in yet", tab: "household" as Tab }
-    : missed[0] ? { text: `${missed[0].label} passed: record what happened`, tab: "contract" as Tab }
-    : blocked[0] ? { text: `${blocked[0].label} is blocked${blocked[0].note ? `: ${blocked[0].note}` : ""}`, tab: "contract" as Tab }
-    : nudge ? { text: nudge, tab: "contract" as Tab }
-    : unchecked[0] ? { text: `Check ${unchecked[0].label} against the contract`, tab: "contract" as Tab }
-    : leadRow?.nextAction ? { text: `${leadRow.nextAction}${leadRow.nextDue ? ` (${leadRow.nextDue})` : ""}`, tab: null }
+  const attention = prog ? journeyAttention({
+    side: journey.side, stage: prog.progress.stage, status: prog.progress.status, statusReason: statusEvent?.to === "paused" ? statusEvent.reason : null,
+    nobodyInvited,
+    missedDates: missed.map((d) => ({ id: d.id, label: d.label, when: d.view.when })),
+    uncheckedDates: unchecked.map((d) => ({ id: d.id, label: d.label })),
+    blocked: blocked.map((w) => ({ label: w.label, note: w.note ?? null })),
+    stageNudge: nudge,
+    search: searchStatus,
+    tours: (tourData?.stops ?? []).map((t) => ({ id: t.id, address: t.address, status: t.view.status, blocked: t.view.blocked, overdue: t.view.overdue })),
+    bids: (bidData?.bids ?? []).map((b) => ({ id: b.id, address: b.address, status: b.view.status, nextStep: b.view.nextStep, final: b.view.final })),
+    listing: listing ? {
+      status: listingStatus(listing.events).status,
+      checklistLeft: checklist(listing.events).filter((c) => !c.done).length,
+      showingsToUpdate: listing.showings.filter((x) => x.state === "requested" || (x.state === "done" && !x.feedback)).length,
+    } : null,
+    sellerOffers: offerData ? { unreleased: offerData.offers.filter((o) => !o.releasedAt).length, chosen: Boolean(room?.chosenOfferId) } : null,
+    prep: planItems ? planItems.filter((p) => !p.doneAt).map((p) => ({ id: p.id, title: p.title, dueOn: p.dueOn })) : null,
+    leadNext: leadRow?.nextAction ? { text: leadRow.nextAction, due: leadRow.nextDue ?? null } : null,
+    today,
+  }) : [];
+  const counts = tabCounts(attention);
+  const status = prog?.progress.status ?? null;
+  const closed = prog && (status === "completed" || status === "cancelled")
+    ? `${STATUS_LABEL[status]} ${prog.progress.statusSince ? DAY(prog.progress.statusSince) : ""}${statusEvent?.reason ? `: ${statusEvent.reason}` : "."}`.replace(/\s+:/, ":")
     : null;
+  const focus = prog ? stageFocus(journey.side, prog.progress.stage) : null;
+  const href = (t: string) => (t === "overview" ? `/operations/journey/${id}` : `/operations/journey/${id}?tab=${t}`);
 
-  const fitRevision = s?.active ? s.revisions.find((r) => r.id === s.active!.revisionId) ?? latest : latest;
+  const fitRevision = s0?.active ? s0.revisions.find((r) => r.id === s0.active!.revisionId) ?? latest : latest;
   const against = fitRevision
-    ? s?.active && fitRevision.id === s.active.revisionId
+    ? s0?.active && fitRevision.id === s0.active.revisionId
       ? `the requirements in the Matrix search (revision ${fitRevision.revision})`
       : `the requirements in brief revision ${fitRevision.revision}, not yet set up in Matrix`
     : null;
-  const href = (t: Tab) => (t === "overview" ? `/operations/journey/${id}` : `/operations/journey/${id}?tab=${t}`);
+
+  const householdLine = memberList
+    ? memberList.filter((m) => m.state === "active" || m.state === "invited").map((m) => `${m.name ?? m.email}${m.state === "invited" ? " (invited)" : ""}`).join(", ") || null
+    : null;
 
   return (
     <main className="shell-w">
-      <header className="card" style={{ padding: "10px 14px" }}>
-        <div className="between wrap gap-2">
-          <div style={{ minWidth: 0 }}>
-            <div className="row gap-2 wrap">
-              <span className="chip t-2xs">{SIDE_LABEL[journey.side]}</span>
-              <h1 className="serif trunc">{journey.label}</h1>
-            </div>
-            <p className="t-xs c-4" style={{ marginTop: 2 }}>
-              <Link className="u" href={`/operations/lead/${journey.leadId}`}>{journey.person}</Link> · started {DAY(journey.createdAt)}
-              {memberList ? ` · household: ${memberList.filter((m) => m.state === "active" || m.state === "invited").map((m) => `${m.name ?? m.email}${m.state === "invited" ? " (invited)" : ""}`).join(", ") || "nobody yet"}` : ""}
-            </p>
-          </div>
-          {prog ? (
-            <div className="row gap-2 wrap">
-              <span className="chip">{STAGE_LABEL[prog.progress.stage]}</span>
-              <span className={`chip ${prog.progress.status === "active" ? "chip-pos" : "chip-warn"}`}>{STATUS_LABEL[prog.progress.status]}</span>
-            </div>
-          ) : <span className="chip chip-warn">⚠ Stage unknown: did not load</span>}
-        </div>
-        {openDeps.length ? (
-          <p className="t-xs" style={{ marginTop: 6 }}>
-            <span className="chip chip-warn t-2xs">◷ Linked</span> {openDeps.map((d) => `${journey.side === "buy" ? "Needs" : "Needed by"} ${journey.side === "buy" ? d.saleLabel : d.purchaseLabel} (${d.kind}, owner ${d.owner})`).join("; ")}
-          </p>
-        ) : null}
-        {next ? (
-          <p className="t-sm" style={{ marginTop: 8 }}>
-            <span className="w6">Next:</span> {next.tab ? <Link className="u" href={href(next.tab)}>{next.text}</Link> : next.text}
-          </p>
-        ) : null}
-        <nav className="row gap-1 wrap" aria-label="Journey" style={{ marginTop: 10 }}>
-          {tabsFor(buying).map((t) => (
-            <Link key={t} href={href(t)} className={`btn btn-sm ${t === tab ? "btn-p" : "btn-g"}`} aria-current={t === tab ? "page" : undefined}>{TAB_LABEL[t]}</Link>
-          ))}
-        </nav>
-      </header>
+      <JourneyHead
+        id={id} tab={tab}
+        journey={{ label: journey.label, leadId: journey.leadId, person: journey.person, side: journey.side, createdAt: DAY(journey.createdAt) }}
+        household={householdLine} progress={prog?.progress ?? null} events={prog?.events ?? []} status={status}
+        attention={attention} closed={closed} focus={focus} counts={counts}
+        extra={openDeps.map((d) => (
+          <Link key={d.id} href={`/operations/journey/${buying ? d.saleJourneyId : d.purchaseJourneyId}`} className="chip chip-warn chip-line">
+            <Ico.clock size={11} /> <span>{lineFor(d, journey.side)}</span>
+          </Link>
+        ))}
+      />
 
-      <div style={{ marginTop: 14 }}>
+      <div className={s.body}>
         {tab === "overview" ? (
-          <div className="desk-grid" style={{ marginTop: 0 }}>
-            <section className="card desk-card" aria-labelledby="ov-next">
-              <h2 id="ov-next">Next actions and blockers</h2>
-              <ul>
-                {nobodyInvited ? <li className="desk-row"><Link className="u" href={href("household")}>Invite the {buying ? "buyer" : "seller"}</Link><div className="desk-meta">Nobody can sign in to this journey yet. Make an invitation link and send it yourself.</div></li> : null}
-                {missed.map((d) => <li key={d.id} className="desk-row"><span className="chip chip-neg t-2xs">Passed</span> <Link className="u" href={href("contract")}>{d.label}</Link><div className="desk-meta">{d.view.when}. Record what actually happened.</div></li>)}
-                {blocked.map((w) => <li key={w.workstream} className="desk-row"><span className="chip chip-neg t-2xs">Blocked</span> <Link className="u" href={href("contract")}>{w.label}</Link>{w.note ? <div className="desk-meta">{w.note}</div> : null}</li>)}
-                {nudge ? <li className="desk-row">{nudge}</li> : null}
-                {unchecked.map((d) => <li key={d.id} className="desk-row"><span className="chip chip-warn t-2xs">Check</span> <Link className="u" href={href("contract")}>{d.label}</Link><div className="desk-meta">Not checked against the document, so the {buying ? "buyer" : "seller"} does not see it.</div></li>)}
-                {leadRow?.nextAction ? <li className="desk-row">{leadRow.nextAction}<div className="desk-meta">Your next action{leadRow.nextDue ? `, due ${leadRow.nextDue}` : ""}</div></li> : null}
-              </ul>
-              {!nobodyInvited && !missed.length && !blocked.length && !nudge && !unchecked.length && !leadRow?.nextAction ? <p className="t-sm c-4">Nothing is waiting on you here.</p> : null}
-            </section>
-            <section className="card desk-card" aria-labelledby="ov-dates">
-              <h2 id="ov-dates">Key dates</h2>
-              {!prog?.open ? <p className="t-sm c-4">No contract yet.</p>
-                : !dateData ? <p className="t-sm c-neg">The dates did not load; unknown, not none.</p>
-                : upcoming.length ? <ul>{upcoming.map((d) => <li key={d.id} className="desk-row">{d.label}<div className="desk-meta">{d.view.when}</div></li>)}</ul>
-                : <p className="t-sm c-4">No checked dates ahead.</p>}
-            </section>
-            <section className="card desk-card" aria-labelledby="ov-recent">
-              <h2 id="ov-recent">Recent activity</h2>
-              {prog?.events.length ? (
-                <ul>{[...prog.events].reverse().slice(0, 6).map((e) => (
-                  <li key={e.seq} className="desk-row t-xs"><span className="c-4">{WHEN(e.at)}</span> {e.kind === "stage" ? "Stage" : "Status"}: {e.kind === "stage" ? STAGE_LABEL[e.to as keyof typeof STAGE_LABEL] ?? e.to : STATUS_LABEL[e.to as keyof typeof STATUS_LABEL] ?? e.to} · {e.by}<div className="desk-meta">{e.reason}</div></li>
-                ))}</ul>
-              ) : <p className="t-sm c-4">Nothing recorded yet.</p>}
-              <p className="t-xs" style={{ marginTop: 6 }}><Link className="u" href={href("history")}>All history</Link></p>
-            </section>
-            {prog?.open ? (
-              <section className="card desk-card" aria-labelledby="ov-work">
-                <h2 id="ov-work">Workstreams</h2>
-                <ul>{prog.open.work.filter((w) => !isSettled(w.state) && w.state !== "not-started").map((w) => (
-                  <li key={w.workstream} className="desk-row t-xs"><span className="w6">{w.label}</span> · {WORK_STATE_LABEL[w.state].toLowerCase()}{w.stale && w.state !== "blocked" ? " · no word for a week" : ""}</li>
-                ))}</ul>
-                {(() => {
-                  const idle = prog.open.work.filter((w) => w.state === "not-started").length;
-                  const settled = prog.open.work.filter((w) => isSettled(w.state)).length;
-                  return <p className="t-xs c-4" style={{ marginTop: 4 }}>{idle} not started, {settled} confirmed or not needed.</p>;
-                })()}
-                <p className="t-xs" style={{ marginTop: 6 }}><Link className="u" href={href("contract")}>Open the contract</Link></p>
-              </section>
-            ) : null}
-            <section className="card desk-card" aria-labelledby="ov-linked">
-              <h2 id="ov-linked">Linked {buying ? "sale" : "purchase"}</h2>
-              {deps === null ? <p className="t-sm c-4">{depsRead.ok ? "Linking journeys needs database update 20260928020000." : "Did not load; unknown, not none."}</p>
-                : <Linked journeyId={id} side={journey.side} deps={deps} candidates={candidates} agentName={agent.name} />}
-            </section>
-            {!buying ? (
-              <section className="card desk-card">
-                <h2>Selling</h2>
-                <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
-                  The property, the stages from Prepare to Continue, and the contract with its dates and workstreams are here.
-                  Offers and the offer room are on <Link className="u" href={`/operations/lead/${journey.leadId}`}>their record</Link>.
-                </p>
-              </section>
-            ) : null}
+          <div className={s.cols}>
+            <div>
+              <Section title="What needs you" hint="Everything on this journey that is wrong, owed or waiting, most urgent first.">
+                <Panel>
+                  {!prog ? <Unread what="journey's stage and contract" />
+                    : closed ? (
+                      <div className={s.line}><Ico.checkCircle size={15} className="c-pos" /><span>{closed}</span></div>
+                    ) : attention.length ? <AttentionList items={attention} id={id} tab={tab} />
+                    : (
+                      <div>
+                        <div className={s.line}><Ico.checkCircle size={15} className="c-pos" /><span className="w6">Nothing is blocked or waiting on you.</span></div>
+                        {focus ? <p className="t-sm c-3" style={{ marginTop: 6 }}>At {STAGE_LABEL[prog.progress.stage]}: {focus.text}{" "}
+                          {focus.tab !== "overview" ? <Link className="u" href={href(focus.tab)}>Open {(TAB_LABEL[focus.tab as keyof typeof TAB_LABEL] ?? focus.tab).toLowerCase()}</Link> : null}</p> : null}
+                      </div>
+                    )}
+                </Panel>
+              </Section>
+
+              <Section title="Recent activity" actions={<Link className="u t-sm" href={href("history")}>All history</Link>}>
+                <Panel>
+                  {!prog ? <Unread what="journey's history" /> : prog.events.length ? (
+                    <ul className={s.rows}>{[...prog.events].reverse().slice(0, 6).map((e) => {
+                      const ago = agoWords(georgiaDay(new Date(e.at)), today);
+                      return (
+                        <li key={e.seq}>
+                          {e.kind === "stage" ? "Stage" : "Status"}: <span className="w6">{e.kind === "stage" ? STAGE_LABEL[e.to as keyof typeof STAGE_LABEL] ?? e.to : STATUS_LABEL[e.to as keyof typeof STATUS_LABEL] ?? e.to}</span>
+                          <span className={s.sub}><span title={WHEN(e.at)}>{ago ?? DAY(e.at)}</span> · {e.by}{e.reason ? ` · ${e.reason}` : ""}</span>
+                        </li>
+                      );
+                    })}</ul>
+                  ) : <p className="t-sm c-4">Nothing recorded yet. The first stage change appears here.</p>}
+                </Panel>
+              </Section>
+            </div>
+
+            <div>
+              <Section title="Key dates" hint={prog?.open ? "Checked dates only: the household sees a date once you have checked it." : undefined} actions={prog?.open ? <Link className="u t-sm" href={href("contract")}>All dates</Link> : undefined}>
+                <Panel>
+                  {!prog?.open ? <p className="t-sm c-4">No contract yet. Dates appear here once one is recorded on the Contract tab.</p>
+                    : !dateData ? <Unread what="contract dates" />
+                    : upcoming.length ? (
+                      <ul className={s.rows}>{upcoming.map((d) => (
+                        <li key={d.id}>{d.label}<span className={s.sub}>{d.view.when}{d.view.days !== null ? <> · <span className={s.rel}>{inDays(d.view.days)}</span></> : null}</span></li>
+                      ))}</ul>
+                    ) : <p className="t-sm c-4">No checked dates ahead.{unchecked.length ? ` ${unchecked.length} still to check against the contract.` : ""}</p>}
+                </Panel>
+              </Section>
+
+              {prog?.open ? (
+                <Section title="Workstreams" actions={<Link className="u t-sm" href={href("contract")}>Open the contract</Link>}>
+                  <Panel>
+                    {(() => {
+                      const active = prog.open.work.filter((w) => !isSettled(w.state) && w.state !== "not-started");
+                      const idle = prog.open.work.filter((w) => w.state === "not-started").length;
+                      const done = prog.open.work.filter((w) => isSettled(w.state)).length;
+                      return (
+                        <>
+                          {active.length ? (
+                            <ul className={s.rows}>{active.map((w) => (
+                              <li key={w.workstream}>
+                                <span className={`${s.state} ${GLYPH[w.state].c}`}><span aria-hidden>{GLYPH[w.state].g}</span><span className="c-1 w6">{w.label}</span></span>
+                                <span className={s.sub}>{WORK_STATE_LABEL[w.state]}{w.stale && w.state !== "blocked" ? " · no word for a week" : ""}</span>
+                              </li>
+                            ))}</ul>
+                          ) : <p className="t-sm c-4">Nothing under way.</p>}
+                          <p className="t-xs c-4" style={{ marginTop: 10 }}>{idle} not started, {done} confirmed or not needed.</p>
+                        </>
+                      );
+                    })()}
+                  </Panel>
+                </Section>
+              ) : null}
+
+              {buying ? (
+                <Section title="Search and showings">
+                  <Panel>
+                    <ul className={s.rows}>
+                      <li><Link className="u" href={href("search")}>Matrix search</Link><span className={s.sub}>{searchStatus ? SEARCH_STATUS_LABEL[searchStatus] : "Not read"}</span></li>
+                      <li><Link className="u" href={href("homes")}>Showings</Link><span className={s.sub}>{tourData ? `${tourData.stops.filter((t) => t.view.status !== "cancelled" && t.view.status !== "completed").length} open, ${tourData.stops.filter((t) => t.view.status === "completed").length} seen` : "Did not load"}</span></li>
+                      <li><Link className="u" href={href("offers")}>Offers</Link><span className={s.sub}>{bidData ? `${bidData.bids.filter((b) => !b.view.final).length} in progress, ${bidData.bids.filter((b) => b.view.final).length} finished` : "Did not load"}</span></li>
+                    </ul>
+                  </Panel>
+                </Section>
+              ) : (
+                <Section title="The sale">
+                  <Panel>
+                    <ul className={s.rows}>
+                      <li><Link className="u" href={href("listing")}>Listing</Link><span className={s.sub}>{listing ? listingLine(listing.events, listing.showings) : "Not read"}</span></li>
+                      <li><Link className="u" href={href("seller-offers")}>Offers</Link><span className={s.sub}>{offerData ? `${offerData.offers.length} recorded, ${offerData.offers.filter((o) => o.releasedAt).length} shown to the seller${room?.chosenAt ? ", one chosen" : ""}` : "Did not load"}</span></li>
+                      <li><Link className="u" href={href("prep")}>Preparation</Link><span className={s.sub}>{planItems ? `${planItems.filter((p) => !p.doneAt).length} open, ${planItems.filter((p) => p.doneAt).length} done` : "Did not load"}</span></li>
+                    </ul>
+                  </Panel>
+                </Section>
+              )}
+
+              <Section title={`Linked ${buying ? "sale" : "purchase"}`}>
+                <Panel>
+                  {deps === null ? (depsRead.ok ? <NeedsUpdate what="Linked journeys" migration="20260928020000" /> : <Unread what="linked journeys" />)
+                    : <Linked journeyId={id} side={journey.side} deps={deps} candidates={candidates} agentName={agent.name} />}
+                </Panel>
+              </Section>
+            </div>
           </div>
         ) : null}
 
         {tab === "search" ? (
           <>
-            <section className="card p-4" aria-labelledby="brief-h">
-              <h2 id="brief-h" className="t-md w6">Search brief</h2>
-              <div className="t-xs c-4" style={{ marginTop: 2 }}>
-                {latest
-                  ? `Revision ${latest.revision}, by ${latest.authorLabel}${latest.authorKind === "client" ? " (buyer)" : ""}, ${DAY(latest.createdAt)}.`
-                  : "What they need in a home, and what they would only like, each with who said it and when."}
-              </div>
-              {search && !search.ok ? (
-                <p className="t-xs c-neg" style={{ marginTop: 10 }}>The brief did not load ({search.error}). That is not the same as having none.</p>
-              ) : (
-                <div style={{ marginTop: 12 }}>
+            <Section title="Search brief" hint={latest
+              ? `Revision ${latest.revision}, by ${latest.authorLabel}${latest.authorKind === "client" ? " (buyer)" : ""}, ${DAY(latest.createdAt)}.`
+              : "What they need in a home, and what they would only like, each with who said it and when."}>
+              <Panel>
+                {search && !search.ok ? <Unread what="brief" error={search.error} /> : (
                   <AgentBrief journeyId={id} latest={latest ? { revision: latest.revision, ...latest.brief } : null}
-                    start={start && start.ok && "data" in start ? start.data : null} person={journey.person} disagreement={s?.disagreement ?? []} />
-                </div>
-              )}
-            </section>
-            {latest && (previous || s?.responses.length) ? <Changed latest={latest} previous={previous} s={s!} anyActive={Boolean(memberList?.some((m) => m.state === "active"))} /> : null}
-            <section className="card p-4" style={{ marginTop: 14 }} aria-labelledby="matrix-h">
-              <h2 id="matrix-h" className="t-md w6">Matrix search</h2>
-              <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>Approve a revision, set it up in Matrix, record where it lives.</div>
-              {s ? (
-                <SearchSetup journeyId={id} person={journey.person} status={s.status}
-                  latest={latest ? { id: latest.id, revision: latest.revision, brief: latest.brief } : null}
-                  disagreement={s.disagreement} active={s.active} pending={s.pending} history={s.history} />
-              ) : <p className="t-xs c-neg">The Matrix search status did not load. It is unknown, not inactive.</p>}
-            </section>
+                    start={start && start.ok && "data" in start ? start.data : null} person={journey.person} disagreement={s0?.disagreement ?? []} />
+                )}
+              </Panel>
+            </Section>
+            {latest && (previous || s0?.responses.length) ? <Changed latest={latest} previous={previous} s={s0!} anyActive={Boolean(memberList?.some((m) => m.state === "active"))} /> : null}
+            <Section title="Matrix search" hint="Approve a revision, set it up in Matrix, record where it lives. Rift cannot see Matrix, so it only knows what you record.">
+              <Panel>
+                {s0 ? (
+                  <SearchSetup journeyId={id} person={journey.person} status={s0.status}
+                    latest={latest ? { id: latest.id, revision: latest.revision, brief: latest.brief } : null}
+                    disagreement={s0.disagreement} active={s0.active} pending={s0.pending} history={s0.history} />
+                ) : <Notice tone="neg" title="The Matrix search status did not load">It is unknown, not inactive.</Notice>}
+              </Panel>
+            </Section>
           </>
         ) : null}
 
         {tab === "homes" ? (
           <>
-            <section className="card p-4" aria-labelledby="homes-h">
-              <div className="between gap-2 wrap">
-                <h2 id="homes-h" className="t-md w6">Homes</h2>
-                {(homeList?.filter((h) => !h.withdrawnAt).length ?? 0) >= 2 ? <Link href={`/operations/journey/${id}/compare`} className="btn btn-g btn-sm">Compare side by side</Link> : null}
-              </div>
-              <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>Homes you or the buyer added, with everyone&apos;s reactions. No listing feed: a link and the facts you typed.</div>
-              {homeList ? (
-                <Homes journeyId={id} homes={homeList.map((h) => ({ ...h, historyCount: h.history.length }))} criteria={fitRevision?.brief.criteria ?? []} against={against} />
-              ) : <p className="t-xs c-neg">The shortlist did not load. That is not the same as an empty list.</p>}
-            </section>
-            <section className="card p-4" style={{ marginTop: 14 }} aria-labelledby="showings-h">
-              <h2 id="showings-h" className="t-md w6">Showings</h2>
-              <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>What you arranged in ShowingTime, step by step. A request is not an appointment until you record the confirmed time.</div>
-              {tourData ? (
-                <Showings journeyId={id} stops={tourData.stops} homes={liveHomes} coverage={tourData.coverage} leadId={journey.leadId} person={person} unavailable={tourData.unavailable} />
-              ) : <p className="t-xs c-neg">The showings did not load. That is not the same as there being none.</p>}
-            </section>
+            <Section title="Homes" hint="Homes you or the buyer added, with everyone's reactions. No listing feed: a link and the facts you typed."
+              actions={(homeList?.filter((h) => !h.withdrawnAt).length ?? 0) >= 2 ? <Link href={`/operations/journey/${id}/compare`} className="btn btn-s btn-sm">Compare side by side</Link> : undefined}>
+              <Panel>
+                {homeList ? (
+                  <Homes journeyId={id} homes={homeList.map((h) => ({ ...h, historyCount: h.history.length }))} criteria={fitRevision?.brief.criteria ?? []} against={against} />
+                ) : <Unread what="shortlist" />}
+              </Panel>
+            </Section>
+            <Section title="Showings" hint="What you arranged in ShowingTime, step by step. A request is not an appointment until you record the confirmed time.">
+              <Panel>
+                {tourData ? (
+                  <Showings journeyId={id} stops={tourData.stops} homes={liveHomes} coverage={tourData.coverage} leadId={journey.leadId} person={person} unavailable={tourData.unavailable} />
+                ) : <Unread what="showings" />}
+              </Panel>
+            </Section>
           </>
         ) : null}
 
         {tab === "offers" ? (
-          <section className="card p-4" aria-labelledby="offers-h">
-            <h2 id="offers-h" className="t-md w6">Offers and documents</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>The terms, each version, and what the household told you. The forms are prepared, signed and delivered in Remine; this records that they were.</div>
-            {bidData && docData ? (
-              <Offers journeyId={id} bids={bidData.bids} docs={docData.documents} homes={liveHomes} deciders={bidData.deciders}
-                coverage={bidData.coverage} leadId={journey.leadId} person={person} unavailable={bidData.unavailable ?? docData.unavailable} />
-            ) : <p className="t-xs c-neg">The offers did not load. That is not the same as there being none.</p>}
-          </section>
+          <Section title="Offers and documents" hint="The terms, each version, and what the household told you. The forms are prepared, signed and delivered in Remine; this records that they were.">
+            <Panel>
+              {bidData && docData ? (
+                <Offers journeyId={id} bids={bidData.bids} docs={docData.documents} homes={liveHomes} deciders={bidData.deciders}
+                  coverage={bidData.coverage} leadId={journey.leadId} person={person} unavailable={bidData.unavailable ?? docData.unavailable} />
+              ) : <Unread what="offers" />}
+            </Panel>
+          </Section>
         ) : null}
 
         {tab === "contract" ? (
-          <section className="card p-4" aria-labelledby="progress-h">
-            <h2 id="progress-h" className="t-md w6">Where it stands</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>The stage the {buying ? "buyer" : "seller"} sees, and under contract what is running at once. Each change is recorded with why and by whom.</div>
-            {prog ? (
-              <Progress journeyId={id} side={journey.side} progress={prog.progress} events={prog.events} open={prog.open} past={prog.contracts.filter((c) => c.outcome)}
-                homes={prog.homes} coverage={prog.coverage} leadId={journey.leadId} person={person} unavailable={prog.unavailable} nudge={nudge} />
-            ) : <p className="t-xs c-neg">Where this journey stands did not load. That is not the same as it being at Prepare.</p>}
+          <>
+            <Section title="Where it stands" hint={`The stage the ${buying ? "buyer" : "seller"} sees, and under contract what is running at once. Each change is recorded with why and by whom.`}>
+              <Panel>
+                {prog ? (
+                  <Progress journeyId={id} side={journey.side} progress={prog.progress} events={prog.events} open={prog.open} past={prog.contracts.filter((c) => c.outcome)}
+                    homes={prog.homes} coverage={prog.coverage} leadId={journey.leadId} person={person} unavailable={prog.unavailable} nudge={nudge} />
+                ) : <Unread what="stage and contract" />}
+              </Panel>
+            </Section>
             {prog?.open ? (
-              dateData?.unavailable ? <p className="t-xs c-warn" style={{ marginTop: 12 }}>{dateData.unavailable}</p>
-              : dateData ? <Dates journeyId={id} dates={openDates} docs={(docData?.documents ?? []).map((d) => ({ id: d.id, label: d.label }))} />
-              : <p className="t-xs c-neg" style={{ marginTop: 12 }}>The contract dates did not load. That is not the same as there being none.</p>
+              <Section title="Contract dates" hint={`Each from the executed documents, with where it comes from. The ${buying ? "buyer" : "seller"} sees a date only once you have checked it against the document.`}>
+                {dateData?.unavailable ? <Notice tone="warn" title="Contract dates are not available yet">{dateData.unavailable}</Notice>
+                  : dateData ? <Panel><Dates journeyId={id} dates={openDates} docs={(docData?.documents ?? []).map((d) => ({ id: d.id, label: d.label }))} /></Panel>
+                  : <Unread what="contract dates" />}
+              </Section>
             ) : null}
-          </section>
+          </>
         ) : null}
 
         {tab === "property" ? (
-          <section className="card p-4" aria-labelledby="property-h">
-            <h2 id="property-h" className="t-md w6">The property</h2>
-            <div style={{ marginTop: 10 }}>
+          <Section title="The property" hint="The home being sold, each fact from a named source on a stated day.">
+            <Panel>
               {homeList ? (() => {
                 const p = homeList.find((h) => !h.withdrawnAt) ?? null;
                 return <SellerProperty journeyId={id} property={p ? { id: p.id, address: p.address, facts: p.facts, factsSource: p.factsSource, factsAsOf: p.factsAsOf } : null} />;
-              })() : <p className="t-xs c-neg">The property did not load. That is not the same as none being recorded.</p>}
-            </div>
-          </section>
+              })() : <Unread what="property" />}
+            </Panel>
+          </Section>
         ) : null}
 
         {tab === "seller-offers" ? (
-          <section className="card p-4" aria-labelledby="seller-offers-h">
-            <h2 id="seller-offers-h" className="t-md w6">Offers</h2>
-            <div style={{ marginTop: 10 }}>
-              {offersRead && offersRead.ok && "data" in offersRead
-                ? <SellerOffersView leadId={journey.leadId} offers={offersRead.data.offers} costs={offersRead.data.costs}
-                    room={roomRead && roomRead.ok && "data" in roomRead ? roomRead.data : null} />
-                : <p className="t-xs c-neg">The offers did not load. That is not the same as there being none.</p>}
-            </div>
-          </section>
+          <Section title="Offers" hint="Every offer received, none discarded, with what each would leave the seller."
+            actions={<Link href={`/operations/lead/${journey.leadId}`} className="btn btn-s btn-sm">Record or release an offer</Link>}>
+            {offerData
+              ? <SellerOffersView leadId={journey.leadId} offers={offerData.offers} costs={offerData.costs} room={room} />
+              : <Unread what="offers" />}
+          </Section>
         ) : null}
 
         {tab === "prep" ? (
-          <section className="card p-4" aria-labelledby="prep-h">
-            <h2 id="prep-h" className="t-md w6">Preparation</h2>
-            <div style={{ marginTop: 10 }}>
-              {planRead && planRead.ok && "data" in planRead
-                ? <SellerPrepView leadId={journey.leadId} items={planRead.data.items} agentFirst={agentFirst} clientFirst={person} />
-                : <p className="t-xs c-neg">The plan did not load. That is not the same as there being none.</p>}
-            </div>
-          </section>
+          <Section title="Preparation" hint="The work before launch, each item with who does it and when: the same plan the seller sees on their page."
+            actions={<Link href={`/operations/lead/${journey.leadId}`} className="btn btn-s btn-sm">Add or tick off steps</Link>}>
+            {planItems && planRead && planRead.ok && "data" in planRead
+              ? <SellerPrepView leadId={journey.leadId} items={planRead.data.items} agentFirst={agentFirst} clientFirst={person} />
+              : <Unread what="plan" />}
+          </Section>
         ) : null}
 
         {tab === "listing" ? (
-          <section className="card p-4" aria-labelledby="listing-h">
-            <h2 id="listing-h" className="t-md w6">Listing and showings</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
-              What is done for the launch, when it went live and where, each showing with the feedback actually given, and the weekly account.
-              The seller sees the summary on their page, never access details.
-            </div>
-            {!listingRead || !listingRead.ok ? <p className="t-xs c-neg">This did not load. That is not the same as there being none.</p>
-              : !listing ? <p className="t-xs c-warn">The listing needs database update 20260928050000.</p>
-              : <SellerListing journeyId={id} events={listing.events} showings={listing.showings} reviews={listing.reviews} />}
-          </section>
+          <Section title="Listing and showings" hint="What is done for the launch, when it went live and where, each showing with the feedback actually given, and the weekly account. The seller sees the summary on their page, never access details.">
+            {!listingRead || !listingRead.ok ? <Unread what="listing" />
+              : !listing ? <NeedsUpdate what="The listing and its showings" migration="20260928050000" />
+              : <Panel><SellerListing journeyId={id} events={listing.events} showings={listing.showings} reviews={listing.reviews} /></Panel>}
+          </Section>
         ) : null}
 
         {tab === "pricing" || tab === "proceeds" ? (
-          <section className="card p-4" aria-labelledby="seller-money-h">
-            <h2 id="seller-money-h" className="t-md w6">{tab === "pricing" ? "Pricing strategy" : "Proceeds"}</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
-              {tab === "pricing"
-                ? "Your approved opinion and the comparables you chose. The seller sees it with their net at each end of the range, and answers on their page."
-                : "The seller's net from planning to official, each version from a named source. The seller sees these on their page."}
-            </div>
-            {!sellerRead || !sellerRead.ok ? <p className="t-xs c-neg">This did not load. That is not the same as there being none.</p>
-              : !seller ? <p className="t-xs c-warn">Pricing and proceeds need database update 20260928040000.</p>
-              : tab === "pricing"
-                ? <SellerPricing journeyId={id} opinions={seller.opinions}
-                    scenarios={seller.opinions.length && lastFigure ? scenarios(seller.opinions.at(-1)!, { owed: lastFigure.owed, commissionPct: lastFigure.commissionPct, credits: lastFigure.credits }) : null} />
-                : <SellerProceeds journeyId={id} views={figureViews} line={proceedsLine(figureViews)} />}
-          </section>
+          <Section title={tab === "pricing" ? "Pricing strategy" : "Proceeds"}
+            hint={tab === "pricing"
+              ? "Your approved opinion and the comparables you chose. The seller sees it with their net at each end of the range, and answers on their page."
+              : "The seller's net from planning to official, each version from a named source. The seller sees these on their page."}>
+            {!sellerRead || !sellerRead.ok ? <Unread what={tab === "pricing" ? "pricing" : "proceeds"} />
+              : !seller ? <NeedsUpdate what="Pricing and proceeds" migration="20260928040000" />
+              : (
+                <Panel>
+                  {tab === "pricing"
+                    ? <SellerPricing journeyId={id} opinions={seller.opinions}
+                        scenarios={seller.opinions.length && lastFigure ? scenarios(seller.opinions.at(-1)!, { owed: lastFigure.owed, commissionPct: lastFigure.commissionPct, credits: lastFigure.credits }) : null} />
+                    : <SellerProceeds journeyId={id} views={figureViews} line={proceedsLine(figureViews)} />}
+                </Panel>
+              )}
+          </Section>
         ) : null}
 
         {tab === "money" ? (
-          <section className="card p-4" aria-labelledby="money-h">
-            <h2 id="money-h" className="t-md w6">Money</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
-              The buyer&apos;s ledger: {moneyData?.answersFrom ? `their answers from the plan they saved on ${DAY(moneyData.answersFrom)}` : "no saved plan, so Rift's starting figures"}, the
-              amounts you record, and {moneyData ? `this week's rate (${moneyData.rate.label})` : "this week's rate"}. Household members with &ldquo;Price and fees&rdquo; see it too.
-            </div>
-            {!moneyRead || !moneyRead.ok ? <p className="t-xs c-neg">The money record did not load{moneyRead && !moneyRead.ok ? ` (${moneyRead.error})` : ""}. That is not the same as there being none.</p>
-              : !moneyData ? <p className="t-xs c-3">{"skipped" in moneyRead ? moneyRead.reason : "Not available."}</p>
+          <Section title="Money" hint={<>The buyer&apos;s ledger: {moneyData?.answersFrom ? `their answers from the plan they saved on ${DAY(moneyData.answersFrom)}` : "no saved plan, so Rift's starting figures"}, the amounts you record, and {moneyData ? `this week's rate (${moneyData.rate.label})` : "this week's rate"}. Household members with &ldquo;Price and fees&rdquo; see it too.</>}>
+            {!moneyRead || !moneyRead.ok ? <Unread what="money record" error={moneyRead && !moneyRead.ok ? moneyRead.error : undefined} />
+              : !moneyData ? <Notice tone="info" title="Nothing is recorded on this deployment">{"skipped" in moneyRead ? moneyRead.reason : "Not available."}</Notice>
               : (
-                <div className="col gap-4">
-                  <LedgerView l={moneyData.ledger} audience="agent" />
+                <div className={s.stack}>
+                  <Panel><LedgerView l={moneyData.ledger} audience="agent" /></Panel>
                   {moneyData.recording
-                    ? <MoneyFacts journeyId={id} facts={moneyData.facts} />
-                    : <p className="t-xs c-warn">Recording amounts needs database update 20260928010000; until then every figure is an estimate or their answer.</p>}
+                    ? <Panel><MoneyFacts journeyId={id} facts={moneyData.facts} /></Panel>
+                    : <NeedsUpdate what="Recording amounts" migration="20260928010000" />}
                 </div>
               )}
-          </section>
+          </Section>
         ) : null}
 
         {tab === "household" ? (
-          <section className="card p-4" aria-labelledby="household-h">
-            <h2 id="household-h" className="t-md w6">Household</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>Who can sign in to this journey, and what each person sees.</div>
-            {memberList ? (
-              <Household journeyId={id} side={journey.side} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
-            ) : <p className="t-xs c-neg">The household did not load. That is not the same as nobody being invited.</p>}
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line-3)" }}>
-              <div className="t-sm w6">Summary links</div>
-              {summaryRead && summaryRead.ok ? <SummaryLinks journeyId={id} links={"data" in summaryRead ? summaryRead.data : null} /> : <p className="t-xs c-neg">The summary links did not load.</p>}
-            </div>
-          </section>
+          <>
+            <Section title="Household" hint={`Who can sign in to this journey, and what each person sees.`}>
+              {memberList ? (
+                <Household journeyId={id} side={journey.side} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
+              ) : <Unread what="household" />}
+            </Section>
+            <Section title="Summary links" hint="A read-only summary for someone outside the household. It never shows money, notes or documents.">
+              <Panel>
+                {summaryRead && summaryRead.ok ? <SummaryLinks journeyId={id} links={"data" in summaryRead ? summaryRead.data : null} /> : <Unread what="summary links" />}
+              </Panel>
+            </Section>
+          </>
         ) : null}
 
         {tab === "history" ? (
-          <section className="card p-4" aria-labelledby="history-h">
-            <h2 id="history-h" className="t-md w6">History</h2>
-            <div className="t-xs c-4" style={{ marginTop: 2, marginBottom: 8 }}>
-              Every change to the stage and status{buying ? ", and every revision of the brief" : ", every pricing and proceeds version, the listing and each weekly review"}, with who and why. Nothing here is ever edited.
-            </div>
+          <Section title="History" hint={`Every change to the stage and status${buying ? ", and every revision of the brief" : ", every pricing and proceeds version, the listing and each weekly review"}, with who and why. Nothing here is ever edited.`}>
+            {!prog ? <Unread what="stage history" /> : null}
+            {!buying && (!sellerRead?.ok || !listingRead?.ok) ? <Notice tone="warn" title="Part of the sale's history did not load">What is shown is not all of it.</Notice> : null}
             {(() => {
               const history = journeyHistory({
-                events: prog?.events ?? [], revisions: s?.revisions ?? [],
+                events: prog?.events ?? [], revisions: s0?.revisions ?? [],
                 opinions: seller?.opinions, figures: seller?.figures, listing,
               });
               return history.length ? (
-                <ul>{history.map((h) => (
-                  <li key={h.key} className="desk-row t-sm"><span className="c-4 t-xs">{WHEN(h.at)}</span> {h.text} · {h.who}{h.note ? <div className="desk-meta">{h.note}</div> : null}</li>
-                ))}</ul>
-              ) : <p className="t-sm c-4">Nothing recorded yet.</p>;
+                <Panel>
+                  <ol className={s.hist}>{history.map((h) => (
+                    <li key={h.key}>
+                      <span className={s.histWhen}>{WHEN(h.at)}</span>
+                      <span>{h.text} <span className={s.histWho}>· {h.who}</span>{h.note ? <span className={s.sub}>{h.note}</span> : null}</span>
+                    </li>
+                  ))}</ol>
+                </Panel>
+              ) : <Empty title="Nothing recorded yet">Stage changes, brief revisions{buying ? "" : ", pricing versions and listing events"} appear here as they are recorded.</Empty>;
             })()}
-            {!prog ? <p className="t-xs c-neg">The stage history did not load.</p> : null}
-            {!buying && (!sellerRead?.ok || !listingRead?.ok) ? <p className="t-xs c-neg">Part of the sale&apos;s history did not load; what is shown is not all of it.</p> : null}
-          </section>
+          </Section>
         ) : null}
       </div>
 
-      <p className="t-2xs c-4" style={{ marginTop: 20, lineHeight: 1.6, maxWidth: 640 }}>
+      <p className={s.foot}>
         Nothing on this page sends anything to anybody. Invitation links are for you to send{buying ? ", and the Matrix search is set up by you" : ", and the listing goes live through your MLS"}. Rift records what you did, {agentFirst}, and when.
       </p>
     </main>
@@ -498,16 +551,14 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
 function Changed({ latest, previous, s, anyActive }: { latest: Revision; previous: Revision | null; s: SearchState; anyActive: boolean }) {
   const diff = diffBriefs(previous?.brief ?? null, latest.brief);
   return (
-    <section className="card p-4" style={{ marginTop: 14 }} aria-labelledby="changed-h">
-      <h2 id="changed-h" className="t-md w6">What changed, and who agrees</h2>
-      {previous ? (
-        <div style={{ marginTop: 8 }}>
-          <div className="t-xs c-4">Revision {previous.revision} to {latest.revision}{latest.note ? `: "${latest.note}"` : ""}</div>
-          {diff.changes.length || diff.questionsAdded.length || diff.questionsResolved.length ? (
-            <ul className="t-sm" style={{ marginTop: 6, display: "grid", gap: 4 }}>
+    <Section title="What changed, and who agrees" hint={previous ? `Revision ${previous.revision} to ${latest.revision}${latest.note ? `: "${latest.note}"` : ""}` : undefined}>
+      <Panel>
+        {previous ? (
+          diff.changes.length || diff.questionsAdded.length || diff.questionsResolved.length ? (
+            <ul className="t-sm" style={{ display: "grid", gap: 6 }}>
               {diff.changes.map((c) => (
                 <li key={(c.after ?? c.before)!.id}>
-                  {c.kind === "added" ? "Added" : c.kind === "removed" ? "Removed" : "Changed"}{" "}
+                  <span className="chip t-2xs" style={{ marginRight: 6 }}>{c.kind === "added" ? "Added" : c.kind === "removed" ? "Removed" : "Changed"}</span>
                   <span className="w6">{FIELDS[(c.after ?? c.before)!.field].label}</span>:{" "}
                   {c.kind === "changed"
                     ? <>{describe(c.before!)} ({STRENGTH_LABEL[c.before!.strength].toLowerCase()}) to {describe(c.after!)} ({STRENGTH_LABEL[c.after!.strength].toLowerCase()})</>
@@ -515,26 +566,29 @@ function Changed({ latest, previous, s, anyActive }: { latest: Revision; previou
                   {c.after && c.kind !== "removed" ? <span className="t-2xs c-4"> · {c.after.statedBy}, {c.after.sourceRef}</span> : null}
                 </li>
               ))}
-              {diff.questionsAdded.map((q) => <li key={`qa${q}`}>New question: {q}</li>)}
-              {diff.questionsResolved.map((q) => <li key={`qr${q}`}>Settled: {q}</li>)}
+              {diff.questionsAdded.map((q) => <li key={`qa${q}`}><span className="chip t-2xs" style={{ marginRight: 6 }}>New question</span>{q}</li>)}
+              {diff.questionsResolved.map((q) => <li key={`qr${q}`}><span className="chip t-2xs" style={{ marginRight: 6 }}>Settled</span>{q}</li>)}
             </ul>
-          ) : <p className="t-xs c-3" style={{ marginTop: 6 }}>Saved again with no changes to the criteria.</p>}
-        </div>
-      ) : null}
-      {s.responses.length ? (
-        <div style={{ marginTop: 12 }}>
-          <div className="t-xs w6">Answers to revision {latest.revision}</div>
-          <ul className="t-sm" style={{ marginTop: 4, display: "grid", gap: 3 }}>
-            {s.responses.map((r) => (
-              <li key={r.id}>
-                <span className="w6">{r.name}</span> {r.response === "confirmed" ? "confirmed it" : "asked for changes"}
-                {r.note ? <span className="c-3">: &ldquo;{r.note}&rdquo;</span> : null}
-                <span className="t-2xs c-4"> · {DAY(r.createdAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : anyActive ? <p className="t-xs c-4" style={{ marginTop: 10 }}>Nobody in the household has answered revision {latest.revision} yet.</p> : null}
-    </section>
+          ) : <p className="t-sm c-3">Saved again with no changes to the criteria.</p>
+        ) : null}
+        {s.responses.length ? (
+          <div style={previous ? { marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line-3)" } : undefined}>
+            <div className="t-sm w6">Answers to revision {latest.revision}</div>
+            <ul className="t-sm" style={{ marginTop: 6, display: "grid", gap: 6 }}>
+              {s.responses.map((r) => (
+                <li key={r.id}>
+                  <span className="w6">{r.name}</span>{" "}
+                  {r.response === "confirmed"
+                    ? <span className="c-pos"><Ico.check size={12} /> confirmed it</span>
+                    : <span className="c-warn"><Ico.alert size={12} /> asked for changes</span>}
+                  {r.note ? <span className="c-3">: &ldquo;{r.note}&rdquo;</span> : null}
+                  <span className="t-2xs c-4"> · {DAY(r.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : anyActive ? <p className="t-sm c-4" style={previous ? { marginTop: 12 } : undefined}>Nobody in the household has answered revision {latest.revision} yet.</p> : null}
+      </Panel>
+    </Section>
   );
 }

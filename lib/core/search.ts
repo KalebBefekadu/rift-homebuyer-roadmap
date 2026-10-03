@@ -77,6 +77,18 @@ export const PROPERTY_TYPES = {
 } as const;
 export type PropertyType = keyof typeof PROPERTY_TYPES;
 
+/**
+ * A stored type in words. A record from before the types were fixed may
+ * carry "single-family" or something typed by hand; it is said as written,
+ * made readable, rather than shown as a code or dropped.
+ */
+export function propertyTypeLabel(t: string): string {
+  if (t in PROPERTY_TYPES) return PROPERTY_TYPES[t as PropertyType];
+  if (t === "single-family") return PROPERTY_TYPES.detached;
+  const words = t.replace(/[-_]+/g, " ").trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : "Not known";
+}
+
 type ValueKind = "money" | "count" | "half" | "acres" | "codes" | "places" | "yesno" | "text";
 
 interface FieldRule {

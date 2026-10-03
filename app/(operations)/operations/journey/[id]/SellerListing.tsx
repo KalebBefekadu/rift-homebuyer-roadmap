@@ -27,6 +27,8 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
   const [step, setStep] = useState<Showing | null>(null);
   const [decision, setDecision] = useState<"keep" | "change" | "undecided">("keep");
   const status = listingStatus(events);
+  /* The latest record of it going out to other sites, once the listing is live. */
+  const syndicated = status.syndicated ? [...events].reverse().find((e) => e.kind === "syndicated") ?? null : null;
   const counts = showingCounts(showings);
   const req = () => newRequestId();
 
@@ -47,12 +49,22 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
               {c.done ? <span className="t-xs c-4"> · {c.done.detail}, {DAY(c.done.at)}</span> : <span className="t-xs c-4"> · not done</span>}
             </li>
           ))}
+          {/* The row names what was recorded (the MLS number in the agent's words, linked when there is a link) and when, like the rest of the checklist. */}
           <li className="desk-row t-sm">
             <span className={status.status === "live" ? "c-pos" : "c-4"}>{status.status === "live" ? "✓" : "○"}</span> Live on the MLS
-            {status.live?.url ? <> · <a className="u t-xs" href={status.live.url} target="_blank" rel="noreferrer">the listing</a></> : null}
-            {status.status === "live" && !status.syndicated ? <span className="t-xs c-4"> · other sites not confirmed yet (a delay, not a failure)</span> : null}
+            {status.live ? (
+              <span className="t-xs c-4"> · {status.live.url
+                ? <a className="u" href={status.live.url} target="_blank" rel="noreferrer">{status.live.detail}</a>
+                : status.live.detail}, {DAY(status.live.at)}</span>
+            ) : status.status === "preparing" ? <span className="t-xs c-4"> · not live yet</span> : null}
             {status.status === "withdrawn" ? <span className="t-xs c-warn"> · withdrawn</span> : null}
           </li>
+          {status.status === "live" ? (
+            <li className="desk-row t-sm">
+              <span className={status.syndicated ? "c-pos" : "c-4"}>{status.syndicated ? "✓" : "○"}</span> Showing on other sites
+              {syndicated ? <span className="t-xs c-4"> · {syndicated.detail}, {DAY(syndicated.at)}</span> : <span className="t-xs c-4"> · not confirmed yet (a delay, not a failure)</span>}
+            </li>
+          ) : null}
         </ul>
         {form === "event" ? (
           <form className="desk-form" onSubmit={async (e) => {
@@ -73,7 +85,7 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
             <button className="btn btn-p btn-sm" disabled={busy}>Record</button>
             <button type="button" className="btn btn-g btn-sm" onClick={() => setForm(null)}>Cancel</button>
           </form>
-        ) : <button type="button" className="u t-xs" style={{ marginTop: 6 }} onClick={() => { setError(null); setForm("event"); }}>Record something done on the listing</button>}
+        ) : <button type="button" className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={() => { setError(null); setForm("event"); }}>Record something done on the listing</button>}
       </section>
 
       <section aria-labelledby="showings-h">
@@ -116,7 +128,7 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
             <button className="btn btn-p btn-sm" disabled={busy}>Record</button>
             <button type="button" className="btn btn-g btn-sm" onClick={() => { setForm(null); setStep(null); }}>Cancel</button>
           </form>
-        ) : <button type="button" className="u t-xs" style={{ marginTop: 6 }} onClick={() => { setError(null); setStep(null); setForm("showing"); }}>Add a showing</button>}
+        ) : <button type="button" className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={() => { setError(null); setStep(null); setForm("showing"); }}>Add a showing</button>}
       </section>
 
       <section aria-labelledby="reviews-h">
@@ -147,7 +159,7 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
             <button className="btn btn-p btn-sm" disabled={busy}>Record</button>
             <button type="button" className="btn btn-g btn-sm" onClick={() => setForm(null)}>Cancel</button>
           </form>
-        ) : <button type="button" className="u t-xs" style={{ marginTop: 6 }} onClick={() => { setError(null); setForm("review"); }}>Write this week&apos;s review</button>}
+        ) : <button type="button" className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={() => { setError(null); setForm("review"); }}>Write this week&apos;s review</button>}
       </section>
 
       {status.price ? <p className="t-xs c-4">Current list price after changes: {money(status.price)}.</p> : null}

@@ -406,3 +406,36 @@ export async function recentJourneyEvents(agentId: string, days = 7, now = new D
     kind: e.kind as "stage" | "status", to: e.to_value as string, by: e.actor_label as string, at: e.created_at as string,
   })));
 }
+
+export interface JourneyState { stage: Stage; status: JourneyStatus; statusReason: string | null }
+
+/**
+ * Where each of several journeys stands, for a list. Search lists every
+ * buyer's search, and a buyer who closed in September is not searching:
+ * which ones are is a question about stage and status, which only the events
+ * can answer. One read for all of them, shaped by the same `progressOf` the
+ * journey page uses, so a list and a page can never disagree about a stage.
+ */
+export async function journeyStates(journeyIds: string[]): Promise<DbResult<Map<string, JourneyState>>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const agentId = await currentAgentId();
+  if (!agentId) return skipped("no agent row exists yet");
+  const out = new Map<string, JourneyState>();
+  if (journeyIds.length === 0) return done(out);
+  const ev = await boundedRead(
+    db.from("rift_journey_events").select("journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at")
+      .eq("agent_id", agentId).in("journey_id", journeyIds).order("seq").limit(8000),
+    "the journeys' stages",
+  );
+  if (!ev.ok) return journeyTablesMissing(ev.error) ? done(out) : ev;
+  const byJourney = new Map<string, Record<string, unknown>[]>();
+  for (const e of rows(ev)) byJourney.set(e.journey_id as string, [...(byJourney.get(e.journey_id as string) ?? []), e]);
+  for (const id of journeyIds) {
+    const events = shapeEvents(byJourney.get(id) ?? []);
+    const p = progressOf(events);
+    const reason = [...events].reverse().find((e) => e.kind === "status")?.reason ?? null;
+    out.set(id, { stage: p.stage, status: p.status, statusReason: p.status === "paused" ? reason : null });
+  }
+  return done(out);
+}
