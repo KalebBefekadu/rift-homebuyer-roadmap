@@ -11,6 +11,7 @@ import { BRIEF_MAX, briefError } from "@/lib/core/campaign-draft";
 import { draftCampaignRecipe, publishCampaign, saveCampaign } from "../actions";
 import { showTime } from "@/lib/core/day";
 import { newRequestId } from "@/lib/core/ids";
+import k from "../../_business/kit.module.css";
 
 const WHEN = (iso: string) => showTime(iso);
 const LIVE_VALUES = VALUES.filter((v) => v.live);
@@ -102,7 +103,7 @@ export function Composer({ id, slug, live, revisions, history, programs, origin,
           </div>
         ) : null}
       </details>
-      <div className="ops-split" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)" }}>
+      <div className={k.split}>
         <section className="card p-4 col gap-3" aria-labelledby="compose-h">
           <h2 id="compose-h" className="t-md w6">Blocks</h2>
           <ol className="col gap-2">
@@ -110,7 +111,7 @@ export function Composer({ id, slug, live, revisions, history, programs, origin,
               <li key={i} className="card p-3" style={{ background: "var(--sunk)" }}>
                 <div className="between gap-2">
                   <span className="t-xs w6">{i + 1}. {BLOCK_LABEL[b.type]}</span>
-                  <span className="row gap-2 t-xs">
+                  <span className="row gap-2 wrap t-xs">
                     <button type="button" className="u" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Move block ${i + 1} up`}>Up</button>
                     <button type="button" className="u" disabled={i === blocks.length - 1} onClick={() => move(i, 1)} aria-label={`Move block ${i + 1} down`}>Down</button>
                     <button type="button" className="u" onClick={() => setBlocks((bs) => bs.filter((_, n) => n !== i))} aria-label={`Remove block ${i + 1}`}>Remove</button>

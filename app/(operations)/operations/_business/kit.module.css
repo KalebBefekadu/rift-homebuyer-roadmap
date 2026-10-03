@@ -1,0 +1,68 @@
+/*
+ * What the business pages (Transactions, Offers, Advocacy, Reports, Campaigns)
+ * share that ui.tsx does not draw: a state tag, a list of rows, a table that
+ * becomes stacked cards on a phone, and right-aligned figures. Kept here
+ * rather than in rift.css because other pages are being rebuilt in parallel
+ * and a shared stylesheet is where two of them collide.
+ */
+
+/* A state is an icon and a word as well as a colour (rule 10). */
+.tag {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px;
+  border-radius: 6px; font-size: 12px; font-weight: 550; white-space: nowrap;
+  background: var(--sunk); color: var(--ink-2); border: 1px solid var(--line-2);
+}
+.tag svg { flex: none; }
+.pos { background: var(--pos-wash); color: var(--pos); border-color: var(--pos-line); }
+.warn { background: var(--warn-wash); color: var(--warn); border-color: var(--warn-line); }
+.neg { background: var(--neg-wash); color: var(--neg); border-color: color-mix(in srgb, var(--neg) 25%, transparent); }
+.acc { background: var(--accent-wash); color: var(--accent-2); border-color: var(--accent-line); }
+
+/* A list of rows in one card: a name and what is going on on the left, the
+   figure or the action on the right. */
+.list { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); overflow: hidden; }
+.row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 20px; align-items: start;
+  padding: 14px 16px; border-bottom: 1px solid var(--line-3);
+}
+.row:last-child { border-bottom: 0; }
+.rowMain { min-width: 0; }
+.rowTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.rowSub { margin-top: 3px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.rowNote { margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.rowSide { text-align: right; min-width: 0; }
+.rowSideStrong { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.rowSideHint { margin-top: 2px; font-size: 12px; color: var(--ink-4); }
+.rowFoot { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 13px; color: var(--ink-3); }
+.muted { color: var(--ink-4); }
+.strong { color: var(--ink); font-weight: 600; }
+.link { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.link:hover { text-decoration-color: currentColor; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* A table that stays a table where it fits and becomes a stack of labelled
+   cards where it does not, so a phone never scrolls sideways to read a row. */
+.tableCard { background: var(--paper); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); overflow: hidden; }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th { text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-3); padding: 9px 14px; border-bottom: 1px solid var(--line-2); background: var(--sunk); white-space: nowrap; }
+.table td { padding: 11px 14px; border-bottom: 1px solid var(--line-3); vertical-align: top; }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table tbody tr:hover { background: var(--sunk); }
+.table .num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table tfoot td { background: var(--sunk); font-weight: 600; border-top: 1px solid var(--line-2); border-bottom: 0; }
+
+@media (max-width: 760px) {
+  .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
+  .stack tr { padding: 12px 14px; border-bottom: 1px solid var(--line-3); }
+  .stack tbody tr:last-child { border-bottom: 0; }
+  .stack td { display: block; padding: 5px 0; border: 0; text-align: left !important; }
+  .stack td::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: 11.5px; font-weight: 600; letter-spacing: .02em; color: var(--ink-4); }
+  .stack td[data-label=""]::before, .stack td:not([data-label])::before { content: none; }
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .rowSide { text-align: left; }
+}
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: minmax(0, 1fr); } }

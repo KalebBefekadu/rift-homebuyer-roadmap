@@ -1,7 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedRead } from "./bounded";
+import { boundedReport } from "./bounded";
 import { withTimeout, WRITE_DEADLINE_MS } from "@/lib/core/timeout";
 import { sanitise, type EventInput } from "@/lib/core/telemetry";
 import type { LadderEvent } from "@/lib/core/ladder";
@@ -104,11 +104,11 @@ export async function funnelReport(
 
   try {
     const [report, starts] = await Promise.all([
-      boundedRead(
+      boundedReport(
         db.rpc("rift_funnel_report", { p_agent: agent_id, p_side: side, p_days: days }),
         "the funnel report",
       ),
-      boundedRead(
+      boundedReport(
         db.rpc("rift_funnel_starts", { p_agent: agent_id, p_side: side, p_days: days }),
         "the assessment starts",
       ),
@@ -153,7 +153,7 @@ export async function ladderEvents(days = 90): Promise<DbResult<LadderEvent[]>> 
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_events").select("session_id,name,payload").eq("agent_id", agent_id)
       .in("name", ["value_view", "value_answer"]).gte("at", since).limit(20_000),
     "the value events",
@@ -175,8 +175,8 @@ export async function conversionCounts(days = 90): Promise<DbResult<{ savedPlans
   if (!agent_id) return skipped("no agent row exists yet");
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const [plans, calls] = await Promise.all([
-    boundedRead(db.from("rift_leads").select("id").eq("agent_id", agent_id).gte("plan_saved_at", since).limit(10_000), "saved plans"),
-    boundedRead(db.from("rift_events").select("session_id").eq("agent_id", agent_id).eq("name", "booking_complete").gte("at", since).limit(10_000), "call requests"),
+    boundedReport(db.from("rift_leads").select("id").eq("agent_id", agent_id).gte("plan_saved_at", since).limit(10_000), "saved plans"),
+    boundedReport(db.from("rift_events").select("session_id").eq("agent_id", agent_id).eq("name", "booking_complete").gte("at", since).limit(10_000), "call requests"),
   ]);
   /* Before the plan columns exist, no plan has been saved. */
   if (!plans.ok && !/plan_saved_at/.test(plans.error)) return plans;

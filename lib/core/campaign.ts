@@ -137,3 +137,17 @@ export function liveVersion(history: Publication[]): number | null {
   const last = [...history].sort((a, b) => a.at.localeCompare(b.at)).at(-1);
   return !last || last.action === "unpublish" ? null : last.version;
 }
+
+/**
+ * Whether a visit's campaign tag names this campaign. The public page tags the
+ * values it links to with `<slug>-v<version>` (app/(rift)/c/[slug]/page.tsx),
+ * so a tag is this campaign's when it is the slug or the slug and a version.
+ * Matched exactly and never by prefix: "cobb" must not claim "cobb-sellers-v2".
+ */
+export function tagIsCampaign(tag: string | null | undefined, slug: string): boolean {
+  if (!tag) return false;
+  const t = tag.toLowerCase();
+  /* A slug is lowercase letters, digits and hyphens (SLUG above), so a plain
+     prefix check followed by a number is exact; no pattern is built from it. */
+  return t === slug || (t.startsWith(`${slug}-v`) && /^\d+$/.test(t.slice(slug.length + 2)));
+}

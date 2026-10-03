@@ -1,14 +1,37 @@
 import { funnelReport } from "@/lib/db/events";
 import { abandoned } from "@/lib/db/recovery";
+import { BUY_FUNNEL, SELL_FUNNEL } from "@/lib/core/funnel";
 import { valueById } from "@/lib/core/values";
+import { Notice, Empty, Section } from "../ui";
+import { Tag, type TagTone } from "../_business/Tag";
+import k from "../_business/kit.module.css";
+import s from "./reports.module.css";
 import { diagnose } from "./diagnose";
+
+/**
+ * A question's key as a person reads it. The events carry the key, never the
+ * answer (rule 6), so the report names the question from the funnel's own
+ * words where it can and says the key plainly where it cannot, rather than
+ * printing "downPct".
+ */
+const KNOWN: Record<string, string> = {
+  county: "Which county", credit: "Credit", downPct: "Down payment", household: "Household size", income: "Household income",
+  price: "Home price", savings: "Savings", payoff: "Mortgage payoff", owned: "Owned before", timing: "Timing", who: "Who is asking",
+  ownership: "Owned a home before", rate: "Interest rate",
+};
+function questionLabel(key: string): string {
+  const fromFunnel = [...BUY_FUNNEL.questions, ...SELL_FUNNEL.questions].find((q) => q.id === key)?.title;
+  return KNOWN[key] ?? fromFunnel ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+}
+
+const DIAG_TONE: Record<string, TagTone> = { "chip-neg": "neg", "chip-warn": "warn" };
 
 /**
  * Where people stop, and who started without finishing. Moved from Today to
  * Reports (Blueprint v5 §8.8): both are about the funnel's shape over weeks,
  * not about what needs the agent this morning.
  */
-export async function FunnelReports({ h2 }: { h2: React.CSSProperties }) {
+export async function FunnelReports() {
   const [buy, sell, partial] = await Promise.all([funnelReport("buy"), funnelReport("sell"), abandoned()]);
   const rep = (r: typeof buy) => (r.ok && "data" in r ? r.data : null);
   const started = partial.ok && "data" in partial ? partial.data : null;
@@ -16,44 +39,45 @@ export async function FunnelReports({ h2 }: { h2: React.CSSProperties }) {
 
   return (
     <>
-      <h2 className="serif" style={h2}>Where people stop</h2>
-      <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 640, lineHeight: 1.6 }}>
-        The last {buyReport?.days ?? 90} days, counted in distinct sessions rather than page views: a person who
-        backs up and re-reads a question is one person. Bounded in time on purpose, so a changed question can be
-        seen to help or not.
-      </p>
-      <Funnel label="Buyers" report={buyReport} failed={!buy.ok} />
-      <Funnel label="Sellers" report={rep(sell)} failed={!sell.ok} />
+      <Section
+        title="Where people stop"
+        hint={`The last ${buyReport?.days ?? 90} days, counted in distinct sessions rather than page views: a person who backs up and re-reads a question is one person. Bounded in time on purpose, so a changed question can be seen to help or not.`}
+      >
+        <div className={s.cols}>
+          <Side label="Buyers" report={buyReport} failed={!buy.ok} error={!buy.ok ? buy.error : null} />
+          <Side label="Sellers" report={rep(sell)} failed={!sell.ok} error={!sell.ok ? sell.error : null} />
+        </div>
+      </Section>
 
-      <h2 className="serif" style={h2}>Started, not finished</h2>
-      <p className="t-sm c-3" style={{ marginTop: 6, maxWidth: 640, lineHeight: 1.6 }}>
-        People who opened a value, or a retired assessment, and left without an answer or a saved plan. A normal state rather than a failure. Most of these people gave no way to reach them, which is correct: a
-        resume link goes only to somebody who gave an address for that purpose.
-      </p>
-      {!partial.ok ? (
-        <p className="t-sm c-neg" style={{ marginTop: 8 }}>This list did not load, which is not the same as it being empty.</p>
-      ) : !started?.length ? (
-        <p className="t-sm c-4" style={{ marginTop: 8 }}>Nobody in the last 30 days.</p>
-      ) : (
-        <div className="card" style={{ marginTop: 10, overflow: "hidden" }}>
-          {started.slice(0, 20).map((a, i) => (
-            <div key={`${a.sessionId}-${a.tool ?? a.assessmentId}`} className="between wrap gap-2" style={{ padding: "9px 12px", borderBottom: i === Math.min(started.length, 20) - 1 ? undefined : "1px solid var(--line-3)" }}>
-              <div>
-                <div className="row wrap gap-2">
-                  <span className="t-sm w55">{a.email ?? "No contact details"}</span>
-                  <span className="chip t-2xs">{a.side === "buy" ? "Buyer" : a.side === "sell" ? "Seller" : "Buyer abroad"}</span>
-                  {a.tool ? <span className="chip t-2xs">{valueById(a.tool)?.name ?? a.tool}</span> : null}
-                  {a.county ? <span className="chip t-2xs">{a.county}</span> : null}
+      <Section
+        title="Started, not finished"
+        hint="Last 30 days. People who opened a value, or a retired assessment, and left without an answer or a saved plan. A normal state rather than a failure. Most of these people gave no way to reach them, which is correct: a resume link goes only to somebody who gave an address for that purpose."
+      >
+        {!partial.ok ? (
+          <Notice tone="neg" title="This list did not load">That is not the same as it being empty.</Notice>
+        ) : !started?.length ? (
+          <Empty title="Nobody in the last 30 days">Someone appears here when they start and go quiet for two hours.</Empty>
+        ) : (
+          <div className={k.list}>
+            {started.slice(0, 20).map((a) => (
+              <div key={`${a.sessionId}-${a.tool ?? a.assessmentId}`} className={k.row}>
+                <div className={k.rowMain}>
+                  <div className={k.rowTitle}>
+                    {a.email ?? "No contact details"}
+                    <Tag>{a.side === "buy" ? "Buyer" : a.side === "sell" ? "Seller" : "Buyer abroad"}</Tag>
+                    {a.tool ? <Tag>{valueById(a.tool)?.name ?? a.tool}</Tag> : null}
+                    {a.county ? <Tag>{a.county}</Tag> : null}
+                  </div>
+                  <div className={k.rowSub}>{a.answered} question{a.answered === 1 ? "" : "s"} answered, quiet for {a.hoursSince < 48 ? `${a.hoursSince} hours` : `${Math.floor(a.hoursSince / 24)} days`}</div>
                 </div>
-                <div className="t-xs c-4" style={{ marginTop: 3 }}>
-                  {a.answered} question{a.answered === 1 ? "" : "s"} answered · quiet for {a.hoursSince}h
+                <div className={k.rowSide}>
+                  {a.email ? <Tag tone="acc">Can be sent a resume link</Tag> : <Tag>Nothing to send</Tag>}
                 </div>
               </div>
-              {a.email ? <span className="chip chip-acc t-2xs">Can be sent a resume link</span> : <span className="chip t-2xs">Nothing to send</span>}
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </Section>
     </>
   );
 }
@@ -65,33 +89,30 @@ interface FunnelStep { questionKey: string; reached: number; answered: number; m
  * one with no traffic: a funnel absent from the page reads as "nothing is
  * wrong with it" rather than "nobody has been through it".
  */
-function Funnel({ label, report, failed }: { label: string; report: { days: number; starts: number; steps: FunnelStep[] } | null; failed: boolean }) {
+function Side({ label, report, failed, error }: { label: string; report: { days: number; starts: number; steps: FunnelStep[] } | null; failed: boolean; error: string | null }) {
   return (
-    <div style={{ marginTop: 14 }}>
-      <div className="t-sm w6 c-3">{label}</div>
+    <div>
+      <div className={s.sub} style={{ marginTop: 0, marginBottom: 8 }}>{label}</div>
       {failed ? (
-        <p className="t-sm c-neg" style={{ marginTop: 6 }}>Did not load; unknown, not empty.</p>
+        <Notice tone="neg" title="Did not load">{error}. Unknown, not empty.</Notice>
       ) : !report || report.starts < 20 ? (
-        <div className="card p-4" style={{ marginTop: 8, background: "var(--sunk)" }}>
-          <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
-            {report ? `${report.starts} assessment${report.starts === 1 ? "" : "s"} started.` : "No data yet."}{" "}
-            Nothing is reported below twenty, because a drop-off computed from four people is noise wearing a percentage sign.
-          </p>
-        </div>
+        <Empty title={report ? `${report.starts} ${report.starts === 1 ? "assessment" : "assessments"} started` : "No data yet"}>
+          Nothing is reported below twenty, because a drop-off computed from four people is noise wearing a percentage sign.
+        </Empty>
       ) : (
-        <div className="card" style={{ marginTop: 8, overflow: "hidden" }}>
-          {report.steps.map((s, i) => {
-            const d = diagnose(s);
+        <div className={k.list}>
+          {report.steps.map((st) => {
+            const d = diagnose(st);
             return (
-              <div key={s.questionKey} className="between wrap gap-2" style={{ padding: "9px 12px", borderBottom: i === report.steps.length - 1 ? undefined : "1px solid var(--line-3)" }}>
+              <div key={st.questionKey} className={s.step}>
                 <div>
-                  <span className="t-sm w55">{s.questionKey}</span>
-                  <div className="t-xs c-4" style={{ marginTop: 2 }}>{s.reached} reached · {s.answered} answered · {s.medianSec}s median</div>
-                  {d ? <p className="t-xs c-3" style={{ marginTop: 4, maxWidth: 460, lineHeight: 1.5 }}>{d.advice}</p> : null}
+                  <div className={s.stepKey}>{questionLabel(st.questionKey)}</div>
+                  <div className={s.stepMeta}>{st.reached} reached, {st.answered} answered, {st.medianSec}s median</div>
+                  {d ? <p className={s.stepAdvice}>{d.advice}</p> : null}
                 </div>
-                <div className="row gap-2">
-                  <span className="num t-sm">{s.dropPct}%</span>
-                  {d ? <span className={`chip ${d.tone}`}>{d.label}</span> : <span className="chip chip-pos">Healthy</span>}
+                <div className={s.stepSide}>
+                  <span className={s.drop}>{st.dropPct}% stop</span>
+                  {d ? <Tag tone={DIAG_TONE[d.tone] ?? "warn"}>{d.label}</Tag> : <Tag tone="pos">Healthy</Tag>}
                 </div>
               </div>
             );

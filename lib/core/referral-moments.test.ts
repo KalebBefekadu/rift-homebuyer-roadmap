@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MOMENTS, momentsFor, actionable, mayAsk, serviceCheck, anniversariesPassed,
-  currentOccurrence, SILENT_MOMENTS, DAY_30, MONTH_6,
+  currentOccurrence, SILENT_MOMENTS, DAY_30, MONTH_6, STATE_CHIP,
   type Lifecycle, type Mood, type MomentId, type MomentState, type RecordedMoment,
 } from "./referral";
 
@@ -84,7 +84,7 @@ describe("the dates after closing", () => {
     const sentYearOne: RecordedMoment[] = [{ momentId: "anniversary", occurrence: 1, state: "sent" }];
     expect(find(closed, "anniversary", sentYearOne, at("2027-02-01")).state).toBe("sent");
 
-    const yearTwo = find(closed, "anniversary", sentYearOne, at("2028-02-01"));
+    const yearTwo = find(closed, "anniversary", sentYearOne, at("2028-01-10"));
     expect(yearTwo.occurrence).toBe(2);
     expect(yearTwo.state).toBe("due");
   });
@@ -123,7 +123,7 @@ describe("a review invitation is the same for everyone (decision D12)", () => {
 
   it("offers the closing-day review to an unhappy client like anyone else", () => {
     for (const mood of MOODS) {
-      const s = find(life({ stage: "Closed", closedOn: "2026-01-01", mood }), "closing_day", [], at("2026-02-01"));
+      const s = find(life({ stage: "Closed", closedOn: "2026-01-01", mood }), "closing_day", [], at("2026-01-05"));
       expect(s.moment.review).toBe(true);
       expect(s.state).toBe("due");
       expect(mayAsk(s), `mood=${mood}`).toBe(true);
@@ -200,6 +200,73 @@ describe("a recorded decision is the answer", () => {
       const s = find(life({ stage: "Closed", closedOn: "2026-01-01", mood: "bad" }), "closing_day", rec, at("2026-02-01"));
       expect(mayAsk(s), state).toBe(false);
     }
+  });
+});
+
+describe("an ask is reasonable near what earns it, then it is over", () => {
+  const closed = life({ stage: "Closed", closedOn: "2026-03-01", mood: "good" });
+
+  it("closing day is open for two weeks and then stops asking", () => {
+    /* Found on the demo book: a client who closed seven months ago still read
+       "Ask now" for their closing-day review. */
+    expect(find(closed, "closing_day", [], at("2026-03-01")).state).toBe("due");
+    expect(find(closed, "closing_day", [], at("2026-03-14")).state).toBe("due");
+    expect(find(closed, "closing_day", [], at("2026-03-15")).state).toBe("passed");
+    expect(find(closed, "closing_day", [], at("2026-09-29")).state).toBe("passed");
+  });
+
+  it("says how many days are left to ask, counting today", () => {
+    expect(find(closed, "closing_day", [], at("2026-03-01")).closesInDays).toBe(13);
+    expect(find(closed, "closing_day", [], at("2026-03-14")).closesInDays).toBe(0);
+    expect(find(closed, "closing_day", [], at("2026-03-05")).since).toBe("2026-03-01");
+  });
+
+  it("opens the thirty-day check on day thirty and closes it two weeks later", () => {
+    expect(find(closed, "day_30", [], at("2026-03-30")).state).toBe("waiting");
+    expect(find(closed, "day_30", [], at("2026-03-31")).state).toBe("due");
+    expect(find(closed, "day_30", [], at("2026-04-13")).state).toBe("due");
+    expect(find(closed, "day_30", [], at("2026-04-14")).state).toBe("passed");
+  });
+
+  it("lets a recorded decision stand after its window", () => {
+    const rec: RecordedMoment[] = [{ momentId: "closing_day", occurrence: 0, state: "sent" }];
+    expect(find(closed, "closing_day", rec, at("2026-09-29")).state).toBe("sent");
+  });
+
+  it("does not offer the tool to a stranger nobody has picked up", () => {
+    const stranger = life({ stage: "", readoutDelivered: true, planPublished: true });
+    expect(find(stranger, "value_delivered").state).toBe("waiting");
+    expect(find(stranger, "value_delivered").blockedBecause).toMatch(/picked this person up/i);
+    expect(find(stranger, "plan_published").state).toBe("waiting");
+    expect(actionable(momentsFor(stranger, [], at("2026-09-21")))).toEqual([]);
+  });
+
+  it("lets the readout ask age out once they were given their numbers a while ago", () => {
+    const l = life({ readoutDelivered: true, numbersAt: "2026-09-01" });
+    expect(find(l, "value_delivered", [], at("2026-09-14")).state).toBe("due");
+    expect(find(l, "value_delivered", [], at("2026-09-15")).state).toBe("passed");
+  });
+
+  it("makes no ask while they are under contract or closing, even with numbers delivered", () => {
+    for (const stage of ["Under contract", "Closing"]) {
+      const l = life({ stage, readoutDelivered: true, planPublished: true });
+      expect(find(l, "value_delivered").state, stage).toBe("waiting");
+      expect(find(l, "plan_published").state, stage).toBe("waiting");
+    }
+  });
+
+  it("stops asking to share the plan once the home has closed", () => {
+    expect(find(life({ stage: "Closed", planPublished: true, closedOn: "2026-09-01" }), "plan_published").state).toBe("passed");
+  });
+
+  it("keeps a year's anniversary open for a month, and the next year's separate", () => {
+    const l = life({ stage: "Closed", closedOn: "2026-01-01" });
+    expect(find(l, "anniversary", [], at("2027-01-05")).state).toBe("due");
+    expect(find(l, "anniversary", [], at("2027-03-15")).state).toBe("passed");
+  });
+
+  it("never stores the derived state, so nothing can reopen or lose a window", () => {
+    expect(STATE_CHIP.passed.l).toBe("Window passed");
   });
 });
 

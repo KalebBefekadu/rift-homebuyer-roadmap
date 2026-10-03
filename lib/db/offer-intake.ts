@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { captureLead } from "./leads";
 import type { Submission } from "@/lib/core/offer-intake";
@@ -184,7 +184,7 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
   if (!agent_id) return skipped("not signed in");
 
   const BASE = "id,property_address,offered_by,submitted_email,submitted_phone,submitted_firm,representing,price_cents,concessions_cents,repair_credit_cents,earnest_cents,financing,close_on,contingencies,preapproval,proof_of_funds,note,submitter_lead_id,created_at";
-  const query = (cols: string) => boundedRead(
+  const query = (cols: string) => boundedReport(
     db.from("rift_offers").select(cols)
       .eq("agent_id", agent_id).eq("source", "inbound")
       .order("created_at", { ascending: false }).limit(limit),

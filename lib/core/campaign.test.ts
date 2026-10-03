@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assistanceRecipe, cleanRecipe, liveVersion, recipeErrors, versionFor, type Publication, type Recipe } from "./campaign";
+import { assistanceRecipe, cleanRecipe, liveVersion, recipeErrors, tagIsCampaign, versionFor, type Publication, type Recipe } from "./campaign";
 
 describe("campaign recipes (CAMP-01)", () => {
   it("the first recipe, the assistance path, is valid as it comes", () => {
@@ -44,5 +44,24 @@ describe("publishing and versions (CAMP-03)", () => {
     expect(versionFor(undefined, 3, [1, 2, 3])).toBe(3);
     expect(versionFor("9", 3, [1, 2, 3])).toBe(3);
     expect(versionFor("1; drop table", 3, [1, 2, 3])).toBe(3);
+  });
+});
+
+describe("which visits a campaign claims", () => {
+  it("claims its own slug and any version of it", () => {
+    expect(tagIsCampaign("cobb-sellers", "cobb-sellers")).toBe(true);
+    expect(tagIsCampaign("cobb-sellers-v3", "cobb-sellers")).toBe(true);
+    expect(tagIsCampaign("Cobb-Sellers-v12", "cobb-sellers")).toBe(true);
+  });
+
+  it("never claims a longer slug that merely starts with it", () => {
+    expect(tagIsCampaign("cobb-sellers-v2", "cobb")).toBe(false);
+    expect(tagIsCampaign("cobb-sellers", "cobb")).toBe(false);
+    expect(tagIsCampaign("cobb-vacation", "cobb")).toBe(false);
+  });
+
+  it("claims nothing for a visit with no campaign", () => {
+    expect(tagIsCampaign(null, "cobb")).toBe(false);
+    expect(tagIsCampaign("", "cobb")).toBe(false);
   });
 });

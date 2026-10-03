@@ -191,3 +191,13 @@ export function gapsIn(offer: Offer): string[] {
 
 /** Whether anything here has reached the seller yet. */
 export const anyReleased = (offers: Offer[]) => offers.some((o) => o.releasedAt);
+
+/**
+ * What a person reads for a stored financing code. The code ("fha", "va") is
+ * a database value, not a word: it was printed raw on the Offers page.
+ * "Other" says what the sender said it was.
+ */
+export function financingLabel(code: string, other: string | null = null): string {
+  if (code === "other") return other?.trim() ? `Other: ${other.trim()}` : "Other";
+  return FINANCING_LABEL[code as Financing] ?? code;
+}

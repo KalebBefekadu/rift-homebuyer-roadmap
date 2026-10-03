@@ -1,7 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedRead } from "./bounded";
+import { boundedReport } from "./bounded";
 import { unfinishedValues, type ValueEvent } from "@/lib/core/abandonment";
 
 /**
@@ -65,7 +65,7 @@ export async function abandoned(minHoursQuiet = 2, maxAgeDays = 30): Promise<DbR
 
   try {
     const [v4, events, savers] = await Promise.all([
-      boundedRead(
+      boundedReport(
         db.from("rift_assessments")
           .select("id,session_id,side,county,started_at,rift_answers(question_key),rift_leads(email)")
           .eq("agent_id", agent_id)
@@ -75,7 +75,7 @@ export async function abandoned(minHoursQuiet = 2, maxAgeDays = 30): Promise<DbR
           .order("started_at", { ascending: false }),
         "the unfinished assessments",
       ),
-      boundedRead(
+      boundedReport(
         db.from("rift_events")
           .select("session_id,name,payload,at")
           .eq("agent_id", agent_id)
@@ -85,7 +85,7 @@ export async function abandoned(minHoursQuiet = 2, maxAgeDays = 30): Promise<DbR
           .limit(20_000),
         "the value events",
       ),
-      boundedRead(
+      boundedReport(
         db.from("rift_leads")
           .select("session_id")
           .eq("agent_id", agent_id)
@@ -127,7 +127,7 @@ export async function abandoned(minHoursQuiet = 2, maxAgeDays = 30): Promise<DbR
        gave an address. */
     const emails = new Map<string, string>();
     if (started.length) {
-      const leads = await boundedRead(
+      const leads = await boundedReport(
         db.from("rift_leads").select("session_id,email").eq("agent_id", agent_id).in("session_id", started.map((s) => s.sessionId)),
         "the addresses on file",
       );

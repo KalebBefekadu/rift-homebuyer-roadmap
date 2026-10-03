@@ -42,7 +42,7 @@ export async function allContracts(now = new Date()): Promise<DbResult<ContractS
   const journeyIds = [...new Set(list.map((c) => c.journey_id as string))];
   const homeIds = [...new Set(list.map((c) => c.home_id as string))];
   const [journeys, homes, events] = await Promise.all([
-    boundedRead(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).in("id", journeyIds), "the journeys"),
+    boundedRead(db.from("rift_journeys").select("id,label,origin_lead_id,side").eq("agent_id", agentId).in("id", journeyIds), "the journeys"),
     boundedRead(db.from("rift_shortlist_homes").select("id,address").eq("agent_id", agentId).in("id", homeIds), "the homes"),
     boundedRead(db.from("rift_journey_events").select("journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at").eq("agent_id", agentId).in("journey_id", journeyIds).order("seq").limit(4000), "the journeys' history"),
   ]);
@@ -85,6 +85,7 @@ export async function allContracts(now = new Date()): Promise<DbResult<ContractS
       id,
       journeyId: c.journey_id as string,
       journeyLabel: (j?.label as string | undefined) ?? "",
+      side: (j?.side as "buy" | "sell" | undefined),
       leadId,
       person: nameOf.get(leadId) ?? "A client",
       address: addressOf.get(c.home_id as string) ?? "A home",

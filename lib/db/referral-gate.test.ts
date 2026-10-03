@@ -28,10 +28,10 @@ const { momentsForLead, referralQueue, recordMood, recordMoment, LIFECYCLE_COLUM
 
 const NOW = new Date("2026-09-21T12:00:00Z");
 
-/** Closed long enough ago that every post-closing moment has triggered. */
+/** Closed six days ago, so the closing-day ask is open (each ask has a window now, so an old closing has nothing due). */
 const closedLead = (over: Record<string, unknown> = {}) => ({
   id: "l1", name: "A Client", email: "a@example.com", side: "buy",
-  stage: "Closed", closed_on: "2024-01-01", mood: null,
+  stage: "Closed", closed_on: "2026-09-15", mood: null,
   client_token: "tok", assessment_id: "assess-1", referred_by: null,
   ...over,
 });
