@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedRead, boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { shapeEvents } from "./progress";
@@ -57,9 +57,9 @@ export async function pilotReport(now = new Date()): Promise<DbResult<PilotRepor
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
   const read = (table: string, cols: string) =>
-    boundedRead(db.from(table).select(cols).eq("agent_id", agentId).limit(LIMIT), "the pilot report");
+    boundedReport(db.from(table).select(cols).eq("agent_id", agentId).limit(LIMIT), "the pilot report");
 
-  const journeys = await boundedRead(
+  const journeys = await boundedReport(
     db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).eq("side", "buy")
       .order("created_at", { ascending: false }).limit(200),
     "the pilot report",
@@ -71,7 +71,7 @@ export async function pilotReport(now = new Date()): Promise<DbResult<PilotRepor
   const mine = new Set(ids);
 
   const [people, events, members, packages, revisions, responses, stops, steps, work, answers, bidSteps, contracts, outcomes, deadlines, dateRevs, checks] = await Promise.all([
-    boundedRead(db.from("rift_leads").select("id,name,email").eq("agent_id", agentId).in("id", [...new Set(list.map((j) => j.origin_lead_id as string))]), "the pilot report"),
+    boundedReport(db.from("rift_leads").select("id,name,email").eq("agent_id", agentId).in("id", [...new Set(list.map((j) => j.origin_lead_id as string))]), "the pilot report"),
     read("rift_journey_events", "journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at"),
     read("rift_journey_members", "journey_id,accepted_at,revoked_at"),
     read("rift_search_packages", "id,journey_id,status,approved_at,confirmed_at,ended_at,external_ref"),
@@ -86,7 +86,7 @@ export async function pilotReport(now = new Date()): Promise<DbResult<PilotRepor
     read("rift_transaction_outcomes", "transaction_id"),
     read("rift_deadlines", "id,journey_id,transaction_id"),
     read("rift_deadline_revisions", "deadline_id,journey_id,seq,state,verified,created_at"),
-    boundedRead(db.from("rift_reconciliations").select("journey_id,search,dates,note,actor_label,created_at")
+    boundedReport(db.from("rift_reconciliations").select("journey_id,search,dates,note,actor_label,created_at")
       .eq("agent_id", agentId).order("created_at", { ascending: false }).limit(LIMIT), "the pilot report"),
   ]);
   for (const r of [people, events, members, packages, revisions, responses, stops, steps, work, answers, bidSteps, contracts, outcomes, deadlines, dateRevs]) {
