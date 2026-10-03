@@ -3,6 +3,7 @@ import { BUYER_DEFAULTS, cashToClose, money } from "@/lib/core/compute";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { CashStack } from "@/components/rift/value/artifacts";
@@ -25,13 +26,15 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("cash")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -48,7 +51,7 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
         sentence={<>is the cash you would need on a {money(inputs.price)} home in {inputs.county} County. The down payment is only {money(cash.down)} of it; the other {money(extra)} is what surprises most buyers.</>}
         art={<CashStack lines={cash.lines} total={cash.total} down={cash.down} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
 
       <Lines
         title="Line by line"
@@ -63,6 +66,7 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
       <WorkedOut assumptions={cash.assumptions} couldBeWrong={cash.couldBeWrong} />
 
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: money(cash.total), href: `${def.href}?${answersToQuery(a, def.asks)}` }}

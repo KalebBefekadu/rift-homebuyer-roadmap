@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Ico } from "@/components/rift/icons";
-import { ASKS, answersToQuery, type Answers } from "@/lib/core/asks";
+import { ASKS, answersToQuery, type Answers, type AskDef } from "@/lib/core/asks";
 import type { InputKey } from "@/lib/core/values";
 import { readAnswers, writeAnswers } from "@/lib/rift/answers";
 import { track, useCaptureTouch } from "@/lib/rift/track";
@@ -21,8 +21,11 @@ import { MoneyField } from "./MoneyField";
  * When everything is known it replaces the address with the answers, and the
  * server computes the answer page. Answers already given anywhere on the site
  * (this device, the last 30 days) are never asked again.
+ *
+ * The words come from `defs`, the published wording the server read (D37);
+ * anything it does not carry is asked in the code's own words.
  */
-export function ValueFlow({ tool, side, href, asks, given, only }: {
+export function ValueFlow({ tool, side, href, asks, given, only, defs }: {
   tool: string;
   side: "buy" | "sell" | "abroad";
   href: string;
@@ -30,6 +33,8 @@ export function ValueFlow({ tool, side, href, asks, given, only }: {
   given: Answers;
   /** Re-ask just this one, from "Change" on the answer page. */
   only?: InputKey;
+  /** The questions as published. Words only: type, choices and limits are the code's. */
+  defs?: Partial<Record<InputKey, AskDef>>;
 }) {
   const router = useRouter();
   const [answers, setAnswers] = useState<Answers>(given);
@@ -73,7 +78,7 @@ export function ValueFlow({ tool, side, href, asks, given, only }: {
     );
   }
 
-  const def = ASKS[key];
+  const def = defs?.[key] ?? ASKS[key];
   const value = answers[key];
 
   const answer = (v: string | number, advance: boolean) => {

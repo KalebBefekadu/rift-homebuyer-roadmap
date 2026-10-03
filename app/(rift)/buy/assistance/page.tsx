@@ -9,6 +9,7 @@ import { currentPrograms } from "@/lib/db/program-checks";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { AssistanceSteps } from "@/components/rift/value/artifacts";
@@ -38,13 +39,15 @@ export default async function Assistance({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("assistance")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -78,7 +81,7 @@ export default async function Assistance({ searchParams }: { searchParams: Promi
         sentence={sentence}
         art={<AssistanceSteps need={Math.max(price * 0.08, 1)} steps={r.matches.map((m) => ({ name: m.program.name, max: m.amount, open: m.program.funding === "open" }))} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
       {OWNERSHIP_CAVEAT[own] ? <p className="t-sm c-3 mt-3 measure" style={{ lineHeight: 1.6 }}><Ico.info size={12} /> {OWNERSHIP_CAVEAT[own]}</p> : null}
 
       {r.matches.length ? (
@@ -139,6 +142,7 @@ export default async function Assistance({ searchParams }: { searchParams: Promi
       </section>
 
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: best ? `up to ${money(r.combination?.total ?? best.amount)}` : "none yet", href: `${def.href}?${answersToQuery(a, def.asks)}` }}

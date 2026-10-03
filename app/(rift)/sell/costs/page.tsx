@@ -4,6 +4,7 @@ import { saleCosts } from "@/lib/core/seller";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { CostBlocks } from "@/components/rift/value/artifacts";
@@ -25,13 +26,15 @@ export default async function Costs({ searchParams }: { searchParams: Promise<Re
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("costs")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="sell" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="sell" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -54,7 +57,7 @@ export default async function Costs({ searchParams }: { searchParams: Promise<Re
         </>}
         art={<CostBlocks parts={c.lines.map((l) => ({ label: l.short, amount: l.amount }))} total={c.total} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
       <Lines
         title="Each cost"
         rows={c.lines.map((l) => ({ label: l.label, note: l.note, amount: money(l.amount) }))}
@@ -72,6 +75,7 @@ export default async function Costs({ searchParams }: { searchParams: Promise<Re
         couldBeWrong="Commission is whatever you agree. The attorney's fee varies by firm, and your share of the property tax depends on the closing date and your exemptions."
       />
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: money(c.total), href: `${def.href}?${answersToQuery(a, def.asks)}` }}

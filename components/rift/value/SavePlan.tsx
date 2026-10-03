@@ -8,6 +8,8 @@ import { readAnswers } from "@/lib/rift/answers";
 import { sessionId } from "@/lib/rift/session";
 import { track, flush } from "@/lib/rift/track";
 import type { PlanEntry } from "@/lib/rift/plan";
+import { customFor, type CustomQuestion } from "@/lib/core/question-wording";
+import { CustomQuestions } from "./CustomQuestions";
 
 /* Stable, so it runs once when the element appears and never pulls focus back later. */
 const focusOnShow = (el: HTMLElement | null) => el?.focus();
@@ -22,11 +24,13 @@ const focusOnShow = (el: HTMLElement | null) => el?.focus();
  * consent box ticked (the server refuses it otherwise). What they agree to is
  * shown in the words that are recorded.
  */
-export function SavePlan({ side, mode, plan, onClose }: {
+export function SavePlan({ side, mode, plan, onClose, questions }: {
   side: "buy" | "sell" | "abroad";
   mode: "save" | "review";
   plan: PlanEntry[];
   onClose: () => void;
+  /** The published wording this page was rendered with (D37): the agent's questions for this side, and its version. */
+  questions?: { custom: CustomQuestion[]; versionId: string | null };
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,7 +39,7 @@ export function SavePlan({ side, mode, plan, onClose }: {
   /* Unticked, and only on the buyer side, where programs are (D14). */
   const [alerts, setAlerts] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
-  const [result, setResult] = useState<{ emailed: boolean; url: string | null } | null>(null);
+  const [result, setResult] = useState<{ emailed: boolean; url: string | null; answerWith: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
@@ -58,13 +62,15 @@ export function SavePlan({ side, mode, plan, onClose }: {
           answers: readAnswers(),
           alerts: side === "buy" && alerts,
           sessionId: sessionId(),
+          /* Which words they were asked in, recorded on the lead. */
+          wordingVersion: questions?.versionId ?? null,
         }),
       });
-      const d = (await res.json()) as { ok: boolean; error?: string; emailed?: boolean; url?: string | null };
+      const d = (await res.json()) as { ok: boolean; error?: string; emailed?: boolean; url?: string | null; answerWith?: string | null };
       if (!d.ok) { setError(d.error ?? "That did not go through."); setState("error"); return; }
       track({ name: "email_capture", side: side === "abroad" ? undefined : side, meta: { via: mode === "review" ? "review" : "plan", answered: plan.length } });
       flush();
-      setResult({ emailed: Boolean(d.emailed), url: d.url ?? null });
+      setResult({ emailed: Boolean(d.emailed), url: d.url ?? null, answerWith: d.answerWith ?? null });
       setState("done");
     } catch {
       setError("That did not go through. Nothing on this page has changed; try again.");
@@ -73,6 +79,9 @@ export function SavePlan({ side, mode, plan, onClose }: {
   };
 
   const tone = side === "sell" ? "sell" : side === "abroad" ? "abroad" : "buy";
+  /* Narrowed to the values in this plan here and again on the server, which
+     decides what counts from the version recorded on the lead. */
+  const asked = questions ? customFor({ builtin: {}, custom: questions.custom }, side, plan.map((p) => p.tool)) : [];
 
   /* Behaving like a dialog, which it only looked like. It said aria-modal and
      then left focus on the button behind it, let Tab walk out into the page
@@ -136,6 +145,9 @@ export function SavePlan({ side, mode, plan, onClose }: {
             {result?.url ? (
               <a href={result.url} className="btn btn-s mt-3" style={{ width: "100%" }}>Open my saved plan</a>
             ) : null}
+            {/* Only with the plan's link to answer with: without it there is
+                no way to attach the answers to this person, so none are asked. */}
+            {result?.answerWith && asked.length ? <CustomQuestions questions={asked} token={result.answerWith} /> : null}
             <button className="btn btn-p btn-lg mt-2" style={{ width: "100%" }} onClick={onClose}>Back to my answer</button>
           </div>
         ) : (

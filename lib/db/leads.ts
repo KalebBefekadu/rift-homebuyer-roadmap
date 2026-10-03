@@ -9,6 +9,7 @@ import { CONSENT_VERSION } from "@/lib/core/privacy";
 import { enrol } from "./nurture";
 import { firstRefFor, resolveReferrer } from "./attribution";
 import { oneVisitor } from "./visitor-session";
+import { isUuid } from "@/lib/core/ids";
 
 /**
  * Capture, consent, and lead scoring.
@@ -53,6 +54,12 @@ export interface CaptureInput {
   lead: LeadInput;
   ip?: string;
   userAgent?: string;
+  /**
+   * The question wording version the page they saved from was rendered with
+   * (D37). Null or absent is the code's own wording. Only "Save my plan"
+   * sends one: it is the capture that carries the values' answers.
+   */
+  questionVersionId?: string | null;
 }
 
 export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: string; score: LeadScore }>> {
@@ -86,13 +93,17 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
       signals: score.signals as never,
       /* No funnel pin: the v4 questionnaire it pointed at was retired (D31),
          and stamping a v5 lead with its version would record that they were
-         asked questions they never saw. What they answered is in their plan. */
+         asked questions they never saw. What they answered is in their plan,
+         and the words they were asked in is `question_version_id` (D37). */
       funnel_version_id: null,
       /* Kept so the score can be recomputed as recency decays. Without it a
          three-week-old lead keeps the urgency it earned on the day. */
       lead_input: input.lead as never,
       session_id: sessionId,
     };
+    /* Only a well-formed id: the column's foreign key refuses anything else,
+       and that refusal must never be what loses a lead. */
+    if (isUuid(input.questionVersionId)) row.question_version_id = input.questionVersionId;
 
     /* Bounded: the visitor is watching a button spin. A capture that cannot
        finish in six seconds will not finish, and telling them so is better
@@ -123,6 +134,20 @@ export async function captureLead(input: CaptureInput): Promise<DbResult<{ id: s
         extra: { migration: "20260920020000_rift_forget_reaches_the_lead" },
       });
       delete row.session_id;
+      ({ value: created, timedOut } = await send(row));
+      if (timedOut) return failed("the lead did not save in time");
+    }
+
+    /* The wording version (D37) is kept on the same terms: a deployment
+       ahead of migration 20260929400000, or a version id the database does
+       not know, drops the pin and keeps the person. Reported, because the
+       lead's record then says "the code's wording" when that may be wrong. */
+    if (created?.error && "question_version_id" in row && /question_version/.test(created.error.message)) {
+      captureOpError(new Error(created.error.message), {
+        op: "lead.capture.questionVersion",
+        extra: { migration: "20260929400000_rift_question_wording" },
+      });
+      delete row.question_version_id;
       ({ value: created, timedOut } = await send(row));
       if (timedOut) return failed("the lead did not save in time");
     }

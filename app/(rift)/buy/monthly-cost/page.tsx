@@ -4,6 +4,7 @@ import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { MonthlyHomes } from "@/components/rift/value/artifacts";
@@ -27,13 +28,15 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("monthly")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -59,7 +62,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
         sentence={<>a month, all in, on a {money(inputs.price)} home with {inputs.downPct}% down. Principal and interest are {money(Math.round(m.parts.pi))} of it; taxes and insurance are the rest most people forget.</>}
         art={<MonthlyHomes band={band} focus={1} parts={parts.map((p) => ({ label: p.label, amount: p.amount }))} />}
       />
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
 
       <Lines
         title="What the monthly payment is made of"
@@ -76,6 +79,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
       />
 
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: `${money(Math.round(m.value))} a month`, href: `${def.href}?${answersToQuery(a, def.asks)}` }}

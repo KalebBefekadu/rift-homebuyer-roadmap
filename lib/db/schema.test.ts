@@ -869,3 +869,53 @@ describe("campaigns, as stored (CAMP-01 to CAMP-03)", () => {
       values ($1,$2,'publish',1,'Kaleb',gen_random_uuid())`, [AGENT, camp.id]);
   });
 });
+
+describe("question wording, as stored (D37)", () => {
+  const AGENT = "11111111-0000-4000-8000-000000000001";
+  const publish = (c: Client, version: number, rows: unknown[], request: string = crypto.randomUUID()) =>
+    c.query("select public.rift_publish_questions($1,$2,$3,'Kaleb',$4,$5::jsonb) id", [AGENT, version, null, request, JSON.stringify(rows)]);
+  const mine = { key: "x_heard01", kind: "custom", bound: null, type: "choice", title: "How did you hear about Kaleb?", options: [{ value: "a", label: "A friend" }, { value: "b", label: "Online" }], sides: ["buy"], value_ids: [], position: 0, enabled: true };
+
+  test("a custom question can never feed a calculation, or pass for an input", async (c) => {
+    await expect(publish(c, 1, [{ ...mine, bound: "savings" }])).rejects.toThrow(/custom_questions_are_inert/);
+    await expect(publish(c, 1, [{ ...mine, key: "savings" }])).rejects.toThrow(/custom_keys_cannot_name_an_input/);
+    await expect(publish(c, 1, [{ ...mine, type: "money" }])).rejects.toThrow(/custom_questions_are_choice_or_text/);
+    await expect(publish(c, 1, [{ ...mine, sides: [] }])).rejects.toThrow(/custom_questions_name_a_side/);
+    await expect(publish(c, 1, [{ key: "price", kind: "builtin", bound: "income", type: "money", title: "What price?" }])).rejects.toThrow(/builtin_questions_feed_their_own_answer/);
+    /* A refused row refuses the whole version: none is left half-published. */
+    const { rows } = await c.query("select count(*)::int n from rift_question_versions where agent_id = $1", [AGENT]);
+    expect(rows[0].n).toBe(0);
+  });
+
+  test("versions count up once, are never edited, and a stale editor is refused", async (c) => {
+    const request = crypto.randomUUID();
+    const { rows: [v1] } = await publish(c, 1, [mine, { key: "price", kind: "builtin", bound: "price", type: "money", title: "Roughly what price?", unit: "Price" }], request);
+    const { rows: [again] } = await publish(c, 1, [], request);
+    expect(again.id).toBe(v1.id);
+    await expect(publish(c, 1, [])).rejects.toThrow(/published since/);
+    const { rows } = await c.query("select sides, options from rift_question_wordings where version_id = $1 and key = 'x_heard01'", [v1.id]);
+    expect(rows[0].sides).toEqual(["buy"]);
+    await rejects(c, "update rift_question_wordings set title = 'Changed later' where version_id = $1", [v1.id], /history/);
+    await rejects(c, "update rift_question_versions set note = 'Changed later' where id = $1", [v1.id], /history/);
+  });
+
+  test("a lead records the version it saw, and answers only the agent's own questions in the words shown", async (c) => {
+    const LEAD = "99999999-0000-4000-8000-00000000d037";
+    const { rows: [v] } = await c.query("select id from rift_question_versions where agent_id = $1 and version = 1", [AGENT]);
+    await c.query("insert into rift_leads (id, agent_id, side, name, question_version_id) values ($1,$2,'buy','Wording',$3)", [LEAD, AGENT, v.id]);
+    await rejects(c, "insert into rift_leads (agent_id, side, name, question_version_id) values ($1,'buy','Bad',gen_random_uuid())", [AGENT], /rift_leads_question_version/);
+    const answer = (key: string) => c.query(
+      "insert into rift_custom_answers (agent_id, lead_id, version_id, question_key, question, answer, answer_label) values ($1,$2,$3,$4,'How did you hear about Kaleb?','a','A friend')",
+      [AGENT, LEAD, v.id, key]);
+    await expect(answer("x_notasked")).rejects.toThrow(/own questions|rift_custom_answers_question/);
+    await rejects(c,
+      "insert into rift_custom_answers (agent_id, lead_id, version_id, question_key, question, answer, answer_label) values ($1,$2,$3,'price','What price?','1','1')",
+      [AGENT, LEAD, v.id], /own questions|check/);
+    await answer("x_heard01");
+    await expect(answer("x_heard01")).rejects.toThrow(/rift_custom_answers_once/);
+    await rejects(c, "update rift_custom_answers set answer = 'b' where lead_id = $1", [LEAD], /history/);
+    await c.query("delete from rift_leads where id = $1", [LEAD]);
+    const { rows } = await c.query("select count(*)::int n from rift_custom_answers where lead_id = $1", [LEAD]);
+    expect(rows[0].n).toBe(0);
+  });
+});

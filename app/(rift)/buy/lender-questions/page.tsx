@@ -8,6 +8,7 @@ import { currentPrograms } from "@/lib/db/program-checks";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { currentAgentId } from "@/lib/db/service";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, BasedOn } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { PrintButton } from "@/components/rift/PrintButton";
@@ -28,13 +29,15 @@ export default async function LenderQuestions({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const def = valueById("lender")!;
+  /* The published words (D37), or the code's when they cannot be read in time. */
+  const words = await valueWording(def);
   const a = parseAnswers(one);
   const ask = one("ask") as InputKey | undefined;
 
   if (!hasAll(a, def.asks) || (ask && def.asks.includes(ask))) {
     return (
       <ValueLayout def={def}>
-        <ValueFlow tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
+        <ValueFlow defs={words.defs} tool={def.id} side="buy" href={def.href} asks={def.asks} given={a} only={ask && def.asks.includes(ask) ? ask : undefined} />
       </ValueLayout>
     );
   }
@@ -68,7 +71,7 @@ export default async function LenderQuestions({ searchParams }: { searchParams: 
           <span className="no-print"><PrintButton /></span>
         </div>
       </section>
-      <BasedOn def={def} answers={a} />
+      <BasedOn def={def} answers={a} defs={words.defs} />
       {!matches ? (
         <p className="t-sm c-3 mt-3 measure">Check which Georgia programs may fit you and this sheet adds the questions about them.</p>
       ) : null}
@@ -88,6 +91,7 @@ export default async function LenderQuestions({ searchParams }: { searchParams: 
         ))}
       </div>
       <AfterAnswer
+        questions={words}
         tool={def.id}
         answers={a}
         entry={{ tool: def.id, label: def.name, figure: `${count} questions`, href: `${def.href}?${answersToQuery(a, def.asks)}` }}
