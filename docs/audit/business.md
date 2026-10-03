@@ -146,3 +146,30 @@ Design
 - Three of five pages are not on the page kit (`PageHead`, `Section`, `Notice`, `Empty`),
   so their tops, gutters and failure states differ from the rest of Operations.
 - Dates are raw ISO in three places and absolute everywhere; nothing says "in 2 days".
+
+## What was done about it
+
+Every page above is on the page kit, and the tables become stacked cards below 760 px.
+
+- **Transactions:** ordered by what needs the agent (stuck or missed first, then the
+  nearest date), unchecked dates shown and labelled, "n of m confirmed" beside the strip,
+  a side tag, no flags on ended contracts, a stat row. Pure rules in `lib/core/transactions.ts`.
+- **Offers:** one list of every live offer (buyers' offers, sellers' offers and rooms,
+  offers that came in by form) with what it waits on, who, and by when
+  (`lib/core/offer-board.ts`, `lib/db/offer-board.ts`). Financing, dates and PDF field
+  names are words; the due diligence period is said once; an inbound offer is "replied"
+  once the lead behind it has a human reply since it arrived.
+- **Advocacy:** every ask has a window after its trigger and is "passed" after it
+  (14 days for numbers and closing day and the thirty-day check, 30 for six months and
+  each anniversary), nothing is asked of a lead nobody picked up or while a person is under
+  contract or closing, the queue is ordered by strength then soonest window, and the page
+  shows eight people at a time. `lib/core/referral.ts`.
+- **Reports:** three views (the business, the buyer pilot, where people stop) so each opens
+  only its own reads. The business view is the visitor to closed funnel, sources, and the
+  commission-weighted pipeline, each with its period and what it counts
+  (`lib/core/business-report.ts`). The cold-start failure was a deadline, not a slow query:
+  agent-side reads now have an eight second deadline (`REPORT_DEADLINE_MS`).
+- **Campaigns:** visits and leads per campaign from first-touch tags, an honest "Unknown"
+  when that read fails, and a composer that stacks on a phone.
+
+Left for a decision rather than guessed: see the report that accompanied this branch.
