@@ -280,6 +280,14 @@ export function touchCopy(
 }
 
 /**
+ * The step id under which the "Your Rift plan" save email is recorded in
+ * rift_touches (lib/db/nurture.ts `recordSaveEmail`). It is in no sequence,
+ * so it can never read as a follow-up already sent; it is there so a step
+ * that would repeat the save email's link can be skipped on a fact.
+ */
+export const SAVE_EMAIL_STEP = "save";
+
+/**
  * Why a step is not sent to this audience, or null when it is.
  *
  * The runner records the touch as skipped with this reason and moves on. A

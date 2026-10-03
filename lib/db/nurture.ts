@@ -3,10 +3,10 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead, boundedWrite } from "./bounded";
 import { journeyTablesMissing } from "./journeys";
-import { sequenceFor, resolveChannel, programLines, touchCopy, skipReason, type Audience, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
+import { sequenceFor, resolveChannel, programLines, touchCopy, skipReason, SAVE_EMAIL_STEP, type Audience, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
 import { BUY_FUNNEL, firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
 import { planFacts, planAssistance } from "@/lib/core/saved-plan";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
 import { currentPrograms } from "./program-checks";
 import { rulesOrDefaults } from "./settings";
 import { matchAssistance, toLegacy, type Profile, type ProgramRecord } from "@/lib/core/assistance";
@@ -165,7 +165,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
          assessment at all, so without them every real lead read as somebody
          who had started and stopped, and was sent "pick up where you left
          off" about a plan they had finished and saved. */
-      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side,plan,plan_token,plan_saved_at),rift_touches(step_id)")
+      .select("id,lead_id,band,entered_at,phone_consent,rift_leads(name,email,assessment_id,side,plan,plan_token,plan_saved_at),rift_touches(step_id,outcome,sent_at)")
       .eq("agent_id", agent_id)
       .is("stopped_at", null);
     if (error) return failed(error.message);
@@ -184,7 +184,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         name: string | null; email: string | null; assessment_id: string | null; side: "buy" | "sell";
         plan?: unknown; plan_token?: string | null; plan_saved_at?: string | null;
       } | null;
-      rift_touches: { step_id: string }[];
+      rift_touches: { step_id: string; outcome?: string; sent_at?: string }[];
     }[]).filter((r) => !isClient.has(r.lead_id));
 
     /* One query for the whole queue rather than one per enrolment. */
@@ -302,7 +302,7 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         of,
         side: lead?.side ?? "buy",
         audience,
-        skip: skipReason(step, audience),
+        skip: skipReason(step, audience) ?? (kind === "plan" && step.coveredBySaveEmail ? savedEmailCovers(row.rift_touches) : null),
       });
     }
 
@@ -310,6 +310,58 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
     return done(out.sort((a, b) => b.daysLate - a.daysLate));
   } catch (e) {
     return failed(e);
+  }
+}
+
+/**
+ * Why a day-zero touch is not sent: the save email already carried its link.
+ *
+ * Only on a RECORDED send. A failed save email, a switched-off sender, and a
+ * plan saved before the outcome was recorded all leave the follow-up as the
+ * one email with the link in it, and one duplicate is better than somebody
+ * who never received it.
+ */
+function savedEmailCovers(touches: { step_id: string; outcome?: string; sent_at?: string }[] | undefined): string | null {
+  const sent = touches?.find((t) => t.step_id === SAVE_EMAIL_STEP && t.outcome === "sent");
+  if (!sent) return null;
+  const day = sent.sent_at && Number.isFinite(Date.parse(sent.sent_at))
+    ? ` on ${showDay(georgiaDay(new Date(sent.sent_at)), { month: "long", day: "numeric" })}`
+    : "";
+  return `Not sent: the plan's save email already went out${day} with the same link`;
+}
+
+/**
+ * Records what became of the "Your Rift plan" save email, on the lead's
+ * sequence, as a touch no sequence has a step for.
+ *
+ * The least invasive place that is also a fact: nothing here changes what the
+ * cadence owes, and the unique (enrolment, step) key means a second record
+ * for the same enrolment is `recorded: false`, not an error. A lead with no
+ * sequence (it could not be enrolled) has nothing to record against, and says
+ * so rather than inventing one.
+ */
+export async function recordSaveEmail(
+  leadId: string,
+  outcome: "sent" | "skipped" | "failed",
+  detail?: string,
+): Promise<DbResult<{ recorded: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const e = await boundedRead(db.from("rift_enrolments").select("id").eq("lead_id", leadId).maybeSingle(), "the sequence");
+  if (!e.ok) return e;
+  const row = ("data" in e ? e.data : null) as { id: string } | null;
+  if (!row) return skipped("this lead has no follow-up sequence to record the save email against");
+  try {
+    const { error } = await db.from("rift_touches").insert({
+      enrolment_id: row.id, step_id: SAVE_EMAIL_STEP, channel: "email", outcome, detail: detail ?? null,
+    });
+    if (error) {
+      if (error.code === "23505") return done({ recorded: false });
+      return failed(error.message);
+    }
+    return done({ recorded: true });
+  } catch (err) {
+    return failed(err);
   }
 }
 

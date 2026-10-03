@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines, touchCopy, skipReason, type Audience, type TouchKind } from "./nurture";
+import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines, touchCopy, skipReason, SAVE_EMAIL_STEP, type Audience, type TouchKind } from "./nurture";
 import { PROGRAMS } from "./registry";
 import { BUY_FUNNEL } from "./funnel";
 
@@ -248,6 +248,27 @@ describe("the copy for a saved plan", () => {
   it("uses a step's own copy when it is already true for a plan", () => {
     const d2 = SEQUENCES.find((s) => s.band === "nurture")!.steps.find((s) => s.id === "d2")!;
     expect(touchCopy(d2, "plan")).toEqual({ says: d2.says, body: d2.body });
+  });
+});
+
+describe("the steps a save email covers", () => {
+  it("are the day-zero emails that only carry the plan's link, and no others", () => {
+    /* The save email carries the link the moment they save. A day-zero touch
+       is the same link again within the day; nothing later is. */
+    const covered = SEQUENCES.flatMap((s) => s.steps).filter((x) => x.coveredBySaveEmail).map((x) => x.id);
+    expect(covered).toEqual(["n1", "s1", "l1"]);
+    for (const s of SEQUENCES.flatMap((q) => q.steps)) {
+      if (s.coveredBySaveEmail) {
+        expect(s.day, s.id).toBe(0);
+        expect(s.channel, s.id).toBe("email");
+        expect(s.plan, `${s.id} needs plan copy: the covered touch is the plan's`).toBeDefined();
+      }
+    }
+  });
+
+  it("has a recorded step id no sequence uses, so it can never stand in for a step", () => {
+    expect(SAVE_EMAIL_STEP).toBe("save");
+    expect(SEQUENCES.flatMap((s) => s.steps).some((x) => x.id === SAVE_EMAIL_STEP)).toBe(false);
   });
 });
 
