@@ -5,6 +5,7 @@ import { SIDE_LABEL } from "@/lib/core/journey";
 import { STAGE_LABEL, STATUS_LABEL, stageStrip, visitedStages, type JourneyEvent, type JourneyStatus, type Progress, type Side } from "@/lib/core/progress";
 import type { Attention } from "@/lib/core/journey-focus";
 import { TAB_LABEL, tabsFor, type Tab } from "./tabs";
+import { JourneyTabs } from "./JourneyTabs";
 import s from "./journey.module.css";
 
 const STATUS_ICON = { active: Ico.checkCircle, paused: Ico.pause, completed: Ico.check, cancelled: Ico.x } as const;
@@ -91,7 +92,8 @@ export function JourneyHead({ journey, household, progress, events, status, extr
       />
       {progress ? <StageStrip progress={progress} events={events} side={journey.side} /> : null}
 
-      {text ? (
+      {/* The overview's own first section is this same list, so the bar would say it twice there. */}
+      {text && tab !== "overview" ? (
         <div className={s.next} data-tone={tone} role={tone === "neg" ? "alert" : undefined}>
           <NextIco size={15} className={s.nextIco} />
           <div className={s.nextBody}>
@@ -107,14 +109,7 @@ export function JourneyHead({ journey, household, progress, events, status, extr
         </div>
       ) : null}
 
-      <nav className={s.tabs} aria-label="Journey">
-        {tabsFor(journey.side === "buy").map((t) => (
-          <Link key={t} href={href(t)} className={s.tab} aria-current={t === tab ? "page" : undefined}>
-            {TAB_LABEL[t]}
-            {counts[t] ? <span className={s.badge} aria-label={`${counts[t]} need${counts[t] === 1 ? "s" : ""} you`}>{counts[t]}</span> : null}
-          </Link>
-        ))}
-      </nav>
+      <JourneyTabs current={tab} tabs={tabsFor(journey.side === "buy").map((t) => ({ id: t, href: href(t), label: TAB_LABEL[t], count: counts[t] }))} />
     </>
   );
 }

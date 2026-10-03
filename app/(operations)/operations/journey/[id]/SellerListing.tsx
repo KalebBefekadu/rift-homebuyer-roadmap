@@ -99,7 +99,7 @@ export function SellerListing({ journeyId, events, showings, reviews }: { journe
                 {x.feedback ? <div className="desk-meta">Feedback: {x.feedback}{x.interest ? ` (${INTEREST_LABEL[x.interest].toLowerCase()})` : ""}</div>
                   : x.state === "done" ? <div className="desk-meta">No feedback given.</div> : null}
                 {x.state !== "cancelled" && !(x.state === "done" && x.feedback) ? (
-                  <button type="button" className="u t-xs" onClick={() => { setError(null); setStep(x); setForm("showing"); }}>Update</button>
+                  <button type="button" className="u t-xs" style={{ marginLeft: 10 }} onClick={() => { setError(null); setStep(x); setForm("showing"); }}>Update</button>
                 ) : null}
               </li>
             ))}

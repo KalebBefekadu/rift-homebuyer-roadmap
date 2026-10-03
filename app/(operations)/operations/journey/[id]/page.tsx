@@ -129,7 +129,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     membersOf(id),
     readLead(journey.leadId),
     progressFor(id),
-    settled(buyerNeeds("search", "history") ? searchState(id) : null),
+    settled(buyerNeeds("search", "homes", "history") ? searchState(id) : null),
     settled(buyerNeeds("search") ? readoutStart(journey.leadId) : null),
     settled(needs("homes", "offers", "property") ? homesOf(id) : null),
     settled(buying ? toursOf(id) : null),
@@ -256,7 +256,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
                 <Panel>
                   {!prog ? <Unread what="journey's stage and contract" />
                     : closed ? (
-                      <div className={s.line}><Ico.checkCircle size={15} className="c-pos" /><span>{closed}</span></div>
+                      <div className={s.line}><Ico.checkCircle size={15} className="c-pos" /><span className="w6">Nothing is open: this journey is finished.</span></div>
                     ) : attention.length ? <AttentionList items={attention} id={id} tab={tab} />
                     : (
                       <div>

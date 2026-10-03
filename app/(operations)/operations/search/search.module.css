@@ -7,6 +7,7 @@
 .items > li:last-child .row { border-bottom: 0; }
 .row:hover { background: var(--sunk); }
 .who { min-width: 0; }
+.name, .what { display: block; }
 .name { font-size: 14px; font-weight: 600; color: var(--ink); }
 .what { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); overflow-wrap: anywhere; }
 .stage { font-size: 13px; color: var(--ink-2); }

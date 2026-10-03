@@ -13,7 +13,7 @@ import { searchListing, type SearchGroup } from "@/lib/core/search-list";
 import { agoWords } from "@/lib/core/journey-focus";
 import { georgiaDay, showDay } from "@/lib/core/day";
 import { Ico } from "@/components/rift/icons";
-import { PageHead, Notice, Empty, Tabs, Stats, Stat } from "../ui";
+import { PageHead, Notice, Empty, Tabs } from "../ui";
 import s from "./search.module.css";
 
 export const metadata: Metadata = { title: "Search" };
@@ -109,12 +109,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
             <Notice tone="warn" title="Where each journey stands did not load">Every journey below is treated as an active search, so a finished one may still be listed ({states.error}).</Notice>
           ) : null}
 
-          <Stats>
-            <Stat label="Need you" value={count("needs")} tone={count("needs") ? "warn" : undefined} hint={count("needs") ? "Approve, set up, or write a brief" : "Nothing owed"} href="/operations/search" />
-            <Stat label="Running" value={count("running")} hint="Set up in Matrix, as you recorded" href="/operations/search?show=running" />
-            <Stat label="Paused" value={count("paused")} hint="Journey or Matrix search paused" href="/operations/search?show=paused" />
-          </Stats>
-
           {shown.length === 0 ? (
             <Empty title={show === "needs" ? "No search needs you" : "None here"}
               action={show !== "all" ? <Link className="btn btn-g btn-sm" href="/operations/search?show=all">Show all {rows.length}</Link> : undefined}>
@@ -123,7 +117,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                 : "A search appears here when its journey is active and has not yet reached a contract."}
             </Empty>
           ) : (
-            <div className={s.list} style={{ marginTop: 16 }}>
+            <div className={s.list}>
               <div className={s.head} aria-hidden>
                 <span>Buyer</span><span>Stage</span><span>What it needs</span><span>Matrix search</span><span />
               </div>

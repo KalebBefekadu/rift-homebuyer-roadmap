@@ -107,7 +107,7 @@ export function journeyAttention(i: FocusInput): Attention[] {
       text: `Invite the ${i.side === "buy" ? "buyer" : "seller"}: nobody can sign in yet`,
       detail: "Make an invitation link and send it yourself." });
   }
-  for (const d of i.missedDates) add({ key: `missed:${d.id}`, severity: "neg", word: "Passed", tab: "contract", text: `${d.label} passed: record what happened`, detail: d.when });
+  for (const d of i.missedDates) add({ key: `missed:${d.id}`, severity: "neg", word: "Passed", tab: "contract", text: `${d.label}: the date has passed, record what happened`, detail: d.when });
   for (const w of i.blocked) add({ key: `blocked:${w.label}`, severity: "neg", word: "Blocked", tab: "contract", text: `${w.label} is blocked`, detail: w.note ?? undefined });
   for (const d of i.uncheckedDates) {
     add({ key: `check:${d.id}`, severity: "warn", word: "Check", tab: "contract", text: `Check ${d.label} against the contract`,
