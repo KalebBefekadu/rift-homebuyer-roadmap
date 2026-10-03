@@ -19,8 +19,9 @@
  */
 
 import { daysUntil } from "./day";
+import type { ContractSummary } from "./transactions";
 
-export type CommitmentKind = "action" | "step";
+export type CommitmentKind = "action" | "step" | "date";
 
 export interface Commitment {
   id: string;
@@ -32,12 +33,20 @@ export interface Commitment {
   /** Who it is about. */
   personId: string;
   personName: string;
-  side: "buy" | "sell";
+  /** Absent for a contract date read without its side. */
+  side?: "buy" | "sell";
   /** True when the client can see this commitment on their own page. */
   visibleToThem: boolean;
   /** Who owes it. Only meaningful for a step. */
   owner?: "client" | "agent" | "other";
   ownerName?: string | null;
+  /** A contract date opens its journey's Contract tab, not the person's record. */
+  href?: string;
+  /** For a contract date: the property, and the date as the contract words it. */
+  address?: string;
+  whenText?: string;
+  /** For a contract date: whether it was checked against the document, which is what lets the client see it. */
+  checked?: boolean;
 }
 
 export interface AgendaDay {
@@ -152,4 +161,35 @@ export function agendaHeadline(s: AgendaSummary): string {
   if (s.today > 0) return s.today === 1 ? "One thing is due today." : `${s.today} things are due today.`;
   if (s.thisWeek > 0) return `Nothing today. ${s.thisWeek} this week.`;
   return "Nothing is due in the next five weeks.";
+}
+
+/**
+ * Contract dates as calendar entries.
+ *
+ * The calendar was built from plan steps and next actions only, so a due
+ * diligence deadline tomorrow or a closing next week, the dates that carry
+ * legal weight, were on Today and nowhere on the month. A date that has passed
+ * without being recorded as met stays on the calendar as overdue, however far
+ * back, like any promise; a checked date is one the client can see, an
+ * unchecked one is the agent's own note until it is checked against the
+ * document. Ended contracts have no dates left to keep.
+ */
+export function contractDateCommitments(contracts: ContractSummary[]): Commitment[] {
+  const out: Commitment[] = [];
+  for (const c of contracts) {
+    if (c.outcome) continue;
+    for (const d of c.dates) {
+      const v = d.view;
+      if (v.state !== "active") continue;
+      /* A date that passed and was never contractual is history, not a miss. */
+      if (!v.missed && (v.days === null || v.days < 0)) continue;
+      out.push({
+        id: `date:${d.id}`, kind: "date", what: d.label, dueOn: v.current.dueDate,
+        personId: c.leadId, personName: c.person, ...(c.side ? { side: c.side } : {}),
+        visibleToThem: v.verified, href: `/operations/journey/${c.journeyId}?tab=contract`,
+        address: c.address, whenText: v.when, checked: v.verified,
+      });
+    }
+  }
+  return out;
 }
