@@ -28,6 +28,18 @@ const STATE_LABEL: Record<MemberState, string> = {
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
 
+/* The roles are stored as a buyer's, but a seller is not a "buyer" and has no
+   search or homes to see: only the price scope reaches a seller's page. So the
+   words, and the choices offered, follow the side of the journey. */
+const ROLE_WORD: Record<"buy" | "sell", Record<Role, string>> = {
+  buy: ROLE_LABEL,
+  sell: { buyer: "Seller", "co-buyer": "Co-seller", viewer: "Can view" },
+};
+const sees = (side: "buy" | "sell", scopes: Scope[]) =>
+  side === "sell"
+    ? (scopes.includes("money") ? "price, proceeds and offers" : "progress only, not price or proceeds")
+    : scopes.map((x) => SCOPE_LABEL[x].toLowerCase()).join(", ");
+
 /**
  * Who can see this journey, and how much.
  *
@@ -68,14 +80,14 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
               <div style={{ minWidth: 0 }}>
                 <div className="row gap-2 wrap">
                   <span className="t-sm w6">{m.name ?? m.email}</span>
-                  <span className="chip t-2xs">{ROLE_LABEL[m.role]}</span>
+                  <span className="chip t-2xs">{ROLE_WORD[side][m.role]}</span>
                   <span className={`chip t-2xs ${m.state === "active" ? "chip-pos" : m.state === "expired" ? "chip-warn" : ""}`}>
                     {STATE_LABEL[m.state]}{m.state === "active" && m.acceptedAt ? ` ${DAY(m.acceptedAt)}` : ""}
                     {m.state === "invited" && m.inviteExpiresAt ? `, link good until ${DAY(m.inviteExpiresAt)}` : ""}
                   </span>
                 </div>
                 <div className="t-2xs c-4" style={{ marginTop: 3 }}>
-                  {m.email} · sees {m.scopes.map((s) => SCOPE_LABEL[s].toLowerCase()).join(", ")}
+                  {m.email} · sees {sees(side, m.scopes)}
                 </div>
               </div>
               {m.state !== "revoked" ? (
@@ -135,28 +147,34 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
             <label className="field" style={{ flex: "0 1 140px" }}>
               <span className="label">Role</span>
               <select className="input" value={role} onChange={(e) => { const r = e.target.value as Role; setRole(r); setScopes(DEFAULT_SCOPES[r]); }}>
-                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                {(Object.keys(ROLE_LABEL) as Role[]).map((r) => <option key={r} value={r}>{ROLE_WORD[side][r]}</option>)}
               </select>
             </label>
           </div>
           <fieldset className="row gap-3 wrap" style={{ marginTop: 8, border: 0, padding: 0 }}>
             <legend className="t-2xs c-4" style={{ marginBottom: 4 }}>They can see</legend>
-            {SCOPES.map((s) => (
+            {(side === "sell" ? (["money"] as Scope[]) : SCOPES).map((s) => (
               <label key={s} className="row gap-1 t-xs">
                 <input type="checkbox" style={{ width: 16, height: 16, flex: "none" }} checked={scopes.includes(s)}
                   onChange={(e) => setScopes(e.target.checked ? [...scopes, s] : scopes.filter((x) => x !== s))} />
-                {SCOPE_LABEL[s]}
+                {side === "sell" ? "Price, proceeds and offers" : SCOPE_LABEL[s]}
               </label>
             ))}
           </fieldset>
           <p className="t-2xs c-4" style={{ marginTop: 6, lineHeight: 1.5 }}>
-            {role === "viewer" ? "A viewer reads only. " : "Buyers and co-buyers can confirm the brief, ask for changes and react to homes. "}
-            Leave price and fees off for somebody who is helping but should not see the budget.
+            {side === "sell"
+              ? "Sellers and co-sellers see what you release and answer on their page. Leave price, proceeds and offers off for somebody who is helping but should not see them."
+              : <>{role === "viewer" ? "A viewer reads only. " : "Buyers and co-buyers can confirm the brief, ask for changes and react to homes. "}
+                Leave price and fees off for somebody who is helping but should not see the budget.</>}
           </p>
           <div className="row gap-2" style={{ marginTop: 10 }}>
             <button className="btn btn-p btn-sm" disabled={busy || !email.trim() || scopes.length === 0}
               onClick={async () => {
-                if (done(await write("invite", { journeyId, email, name, role, scopes }, { reload: false }), name || email)) setOpen(false);
+                if (done(await write("invite", {
+                  journeyId, email, name, role,
+                  /* A seller has no search or homes to see; the server needs at least one scope, so those two ride along and only the price one is a choice. */
+                  scopes: side === "sell" ? [...new Set<Scope>(["search", "homes", ...scopes.filter((x) => x === "money")])] : scopes,
+                }, { reload: false }), name || email)) setOpen(false);
               }}>
               {busy ? "Making link…" : "Make invitation link"}
             </button>

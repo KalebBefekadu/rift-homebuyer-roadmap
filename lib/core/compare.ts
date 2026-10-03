@@ -17,7 +17,7 @@
  */
 
 import { PMI_NOTE, cashToClose, money, monthlyCost, type BuyerInputs } from "./compute";
-import { describe, fitOf, FIELDS, type Fit, type PropertyFacts, type SearchCriterion } from "./search";
+import { describe, fitOf, FIELDS, propertyTypeLabel, type Fit, type PropertyFacts, type SearchCriterion } from "./search";
 
 /** More than this and the columns stop being readable on a laptop. */
 export const MAX_COMPARED = 4;
@@ -30,7 +30,6 @@ export interface Row { label: string; cells: Cell[]; group: "money" | "facts" | 
 const UNKNOWN: Cell = { text: "Not known", unknown: true };
 const cell = <T,>(v: T | null, show: (x: T) => string): Cell => (v === null ? UNKNOWN : { text: show(v) });
 
-const TYPE_LABEL: Record<string, string> = { "single-family": "Single-family", townhouse: "Townhouse", condo: "Condo", "multi-family": "Multi-family", land: "Land" };
 
 export function compareHomes(homes: CompareHome[], criteria: SearchCriterion[], plan: { inputs: BuyerInputs; savingsKnown: boolean } | null): Row[] {
   const list = homes.slice(0, MAX_COMPARED);
@@ -71,7 +70,7 @@ export function compareHomes(homes: CompareHome[], criteria: SearchCriterion[], 
 
   rows.push({ label: "Bedrooms", group: "facts", cells: list.map((h) => cell(h.facts.bedrooms, String)) });
   rows.push({ label: "Bathrooms", group: "facts", cells: list.map((h) => cell(h.facts.bathrooms, String)) });
-  rows.push({ label: "Type", group: "facts", cells: list.map((h) => cell(h.facts.propertyType, (t) => TYPE_LABEL[t] ?? t)) });
+  rows.push({ label: "Type", group: "facts", cells: list.map((h) => cell(h.facts.propertyType, propertyTypeLabel)) });
   rows.push({ label: "City", group: "facts", cells: list.map((h) => cell(h.facts.city, String)) });
   rows.push({ label: "Lot", group: "facts", cells: list.map((h) => cell(h.facts.lotAcres, (a) => `${a} acres`)) });
   rows.push({ label: "HOA", group: "facts", cells: list.map((h) => cell(h.facts.hoaMonthly, (x) => (x === 0 ? "None" : `${money(x)} a month`))) });

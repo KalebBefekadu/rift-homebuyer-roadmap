@@ -5,7 +5,7 @@ import {
   approvalBlockers, criterionError, describe, FIELD_ORDER, FIELDS, PROPERTY_TYPES, STRENGTH_LABEL,
   type Field, type Operator, type PropertyType, type SearchCriterion, type Strength,
 } from "@/lib/core/search";
-import { georgiaDay } from "@/lib/core/day";
+import { georgiaDay, showDay } from "@/lib/core/day";
 
 export const OPERATOR_LABEL = (field: Field, op: Operator): string => {
   if (op === "atMost") return "At most";
@@ -175,7 +175,7 @@ export function BriefEditor({ latest, start, person, disagreement, onSave, mode 
                   </span>
                 </div>
                 <div className="t-2xs c-4" style={{ marginTop: 3 }}>
-                  {client ? `${c.statedBy}, ${c.statedAt.slice(0, 10)}` : `${c.statedBy}, ${c.statedAt.slice(0, 10)}, from ${c.sourceRef}`}
+                  {client ? `${c.statedBy}, ${showDay(c.statedAt.slice(0, 10), { month: "short", day: "numeric", year: "numeric" })}` : `${c.statedBy}, ${showDay(c.statedAt.slice(0, 10), { month: "short", day: "numeric", year: "numeric" })}, from ${c.sourceRef}`}
                 </div>
               </div>
               <div className="row gap-1">
