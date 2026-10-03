@@ -32,7 +32,7 @@ describe("what a follow-up may read from a saved plan", () => {
     const p = cleanPlan({ side: "buy", answers: { county: "Cobb", ownership: "primary" }, values: [
       { tool: "cash", label: "x", figure: "$24,788", href: "/buy/cash-to-close?c=Cobb&s=9000" },
     ] });
-    expect(planFacts(p)).toEqual({ county: "Cobb", firstTimeBuyer: false, againPath: "/buy/cash-to-close" });
+    expect(planFacts(p)).toEqual({ county: "Cobb", firstTimeBuyer: false, againPath: "/buy/cash-to-close", side: "buy" });
   });
 
   it("links a value's bare page, never one carrying their answers", () => {
@@ -45,8 +45,16 @@ describe("what a follow-up may read from a saved plan", () => {
   it("fails towards more help, and towards no county rather than a wrong one", () => {
     /* The column is jsonb from whichever build saved it. */
     expect(planFacts({ side: "buy", answers: { county: "Atlantis", ownership: "castle" }, values: [] }))
-      .toEqual({ county: null, firstTimeBuyer: true, againPath: "/buy" });
-    expect(planFacts({ side: "sell", values: [{ tool: "nope" }] })).toEqual({ county: null, firstTimeBuyer: true, againPath: "/sell" });
+      .toEqual({ county: null, firstTimeBuyer: true, againPath: "/buy", side: "buy" });
+    expect(planFacts({ side: "sell", values: [{ tool: "nope" }] })).toEqual({ county: null, firstTimeBuyer: true, againPath: "/sell", side: "sell" });
+  });
+
+  it("says which side the plan is for, and says nothing when it does not say", () => {
+    /* A plan with no side must not read as a buyer's: the caller falls back to
+       the lead's own side, which may be selling. */
+    expect(planFacts({ side: "abroad" })!.side).toBe("abroad");
+    expect(planFacts({ values: [] })!.side).toBeNull();
+    expect(planFacts({ side: "elsewhere" })!.side).toBeNull();
   });
 
   it("is nothing without a plan", () => {

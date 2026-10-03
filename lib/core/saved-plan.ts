@@ -100,14 +100,17 @@ export function planSummary(p: SavedPlan): string {
  * as first-time, which fails towards showing somebody more help rather than
  * less, as `ownershipOf` does for a readout.
  */
-export function planFacts(plan: unknown): { county: string | null; firstTimeBuyer: boolean; againPath: string } | null {
+export function planFacts(plan: unknown): { county: string | null; firstTimeBuyer: boolean; againPath: string; side: "buy" | "sell" | "abroad" | null } | null {
   if (!plan || typeof plan !== "object") return null;
   const p = plan as Partial<SavedPlan>;
   const answers = (p.answers && typeof p.answers === "object" ? p.answers : {}) as Record<string, unknown>;
   const county = typeof answers.county === "string" && ASKS.county.options?.some((o) => o.value === answers.county)
     ? answers.county
     : null;
-  const side = p.side === "sell" ? "sell" : p.side === "abroad" ? "abroad" : "buy";
+  /* Null when the plan does not say, so a caller can fall back to the lead's
+     own side rather than read a missing field as "buy". */
+  const said = p.side === "sell" || p.side === "abroad" || p.side === "buy" ? p.side : null;
+  const side = said ?? "buy";
   /* The first value they saved, bare. Not `href`: that carries their answers
      in the query string (savings, income), and a link in an email is read by
      every mail scanner and forwarded with the message. The saved plan page
@@ -117,5 +120,6 @@ export function planFacts(plan: unknown): { county: string | null; firstTimeBuye
     county,
     firstTimeBuyer: firstTimeFrom(ownershipOf(answers.ownership)),
     againPath: first?.href ?? `/${side}`,
+    side: said,
   };
 }

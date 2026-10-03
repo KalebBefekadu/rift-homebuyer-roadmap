@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cronRefusal } from "@/lib/db/guard";
 import { trackedCron } from "@/lib/db/jobs";
-import { due, claimStep, markTouch, stillOwed, stop, matchedPrograms } from "@/lib/db/nurture";
+import { due, claimStep, markTouch, skipStep, stillOwed, stop, matchedPrograms } from "@/lib/db/nurture";
 import { sendTouch, sendPlanTouch, sendResume, blockedContacts } from "@/lib/db/email";
 import { currentAgentId } from "@/lib/db/service";
 import { runOptions, blockedStop, listsPrograms, programsCopy, type ProgramLine, type TouchKind } from "@/lib/core/nurture";
@@ -75,6 +75,11 @@ async function run(req: Request) {
      skipped with its reason, never sent, and not a failure: there was nothing
      true to say. */
   let nothingToList = 0;
+  /* Ninth: a step with no honest version for this person (a seller does not
+     get the rates text; a buyer abroad does not get the Georgia programs) or
+     one their save email already covered. Recorded as skipped with its
+     reason, and not a failure: there was nothing true to say. */
+  let notForThem = 0;
   /* What was sent, by which email. A run that reports "sent: 12" cannot show
      that all twelve were the wrong one, which is how every saved plan was
      answered with "pick up where you left off" and nothing said so. */
@@ -83,8 +88,23 @@ async function run(req: Request) {
   /* A dry run's only output. Who, which step, and what would have gone: the
      three things you need to decide whether to let it loose. */
   const plan: { to: string; stepId: string; band: string; kind: TouchKind }[] = [];
+  const wouldSkip: { to: string | null; stepId: string; why: string }[] = [];
 
   for (const t of queue.data) {
+    /* Before everything else, including "held for the agent": a text step
+       with no seller version must not sit in the agent's queue as a task, and
+       a step that does not apply needs no address, no consent and no budget.
+       Nothing is contacted, so nothing here counts against the cap. */
+    if (t.skip) {
+      notForThem++;
+      if (dry) wouldSkip.push({ to: t.email, stepId: t.stepId, why: t.skip });
+      else {
+        const r = await skipStep(t, t.skip);
+        if (!r.ok) captureOpError(new Error(r.error), { op: "nurture.skip", extra: { stepId: t.stepId } });
+      }
+      continue;
+    }
+
     if (!t.auto) { held++; continue; }
     if (t.channel !== "email" || !t.email) { held++; continue; }
 
@@ -111,22 +131,18 @@ async function run(req: Request) {
        matched" to somebody who matched none is the zero-in-the-figure defect
        again, in words. Claimed and marked skipped so it is not owed tomorrow
        and the agent can see why it did not go. */
-    /* A seller matches nothing: these are buyers' programs, and listing them
-       to somebody selling is the wrong email, whatever their county. */
-    const programs = listsPrograms(t.stepId)
-      ? t.side === "sell" ? [] : await matchedPrograms(t, programCache)
-      : null;
+    /* A seller and a buyer abroad never reach here for this step: it is
+       skipped for them above, with its reason. */
+    const programs = listsPrograms(t.stepId) ? await matchedPrograms(t, programCache) : null;
     const copy = programs ? programsCopy(programs.map((p) => p.name)) : null;
     if (programs && !copy) {
       nothingToList++;
       if (!dry) {
         const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
         if (claim.ok && "data" in claim && claim.data.claimed) {
-          await markTouch(t.enrolmentId, t.stepId, "skipped", t.side === "sell"
-            ? "Not sent: the programs are for buyers, and they are selling"
-            : t.county
-              ? "Not sent: they matched no programs, so there were none to list"
-              : "Not sent: no county on record to match programs against");
+          await markTouch(t.enrolmentId, t.stepId, "skipped", t.county
+            ? "Not sent: they matched no programs, so there were none to list"
+            : "Not sent: no county on record to match programs against");
         }
       }
       continue;
@@ -247,10 +263,11 @@ async function run(req: Request) {
     optedOut,
     stoppedBeforeSend,
     nothingToList,
+    notForThem,
     /* Whether the provider's opt-out list was read. When it was not, Brevo
        still refuses those sends, but this run could not stop their sequences. */
     optOuts: blockList ? "checked" : `not checked: ${blocked.ok ? ("reason" in blocked ? blocked.reason : "") : blocked.error}`,
-    ...(dry ? { wouldSend: plan } : {}),
+    ...(dry ? { wouldSend: plan, wouldSkip } : {}),
   });
 }
 

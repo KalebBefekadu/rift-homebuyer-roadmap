@@ -3,7 +3,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { boundedRead, boundedWrite } from "./bounded";
 import { journeyTablesMissing } from "./journeys";
-import { sequenceFor, resolveChannel, programLines, touchCopy, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
+import { sequenceFor, resolveChannel, programLines, touchCopy, skipReason, type Audience, type Enrolment, type ProgramLine, type StopId, type TouchKind } from "@/lib/core/nurture";
 import { BUY_FUNNEL, firstTimeFrom, ownershipOf } from "@/lib/core/funnel";
 import { planFacts } from "@/lib/core/saved-plan";
 import { georgiaDay } from "@/lib/core/day";
@@ -122,6 +122,18 @@ export interface DueTouch {
   answered: number;
   of: number;
   side: "buy" | "sell";
+  /**
+   * What they are doing, read from their saved plan before the lead's side:
+   * the save route files a buyer from abroad as a buyer, and the plan is
+   * where the difference is kept. Decides the copy.
+   */
+  audience: Audience;
+  /**
+   * Why this step is not sent to them, when it is not. The runner records the
+   * touch as skipped with this, and sends nothing: the alternative is the
+   * buyer's words, or silence nobody can see.
+   */
+  skip: string | null;
 }
 
 /**
@@ -246,7 +258,10 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
          token, because the token is the only way back to it. */
       const saved = !s && lead?.plan_token ? planFacts(lead.plan) : null;
       const kind: TouchKind = s ? "readout" : saved ? "plan" : "resume";
-      const copy = touchCopy(step, kind);
+      /* The plan's side even when a readout wins the kind: it is the person
+         who is selling or abroad, not the email. Falls back to the lead's. */
+      const audience: Audience = planFacts(lead?.plan)?.side ?? lead?.side ?? "buy";
+      const copy = touchCopy(step, kind, audience);
 
       out.push({
         enrolmentId: row.id,
@@ -273,6 +288,8 @@ export async function due(now = new Date()): Promise<DbResult<DueTouch[]>> {
         answered: saved ? of : lead?.assessment_id ? progress.get(lead.assessment_id) ?? 0 : 0,
         of,
         side: lead?.side ?? "buy",
+        audience,
+        skip: skipReason(step, audience),
       });
     }
 
@@ -376,6 +393,26 @@ export async function claimStep(enrolmentId: string, stepId: string, channel: Du
   } catch (e) {
     return failed(e);
   }
+}
+
+/**
+ * Records a step as skipped, with why, so it is not owed again tomorrow and
+ * the agent can read the reason in the touches table.
+ *
+ * The same claim-then-mark the send uses, so two workers cannot both record
+ * it, and a step already claimed (by a send, or by the other worker) is left
+ * as it is: `recorded: false` says nothing was written.
+ */
+export async function skipStep(
+  t: Pick<DueTouch, "enrolmentId" | "stepId" | "channel" | "downgraded">,
+  why: string,
+): Promise<DbResult<{ recorded: boolean }>> {
+  const claim = await claimStep(t.enrolmentId, t.stepId, t.channel, t.downgraded);
+  if (!claim.ok || "skipped" in claim) return claim;
+  if (!claim.data.claimed) return done({ recorded: false });
+  const marked = await markTouch(t.enrolmentId, t.stepId, "skipped", why);
+  if (!marked.ok) return marked;
+  return done({ recorded: true });
 }
 
 export async function markTouch(enrolmentId: string, stepId: string, outcome: "sent" | "skipped" | "failed", detail?: string) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines, touchCopy } from "./nurture";
+import { SEQUENCES, STOPS, sequenceFor, resolveChannel, dueFor, nextFor, autonomy, blockedStop, listsPrograms, programsCopy, programLines, touchCopy, skipReason, type Audience, type TouchKind } from "./nurture";
 import { PROGRAMS } from "./registry";
 import { BUY_FUNNEL } from "./funnel";
 
@@ -248,5 +248,107 @@ describe("the copy for a saved plan", () => {
   it("uses a step's own copy when it is already true for a plan", () => {
     const d2 = SEQUENCES.find((s) => s.band === "nurture")!.steps.find((s) => s.id === "d2")!;
     expect(touchCopy(d2, "plan")).toEqual({ says: d2.says, body: d2.body });
+  });
+});
+
+/**
+ * Who a step is written to.
+ *
+ * Sequences are chosen by band, not by side, so a seller was sent "What
+ * actually moves your closing date" and "The savings target that gets you
+ * there fastest". Nothing failed: the queue was well formed and the words
+ * were about somebody else's purchase. Every step now says something true to
+ * a seller and to a buyer abroad, or is skipped for them with a recorded
+ * reason.
+ *
+ * The guard below is on vocabulary rather than on a list of steps, so a step
+ * added later cannot be buyer wording for everybody without this failing.
+ */
+describe("copy for who it is sent to", () => {
+  const all = SEQUENCES.flatMap((s) => s.steps.map((step) => ({ where: `${s.band}/${step.id}`, step })));
+  const KINDS: TouchKind[] = ["readout", "plan", "resume"];
+
+  /* What only a buyer has: a purchase date, a savings target, a monthly
+     payment, a mortgage rate, programs that help somebody buy. */
+  const BUYER_ONLY = /closing date|timeline|savings|monthly|mortgage|down payment|first-time|\bprograms?\b|assistance|\brates?\b|\bgap\b|cash to close/i;
+  /* What a buyer from abroad cannot use: the Georgia programs need the buyer
+     to live in the home, and most ask for a Social Security number. */
+  const NOT_ABROAD = /closing date|savings|first-time|\bprograms?\b|assistance|Georgia Dream|\bgap\b/i;
+
+  const check = (aud: Audience, no: RegExp) => {
+    for (const { where, step } of all) {
+      if (skipReason(step, aud)) continue;
+      for (const kind of KINDS) {
+        const c = touchCopy(step, kind, aud);
+        expect(`${c.says} ${c.body}`, `${where} (${kind}) reads as buyer wording to a ${aud}`).not.toMatch(no);
+      }
+    }
+  };
+
+  it("says nothing only a buyer has to a seller", () => check("sell", BUYER_ONLY));
+  it("says nothing a buyer from abroad cannot use to them", () => check("abroad", NOT_ABROAD));
+
+  it("leaves a buyer's copy exactly as it was defined", () => {
+    for (const { step } of all) {
+      expect(touchCopy(step, "readout", "buy")).toEqual({ says: step.says, body: step.body });
+      expect(skipReason(step, "buy")).toBeNull();
+    }
+  });
+
+  it("talks to a seller about what a seller got: what they keep, what it costs, what to fix", () => {
+    const s2 = all.find((x) => x.step.id === "s2")!.step;
+    expect(touchCopy(s2, "plan", "sell").says).toMatch(/keep/i);
+    expect(touchCopy(s2, "plan", "sell").body).toMatch(/payoff.*commission.*costs of selling/i);
+    const n1 = SEQUENCES[0].steps[0];
+    expect(touchCopy(n1, "readout", "sell").says).toMatch(/what selling would leave you/i);
+    const l4 = all.find((x) => x.step.id === "l4")!.step;
+    expect(touchCopy(l4, "plan", "sell").body).toMatch(/what selling would leave you/i);
+  });
+
+  it("is written to the reader, like every other line", () => {
+    for (const { where, step } of all) {
+      for (const aud of ["sell", "abroad"] as const) {
+        for (const kind of KINDS) {
+          const c = touchCopy(step, kind, aud);
+          expect(c.body, `${where} ${aud}`).not.toMatch(/\btheir\b|\bthe person\b|recovery, not pursuit|\bcadence\b|\bsequence\b/i);
+          expect(c.body.length, `${where} ${aud}`).toBeGreaterThan(20);
+        }
+      }
+    }
+  });
+
+  it("quotes no figure in any variant: the plan's figures are not ours to restate", () => {
+    for (const { where, step } of all) {
+      for (const aud of ["sell", "abroad"] as const) {
+        for (const kind of KINDS) {
+          const c = touchCopy(step, kind, aud);
+          expect(`${c.says} ${c.body}`, `${where} ${aud}`).not.toMatch(/[$]\s?\d|\d\s?%/);
+        }
+      }
+    }
+  });
+
+  it("skips what has no honest version for them, and says why in the reason", () => {
+    const by = new Map(all.map((x) => [x.step.id, x.step]));
+    /* The programs email, the rates text and the savings target are a buyer's. */
+    for (const id of ["n4", "s3", "l2"]) {
+      expect(skipReason(by.get(id)!, "sell"), `${id} for a seller`).toMatch(/^Not sent: .*(buy|buyer|mortgage)/i);
+    }
+    for (const id of ["n4", "s4", "l2"]) {
+      expect(skipReason(by.get(id)!, "abroad"), `${id} for a buyer abroad`).toMatch(/^Not sent: /);
+    }
+    expect(skipReason(by.get("n4")!, "abroad")).toMatch(/live in the home/);
+  });
+
+  it("never skips the opening or the closing of a sequence", () => {
+    /* A person always hears the first thing and the last thing, whatever
+       they came for. Otherwise a seller in a short sequence could be
+       enrolled and never contacted. */
+    for (const seq of SEQUENCES) {
+      for (const aud of ["sell", "abroad"] as const) {
+        expect(skipReason(seq.steps[0]!, aud), `${seq.band} first`).toBeNull();
+        expect(skipReason(seq.steps.at(-1)!, aud), `${seq.band} last`).toBeNull();
+      }
+    }
   });
 });
