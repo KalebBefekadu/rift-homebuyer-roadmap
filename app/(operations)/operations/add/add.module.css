@@ -3,7 +3,7 @@
 .form { display: grid; gap: 28px; }
 .group { display: grid; gap: 14px; }
 .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.legend { font-size: 13px; font-weight: 600; color: var(--ink); }
+.legend { font-size: 13px; font-weight: 600; color: var(--ink); padding: 0; margin-bottom: 12px; }
 .req { color: var(--ink-4); font-weight: 400; margin-left: 6px; font-size: 12px; }
 .help { font-size: 12.5px; line-height: 1.55; color: var(--ink-4); }
 .choices { display: flex; flex-wrap: wrap; gap: 8px; }
