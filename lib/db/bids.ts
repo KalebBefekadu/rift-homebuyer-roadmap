@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { coverageFor } from "./tours";
@@ -64,14 +64,14 @@ export async function readBids(journeyId: string, agentId: string, agentFirst: s
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [bids, steps, responses, homes, members, coverage] = await Promise.all([
-    boundedRead(db.from("rift_bids").select("id,home_id,created_at").eq("journey_id", journeyId).eq("agent_id", agentId)
+    boundedReport(db.from("rift_bids").select("id,home_id,created_at").eq("journey_id", journeyId).eq("agent_id", agentId)
       .order("created_at", { ascending: false }).limit(50), "the offers"),
-    boundedRead(db.from("rift_bid_steps").select("bid_id,seq,kind,version,terms,origin,required,document_ids,note,actor_label,created_at")
+    boundedReport(db.from("rift_bid_steps").select("bid_id,seq,kind,version,terms,origin,required,document_ids,note,actor_label,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(2000), "the offer steps"),
-    boundedRead(db.from("rift_bid_responses").select("bid_id,member_id,version,instruction,note,told_agent,actor_label,created_at")
+    boundedReport(db.from("rift_bid_responses").select("bid_id,member_id,version,instruction,note,told_agent,actor_label,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(2000), "the household's answers"),
-    boundedRead(db.from("rift_shortlist_homes").select("id,address,withdrawn_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(200), "the homes"),
-    boundedRead(db.from("rift_journey_members").select("id,display_name,email,role,accepted_at,revoked_at,invite_expires_at")
+    boundedReport(db.from("rift_shortlist_homes").select("id,address,withdrawn_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(200), "the homes"),
+    boundedReport(db.from("rift_journey_members").select("id,display_name,email,role,accepted_at,revoked_at,invite_expires_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "the household"),
     coverageFor(journeyId, agentId),
   ]);
@@ -134,7 +134,7 @@ export async function bidsFor(journeyId: string, agentFirst: string) {
 async function ownDocuments(journeyId: string, agentId: string, ids: string[]): Promise<DbResult<true>> {
   if (!ids.length) return done(true as const);
   const db = serviceClient()!;
-  const r = await boundedRead(db.from("rift_documents").select("id").eq("journey_id", journeyId).eq("agent_id", agentId).in("id", ids), "the documents");
+  const r = await boundedReport(db.from("rift_documents").select("id").eq("journey_id", journeyId).eq("agent_id", agentId).in("id", ids), "the documents");
   if (!r.ok) return r;
   return rows(r).length === new Set(ids).size ? done(true as const) : failed("One of those documents is not on this journey");
 }
@@ -150,7 +150,7 @@ export async function startBid(
   if (!db) return skipped("no database configured");
   const a = await agent();
   if (!a) return skipped("no agent row exists yet");
-  const replay = await boundedRead(db.from("rift_bid_steps").select("bid_id").eq("request_id", requestId).eq("agent_id", a.id).maybeSingle(), "the offer");
+  const replay = await boundedReport(db.from("rift_bid_steps").select("bid_id").eq("request_id", requestId).eq("agent_id", a.id).maybeSingle(), "the offer");
   if (!replay.ok) return replay;
   const seen = ("data" in replay ? replay.data : null) as { bid_id: string } | null;
   if (seen) return done({ id: seen.bid_id });
@@ -158,7 +158,7 @@ export async function startBid(
   const all = await readBids(journeyId, a.id, agentFirst);
   if (!all.ok || !("data" in all)) return all as DbResult<never>;
   if (all.data.unavailable) return failed(all.data.unavailable);
-  const h = await boundedRead(db.from("rift_shortlist_homes").select("withdrawn_at").eq("id", homeId).eq("journey_id", journeyId).eq("agent_id", a.id).maybeSingle(), "the home");
+  const h = await boundedReport(db.from("rift_shortlist_homes").select("withdrawn_at").eq("id", homeId).eq("journey_id", journeyId).eq("agent_id", a.id).maybeSingle(), "the home");
   if (!h.ok) return h;
   const homeRow = ("data" in h ? h.data : null) as { withdrawn_at: string | null } | null;
   if (!homeRow) return failed("Choose a home on the list");
@@ -198,7 +198,7 @@ export async function recordBidStep(
   if (!db) return skipped("no database configured");
   const a = await agent();
   if (!a) return skipped("no agent row exists yet");
-  const replay = await boundedRead(db.from("rift_bid_steps").select("seq").eq("request_id", requestId).eq("agent_id", a.id).maybeSingle(), "the offer");
+  const replay = await boundedReport(db.from("rift_bid_steps").select("seq").eq("request_id", requestId).eq("agent_id", a.id).maybeSingle(), "the offer");
   if (!replay.ok) return replay;
   const seen = ("data" in replay ? replay.data : null) as { seq: number } | null;
   if (seen) return done({ seq: seen.seq });
@@ -245,7 +245,7 @@ export async function recordResponse(
 ): Promise<DbResult<{ recorded: true }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const replay = await boundedRead(db.from("rift_bid_responses").select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "your answer");
+  const replay = await boundedReport(db.from("rift_bid_responses").select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "your answer");
   if (!replay.ok) return replay;
   if ("data" in replay && replay.data) return done({ recorded: true as const });
 

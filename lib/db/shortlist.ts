@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyFor, journeyTablesMissing } from "./journeys";
 import { EMPTY_FACTS, factsError, safeListingUrl, type PropertyFacts, type Reaction } from "@/lib/core/search";
@@ -78,12 +78,12 @@ export async function readHomes(journeyId: string, agentId: string): Promise<DbR
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [homes, reactions] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_shortlist_homes").select(HOME_COLUMNS)
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(100),
       "the shortlist",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_home_reactions").select("home_id,member_id,actor_label,reaction,reason,created_at")
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(1000),
       "the reactions",
@@ -179,7 +179,7 @@ export async function insertReaction(
   const why = reason?.trim() || null;
   if (why && why.length > 500) return failed("Keep the reason under 500 characters");
 
-  const home = await boundedRead(
+  const home = await boundedReport(
     db.from("rift_shortlist_homes").select("id,withdrawn_at").eq("id", homeId).eq("journey_id", journeyId).eq("agent_id", agentId).maybeSingle(),
     "the home",
   );

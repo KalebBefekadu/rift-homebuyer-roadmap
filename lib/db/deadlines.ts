@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { readProgress } from "./progress";
@@ -45,9 +45,9 @@ export async function readDeadlines(journeyId: string, agentId: string, now = ne
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [ds, rs] = await Promise.all([
-    boundedRead(db.from("rift_deadlines").select("id,transaction_id,label,kind,workstream,created_at")
+    boundedReport(db.from("rift_deadlines").select("id,transaction_id,label,kind,workstream,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(200), "the contract dates"),
-    boundedRead(db.from("rift_deadline_revisions")
+    boundedReport(db.from("rift_deadline_revisions")
       .select(REVISION_COLUMNS)
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(2000), "the contract dates"),
   ]);
@@ -114,7 +114,7 @@ async function context(journeyId: string) {
 
 async function sourceOnJourney(db: NonNullable<ReturnType<typeof serviceClient>>, journeyId: string, agentId: string, id: string | null | undefined) {
   if (!id) return null;
-  const r = await boundedRead(db.from("rift_documents").select("id").eq("id", id).eq("journey_id", journeyId).eq("agent_id", agentId).maybeSingle(), "the document");
+  const r = await boundedReport(db.from("rift_documents").select("id").eq("id", id).eq("journey_id", journeyId).eq("agent_id", agentId).maybeSingle(), "the document");
   return r.ok && "data" in r && r.data ? null : "That document is not on this journey";
 }
 
@@ -124,7 +124,7 @@ export async function addDeadline(
 ): Promise<DbResult<{ id: string }>> {
   const c = await context(journeyId);
   if ("skip" in c) return c.skip as DbResult<never>;
-  const replay = await boundedRead(c.db.from("rift_deadlines").select("id").eq("request_id", requestId).eq("agent_id", c.agentId).maybeSingle(), "the date");
+  const replay = await boundedReport(c.db.from("rift_deadlines").select("id").eq("request_id", requestId).eq("agent_id", c.agentId).maybeSingle(), "the date");
   if (!replay.ok) return replay;
   if ("data" in replay && replay.data) return done({ id: (replay.data as { id: string }).id });
   if (!c.open) return failed("Dates belong to a contract. Record the contract first");
@@ -161,7 +161,7 @@ export type Revise =
 export async function reviseDeadline(journeyId: string, deadlineId: string, change: Revise, expectedSeq: number, agentLabel: string, requestId: string): Promise<DbResult<{ seq: number }>> {
   const c = await context(journeyId);
   if ("skip" in c) return c.skip as DbResult<never>;
-  const replay = await boundedRead(c.db.from("rift_deadline_revisions").select("seq").eq("request_id", requestId).eq("agent_id", c.agentId).maybeSingle(), "the date");
+  const replay = await boundedReport(c.db.from("rift_deadline_revisions").select("seq").eq("request_id", requestId).eq("agent_id", c.agentId).maybeSingle(), "the date");
   if (!replay.ok) return replay;
   if ("data" in replay && replay.data) return done({ seq: (replay.data as { seq: number }).seq });
   const d = c.deadlines.find((x) => x.id === deadlineId);
@@ -204,7 +204,7 @@ export async function recordAmendment(
 ): Promise<DbResult<{ changed: number }>> {
   const c = await context(journeyId);
   if ("skip" in c) return c.skip as DbResult<never>;
-  const replay = await boundedRead(c.db.from("rift_deadline_revisions").select("seq").eq("request_id", requestId).eq("agent_id", c.agentId).maybeSingle(), "the amendment");
+  const replay = await boundedReport(c.db.from("rift_deadline_revisions").select("seq").eq("request_id", requestId).eq("agent_id", c.agentId).maybeSingle(), "the amendment");
   if (!replay.ok) return replay;
   if ("data" in replay && replay.data) return done({ changed: changes.length });
   const bad = amendmentError(reference, changes);

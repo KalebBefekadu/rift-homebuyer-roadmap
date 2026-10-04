@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyFor, journeyTablesMissing } from "./journeys";
 import { georgiaDay } from "@/lib/core/day";
@@ -124,12 +124,12 @@ export async function searchState(journeyId: string): Promise<DbResult<SearchSta
   if (!agentId) return skipped("no agent row exists yet");
 
   const [revs, pkgs] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_search_revisions").select(REV_COLUMNS)
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("revision", { ascending: false }).limit(50),
       "the search brief",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_search_packages").select(PKG_COLUMNS)
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("approved_at", { ascending: false }).limit(30),
       "the Matrix search",
@@ -147,14 +147,14 @@ export async function searchState(journeyId: string): Promise<DbResult<SearchSta
 
   let responses: ResponseRow[] = [];
   if (latest) {
-    const resp = await boundedRead(
+    const resp = await boundedReport(
       db.from("rift_search_responses").select("id,revision_id,member_id,response,note,created_at")
         .eq("revision_id", latest.id).eq("agent_id", agentId).order("created_at").limit(50),
       "the household's answers",
     );
     const rows = (resp.ok && "data" in resp ? resp.data : []) as Record<string, unknown>[];
     if (rows.length) {
-      const names = await boundedRead(
+      const names = await boundedReport(
         db.from("rift_journey_members").select("id,display_name,email").eq("agent_id", agentId)
           .in("id", [...new Set(rows.map((r) => r.member_id as string))]),
         "their names",
@@ -336,7 +336,7 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
 
-  const read = (cols: string) => boundedRead(
+  const read = (cols: string) => boundedReport(
     db.from("rift_leads").select(cols).eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the relationship",
   );
@@ -372,7 +372,7 @@ export async function readoutStart(leadId: string): Promise<DbResult<{ criteria:
   }
   if (!row.assessment_id) return done(null);
 
-  const readout = await boundedRead(
+  const readout = await boundedReport(
     db.from("rift_readouts").select("inputs,created_at,side").eq("assessment_id", row.assessment_id).eq("agent_id", agentId)
       .order("created_at", { ascending: false }).limit(1).maybeSingle(),
     "their readout",
@@ -407,12 +407,12 @@ export async function searchStatuses(journeyIds: string[]): Promise<DbResult<Map
   if (journeyIds.length === 0) return done(out);
 
   const [revs, pkgs] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_search_revisions").select("journey_id,revision,created_at")
         .eq("agent_id", agentId).in("journey_id", journeyIds).order("revision", { ascending: false }).limit(2000),
       "the briefs",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_search_packages").select("journey_id,revision_id,status,package")
         .eq("agent_id", agentId).in("journey_id", journeyIds).in("status", ["manual-action-needed", "active-confirmed", "paused"]),
       "the Matrix searches",

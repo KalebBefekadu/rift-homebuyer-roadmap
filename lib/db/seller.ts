@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { marketDay } from "@/lib/core/progress";
 import { pricingError, type Comp, type Opinion, type PricingInput } from "@/lib/core/pricing";
@@ -25,20 +25,20 @@ export async function sellerMoney(journeyId: string, agentId: string): Promise<D
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [ops, figs] = await Promise.all([
-    boundedRead(db.from("rift_pricing_opinions").select("id,version,list_price_cents,low_cents,high_cents,comps,rationale,review_on,actor_label,created_at")
+    boundedReport(db.from("rift_pricing_opinions").select("id,version,list_price_cents,low_cents,high_cents,comps,rationale,review_on,actor_label,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("version").limit(50), "the pricing"),
-    boundedRead(db.from("rift_seller_figures").select("kind,price_cents,owed_cents,owed_source,commission_pct,credits_cents,official_net_cents,source,as_of,note,actor_label,created_at")
+    boundedReport(db.from("rift_seller_figures").select("kind,price_cents,owed_cents,owed_source,commission_pct,credits_cents,official_net_cents,source,as_of,note,actor_label,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(100), "the proceeds"),
   ]);
   for (const r of [ops, figs]) if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   const opinionIds = rows(ops).map((o) => o.id as string);
   const resp = opinionIds.length
-    ? await boundedRead(db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", agentId).in("opinion_id", opinionIds).order("created_at").limit(200), "their answers")
+    ? await boundedReport(db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", agentId).in("opinion_id", opinionIds).order("created_at").limit(200), "their answers")
     : done([]);
   if (!resp.ok) return resp;
   const memberIds = [...new Set(rows(resp).map((r) => r.member_id as string))];
   const members = memberIds.length
-    ? await boundedRead(db.from("rift_journey_members").select("id,display_name,email").in("id", memberIds), "who answered")
+    ? await boundedReport(db.from("rift_journey_members").select("id,display_name,email").in("id", memberIds), "who answered")
     : done([]);
   const nameOf = new Map(rows(members).map((m) => [m.id as string, ((m.display_name as string | null) ?? "").trim() || (m.email as string)]));
   return done({
@@ -116,7 +116,7 @@ export async function respondToPricing(m: Membership, opinionId: string, respons
   if (m.side !== "sell") return failed("Pricing belongs to a sale");
   /* The pricing is shown only with "Price and fees", so answering it needs the same. */
   if (!canRespond(m.role) || !m.scopes.includes("money")) return failed("Your access lets you see this, not answer it");
-  const o = await boundedRead(db.from("rift_pricing_opinions").select("id,version,journey_id").eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("version", { ascending: false }).limit(1), "the pricing");
+  const o = await boundedReport(db.from("rift_pricing_opinions").select("id,version,journey_id").eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("version", { ascending: false }).limit(1), "the pricing");
   if (!o.ok) return o;
   const latest = rows(o)[0];
   if (!latest || latest.id !== opinionId) return failed("This pricing has been revised. Reload to see the latest");

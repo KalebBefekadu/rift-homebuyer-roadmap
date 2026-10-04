@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead } from "./bounded";
+import { boundedReport } from "./bounded";
 import { done, skipped, type DbResult } from "./result";
 import { drift, mustDisclose, type Drift } from "@/lib/core/seam";
 import type { TrustState } from "@/lib/core/review";
@@ -103,7 +103,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const lead = await boundedRead(
+  const lead = await boundedReport(
     db.from("rift_leads").select("id,assessment_id,side,plan_saved_at").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the relationship",
   );
@@ -119,7 +119,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
     : EMPTY;
   if (!leadRow?.assessment_id) return done(fromPlan());
 
-  const readout = await boundedRead(
+  const readout = await boundedReport(
     db.from("rift_readouts").select("id,side,inputs,matched,created_at")
       .eq("assessment_id", leadRow.assessment_id)
       .order("created_at", { ascending: false }).limit(1).maybeSingle(),
@@ -132,7 +132,7 @@ export async function compareToSnapshot(leadId: string): Promise<DbResult<Snapsh
   } | null;
   if (!snap) return done(fromPlan());
 
-  const figs = await boundedRead(
+  const figs = await boundedReport(
     db.from("rift_figures").select("label,value_cents,trust_state").eq("readout_id", snap.id).limit(24),
     "their figures",
   );

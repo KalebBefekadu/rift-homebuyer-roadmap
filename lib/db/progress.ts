@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { coverageFor } from "./tours";
@@ -87,12 +87,12 @@ export async function readProgress(journeyId: string, agentId: string, now = new
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [journey, events, contracts, outcomes, updates, homes, coverage] = await Promise.all([
-    boundedRead(db.from("rift_journeys").select("side").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey"),
-    boundedRead(db.from("rift_journey_events").select("seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(1000), "the journey's history"),
-    boundedRead(db.from("rift_transactions").select("id,home_id,financing,evidence,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(50), "the contracts"),
-    boundedRead(db.from("rift_transaction_outcomes").select("transaction_id,outcome,reason,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "how contracts ended"),
-    boundedRead(db.from("rift_workstream_updates").select("transaction_id,workstream,seq,state,owner,owner_name,source,confirmed_on,note,actor_kind,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(4000), "the contract's progress"),
-    boundedRead(db.from("rift_shortlist_homes").select("id,address,withdrawn_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(200), "the homes"),
+    boundedReport(db.from("rift_journeys").select("side").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey"),
+    boundedReport(db.from("rift_journey_events").select("seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(1000), "the journey's history"),
+    boundedReport(db.from("rift_transactions").select("id,home_id,financing,evidence,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(50), "the contracts"),
+    boundedReport(db.from("rift_transaction_outcomes").select("transaction_id,outcome,reason,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "how contracts ended"),
+    boundedReport(db.from("rift_workstream_updates").select("transaction_id,workstream,seq,state,owner,owner_name,source,confirmed_on,note,actor_kind,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(4000), "the contract's progress"),
+    boundedReport(db.from("rift_shortlist_homes").select("id,address,withdrawn_at").eq("journey_id", journeyId).eq("agent_id", agentId).limit(200), "the homes"),
     coverageFor(journeyId, agentId),
   ]);
   for (const r of [events, contracts, outcomes, updates, homes]) {
@@ -163,7 +163,7 @@ const ctxOf = (rec: ProgressRecord): StageContext => ({
 
 /** A replayed request id is the same change, already made. */
 async function replayed(db: Loaded["db"], table: string, agentId: string, requestId: string): Promise<DbResult<boolean>> {
-  const r = await boundedRead(db.from(table).select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "the change");
+  const r = await boundedReport(db.from(table).select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "the change");
   if (!r.ok) return r;
   return done(("data" in r ? r.data : null) !== null);
 }
@@ -229,7 +229,7 @@ export async function recordContract(
   const l = await load(journeyId);
   if (!l.ok || !("data" in l)) return l as DbResult<never>;
   const { db, agentId, rec } = l.data;
-  const prior = await boundedRead(db.from("rift_transactions").select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "the contract");
+  const prior = await boundedReport(db.from("rift_transactions").select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "the contract");
   if (!prior.ok) return prior;
   const seen = ("data" in prior ? prior.data : null) as { id: string } | null;
   if (seen) return done({ id: seen.id });
@@ -393,12 +393,12 @@ export async function recentJourneyEvents(agentId: string, days = 7, now = new D
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const since = new Date(now.getTime() - days * 86_400_000).toISOString();
-  const ev = await boundedRead(db.from("rift_journey_events").select("journey_id,kind,to_value,actor_label,created_at")
+  const ev = await boundedReport(db.from("rift_journey_events").select("journey_id,kind,to_value,actor_label,created_at")
     .eq("agent_id", agentId).gte("created_at", since).order("created_at", { ascending: false }).limit(20), "recent changes");
   if (!ev.ok) return journeyTablesMissing(ev.error) ? done(null) : ev;
   const list = rows(ev);
   if (!list.length) return done([]);
-  const js = await boundedRead(db.from("rift_journeys").select("id,label").eq("agent_id", agentId)
+  const js = await boundedReport(db.from("rift_journeys").select("id,label").eq("agent_id", agentId)
     .in("id", [...new Set(list.map((e) => e.journey_id as string))]), "their journeys");
   const label = new Map(rows(js).map((j) => [j.id as string, j.label as string]));
   return done(list.map((e) => ({
@@ -423,7 +423,7 @@ export async function journeyStates(journeyIds: string[]): Promise<DbResult<Map<
   if (!agentId) return skipped("no agent row exists yet");
   const out = new Map<string, JourneyState>();
   if (journeyIds.length === 0) return done(out);
-  const ev = await boundedRead(
+  const ev = await boundedReport(
     db.from("rift_journey_events").select("journey_id,seq,kind,from_value,to_value,reason,evidence,transaction_id,actor_label,created_at")
       .eq("agent_id", agentId).in("journey_id", journeyIds).order("seq").limit(8000),
     "the journeys' stages",

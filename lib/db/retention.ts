@@ -7,7 +7,7 @@ import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
 import { RETENTION } from "@/lib/core/privacy";
 import { markAbandoned } from "./recovery";
-import { boundedWrite, boundedRead } from "./bounded";
+import { boundedWrite, boundedReport } from "./bounded";
 import { oneVisitor } from "./visitor-session";
 
 /**
@@ -314,7 +314,7 @@ export async function forgetByPlan(token: string): Promise<DbResult<{ deleted: n
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return done({ deleted: 0, held: 0 });
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_leads").select("id,session_id,assessment_id").eq("agent_id", agent_id).eq("plan_token", token).maybeSingle(),
     "the saved plan",
   );
@@ -345,7 +345,7 @@ async function erase(
      an answer. A hang here reads as the request being ignored, which is the
      worst possible impression to leave on this particular button. */
   const read = sessionId
-    ? await boundedRead(
+    ? await boundedReport(
         db.from("rift_assessments").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
         "the deletion lookup",
       )
@@ -363,7 +363,7 @@ async function erase(
      the leads that carry this session directly, which is the only handle a
      capture with no assessment behind it has ever had. */
   const byAssessment = ids.length
-    ? await boundedRead(
+    ? await boundedReport(
         db.from("rift_leads").select("id").eq("agent_id", agent_id).in("assessment_id", ids),
         "the lead lookup",
       )
@@ -378,7 +378,7 @@ async function erase(
      leads found by session", the assessment-side deletion below still runs,
      and the gap is reported rather than swallowed. */
   const bySession = sessionId
-    ? await boundedRead(
+    ? await boundedReport(
         db.from("rift_leads").select("id").eq("agent_id", agent_id).eq("session_id", sessionId),
         "the lead lookup",
       )
@@ -435,7 +435,7 @@ async function erase(
        Storage after its row is gone could never be found to delete. If
        the files cannot be removed, stop here so the request can be
        retried, rather than erase the record and keep the files. */
-    const theirJourneys = await boundedRead(
+    const theirJourneys = await boundedReport(
       db.from("rift_journeys").select("id,origin_lead_id").eq("agent_id", agent_id).in("origin_lead_id", leadIds),
       "their journeys");
     if (!theirJourneys.ok && !journeyTablesMissing(theirJourneys.error)) return theirJourneys;
@@ -451,7 +451,7 @@ async function erase(
        then the published promise is the rule. Everything else goes, and a
        held record is closed to sign-in and its share link revoked. */
     const tx = journeyIds.length
-      ? await boundedRead(db.from("rift_transactions").select("journey_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their contracts")
+      ? await boundedReport(db.from("rift_transactions").select("journey_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their contracts")
       : null;
     if (tx && !tx.ok && !journeyTablesMissing(tx.error)) return tx;
     const held = new Set(tx && tx.ok && "data" in tx ? (tx.data as { journey_id: string }[]).map((x) => x.journey_id) : []);
@@ -463,13 +463,13 @@ async function erase(
        account belongs to nobody else's live journey. If it cannot be
        removed, stop here so the request can be retried. */
     const members = journeyIds.length
-      ? await boundedRead(db.from("rift_journey_members").select("id,journey_id,auth_user_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their sign-ins")
+      ? await boundedReport(db.from("rift_journey_members").select("id,journey_id,auth_user_id").eq("agent_id", agent_id).in("journey_id", journeyIds), "their sign-ins")
       : null;
     if (members && !members.ok && !journeyTablesMissing(members.error)) return members;
     const memberRows = members && members.ok && "data" in members ? (members.data as { id: string; journey_id: string; auth_user_id: string | null }[]) : [];
     const accounts = [...new Set(memberRows.map((x) => x.auth_user_id).filter((x): x is string => Boolean(x)))];
     for (const account of accounts) {
-      const elsewhere = await boundedRead(
+      const elsewhere = await boundedReport(
         db.from("rift_journey_members").select("id").eq("auth_user_id", account).is("revoked_at", null).not("journey_id", "in", `(${journeyIds.join(",")})`).limit(1),
         "their other journeys");
       if (!elsewhere.ok) return elsewhere;
@@ -507,7 +507,7 @@ async function erase(
        visit email them again. */
     const deletable = leadIds.filter((id) => !heldLeads.has(id));
     const addresses = deletable.length
-      ? await boundedRead(db.from("rift_leads").select("email").eq("agent_id", agent_id).in("id", deletable), "their addresses")
+      ? await boundedReport(db.from("rift_leads").select("email").eq("agent_id", agent_id).in("id", deletable), "their addresses")
       : null;
     if (addresses && !addresses.ok) captureOpError(new Error(addresses.error), { op: "retention.forget.brevo" });
     for (const a of addresses && addresses.ok && "data" in addresses ? (addresses.data as { email: string | null }[]) : []) {
@@ -593,7 +593,7 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
        would go red soonest if the sweep stopped. Checked separately because a
        lead attached to it means it is not an orphan and its clock is a
        different one. */
-    const orphans = await boundedRead(
+    const orphans = await boundedReport(
       db.from("rift_assessments").select("id,rift_leads(id)")
         .eq("agent_id", agent_id).is("completed_at", null)
         .lte("started_at", ago(WINDOWS.abandoned.days + grace)).limit(20),
@@ -608,7 +608,7 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
        whole answer, so running all three concurrently buys nothing and pays
        for every query every time, and the last of them is the only one
        without an index behind it. Cheapest and most likely to trip first. */
-    const events = await boundedRead(
+    const events = await boundedReport(
       db.from("rift_events").select("id")
         .eq("agent_id", agent_id).lte("at", ago(WINDOWS.analytics.days + grace)).limit(1),
       "the analytics retention check",
@@ -616,7 +616,7 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
     if (!events.ok) return events;
     if ((("data" in events ? events.data : []) as unknown[]).length) return done({ overdue: true });
 
-    const cold = await boundedRead(
+    const cold = await boundedReport(
       db.from("rift_assessments").select("id")
         .eq("agent_id", agent_id).not("completed_at", "is", null)
         .lte("started_at", ago(WINDOWS.unconverted.days + grace)).limit(1),
@@ -625,7 +625,7 @@ export async function overdue(now = new Date()): Promise<DbResult<{ overdue: boo
     if (!cold.ok) return cold;
     if ((("data" in cold ? cold.data : []) as unknown[]).length) return done({ overdue: true });
 
-    const attributions = await boundedRead(
+    const attributions = await boundedReport(
       db.from("rift_attributions").select("session_id")
         .eq("agent_id", agent_id).lte("first_at", ago(WINDOWS.analytics.days + grace)).limit(1),
       "the attribution retention check",

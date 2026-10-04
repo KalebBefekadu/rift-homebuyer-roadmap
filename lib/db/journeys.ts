@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
@@ -83,7 +83,7 @@ async function agentScope() {
 export async function journeysFor(leadId: string): Promise<DbResult<Journey[]>> {
   const s = await agentScope();
   if (!s.db) return skipped(s.why!);
-  const r = await boundedRead(
+  const r = await boundedReport(
     s.db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
       .eq("origin_lead_id", leadId).eq("agent_id", s.agentId)
       .order("created_at", { ascending: false }).limit(20),
@@ -101,7 +101,7 @@ export async function journeysFor(leadId: string): Promise<DbResult<Journey[]>> 
 export async function journeyFor(journeyId: string): Promise<DbResult<Journey | null>> {
   const s = await agentScope();
   if (!s.db) return skipped(s.why!);
-  const r = await boundedRead(
+  const r = await boundedReport(
     s.db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
       .eq("id", journeyId).eq("agent_id", s.agentId).maybeSingle(),
     "the journey",
@@ -109,7 +109,7 @@ export async function journeyFor(journeyId: string): Promise<DbResult<Journey | 
   if (!r.ok) return r;
   const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
   if (!row) return done(null);
-  const lead = await boundedRead(
+  const lead = await boundedReport(
     s.db.from("rift_leads").select("name,email").eq("id", row.origin_lead_id as string).eq("agent_id", s.agentId).maybeSingle(),
     "their name",
   );
@@ -132,7 +132,7 @@ export async function createJourney(leadId: string, side: Side, label: string): 
   const bad = labelError(label);
   if (bad) return failed(bad);
 
-  const lead = await boundedRead(
+  const lead = await boundedReport(
     s.db.from("rift_leads").select("id").eq("id", leadId).eq("agent_id", s.agentId).maybeSingle(),
     "the relationship",
   );
@@ -177,7 +177,7 @@ export async function renameJourney(journeyId: string, label: string): Promise<D
 export async function membersOf(journeyId: string): Promise<DbResult<Member[]>> {
   const s = await agentScope();
   if (!s.db) return skipped(s.why!);
-  const r = await boundedRead(
+  const r = await boundedReport(
     s.db.from("rift_journey_members").select(MEMBER_COLUMNS)
       .eq("journey_id", journeyId).eq("agent_id", s.agentId).order("invited_at").limit(20),
     "who is on it",
@@ -218,7 +218,7 @@ export async function invite(journeyId: string, input: {
   if (!j.ok || !("data" in j)) return j as DbResult<never>;
   if (!j.data) return failed("that journey is not in your book");
 
-  const existing = await boundedRead(
+  const existing = await boundedReport(
     s.db.from("rift_journey_members").select("id,accepted_at")
       .eq("journey_id", journeyId).eq("agent_id", s.agentId).eq("email", email).is("revoked_at", null).maybeSingle(),
     "who is on it",
@@ -293,7 +293,7 @@ export async function revokeMember(memberId: string): Promise<DbResult<{ id: str
 export async function buyingJourneys(): Promise<DbResult<Journey[]>> {
   const s = await agentScope();
   if (!s.db) return skipped(s.why!);
-  const r = await boundedRead(
+  const r = await boundedReport(
     s.db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
       .eq("agent_id", s.agentId).eq("side", "buy").order("created_at", { ascending: false }).limit(200),
     "the buying journeys",
@@ -308,7 +308,7 @@ export async function journeysMatching(q: string): Promise<DbResult<Journey[]>> 
   if (!s.db) return skipped(s.why!);
   const term = q.replace(/[%_,()*"\\]/g, " ").trim().slice(0, 60);
   if (!term) return done([]);
-  const r = await boundedRead(
+  const r = await boundedReport(
     s.db.from("rift_journeys").select("id,origin_lead_id,side,label,created_at")
       .eq("agent_id", s.agentId).ilike("label", `%${term}%`).order("created_at", { ascending: false }).limit(6),
     "the journeys",
@@ -320,7 +320,7 @@ export async function journeysMatching(q: string): Promise<DbResult<Journey[]>> 
 /** Journey rows with the name of the relationship each belongs to. */
 async function withPeople(db: NonNullable<ReturnType<typeof serviceClient>>, agentId: string, rows: Record<string, unknown>[]): Promise<Journey[]> {
   if (rows.length === 0) return [];
-  const leads = await boundedRead(
+  const leads = await boundedReport(
     db.from("rift_leads").select("id,name,email").eq("agent_id", agentId)
       .in("id", [...new Set(rows.map((x) => x.origin_lead_id as string))]),
     "their names",

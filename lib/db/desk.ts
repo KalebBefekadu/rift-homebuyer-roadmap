@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { markError, type Mark, type MarkKind } from "@/lib/core/desk";
 
@@ -21,7 +21,7 @@ export async function readMarks(agentId: string, now = new Date()): Promise<DbRe
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const since = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000).toISOString();
-  const r = await boundedRead(db.from("rift_desk_marks").select("item_key,kind,until_at,person,reason,by_name,created_at")
+  const r = await boundedReport(db.from("rift_desk_marks").select("item_key,kind,until_at,person,reason,by_name,created_at")
     .eq("agent_id", agentId).gte("created_at", since).order("created_at").limit(3000), "what you marked on Today");
   if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   return done((("data" in r ? r.data : []) as Record<string, unknown>[]).map((m) => ({

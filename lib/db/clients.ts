@@ -1,7 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import {
   stallOf,
   STAGE_NAMES,
@@ -126,14 +126,14 @@ async function readLeads(
   build: (select: string) => LeadQuery,
   what: string,
 ): Promise<DbResult<unknown>> {
-  const first = await boundedRead(build(selectFor()) as never, what);
+  const first = await boundedReport(build(selectFor()) as never, what);
   if (first.ok) {
     if (hasFollowUp === null) hasFollowUp = true;
     return first;
   }
   if (hasFollowUp !== false && isMissingColumn(first.error)) {
     hasFollowUp = false;
-    return boundedRead(build(SELECT_BASE) as never, what);
+    return boundedReport(build(SELECT_BASE) as never, what);
   }
   return first;
 }
@@ -237,7 +237,7 @@ export async function setStage(leadId: string, stage: Stage, why?: string): Prom
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const current = await boundedRead(
+  const current = await boundedReport(
     db.from("rift_leads").select("stage,side").eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
     "reading the current stage",
   );
@@ -352,7 +352,7 @@ export async function lookalikes(email?: string | null, phone?: string | null): 
   const conds = [e ? `email.ilike.${e}` : null, tail.length === 4 ? `phone.ilike.*${tail.split("").join("*")}*` : null].filter(Boolean);
   if (!conds.length) return done([]);
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_leads").select("id,name,email,phone,stage").eq("agent_id", agent_id).or(conds.join(",")).limit(25),
     "checking for the same person",
   );
@@ -380,7 +380,7 @@ export async function readLead(
   const row = leadRes.data as Record<string, unknown> | null;
   if (!row) return failed("no such person");
 
-  const notesRes = await boundedRead(
+  const notesRes = await boundedReport(
     db.from("rift_lead_notes")
       .select("id,kind,body,from_stage,to_stage,at")
       .eq("lead_id", leadId).eq("agent_id", agent_id)
@@ -568,7 +568,7 @@ export async function lastContacts(leadIds: string[]): Promise<DbResult<Map<stri
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
   if (!leadIds.length) return done(new Map());
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_lead_notes").select("lead_id,at").eq("agent_id", agent_id)
       .in("lead_id", leadIds.slice(0, 500)).in("kind", ["call", "email", "text", "meeting"])
       .order("at", { ascending: false }).limit(2000),
@@ -606,7 +606,7 @@ export async function finishedRelationships(): Promise<DbResult<Finished[]>> {
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const leads = await boundedRead(
+  const leads = await boundedReport(
     db.from("rift_leads")
       .select("id,stage")
       .eq("agent_id", agent_id)
@@ -622,7 +622,7 @@ export async function finishedRelationships(): Promise<DbResult<Finished[]>> {
   /* One query for every stage note across all of them, rather than one per
      person. Five hundred relationships is five hundred round trips otherwise,
      on a page the agent opens every morning. */
-  const moves = await boundedRead(
+  const moves = await boundedReport(
     db.from("rift_lead_notes")
       .select("lead_id,from_stage,to_stage")
       .eq("agent_id", agent_id)
@@ -670,7 +670,7 @@ export async function representationOf(leadId: string): Promise<DbResult<Represe
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_leads")
       .select("representation,representation_signed_on,representation_expires_on")
       .eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
@@ -752,7 +752,7 @@ export async function lapsingAgreements(now = new Date()): Promise<DbResult<Laps
 
   const horizon = georgiaDay(now, EXPIRY_WARNING_DAYS);
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_leads")
       .select("id,name,side,representation,representation_signed_on,representation_expires_on")
       .eq("agent_id", agent_id)
@@ -818,7 +818,7 @@ export async function liveRelationships(): Promise<DbResult<Live[]>> {
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_leads")
       .select("name,stage,lead_input")
       .eq("agent_id", agent_id)

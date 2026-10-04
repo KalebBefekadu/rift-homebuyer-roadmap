@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { serviceClient } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { PROFILE_FIELDS, type AgentProfile, type ProfileField } from "@/lib/core/profile";
 
 /**
@@ -26,7 +26,7 @@ async function read(agentId: string): Promise<DbResult<AgentProfile>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   if (!agentId) return failed("no agent");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_agents").select(PROFILE_FIELDS.join(",")).eq("id", agentId).maybeSingle(),
     "your profile",
   );
@@ -46,7 +46,7 @@ export const agentProfile = cache(read);
 export async function profileHistory(agentId: string, limit = 8): Promise<DbResult<ProfileChange[] | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_agent_profile_changes").select("field,before,after,by_name,created_at")
       .eq("agent_id", agentId).order("created_at", { ascending: false }).limit(limit),
     "the profile history",

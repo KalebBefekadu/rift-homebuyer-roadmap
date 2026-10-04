@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedReport, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { shapeEvents } from "./progress";
@@ -206,16 +206,16 @@ export async function recordCheck(
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
 
-  const replay = await boundedRead(db.from("rift_reconciliations").select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "the check");
+  const replay = await boundedReport(db.from("rift_reconciliations").select("id").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(), "the check");
   if (!replay.ok) return journeyTablesMissing(replay.error) ? failed(NOT_YET) : replay;
   if ("data" in replay && replay.data) return done({ id: (replay.data as { id: string }).id });
 
   const [journey, live, contracts, outcomes] = await Promise.all([
-    boundedRead(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey"),
-    boundedRead(db.from("rift_search_packages").select("id").eq("journey_id", journeyId).eq("agent_id", agentId)
+    boundedReport(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey"),
+    boundedReport(db.from("rift_search_packages").select("id").eq("journey_id", journeyId).eq("agent_id", agentId)
       .in("status", ["active-confirmed", "paused"]).limit(1), "the Matrix search"),
-    boundedRead(db.from("rift_transactions").select("id").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "the contracts"),
-    boundedRead(db.from("rift_transaction_outcomes").select("transaction_id").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "the contracts"),
+    boundedReport(db.from("rift_transactions").select("id").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "the contracts"),
+    boundedReport(db.from("rift_transaction_outcomes").select("transaction_id").eq("journey_id", journeyId).eq("agent_id", agentId).limit(50), "the contracts"),
   ]);
   for (const r of [journey, live, contracts, outcomes]) if (!r.ok) return r;
   if (!("data" in journey && journey.data)) return failed("That journey is not in your book");
@@ -225,8 +225,8 @@ export async function recordCheck(
   let dates = 0;
   if (open) {
     const [ds, rs] = await Promise.all([
-      boundedRead(db.from("rift_deadlines").select("id").eq("transaction_id", open).eq("agent_id", agentId).limit(200), "the contract dates"),
-      boundedRead(db.from("rift_deadline_revisions").select("deadline_id,seq,state").eq("journey_id", journeyId).eq("agent_id", agentId).limit(LIMIT), "the contract dates"),
+      boundedReport(db.from("rift_deadlines").select("id").eq("transaction_id", open).eq("agent_id", agentId).limit(200), "the contract dates"),
+      boundedReport(db.from("rift_deadline_revisions").select("deadline_id,seq,state").eq("journey_id", journeyId).eq("agent_id", agentId).limit(LIMIT), "the contract dates"),
     ]);
     for (const r of [ds, rs]) if (!r.ok) return r;
     const onOpen = new Set(rows(ds).map((d) => d.id as string));

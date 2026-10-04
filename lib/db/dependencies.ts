@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { dependencyError, eventError, stateOf, type Dependency, type DependencyEvent, type DependencyKind } from "@/lib/core/dependency";
 import { isUuid } from "@/lib/core/ids";
@@ -23,15 +23,15 @@ export async function dependenciesFor(journeyId: string | null, agentIdIn?: stri
   if (!agentId) return skipped("not signed in");
   let q = db.from("rift_dependencies").select("id,sale_journey_id,purchase_journey_id,kind,note,owner,actor_label,created_at").eq("agent_id", agentId);
   if (journeyId) q = q.or(`sale_journey_id.eq.${journeyId},purchase_journey_id.eq.${journeyId}`);
-  const d = await boundedRead(q.order("created_at").limit(200), "the linked journeys");
+  const d = await boundedReport(q.order("created_at").limit(200), "the linked journeys");
   if (!d.ok) return MISSING.test(d.error) ? done(null) : d;
   const list = rows(d);
   if (!list.length) return done([]);
   const ids = list.map((x) => x.id as string);
   const journeyIds = [...new Set(list.flatMap((x) => [x.sale_journey_id as string, x.purchase_journey_id as string]))];
   const [ev, js] = await Promise.all([
-    boundedRead(db.from("rift_dependency_events").select("dependency_id,state,evidence,actor_label,created_at").eq("agent_id", agentId).in("dependency_id", ids).order("created_at").limit(1000), "what happened to them"),
-    boundedRead(db.from("rift_journeys").select("id,label").eq("agent_id", agentId).in("id", journeyIds), "their journeys"),
+    boundedReport(db.from("rift_dependency_events").select("dependency_id,state,evidence,actor_label,created_at").eq("agent_id", agentId).in("dependency_id", ids).order("created_at").limit(1000), "what happened to them"),
+    boundedReport(db.from("rift_journeys").select("id,label").eq("agent_id", agentId).in("id", journeyIds), "their journeys"),
   ]);
   if (!ev.ok) return ev;
   if (!js.ok) return js;

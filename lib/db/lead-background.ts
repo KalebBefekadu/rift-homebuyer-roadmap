@@ -1,7 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedRead } from "./bounded";
+import { boundedReport } from "./bounded";
 import type { LeadInput, Signal } from "@/lib/core/lead";
 import type { StopId } from "@/lib/core/nurture";
 
@@ -50,7 +50,7 @@ export async function backgroundOf(leadId: string): Promise<DbResult<Background>
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
 
-  const lead = await boundedRead(
+  const lead = await boundedReport(
     db.from("rift_leads")
       .select("lead_input,signals,human_replied_at,assessment_id,session_id")
       .eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
@@ -74,13 +74,13 @@ export async function backgroundOf(leadId: string): Promise<DbResult<Background>
 
   const [consentRead, enrolRead] = await Promise.all([
     conds.length
-      ? boundedRead(
+      ? boundedReport(
           db.from("rift_consents").select("kind,granted,at").eq("agent_id", agentId)
             .or(conds.join(",")).order("at", { ascending: false }).limit(50),
           "their consent",
         )
       : Promise.resolve(null),
-    boundedRead(
+    boundedReport(
       db.from("rift_enrolments")
         .select("band,entered_at,stopped_at,stop_reason,phone_consent,rift_touches(id)")
         .eq("lead_id", leadId).eq("agent_id", agentId).maybeSingle(),

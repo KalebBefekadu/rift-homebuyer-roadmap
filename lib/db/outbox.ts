@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { serviceClient } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { blockedContacts, sendApproved } from "./email";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -66,7 +66,7 @@ async function historyOf(agentId: string, ids: string[]): Promise<DbResult<Map<s
   const out = new Map<string, History>();
   for (let i = 0; i < ids.length; i += 50) {
     const chunk = ids.slice(i, i + 50);
-    const read = (cols: string) => boundedRead(
+    const read = (cols: string) => boundedReport(
       db.from("rift_outbox_events").select(cols).eq("agent_id", agentId).in("outbox_id", chunk).order("at").limit(1000),
       "the outbox history",
     );
@@ -141,7 +141,7 @@ export async function prepare(agentId: string, leadId: string | null, draft: Dra
 export async function outbox(agentId: string, limit = 100): Promise<DbResult<OutboxItem[] | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const items = await boundedRead(db.from("rift_outbox").select(ITEM_COLS)
+  const items = await boundedReport(db.from("rift_outbox").select(ITEM_COLS)
     .eq("agent_id", agentId).order("created_at", { ascending: false }).limit(limit), "the outbox");
   if (!items.ok) return MISSING.test(items.error) ? done(null) : items;
   const rows = ("data" in items ? items.data : []) as unknown as Row[];
@@ -159,7 +159,7 @@ export async function outbox(agentId: string, limit = 100): Promise<DbResult<Out
 async function one(agentId: string, id: string): Promise<DbResult<{ item: OutboxItem; next: number } | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(db.from("rift_outbox").select(ITEM_COLS).eq("id", id).eq("agent_id", agentId).maybeSingle(), "the message");
+  const r = await boundedReport(db.from("rift_outbox").select(ITEM_COLS).eq("id", id).eq("agent_id", agentId).maybeSingle(), "the message");
   if (!r.ok) return r;
   const row = ("data" in r ? r.data : null) as unknown as Row | null;
   if (!row) return done(null);
@@ -199,7 +199,7 @@ export async function approveAndSend(agentId: string, id: string, by: string): P
   let leadExists = true;
   let replied = false;
   if (item.leadId) {
-    const l = await boundedRead(db.from("rift_leads").select("id,human_replied_at").eq("id", item.leadId).maybeSingle(), "the person");
+    const l = await boundedReport(db.from("rift_leads").select("id,human_replied_at").eq("id", item.leadId).maybeSingle(), "the person");
     if (!l.ok) return l;
     const row = ("data" in l ? l.data : null) as { id: string; human_replied_at: string | null } | null;
     leadExists = Boolean(row);

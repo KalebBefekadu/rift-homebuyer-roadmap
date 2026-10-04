@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { currentRate } from "./rates";
 import { marketDay } from "@/lib/core/progress";
@@ -24,7 +24,7 @@ const rows = (r: DbResult<unknown>) => (r.ok && "data" in r ? (r.data as Record<
 export async function readFacts(journeyId: string, agentId: string): Promise<DbResult<Fact[] | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(db.from("rift_money_facts").select("kind,amount_cents,source,as_of,actor_label,created_at")
+  const r = await boundedReport(db.from("rift_money_facts").select("kind,amount_cents,source,as_of,actor_label,created_at")
     .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(500), "the money record");
   if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   return done(rows(r).map((f) => ({
@@ -40,7 +40,7 @@ export async function recordFact(input: { journeyId: string; kind: string; amoun
   if (!agentId) return skipped("not signed in");
   const bad = factError(input, marketDay(now));
   if (bad) return failed(bad);
-  const j = await boundedRead(db.from("rift_journeys").select("id").eq("id", input.journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
+  const j = await boundedReport(db.from("rift_journeys").select("id").eq("id", input.journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
   if (!j.ok) return j;
   if (!("data" in j) || !j.data) return failed("That journey is not yours");
   const w = await boundedWrite(db.from("rift_money_facts").insert({
@@ -70,12 +70,12 @@ export interface JourneyMoney {
 export async function journeyMoney(journeyId: string, agentId: string): Promise<DbResult<JourneyMoney>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const j = await boundedRead(db.from("rift_journeys").select("origin_lead_id,side").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
+  const j = await boundedReport(db.from("rift_journeys").select("origin_lead_id,side").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
   if (!j.ok) return j;
   const journey = ("data" in j ? j.data : null) as { origin_lead_id: string; side: string } | null;
   if (!journey) return failed("Not found");
 
-  let lead = await boundedRead(db.from("rift_leads").select("plan,plan_saved_at").eq("id", journey.origin_lead_id).eq("agent_id", agentId).maybeSingle(), "their plan");
+  let lead = await boundedReport(db.from("rift_leads").select("plan,plan_saved_at").eq("id", journey.origin_lead_id).eq("agent_id", agentId).maybeSingle(), "their plan");
   if (!lead.ok && /plan/.test(lead.error)) lead = done(null);
   if (!lead.ok) return lead;
   const plan = ("data" in lead ? lead.data : null) as { plan?: { answers?: Record<string, unknown> } | null; plan_saved_at?: string | null } | null;

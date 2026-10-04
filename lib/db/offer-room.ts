@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { offersFor, releasedOffersFor } from "./offers";
 import {
@@ -60,7 +60,7 @@ export async function roomFor(leadId: string): Promise<DbResult<OfferRoom>> {
   const agent_id = await currentAgentId();
   if (!agent_id) return skipped("no agent row exists yet");
 
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_offer_rooms").select(AGENT_COLUMNS)
       .eq("lead_id", leadId).eq("agent_id", agent_id).maybeSingle(),
     "the offer room",
@@ -77,7 +77,7 @@ export async function clientRoomFor(leadId: string): Promise<DbResult<OfferRoom>
   const db = serviceClient();
   if (!db) return skipped("no database configured");
 
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_offer_rooms").select(CLIENT_COLUMNS).eq("lead_id", leadId).maybeSingle(),
     "the offer room",
   );
@@ -103,7 +103,7 @@ export async function approveTake(leadId: string, take: string): Promise<DbResul
   /* offersFor is agent-scoped on the offers but returns an empty list, not an
      error, for a lead that is not his. Ask directly, because this is an upsert
      keyed by lead_id and it must not create a room on somebody else's seller. */
-  const lead = await boundedRead(
+  const lead = await boundedReport(
     db.from("rift_leads").select("id").eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
     "the seller",
   );
@@ -186,7 +186,7 @@ export async function chooseOffer(leadId: string, offerId: string, note: string 
   if (!db) return skipped("no database configured");
 
   const [lead, releasedRead, roomRead] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_leads").select("agent_id,name,side,payoff_cents,commission_pct").eq("id", leadId).maybeSingle(),
       "the seller",
     ),
@@ -265,7 +265,7 @@ export async function recentChoices(days = 7): Promise<DbResult<RecentChoice[]>>
   if (!agent_id) return skipped("no agent row exists yet");
 
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
-  const rooms = await boundedRead(
+  const rooms = await boundedReport(
     db.from("rift_offer_rooms").select("lead_id,chosen_at,chosen_seen,client_note")
       .eq("agent_id", agent_id).not("chosen_offer_id", "is", null).gte("chosen_at", since)
       .order("chosen_at", { ascending: false }).limit(10),
@@ -275,7 +275,7 @@ export async function recentChoices(days = 7): Promise<DbResult<RecentChoice[]>>
   const list = ("data" in rooms ? (rooms.data as Record<string, unknown>[] | null) : null) ?? [];
   if (list.length === 0) return done([]);
 
-  const names = await boundedRead(
+  const names = await boundedReport(
     db.from("rift_leads").select("id,name").eq("agent_id", agent_id)
       .in("id", list.map((r) => r.lead_id as string)),
     "their names",

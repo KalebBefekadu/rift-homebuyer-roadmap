@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { readProgress } from "./progress";
 import { readDeadlines } from "./deadlines";
@@ -26,7 +26,7 @@ export async function createSummaryLink(input: { journeyId: string; label: strin
   if (!scopes.length) return failed("Choose what the link may show");
   const label = input.label.trim().slice(0, 80);
   if (!label) return failed("Say who the link is for");
-  const j = await boundedRead(db.from("rift_journeys").select("id").eq("id", input.journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
+  const j = await boundedReport(db.from("rift_journeys").select("id").eq("id", input.journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
   if (!j.ok) return j;
   if (!("data" in j) || !j.data) return failed("That journey is not yours");
   const token = randomBytes(32).toString("base64url");
@@ -43,7 +43,7 @@ export async function summaryLinksFor(journeyId: string): Promise<DbResult<Summa
   if (!db) return skipped("no database configured");
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
-  const r = await boundedRead(db.from("rift_summary_links").select("id,label,scopes,expires_at,revoked_at,created_at")
+  const r = await boundedReport(db.from("rift_summary_links").select("id,label,scopes,expires_at,revoked_at,created_at")
     .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(50), "the summary links");
   if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   return done((("data" in r ? r.data : []) as { id: string; label: string; scopes: SummaryScope[]; expires_at: string; revoked_at: string | null; created_at: string }[])
@@ -77,7 +77,7 @@ export async function openSummary(token: string, now = new Date()): Promise<DbRe
   if (!tokenShape(token)) return done(null);
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(db.from("rift_summary_links").select("agent_id,journey_id,label,scopes,expires_at,revoked_at")
+  const r = await boundedReport(db.from("rift_summary_links").select("agent_id,journey_id,label,scopes,expires_at,revoked_at")
     .eq("token_hash", hash(token)).maybeSingle(), "the summary");
   if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   const link = ("data" in r ? r.data : null) as { agent_id: string; journey_id: string; label: string; scopes: SummaryScope[]; expires_at: string; revoked_at: string | null } | null;
@@ -86,7 +86,7 @@ export async function openSummary(token: string, now = new Date()): Promise<DbRe
   const base: Summary = { state, label: link.label, journeyLabel: "", scopes: link.scopes, expiresAt: link.expires_at, progress: null, visited: [], contract: null, dates: [] };
   if (state !== "live") return done(base);
 
-  const j = await boundedRead(db.from("rift_journeys").select("label").eq("id", link.journey_id).eq("agent_id", link.agent_id).maybeSingle(), "the journey");
+  const j = await boundedReport(db.from("rift_journeys").select("label").eq("id", link.journey_id).eq("agent_id", link.agent_id).maybeSingle(), "the journey");
   if (!j.ok) return j;
   base.journeyLabel = (("data" in j ? j.data : null) as { label: string } | null)?.label ?? "";
   const p = await readProgress(link.journey_id, link.agent_id, now);

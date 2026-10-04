@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedTransfer, boundedWrite } from "./bounded";
+import { boundedReport, boundedTransfer, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { checkFile, cleanFilename, labelError, type DocKind, type Family } from "@/lib/core/document";
@@ -54,7 +54,7 @@ const shape = (r: Record<string, unknown>): DocumentRecord => ({
 export async function readDocuments(journeyId: string, agentId: string): Promise<DbResult<{ documents: DocumentRecord[]; unavailable?: string }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_documents").select("id,family,label,filename,kind,bytes,sha256,actor_label,created_at")
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(200),
     "the documents",
@@ -79,7 +79,7 @@ export async function uploadSlot(journeyId: string): Promise<DbResult<{ path: st
   if (!db) return skipped("no database configured");
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
-  const j = await boundedRead(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
+  const j = await boundedReport(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
   if (!j.ok) return j;
   if (!("data" in j) || !j.data) return failed("That journey could not be found");
 
@@ -93,7 +93,7 @@ export async function uploadSlot(journeyId: string): Promise<DbResult<{ path: st
 async function sweepQuarantine(agentId: string): Promise<void> {
   const db = serviceClient();
   if (!db) return;
-  const list = await boundedRead(db.storage.from(BUCKET).list(`quarantine/${agentId}`, { limit: 100 }), "the quarantine");
+  const list = await boundedReport(db.storage.from(BUCKET).list(`quarantine/${agentId}`, { limit: 100 }), "the quarantine");
   if (!list.ok || !("data" in list)) return;
   const cutoff = Date.now() - QUARANTINE_HOURS * 3_600_000;
   const old = (list.data ?? [])
@@ -117,7 +117,7 @@ export async function finishUpload(
   if (!new RegExp(`^quarantine/${agentId}/[0-9a-f-]{36}$`).test(path)) return failed("That upload could not be found. Try again");
   const bad = labelError(label, family);
   if (bad) return failed(bad);
-  const j = await boundedRead(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
+  const j = await boundedReport(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
   if (!j.ok) return j;
   if (!("data" in j) || !j.data) return failed("That journey could not be found");
 
@@ -155,7 +155,7 @@ export async function finishUpload(
 export async function documentLink(journeyId: string, agentId: string, documentId: string): Promise<DbResult<{ url: string }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_documents").select("storage_path,filename").eq("id", documentId).eq("journey_id", journeyId).eq("agent_id", agentId).maybeSingle(),
     "the document",
   );
@@ -182,7 +182,7 @@ export async function removeJourneyFiles(agentId: string, journeyIds: string[]):
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   if (!journeyIds.length) return done({ removed: 0 });
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_documents").select("storage_path").eq("agent_id", agentId).in("journey_id", journeyIds).limit(5000),
     "their documents",
   );

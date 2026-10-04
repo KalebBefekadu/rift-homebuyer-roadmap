@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { serviceClient } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { inviteTokenHash, journeyTablesMissing } from "./journeys";
 import { shapeRevision, type Revision } from "./search";
@@ -96,8 +96,8 @@ async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
   }) === "active");
   if (live.length === 0) return [];
   const [journeys, agents] = await Promise.all([
-    boundedRead(db.from("rift_journeys").select("id,label,side").in("id", live.map((r) => r.journey_id as string)), "your journeys"),
-    boundedRead(db.from("rift_agents").select("id,name,email").in("id", [...new Set(live.map((r) => r.agent_id as string))]), "your agent"),
+    boundedReport(db.from("rift_journeys").select("id,label,side").in("id", live.map((r) => r.journey_id as string)), "your journeys"),
+    boundedReport(db.from("rift_agents").select("id,name,email").in("id", [...new Set(live.map((r) => r.agent_id as string))]), "your agent"),
   ]);
   const j = new Map(((journeys.ok && "data" in journeys ? journeys.data : []) as { id: string; label: string; side: Side }[]).map((x) => [x.id, x]));
   const agentRows = (agents.ok && "data" in agents ? agents.data : []) as { id: string; name: string | null; email: string | null }[];
@@ -121,7 +121,7 @@ async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
 export async function myJourneys(userId: string): Promise<DbResult<Membership[]>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_journey_members").select(MEMBERSHIP_SELECT)
       .eq("auth_user_id", userId).is("revoked_at", null).limit(20),
     "your journeys",
@@ -134,7 +134,7 @@ export async function myJourneys(userId: string): Promise<DbResult<Membership[]>
 export async function memberOf(userId: string, journeyId: string): Promise<DbResult<Membership | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_journey_members").select(MEMBERSHIP_SELECT)
       .eq("auth_user_id", userId).eq("journey_id", journeyId).is("revoked_at", null).maybeSingle(),
     "your access",
@@ -169,7 +169,7 @@ export async function invitationByToken(token: string): Promise<DbResult<Invitat
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   if (!/^[A-Za-z0-9_-]{30,60}$/.test(token)) return done(null);
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_journey_members").select("id,email,journey_id,agent_id,accepted_at,revoked_at,invite_expires_at")
       .eq("invite_token_hash", inviteTokenHash(token)).maybeSingle(),
     "the invitation",
@@ -178,8 +178,8 @@ export async function invitationByToken(token: string): Promise<DbResult<Invitat
   const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
   if (!row) return done(null);
   const [journey, agent] = await Promise.all([
-    boundedRead(db.from("rift_journeys").select("label").eq("id", row.journey_id as string).maybeSingle(), "the journey"),
-    boundedRead(db.from("rift_agents").select("name").eq("id", row.agent_id as string).maybeSingle(), "your agent"),
+    boundedReport(db.from("rift_journeys").select("label").eq("id", row.journey_id as string).maybeSingle(), "the journey"),
+    boundedReport(db.from("rift_agents").select("name").eq("id", row.agent_id as string).maybeSingle(), "your agent"),
   ]);
   return done({
     memberId: row.id as string,
@@ -204,7 +204,7 @@ export async function acceptInvitation(token: string, userId: string, sessionEma
   if (!db) return skipped("no database configured");
   if (!/^[A-Za-z0-9_-]{30,60}$/.test(token)) return failed("This invitation link is not valid");
   const hash = inviteTokenHash(token);
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_journey_members").select("id,email,journey_id,accepted_at,revoked_at,invite_expires_at")
       .eq("invite_token_hash", hash).maybeSingle(),
     "the invitation",
@@ -245,7 +245,7 @@ export async function mayReceiveSignIn(email: string): Promise<boolean> {
   const db = serviceClient();
   const e = normaliseEmail(email);
   if (!db || !e) return false;
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_journey_members").select("id").eq("email", e).is("revoked_at", null).limit(1),
     "the address",
   );
@@ -280,17 +280,17 @@ export async function clientBrief(m: Membership): Promise<DbResult<ClientBrief>>
   if (!m.scopes.includes("search")) return failed("Your agent has not shared the search with you");
 
   const [revs, pkgs, mine] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_search_revisions").select("id,revision,criteria,questions,note,author_kind,author_label,created_at")
         .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("revision", { ascending: false }).limit(2),
       "your search",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_search_packages").select("status,package,confirmed_at")
         .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).in("status", ["manual-action-needed", "active-confirmed", "paused"]),
       "your search",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_search_responses").select("revision_id,response,note,created_at")
         .eq("journey_id", m.journeyId).eq("member_id", m.memberId).order("created_at", { ascending: false }).limit(1),
       "your answer",
@@ -341,7 +341,7 @@ export async function respondToBrief(
   if (response === "changes-requested" && !why) return failed("Say what should change");
   if (why && why.length > 1000) return failed("Keep it under 1,000 characters");
 
-  const latest = await boundedRead(
+  const latest = await boundedReport(
     db.from("rift_search_revisions").select("id").eq("journey_id", m.journeyId).eq("agent_id", m.agentId)
       .order("revision", { ascending: false }).limit(1).maybeSingle(),
     "your search",
@@ -374,7 +374,7 @@ export async function proposeRevision(
   if (!db) return skipped("no database configured");
   if (!canRespond(m.role) || !m.scopes.includes("search")) return failed("Your access lets you read this, not change it");
 
-  const latestRead = await boundedRead(
+  const latestRead = await boundedReport(
     db.from("rift_search_revisions").select("id,revision,criteria,questions,note,author_kind,author_label,created_at")
       .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("revision", { ascending: false }).limit(1).maybeSingle(),
     "your search",
@@ -513,7 +513,7 @@ export async function clientProgress(m: Membership): Promise<DbResult<ClientProg
   if (!canRespond(m.role)) return done({ progress: rec.progress, visited, detail: false, open: null, closed: null, earlier: [], plan: [], dates: [] });
   const after = afterClose(rec.contracts, rec.open);
 
-  const j = await boundedRead(
+  const j = await boundedReport(
     db.from("rift_journeys").select("origin_lead_id").eq("id", m.journeyId).eq("agent_id", m.agentId).maybeSingle(),
     "your plan",
   );

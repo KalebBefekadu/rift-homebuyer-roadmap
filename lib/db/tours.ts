@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { readStatus, standingOf } from "@/lib/core/representation";
@@ -58,14 +58,14 @@ const NOT_YET = "Showings need a database update that has not been applied yet (
 export async function coverageFor(journeyId: string, agentId: string): Promise<DbResult<{ covered: boolean; note: string }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const j = await boundedRead(
+  const j = await boundedReport(
     db.from("rift_journeys").select("origin_lead_id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(),
     "the journey",
   );
   if (!j.ok) return j;
   const leadId = (("data" in j ? j.data : null) as { origin_lead_id: string } | null)?.origin_lead_id;
   if (!leadId) return failed("that journey could not be found");
-  const r = await boundedRead(
+  const r = await boundedReport(
     db.from("rift_leads").select("representation,representation_signed_on,representation_expires_on")
       .eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the buyer agreement",
@@ -130,22 +130,22 @@ export async function readTours(journeyId: string, agentId: string): Promise<DbR
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [stops, steps, feedback, homes, coverage] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_tour_stops").select("id,home_id,requested_by_label,requested_by_member,availability,created_at")
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(100),
       "the showings",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_tour_steps").select("stop_id,seq,status,starts_at,ends_at,ref,note,actor_label,created_at")
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("seq").limit(2000),
       "the showing steps",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_tour_feedback").select("stop_id,member_id,actor_label,offer,reason,search_change,created_at")
         .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(1000),
       "the answers after showings",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_shortlist_homes").select("id,address,withdrawn_at")
         .eq("journey_id", journeyId).eq("agent_id", agentId).limit(200),
       "the homes",
@@ -195,7 +195,7 @@ export async function requestTour(
   const when = availability?.trim() || null;
   if (when && when.length > AVAILABILITY_MAX) return failed(`Keep it under ${AVAILABILITY_MAX} characters`);
 
-  const home = await boundedRead(
+  const home = await boundedReport(
     db.from("rift_shortlist_homes").select("id,withdrawn_at").eq("id", homeId).eq("journey_id", journeyId).eq("agent_id", agentId).maybeSingle(),
     "the home",
   );
@@ -258,7 +258,7 @@ export async function recordTourStep(
   const stop = all?.stops.find((s) => s.id === stopId);
   if (!stop || !all) return failed("That showing is not on this journey");
 
-  const replay = await boundedRead(
+  const replay = await boundedReport(
     db.from("rift_tour_steps").select("seq").eq("request_id", requestId).eq("agent_id", agentId).maybeSingle(),
     "the showing",
   );

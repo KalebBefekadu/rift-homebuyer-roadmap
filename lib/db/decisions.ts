@@ -1,7 +1,7 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
 import { done, failed, skipped, type DbResult } from "./result";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import {
   canRelease, statusOf,
   type Decision, type Option, type Kind,
@@ -66,7 +66,7 @@ async function optionsFor(
   const out = new Map<string, Option[]>();
   if (!decisionIds.length) return out;
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_decision_options")
       .select(`decision_id,${OPTION_COLUMNS}`)
       .eq("agent_id", agentId)
@@ -97,7 +97,7 @@ export async function decisionsFor(leadId: string): Promise<DbResult<Decision[]>
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_decisions").select(DECISION_COLUMNS)
       .eq("lead_id", leadId).eq("agent_id", agentId)
       .order("created_at", { ascending: false }).limit(50),
@@ -129,7 +129,7 @@ export async function releasedFor(leadId: string, agentId: string): Promise<DbRe
   const db = serviceClient();
   if (!db) return skipped("no database configured");
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_decisions").select(DECISION_COLUMNS)
       .eq("lead_id", leadId).eq("agent_id", agentId)
       .not("released_at", "is", null)
@@ -208,7 +208,7 @@ export async function addOption(input: {
   /* Appended, in the agent's order. Reading the current maximum rather than
      counting rows: a deleted option leaves a gap, and counting would reuse a
      sort value and make the order depend on insertion time. */
-  const last = await boundedRead(
+  const last = await boundedReport(
     db.from("rift_decision_options").select("sort")
       .eq("decision_id", input.decisionId).eq("agent_id", agentId)
       .order("sort", { ascending: false }).limit(1).maybeSingle(),
@@ -264,7 +264,7 @@ export async function release(decisionId: string): Promise<DbResult<{ blocks: st
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const room = await boundedRead(
+  const room = await boundedReport(
     db.from("rift_decisions").select("id,question").eq("id", decisionId).eq("agent_id", agentId).maybeSingle(),
     "the decision",
   );
@@ -319,7 +319,7 @@ export async function recordOutcome(input: {
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const owns = await boundedRead(
+  const owns = await boundedReport(
     db.from("rift_decision_options").select("id")
       .eq("id", input.optionId).eq("decision_id", input.decisionId).eq("agent_id", agentId)
       .maybeSingle(),

@@ -44,6 +44,13 @@ export const TRANSFER_DEADLINE_MS = 30_000;
 export const boundedTransfer = <T>(query: Query<T>, what: string) =>
   run(query, TRANSFER_DEADLINE_MS, what);
 
-/** For the agent's own boards and reports, which can wait longer than a visitor can. */
+/**
+ * For anybody who is not a stranger deciding whether to stay: the agent's
+ * pages, a signed-in client's, a client opening their own link, and the
+ * scheduled jobs. Two seconds is a visitor's patience, and spent on a cold
+ * start before the query is even sent it turned working pages into "could not
+ * be read" (platform audit #31). Which modules are which is held by
+ * deadline-by-reader.test.ts.
+ */
 export const boundedReport = <T>(query: Query<T>, what: string) =>
   run(query, REPORT_DEADLINE_MS, what);

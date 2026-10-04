@@ -1,7 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { georgiaDay } from "@/lib/core/day";
 import {
@@ -99,7 +99,7 @@ async function readoutsFor(
   const ids = assessmentIds.filter(Boolean);
   if (!ids.length) return out;
 
-  const res = await boundedRead(
+  const res = await boundedReport(
     db.from("rift_readouts").select("assessment_id,created_at").in("assessment_id", ids).limit(1000),
     "the delivered readouts",
   );
@@ -127,7 +127,7 @@ export async function momentsForLead(
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const lead = await boundedRead(
+  const lead = await boundedReport(
     db.from("rift_leads").select(LIFECYCLE_COLUMNS)
       .eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the relationship",
@@ -136,7 +136,7 @@ export async function momentsForLead(
   const row = ("data" in lead ? lead.data : null) as Record<string, unknown> | null;
   if (!row) return done(null);
 
-  const decided = await boundedRead(
+  const decided = await boundedReport(
     db.from("rift_referral_moments").select("moment_id,occurrence,state")
       .eq("lead_id", leadId).limit(200),
     "the referral decisions",
@@ -178,7 +178,7 @@ export async function referralQueue(now: Date = new Date()): Promise<DbResult<Re
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const leads = await boundedRead(
+  const leads = await boundedReport(
     db.from("rift_leads").select(LIFECYCLE_COLUMNS)
       .eq("agent_id", agentId).is("archived_at", null).limit(500),
     "the relationships",
@@ -187,7 +187,7 @@ export async function referralQueue(now: Date = new Date()): Promise<DbResult<Re
   const rows = ("data" in leads ? leads.data : []) as Record<string, unknown>[];
   if (rows.length === 0) return done([]);
 
-  const decided = await boundedRead(
+  const decided = await boundedReport(
     db.from("rift_referral_moments").select("lead_id,moment_id,occurrence,state")
       .in("lead_id", rows.map((r) => r.id as string)).limit(2000),
     "the referral decisions",
@@ -343,7 +343,7 @@ export async function recordClosing(leadId: string, closedOn: string | null): Pr
 export async function closedByContract(journeyId: string, agentId: string): Promise<DbResult<null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const j = await boundedRead(
+  const j = await boundedReport(
     db.from("rift_journeys").select("origin_lead_id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(),
     "the journey's person",
   );
@@ -388,7 +388,7 @@ export async function referralTokenFor(leadId: string): Promise<DbResult<string>
   const agentId = await currentAgentId();
   if (!agentId) return skipped("not signed in");
 
-  const read = await boundedRead(
+  const read = await boundedReport(
     db.from("rift_leads").select("referral_token").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
     "the referral handle",
   );
@@ -416,11 +416,11 @@ export async function referralLinks(leadId: string): Promise<DbResult<ReferralLi
   if (!agentId) return skipped("not signed in");
 
   const [mine, theirs] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_leads").select("referred_by").eq("id", leadId).eq("agent_id", agentId).maybeSingle(),
       "the referrer",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_leads").select("id,name,stage").eq("referred_by", leadId).eq("agent_id", agentId).limit(100),
       "the people they sent",
     ),
@@ -440,7 +440,7 @@ export async function referralLinks(leadId: string): Promise<DbResult<ReferralLi
 
   let referrer: ReferralLinks["referrer"] = null;
   if (referrerId) {
-    const r = await boundedRead(
+    const r = await boundedReport(
       db.from("rift_leads").select("id,name").eq("id", referrerId).eq("agent_id", agentId).maybeSingle(),
       "the referrer",
     );

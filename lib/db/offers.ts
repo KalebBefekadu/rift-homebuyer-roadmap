@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import type { Financing, Offer, SellerCosts } from "@/lib/core/offers";
 
@@ -104,13 +104,13 @@ export async function offersFor(leadId: string): Promise<DbResult<{ offers: Offe
   if (!agent_id) return skipped("no agent row exists yet");
 
   const [rows, lead] = await Promise.all([
-    boundedRead(
+    boundedReport(
       db.from("rift_offers").select(COLUMNS)
         .eq("lead_id", leadId).eq("agent_id", agent_id)
         .order("created_at", { ascending: false }).limit(50),
       "the offers",
     ),
-    boundedRead(
+    boundedReport(
       db.from("rift_leads").select("payoff_cents,commission_pct")
         .eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
       "the seller's costs",
@@ -145,7 +145,7 @@ export async function releasedOffersFor(leadId: string): Promise<DbResult<Offer[
   const db = serviceClient();
   if (!db) return skipped("no database configured");
 
-  const rows = await boundedRead(
+  const rows = await boundedReport(
     db.from("rift_offers").select(COLUMNS)
       .eq("lead_id", leadId)
       .not("released_at", "is", null)

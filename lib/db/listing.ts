@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead, boundedWrite } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { marketDay } from "@/lib/core/progress";
 import {
@@ -31,9 +31,9 @@ export async function listingOf(journeyId: string, agentId: string): Promise<DbR
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const [ev, sh, rv] = await Promise.all([
-    boundedRead(db.from("rift_listing_events").select("kind,detail,url,price_cents,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(500), "the listing"),
-    boundedRead(db.from("rift_listing_showings").select("showing_key,starts_at,state,showing_agent,feedback,interest,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(2000), "the showings"),
-    boundedRead(db.from("rift_listing_reviews").select("week_of,metrics,summary,decision,decision_note,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("week_of").limit(200), "the reviews"),
+    boundedReport(db.from("rift_listing_events").select("kind,detail,url,price_cents,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(500), "the listing"),
+    boundedReport(db.from("rift_listing_showings").select("showing_key,starts_at,state,showing_agent,feedback,interest,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at").limit(2000), "the showings"),
+    boundedReport(db.from("rift_listing_reviews").select("week_of,metrics,summary,decision,decision_note,actor_label,created_at").eq("journey_id", journeyId).eq("agent_id", agentId).order("week_of").limit(200), "the reviews"),
   ]);
   for (const r of [ev, sh, rv]) if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   return done({
@@ -59,18 +59,18 @@ export async function listingOf(journeyId: string, agentId: string): Promise<DbR
 export async function saleCadences(agentId: string): Promise<DbResult<SaleCadence[] | null>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const j = await boundedRead(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).eq("side", "sell").limit(300), "the sales");
+  const j = await boundedReport(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).eq("side", "sell").limit(300), "the sales");
   if (!j.ok) return MISSING.test(j.error) ? done(null) : j;
   const sales = rows(j);
   if (!sales.length) return done([]);
   const ids = sales.map((x) => x.id as string);
   const leadIds = [...new Set(sales.map((x) => x.origin_lead_id as string))];
   const [ev, rv, op, st, ld] = await Promise.all([
-    boundedRead(db.from("rift_listing_events").select("journey_id,kind,detail,url,price_cents,actor_label,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the listings"),
-    boundedRead(db.from("rift_listing_reviews").select("journey_id,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the weekly reviews"),
-    boundedRead(db.from("rift_pricing_opinions").select("id,journey_id,version,review_on").eq("agent_id", agentId).in("journey_id", ids).order("version").limit(3000), "the pricing"),
-    boundedRead(db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", agentId).eq("kind", "stage").in("journey_id", ids).order("seq").limit(8000), "the sales' stages"),
-    boundedRead(db.from("rift_leads").select("id,name,email").eq("agent_id", agentId).in("id", leadIds), "the sellers"),
+    boundedReport(db.from("rift_listing_events").select("journey_id,kind,detail,url,price_cents,actor_label,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the listings"),
+    boundedReport(db.from("rift_listing_reviews").select("journey_id,created_at").eq("agent_id", agentId).in("journey_id", ids).order("created_at").limit(5000), "the weekly reviews"),
+    boundedReport(db.from("rift_pricing_opinions").select("id,journey_id,version,review_on").eq("agent_id", agentId).in("journey_id", ids).order("version").limit(3000), "the pricing"),
+    boundedReport(db.from("rift_journey_events").select("journey_id,seq,to_value").eq("agent_id", agentId).eq("kind", "stage").in("journey_id", ids).order("seq").limit(8000), "the sales' stages"),
+    boundedReport(db.from("rift_leads").select("id,name,email").eq("agent_id", agentId).in("id", leadIds), "the sellers"),
   ]);
   for (const r of [ev, rv, op, st, ld]) if (!r.ok) return MISSING.test(r.error) ? done(null) : r;
   const group = <T,>(list: Record<string, unknown>[], f: (x: Record<string, unknown>) => T) => {
@@ -84,12 +84,12 @@ export async function saleCadences(agentId: string): Promise<DbResult<SaleCadenc
   /* The seller's answers to each sale's current version only: an answer to a superseded one has been answered. */
   const latestIds = [...opinions.values()].flatMap((l) => (l.length ? [l.at(-1)!.id] : []));
   const ans = latestIds.length
-    ? await boundedRead(db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", agentId).in("opinion_id", latestIds).order("created_at").limit(1000), "the sellers' answers")
+    ? await boundedReport(db.from("rift_pricing_responses").select("opinion_id,member_id,response,note,created_at").eq("agent_id", agentId).in("opinion_id", latestIds).order("created_at").limit(1000), "the sellers' answers")
     : null;
   if (ans && !ans.ok) return MISSING.test(ans.error) ? done(null) : ans;
   const answerRows = ans ? rows(ans) : [];
   const memberIds = [...new Set(answerRows.map((a) => a.member_id as string))];
-  const mem = memberIds.length ? await boundedRead(db.from("rift_journey_members").select("id,display_name,email").in("id", memberIds), "who answered") : null;
+  const mem = memberIds.length ? await boundedReport(db.from("rift_journey_members").select("id,display_name,email").in("id", memberIds), "who answered") : null;
   if (mem && !mem.ok) return mem;
   const memberName = new Map((mem ? rows(mem) : []).map((m) => [m.id as string, ((m.display_name as string | null) ?? "").trim() || (m.email as string | null) || "The seller"]));
   const answerOf = new Map<string, SaleCadence["answer"]>();
