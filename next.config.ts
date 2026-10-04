@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { contentSecurityPolicy } from "./lib/core/csp";
 
 /**
  * Headers the platform does not set for you.
@@ -33,6 +34,15 @@ const SECURITY_HEADERS = [
   {
     key: "Content-Security-Policy",
     value: "frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  },
+  /* The full policy, reported but not enforced yet: lib/core/csp.ts says why
+     and how it becomes enforced. */
+  {
+    key: "Content-Security-Policy-Report-Only",
+    value: contentSecurityPolicy({
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      dev: process.env.NODE_ENV === "development",
+    }),
   },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   /* Nothing in this product uses any of them. Asking for none is how it stays

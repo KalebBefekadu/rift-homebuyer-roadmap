@@ -1,4 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap");
+/* No web font here. This imported two Google fonts from the retired portal
+   MVP on every page, so every visitor's address went to Google for type that
+   only a page outside .rift (global-error) could ever show. Rift's own fonts
+   are loaded by the layouts that use them. */
 @import "tailwindcss";
 
 :root {
@@ -39,7 +42,7 @@ body {
 }
 
 body {
-  font-family: "Manrope", system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: var(--app-bg);
   color: var(--ink);
 }

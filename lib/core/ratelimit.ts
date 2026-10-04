@@ -102,4 +102,7 @@ export const LIMITS = {
   /* A signed-in buyer answering, reacting and adding homes. Generous enough
      for somebody working through a shortlist, not for a script. */
   app: { max: 60, windowMs: 60_000 },
+  /* Violation reports from the report-only policy. A page can send a few at
+     once; anything past this is not a browser reporting. */
+  cspReport: { max: 30, windowMs: 60_000 },
 } as const;
