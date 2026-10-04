@@ -62,6 +62,7 @@ Operations, data, security, reliability, engineering, compliance and growth.
 | 33 | Done | `e2e-operations/` (CI and `npm run test:e2e:operations`): every Operations page signed in as the local agent with the demo book, desktop and phone, fails on "did not load"/"could not be read" or a sideways scroll, plus the sign-in redirect and the Relationships row click. Its first run found the buyer journey overview 55px too wide on a phone (fixed). It also found the public suite's blank environment missed `SUPABASE_URL` and `SUPABASE_ANON_KEY`, so a local run of the "no database" suite read production; fixed |
 | 34 | Done | `agent-lookup` waited out a real 3.5 s deadline; `COLD_START_MS` moved to `lib/core/timeout.ts` so the test shortens it (now 0.2 s). `query-shapes` has a 30 s budget |
 | 40 | Done | Blueprint §1 brought to 4 Oct |
+| 36 | Started | `lib/db/clients.ts` 847 → 558 lines: representation agreements to `representation.ts`, the forecast's finished and live relationships to `relationships.ts`, and `addNote` to `notes.ts` so the two do not import each other; `clients.ts` re-exports all of it, so no caller changed |
 | 38 | Partly | The unused `_s` is gone and lint is clean. `.sr-only` already exists in `rift.css` (the audit was wrong about that) |
 
 ---

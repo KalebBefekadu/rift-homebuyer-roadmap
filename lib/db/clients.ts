@@ -5,7 +5,6 @@ import { boundedReport, boundedWrite } from "./bounded";
 import {
   stallOf,
   STAGE_NAMES,
-  TERMINAL,
   type Stage,
   type NoteKind,
   type LeadNote,
@@ -14,11 +13,11 @@ import {
 } from "@/lib/core/pipeline";
 
 import {
-  standingOf, mayAdvance, readStatus, STATUSES, STATUS_RULES, EXPIRY_WARNING_DAYS,
-  type Representation, type Standing, type Status as RepStatus,
+  mayAdvance, type Representation, type Standing, type Status as RepStatus,
 } from "@/lib/core/representation";
-import { georgiaDay } from "@/lib/core/day";
 import { isTerminal, sameContact } from "@/lib/core/people";
+import { addNote } from "./notes";
+import { representationOf } from "./representation";
 
 export { STAGE_NAMES };
 export type { Stage, NoteKind, LeadNote, ManagedLead, Finished };
@@ -197,32 +196,6 @@ export async function addLead(input: NewLead): Promise<DbResult<{ id: string }>>
   return done({ id });
 }
 
-export async function addNote(
-  leadId: string,
-  kind: NoteKind,
-  body: string,
-  stages?: { fromStage?: string | null; toStage?: string | null },
-): Promise<DbResult<{ id: string }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-  if (!body.trim()) return failed("an empty note is not a note");
-
-  const res = await boundedWrite(
-    db.from("rift_lead_notes").insert({
-      lead_id: leadId,
-      agent_id,
-      kind,
-      body: body.trim(),
-      from_stage: stages?.fromStage ?? null,
-      to_stage: stages?.toStage ?? null,
-    }).select("id").single(),
-    "saving the note",
-  );
-  if (!res.ok || !("data" in res)) return res as DbResult<{ id: string }>;
-  return done({ id: (res.data as { id: string }).id });
-}
 
 /**
  * Move somebody, and say so in the history.
@@ -580,268 +553,6 @@ export async function lastContacts(leadIds: string[]): Promise<DbResult<Map<stri
   return done(out);
 }
 
-/* ------------------------------------------------------------------ *
- * The agent's own closed history
- * ------------------------------------------------------------------ */
-
-/**
- * Every relationship that has finished, and the stages it went through.
- *
- * This is what turns the forward view from an industry assumption into his
- * number. `weightFor` shrinks toward the assumption until there are twelve
- * outcomes in a stage, so early on this changes very little, which is the
- * intended behaviour, not a limitation. What it must never do is return
- * something invented: an empty array here means the forecast correctly reports
- * "assumed" on every stage, and that is a true statement about a new book of
- * business.
- *
- * The stage history comes from `rift_lead_notes`, which is append-only and
- * records both ends of every move. There is no `stage_transitions` table; the
- * notes ARE the transition log, and deriving from them means the forecast
- * cannot disagree with the record the agent can read on the person's page.
- */
-export async function finishedRelationships(): Promise<DbResult<Finished[]>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  const leads = await boundedReport(
-    db.from("rift_leads")
-      .select("id,stage")
-      .eq("agent_id", agent_id)
-      .in("stage", TERMINAL as unknown as string[])
-      .limit(500),
-    "reading closed history",
-  );
-  if (!leads.ok || !("data" in leads)) return leads as DbResult<Finished[]>;
-
-  const rows = leads.data as { id: string; stage: string }[];
-  if (!rows.length) return done([]);
-
-  /* One query for every stage note across all of them, rather than one per
-     person. Five hundred relationships is five hundred round trips otherwise,
-     on a page the agent opens every morning. */
-  const moves = await boundedReport(
-    db.from("rift_lead_notes")
-      .select("lead_id,from_stage,to_stage")
-      .eq("agent_id", agent_id)
-      .eq("kind", "stage")
-      .in("lead_id", rows.map((r) => r.id))
-      .limit(5000),
-    "reading stage history",
-  );
-
-  /* A relationship with no recorded moves still counts. Somebody added at
-     "Under contract" and closed a fortnight later has one stage in their
-     history and it is evidence; dropping them because the note query was slow
-     would quietly bias the forecast toward people who took the long route. */
-  const through = new Map<string, string[]>();
-  if (moves.ok && "data" in moves) {
-    for (const m of moves.data as { lead_id: string; from_stage: string | null; to_stage: string | null }[]) {
-      const list = through.get(m.lead_id) ?? [];
-      if (m.from_stage) list.push(m.from_stage);
-      if (m.to_stage) list.push(m.to_stage);
-      through.set(m.lead_id, list);
-    }
-  }
-
-  return done(rows.map((r) => ({
-    final: r.stage,
-    through: through.get(r.id) ?? [r.stage],
-  })));
-}
-
-/* ------------------------------------------------------------------ *
- * Representation
- * ------------------------------------------------------------------ */
-
-/**
- * The agreement on file, as it stands today.
- *
- * Read separately from the board rather than added to SELECT_BASE, because
- * this arrived after the migration for it and every read in this module shares
- * that column list. Bolting three new columns onto the list would make each of
- * them a way for the roster to fail entirely on a deploy that landed first.
- */
-export async function representationOf(leadId: string): Promise<DbResult<Representation>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  const res = await boundedReport(
-    db.from("rift_leads")
-      .select("representation,representation_signed_on,representation_expires_on")
-      .eq("id", leadId).eq("agent_id", agent_id).maybeSingle(),
-    "the representation agreement",
-  );
-  if (!res.ok || !("data" in res)) return res as DbResult<Representation>;
-
-  const row = res.data as Record<string, unknown> | null;
-  if (!row) return failed("no such person");
-
-  return done({
-    status: readStatus(row.representation),
-    signedOn: (row.representation_signed_on as string | null) ?? null,
-    expiresOn: (row.representation_expires_on as string | null) ?? null,
-  });
-}
-
-/**
- * Record what the agreement now is.
- *
- * Writes a note, like a stage change does, because the history of when
- * representation moved is the part somebody would actually be asked about and
- * a column only holds the latest answer.
- *
- * The dates are cleared whenever the status is not `signed`. The database
- * enforces the same rule; doing it here too means the caller gets a coherent
- * row rather than a constraint violation for something it could have fixed.
- */
-export async function setRepresentation(
-  leadId: string,
-  status: RepStatus,
-  dates: { signedOn?: string | null; expiresOn?: string | null } = {},
-): Promise<DbResult<{ status: RepStatus }>> {
-  if (!(STATUSES as readonly string[]).includes(status)) return failed(`unknown status: ${status}`);
-
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  const signed = status === "signed";
-  if (signed && !dates.signedOn) {
-    return failed("a signed agreement needs the date it was signed. That is the part anyone would ask for");
-  }
-
-  const patch = {
-    representation: status,
-    representation_signed_on: signed ? dates.signedOn! : null,
-    representation_expires_on: signed ? (dates.expiresOn || null) : null,
-  };
-
-  const res = await boundedWrite(
-    db.from("rift_leads").update(patch).eq("id", leadId).eq("agent_id", agent_id).select("id").single(),
-    "the representation agreement",
-  );
-  if (!res.ok || !("data" in res)) return res as DbResult<{ status: RepStatus }>;
-
-  const label = STATUS_RULES[status].label.toLowerCase();
-  await addNote(leadId, "note", signed
-    ? `Representation ${label} ${dates.signedOn}${dates.expiresOn ? `, expires ${dates.expiresOn}` : ", no end date"}.`
-    : `Representation set to ${label}.`);
-
-  return done({ status });
-}
-
-/**
- * Agreements running out, soonest first.
- *
- * docs/product.md: "Expiration is a monitored deadline that raises attention
- * before it lapses, not after." Includes those already lapsed, because an
- * agreement that ran out last week is more urgent than one running out next
- * week and a list that quietly drops it is worse than no list.
- */
-export async function lapsingAgreements(now = new Date()): Promise<DbResult<Lapsing[]>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  const horizon = georgiaDay(now, EXPIRY_WARNING_DAYS);
-
-  const res = await boundedReport(
-    db.from("rift_leads")
-      .select("id,name,side,representation,representation_signed_on,representation_expires_on")
-      .eq("agent_id", agent_id)
-      .is("archived_at", null)
-      .eq("representation", "signed")
-      .not("representation_expires_on", "is", null)
-      .lte("representation_expires_on", horizon)
-      .order("representation_expires_on", { ascending: true })
-      .limit(100),
-    "agreements running out",
-  );
-  if (!res.ok || !("data" in res)) return res as DbResult<Lapsing[]>;
-
-  return done((res.data as Record<string, unknown>[]).map((r) => {
-    const rep: Representation = {
-      status: "signed",
-      signedOn: (r.representation_signed_on as string | null) ?? null,
-      expiresOn: (r.representation_expires_on as string | null) ?? null,
-    };
-    return {
-      id: r.id as string,
-      name: (r.name as string | null) ?? "Unnamed",
-      side: (r.side as "buy" | "sell"),
-      standing: standingOf(rep, now),
-    };
-  }));
-}
-
-export interface Lapsing {
-  id: string;
-  name: string;
-  side: "buy" | "sell";
-  standing: Standing;
-}
-
-/** One live relationship, as the forward view needs it. */
-export interface Live {
-  name: string;
-  stage: string;
-  /** Deal size in dollars. Zero when nobody has said one. */
-  value: number;
-  /** True when the value is a real answer rather than a default. */
-  valueKnown: boolean;
-}
-
-/**
- * Everybody still in play, with what the transaction is worth.
- *
- * The deal size lives inside `lead_input`, which is why this is its own query
- * rather than a column on the board: pulling a jsonb blob for every row of a
- * screen that does not need it would cost the whole of Studio a little, all
- * day, for one panel.
- *
- * `valueKnown` travels with the number because a forecast that shows $0 and a
- * forecast that shows a real $340,000 look identical once they are summed. A
- * relationship nobody has priced is still a relationship expected to close:
- * it just cannot contribute to a dollar figure, and the screen has to be able
- * to say how many of those there are.
- */
-export async function liveRelationships(): Promise<DbResult<Live[]>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  const agent_id = await currentAgentId();
-  if (!agent_id) return skipped("no agent row exists yet");
-
-  const res = await boundedReport(
-    db.from("rift_leads")
-      .select("name,stage,lead_input")
-      .eq("agent_id", agent_id)
-      .is("archived_at", null)
-      .not("stage", "is", null)
-      .not("stage", "in", `(${(TERMINAL as readonly string[]).join(",")})`)
-      .limit(500),
-    "reading the forward view",
-  );
-  if (!res.ok || !("data" in res)) return res as DbResult<Live[]>;
-
-  return done((res.data as Record<string, unknown>[]).map((r) => {
-    const input = (r.lead_input ?? null) as { value?: unknown } | null;
-    const raw = input?.value;
-    /* Finite and positive. A jsonb null reaches here as null, and `Number(null)`
-       is 0, which would render as a priced deal worth nothing rather than an
-       unpriced one. The distinction is the whole reason `valueKnown` exists. */
-    const known = typeof raw === "number" && Number.isFinite(raw) && raw > 0;
-    return {
-      name: (r.name as string | null) ?? "Unnamed",
-      stage: r.stage as string,
-      value: known ? (raw as number) : 0,
-      valueKnown: known,
-    };
-  }));
-}
+export { representationOf, setRepresentation, lapsingAgreements, type Lapsing } from "./representation";
+export { finishedRelationships, liveRelationships, type Live } from "./relationships";
+export { addNote } from "./notes";

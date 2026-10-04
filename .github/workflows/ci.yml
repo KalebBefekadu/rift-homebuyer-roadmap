@@ -93,8 +93,19 @@ jobs:
       # The end-to-end suite runs against this exact bundle rather than one of
       # its own — otherwise the thing whose size is budgeted and the thing that
       # is walked are two different builds.
+      # pipefail: piped through tee, a failed build passed this step, and only
+      # the budget step below happened to notice. One retry, and only for the
+      # Google Fonts fetch next/font makes at build time, which fails now and
+      # then when Google answers with a font URL Next's loader cannot parse.
       - name: Build
-        run: npx next build 2>&1 | tee /tmp/build.log
+        run: |
+          set -o pipefail
+          for attempt in 1 2; do
+            npx next build 2>&1 | tee /tmp/build.log && exit 0
+            grep -q "An error occurred in \`next/font\`" /tmp/build.log || exit 1
+            echo "::warning::next/font could not fetch from Google Fonts; retrying once."
+          done
+          exit 1
         env:
           # Sourcemap upload needs a token that a fork's PR will not have.
           # Building without it is the documented behaviour, not a workaround.

@@ -17,6 +17,7 @@ const PATIENT = [
   "portal", "progress", "listing", "clients", "referral", "bids", "transactions", "journeys", "tours", "search",
   "offer-room", "documents", "decisions", "deadlines", "seller", "outbox", "money", "shortlist", "offers",
   "lead-background", "dependencies", "desk", "pilot", "retention", "summary-links", "seam", "profile", "summary",
+  "representation", "relationships",
 ];
 const src = (m: string) => readFileSync(`lib/db/${m}.ts`, "utf8");
 
