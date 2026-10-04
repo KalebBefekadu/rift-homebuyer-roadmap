@@ -78,9 +78,23 @@ http.createServer(async (req, res) => {
     res.end(JSON.stringify(user));
     return;
   }
+  if (path.startsWith("/auth/v1/token") && path.includes("grant_type=refresh_token")) {
+    /* Token refresh, for the seeded agent only. Without it a local session
+       died after an hour: the middleware's refresh got a 501 and every page
+       went back to "sign in", which read like a broken sign-in rather than
+       this proxy's limit (platform audit #39). A fresh hour, signed with the
+       local secret, which nothing outside the local stack accepts. */
+    const now = Math.floor(Date.now() / 1000);
+    const h = b64({ alg: "HS256", typ: "JWT" });
+    const p = b64({ sub: LOCAL_USER.id, aud: "authenticated", role: "authenticated", email: LOCAL_USER.email, iat: now, exp: now + 3600 });
+    const access = `${h}.${p}.${createHmac("sha256", SECRET).update(`${h}.${p}`).digest("base64url")}`;
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ access_token: access, token_type: "bearer", expires_in: 3600, expires_at: now + 3600, refresh_token: "local", user: LOCAL_USER }));
+    return;
+  }
   if (path.startsWith("/auth/v1/")) {
-    /* Everything else GoTrue would serve (token refresh, OTP) is not needed
-       to render Studio, and answering it plausibly would invite somebody to
+    /* Everything else GoTrue would serve (OTP, sign-up) is not needed to
+       render Operations, and answering it plausibly would invite somebody to
        trust this thing further than it deserves. */
     res.writeHead(501, { "content-type": "application/json" });
     res.end(JSON.stringify({ message: "local proxy implements /auth/v1/user only" }));

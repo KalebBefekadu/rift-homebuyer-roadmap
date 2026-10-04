@@ -4,16 +4,12 @@ import { serviceClient } from "./service";
 import { boundedReport, boundedWrite } from "./bounded";
 import { done, failed, skipped, type DbResult } from "./result";
 import { inviteTokenHash, journeyTablesMissing } from "./journeys";
-import { shapeRevision, type Revision } from "./search";
 import { insertHome, insertReaction, readHomes, type Home, type NewHome } from "./shortlist";
 import { insertFeedback, readTours, requestTour, type Tours } from "./tours";
 import type { FeedbackInput } from "@/lib/core/tour";
 import { readProgress, recordWork } from "./progress";
-import { readBids, recordResponse } from "./bids";
 import { readDeadlines } from "./deadlines";
 import type { DeadlineView } from "@/lib/core/deadline";
-import { documentLink, readDocuments } from "./documents";
-import { buyerBidLine, termsDiff, termsEffects, type BuyerBid, type Instruction } from "@/lib/core/bid";
 import { planItemsFor } from "./plan";
 import { afterClose, visitedStages, type Progress, type Stage, type Workstream, type WorkstreamView } from "@/lib/core/progress";
 import type { PlanItem } from "@/lib/core/plan";
@@ -23,15 +19,10 @@ import { INSTRUCTION_LABEL } from "@/lib/core/bid";
 import { buyerDateLine } from "@/lib/core/deadline";
 import { STAGE_LABEL, workLine } from "@/lib/core/progress";
 import { withTimeout, AUTH_DEADLINE_MS } from "@/lib/core/timeout";
-import {
-  acceptError, canRespond, memberState, normaliseEmail,
-  type MemberState, type Role, type Scope, type Side,
-} from "@/lib/core/journey";
-import {
-  briefErrors, FIELDS, statusOf, SEARCH_SCHEMA_VERSION,
-  type Response, type SearchBrief, type SearchCriterion, type SearchStatus,
-} from "@/lib/core/search";
-import { georgiaDay, showDay } from "@/lib/core/day";
+import { acceptError, canRespond, memberState, normaliseEmail, type MemberState, type Role, type Scope, type Side } from "@/lib/core/journey";
+import { showDay } from "@/lib/core/day";
+import { clientBrief } from "./portal-brief";
+import { clientBids } from "./portal-offers";
 
 /**
  * The client's side of a journey: who is signed in, which journeys they are a
@@ -253,173 +244,6 @@ export async function mayReceiveSignIn(email: string): Promise<boolean> {
 }
 
 /* ------------------------------------------------------------------------ */
-/* The brief, as a member sees it                                            */
-/* ------------------------------------------------------------------------ */
-
-export interface ClientBrief {
-  revision: Revision | null;
-  /** Criteria the member cannot see (money without the money scope) are removed, and counted. */
-  hidden: number;
-  /** The previous revision, projected the same way, for "what changed". */
-  previous: Revision | null;
-  myResponse: { response: Response; note: string | null; at: string } | null;
-  status: SearchStatus;
-  /** When the agent last recorded setting the search up. Never "Matrix says". */
-  activeSince: string | null;
-}
-
-const hide = (rev: Revision, scopes: Scope[]): { rev: Revision; hidden: number } => {
-  if (scopes.includes("money")) return { rev, hidden: 0 };
-  const kept = rev.brief.criteria.filter((c) => !FIELDS[c.field].money);
-  return { rev: { ...rev, brief: { ...rev.brief, criteria: kept } }, hidden: rev.brief.criteria.length - kept.length };
-};
-
-export async function clientBrief(m: Membership): Promise<DbResult<ClientBrief>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  if (!m.scopes.includes("search")) return failed("Your agent has not shared the search with you");
-
-  const [revs, pkgs, mine] = await Promise.all([
-    boundedReport(
-      db.from("rift_search_revisions").select("id,revision,criteria,questions,note,author_kind,author_label,created_at")
-        .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("revision", { ascending: false }).limit(2),
-      "your search",
-    ),
-    boundedReport(
-      db.from("rift_search_packages").select("status,package,confirmed_at")
-        .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).in("status", ["manual-action-needed", "active-confirmed", "paused"]),
-      "your search",
-    ),
-    boundedReport(
-      db.from("rift_search_responses").select("revision_id,response,note,created_at")
-        .eq("journey_id", m.journeyId).eq("member_id", m.memberId).order("created_at", { ascending: false }).limit(1),
-      "your answer",
-    ),
-  ]);
-  if (!revs.ok) return revs;
-  if (!pkgs.ok) return pkgs;
-  const rows = (("data" in revs ? revs.data : []) as Record<string, unknown>[]).map(shapeRevision);
-  const latest = rows[0] ? hide(rows[0], m.scopes) : null;
-  const previous = rows[1] ? hide(rows[1], m.scopes).rev : null;
-
-  const live = ("data" in pkgs ? pkgs.data : []) as { status: string; package: { revision: number }; confirmed_at: string | null }[];
-  const active = live.find((p) => p.status !== "manual-action-needed");
-  const pending = live.find((p) => p.status === "manual-action-needed");
-  const status = statusOf({
-    latest: rows[0]?.revision ?? null,
-    active: active ? { revision: active.package.revision, status: active.status as "active-confirmed" | "paused" } : null,
-    pending: pending ? { revision: pending.package.revision } : null,
-  });
-
-  const lastMine = mine.ok && "data" in mine ? ((mine.data as Record<string, unknown>[])[0] ?? null) : null;
-  return done({
-    revision: latest?.rev ?? null,
-    hidden: latest?.hidden ?? 0,
-    previous,
-    myResponse: lastMine && rows[0] && lastMine.revision_id === rows[0].id
-      ? { response: lastMine.response as Response, note: (lastMine.note as string | null) ?? null, at: lastMine.created_at as string }
-      : null,
-    status,
-    activeSince: active?.confirmed_at ?? null,
-  });
-}
-
-/**
- * Confirm the latest revision, or ask for changes to it. Against the exact
- * revision the member was shown: an answer to revision 3 after revision 4
- * exists is refused, so nobody confirms a brief they never read (AT22's rule,
- * applied here).
- */
-export async function respondToBrief(
-  m: Membership, revisionId: string, response: Response, note: string | null,
-): Promise<DbResult<{ recorded: true }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  if (!canRespond(m.role) || !m.scopes.includes("search")) return failed("Your access lets you read this, not answer it");
-  if (response !== "confirmed" && response !== "changes-requested") return failed("Confirm it or ask for changes");
-  const why = note?.trim() || null;
-  if (response === "changes-requested" && !why) return failed("Say what should change");
-  if (why && why.length > 1000) return failed("Keep it under 1,000 characters");
-
-  const latest = await boundedReport(
-    db.from("rift_search_revisions").select("id").eq("journey_id", m.journeyId).eq("agent_id", m.agentId)
-      .order("revision", { ascending: false }).limit(1).maybeSingle(),
-    "your search",
-  );
-  if (!latest.ok) return latest;
-  const id = (("data" in latest ? latest.data : null) as { id: string } | null)?.id;
-  if (!id || id !== revisionId) return failed("The search changed since you opened this page. Reload to see the latest version");
-
-  const wrote = await boundedWrite(
-    db.from("rift_search_responses").insert({
-      agent_id: m.agentId, journey_id: m.journeyId, revision_id: revisionId, member_id: m.memberId, response, note: why,
-    }),
-    "your answer",
-  );
-  if (!wrote.ok) return wrote;
-  return done({ recorded: true as const });
-}
-
-/**
- * A member proposes a change: a new revision authored by them. Attribution is
- * set HERE: a criterion they changed is "stated by" them, today, from the
- * client page, whatever the browser sent, so nobody can post a change that
- * reads as the agent's. Criteria they cannot see (money, without the scope)
- * are carried over untouched from the latest revision.
- */
-export async function proposeRevision(
-  m: Membership, submitted: SearchBrief, expectedLatest: number, note: string | null,
-): Promise<DbResult<{ revision: number }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
-  if (!canRespond(m.role) || !m.scopes.includes("search")) return failed("Your access lets you read this, not change it");
-
-  const latestRead = await boundedReport(
-    db.from("rift_search_revisions").select("id,revision,criteria,questions,note,author_kind,author_label,created_at")
-      .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).order("revision", { ascending: false }).limit(1).maybeSingle(),
-    "your search",
-  );
-  if (!latestRead.ok) return latestRead;
-  const latestRow = ("data" in latestRead ? latestRead.data : null) as Record<string, unknown> | null;
-  const latest = latestRow ? shapeRevision(latestRow) : null;
-  if ((latest?.revision ?? 0) !== expectedLatest) {
-    return failed("The search changed since you opened this page. Reload to see the latest version, then make your change");
-  }
-
-  const today = georgiaDay();
-  const before = new Map((latest?.brief.criteria ?? []).map((c) => [c.id, c]));
-  const canSeeMoney = m.scopes.includes("money");
-  const visible: SearchCriterion[] = submitted.criteria
-    .filter((c) => canSeeMoney || !FIELDS[c.field]?.money)
-    .map((c) => {
-      const was = before.get(c.id);
-      const same = was && JSON.stringify(was.value) === JSON.stringify(c.value) && was.operator === c.operator
-        && was.strength === c.strength && was.field === c.field;
-      return same ? was : { ...c, statedBy: `${m.name.slice(0, 60)} (buyer)`, statedAt: today, sourceRef: "client page" };
-    });
-  const carried = canSeeMoney ? [] : (latest?.brief.criteria ?? []).filter((c) => FIELDS[c.field].money);
-  const brief: SearchBrief = { criteria: [...carried, ...visible], questions: submitted.questions ?? [] };
-  const errors = briefErrors(brief);
-  if (errors.length) return failed(errors[0]!);
-
-  const revision = expectedLatest + 1;
-  const wrote = await boundedWrite(
-    db.from("rift_search_revisions").insert({
-      agent_id: m.agentId, journey_id: m.journeyId, revision, schema_version: SEARCH_SCHEMA_VERSION,
-      criteria: brief.criteria, questions: brief.questions, note: note?.trim().slice(0, 2000) || null,
-      author_kind: "client", author_member_id: m.memberId, author_label: m.name.slice(0, 120),
-    }),
-    "your change",
-  );
-  if (!wrote.ok) {
-    return /out of order|one_number|duplicate key/.test(wrote.error)
-      ? failed("Somebody saved a change a moment ago. Reload to see it, then make yours")
-      : wrote;
-  }
-  return done({ revision });
-}
-
-/* ------------------------------------------------------------------------ */
 /* Homes, as a member sees them                                              */
 /* ------------------------------------------------------------------------ */
 
@@ -554,90 +378,6 @@ export async function reportWorkAsMember(
 }
 
 /* ------------------------------------------------------------------ *
- * Offers (blueprint v4 W08)
- * ------------------------------------------------------------------ */
-
-export type { BuyerBid };
-
-
-/**
- * The household's offers, as a member may see them: only versions the agent
- * put to them, and only with the money scope (it is all prices). A viewer
- * without it sees nothing here.
- */
-export async function clientBids(m: Membership): Promise<DbResult<{ bids: BuyerBid[]; unavailable?: string }>> {
-  if (!m.scopes.includes("money") || m.side !== "buy") return done({ bids: [] });
-  const agentFirst = m.agentName.trim().split(/\s+/)[0] ?? m.agentName;
-  const [r, docs] = await Promise.all([readBids(m.journeyId, m.agentId, agentFirst), readDocuments(m.journeyId, m.agentId)]);
-  if (!r.ok || !("data" in r)) return r as DbResult<never>;
-  if (r.data.unavailable) return done({ bids: [], unavailable: r.data.unavailable });
-  const docList = docs.ok && "data" in docs ? docs.data.documents : [];
-  const docById = new Map(docList.map((d) => [d.id, d]));
-
-  const bids: BuyerBid[] = [];
-  for (const b of r.data.bids) {
-    const asks = b.steps.filter((s) => s.kind === "ask");
-    const lastAsk = asks[asks.length - 1];
-    if (!lastAsk) continue;
-    const termsOf = (v: number) => b.steps.find((s) => s.kind === "terms" && s.version === v) ?? null;
-    const t = termsOf(lastAsk.version)!;
-    const prev = termsOf(lastAsk.version - 1);
-    const current = lastAsk.version === b.view.version;
-    const resolution = current && b.view.asked ? b.view.asked.resolution : null;
-    const answersOn = b.responses.filter((x) => x.version === lastAsk.version);
-    const latest = new Map<string, (typeof answersOn)[number]>();
-    for (const a of [...answersOn].sort((x, y) => x.at.localeCompare(y.at))) latest.set(a.memberId, a);
-    const open = current && ["awaiting", "instructed", "disagreement", "changes", "stopped"].includes(b.view.status);
-    bids.push({
-      id: b.id,
-      address: b.address,
-      status: b.view.status,
-      line: buyerBidLine(b.view, agentFirst),
-      asked: {
-        version: lastAsk.version,
-        terms: t.terms!,
-        effects: termsEffects(t.terms!),
-        changes: prev ? termsDiff(prev.terms, t.terms!) : [],
-        fromThem: t.origin === "theirs",
-        documents: t.documentIds.map((id) => docById.get(id)).filter((d): d is NonNullable<typeof d> => !!d)
-          .map((d) => ({ id: d.id, label: d.label, family: d.family })),
-        answers: [...latest.values()].map((a) => ({ name: a.name, instruction: a.instruction, note: a.note, mine: a.memberId === m.memberId })),
-        waitingOn: resolution?.waitingOn ?? [],
-        open,
-        myAnswer: latest.get(m.memberId)?.instruction ?? null,
-        mineNeeded: lastAsk.required.some((x) => x.memberId === m.memberId),
-      },
-      newerDraft: !current,
-      sharedDocumentIds: [...new Set(b.steps
-        .filter((s) => s.kind === "terms" && asks.some((a) => a.version === s.version))
-        .flatMap((s) => s.documentIds))],
-    });
-  }
-  return done({ bids });
-}
-
-/** A member's instruction on the version being asked about. Never a signature (REQ-DEC-03). */
-export async function respondToBid(
-  m: Membership, bidId: string, version: number, instruction: Instruction, note: string | null, requestId: string,
-) {
-  if (!canRespond(m.role) || !m.scopes.includes("money")) return failed("Your access lets you look, not answer on offers");
-  const agentFirst = m.agentName.trim().split(/\s+/)[0] ?? m.agentName;
-  return recordResponse(m.journeyId, m.agentId, bidId, { memberId: m.memberId, label: m.name }, version, instruction, note, null, agentFirst, requestId);
-}
-
-/**
- * A one-minute link to a document, for a member: only one attached to a
- * version of an offer they were asked about, and only with the money scope.
- */
-export async function clientDocumentLink(m: Membership, documentId: string): Promise<DbResult<{ url: string }>> {
-  const b = await clientBids(m);
-  if (!b.ok || !("data" in b)) return b as DbResult<never>;
-  const shared = b.data.bids.some((x) => x.sharedDocumentIds.includes(documentId));
-  if (!shared) return failed("That document is not shared with you");
-  return documentLink(m.journeyId, m.agentId, documentId);
-}
-
-/* ------------------------------------------------------------------ *
  * Records (blueprint v4 W11; B20, AT36)
  * ------------------------------------------------------------------ */
 
@@ -751,3 +491,6 @@ export async function clientRecords(m: Membership): Promise<DbResult<ClientRecor
 
   return done({ sections, documents });
 }
+
+export * from "./portal-brief";
+export * from "./portal-offers";
