@@ -68,22 +68,38 @@ export function SiteHeader({ side, current, action }: {
             </Link>
           ))}
           {action ? <Link href={action.href} className="btn btn-s btn-sm">{action.label}</Link> : null}
-          <details className="site-menu">
-            <summary className="btn btn-g btn-ico" aria-label="Menu">
-              <Ico.menu size={18} aria-hidden="true" className="site-menu-open" />
-              <Ico.x size={18} aria-hidden="true" className="site-menu-close" />
-            </summary>
-            <div className="site-menu-panel">
-              {phoneLinks(side).map((n) => (
-                <Link key={n.href} href={n.href} aria-current={current === n.href ? "page" : undefined}>
-                  {n.label}
-                  <Ico.chevR size={14} aria-hidden="true" />
-                </Link>
-              ))}
-            </div>
-          </details>
+          <PhoneMenu links={phoneLinks(side)} current={current} />
         </nav>
       </div>
     </header>
+  );
+}
+
+/**
+ * The phone menu itself, for a header that is not this one: the abroad
+ * landing draws its own, bilingual, and passes its own words. Shown only below
+ * 720px (rift.css), where a header's row of links is hidden.
+ */
+export function PhoneMenu({ links, current, label = "Menu", style }: {
+  links: { href: string; label: string }[];
+  current?: string;
+  label?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <details className="site-menu">
+      <summary className="btn btn-g btn-ico" aria-label={label}>
+        <Ico.menu size={18} aria-hidden="true" className="site-menu-open" />
+        <Ico.x size={18} aria-hidden="true" className="site-menu-close" />
+      </summary>
+      <div className="site-menu-panel" style={style}>
+        {links.map((n) => (
+          <Link key={n.href} href={n.href} aria-current={current === n.href ? "page" : undefined}>
+            {n.label}
+            <Ico.chevR size={14} aria-hidden="true" />
+          </Link>
+        ))}
+      </div>
+    </details>
   );
 }

@@ -42,6 +42,12 @@ Operations, data, security, reliability, engineering, compliance and growth.
 | 4 | Not a gap | See corrections |
 | 7 | Done | `rift_schema_migrations` records each migration in the same request; `/api/health` says `schema: current` or `behind`; a test keeps `lib/db/schema-version.ts` on the newest file; the token comes from the environment or `.env.local` first |
 | 8 | Done | `scripts/local/run.sh <command>` sets the local environment itself and refuses to start unless the database is local; `dev:local` uses it |
+| 2 (more) | Done | The abroad landing has its own bilingual header, which the first e2e run caught without a menu; it now has one, and below 400px "Talk to Kaleb" moves into it so the header fits 320px. `/buy/programs` scrolled sideways to 779px at 320px (a screen-reader label escaping its table's scroller); `.scroll-x` now contains it, and the page is in the phone suite |
+| 17 | Done | Operations › Settings › Mortgage rate: the current rate and its age, the Friday job's last run, and a form to record it by hand (1 to 20%, no future dates); Today's stale-rate item links there |
+| 20 | Done | "Take off the list" asks in place: Sold, They passed, Withdrawn, or a typed reason |
+| 21 | Done | A held Advocacy moment has Reopen, which hands it back to its window (a reopened ask past its window reads "Window passed") |
+| 24 | Done | The whole Relationships row opens the panel; the overdue and quiet chips count within the other filters already set |
+| 38 | Partly | The unused `_s` is gone and lint is clean. `.sr-only` already exists in `rift.css` (the audit was wrong about that) |
 
 ---
 

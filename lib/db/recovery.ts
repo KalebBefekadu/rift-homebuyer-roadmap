@@ -164,7 +164,12 @@ export async function abandoned(minHoursQuiet = 2, maxAgeDays = 30): Promise<DbR
         sortAt: Date.parse(s.lastAt),
       })),
     ];
-    return done(all.sort((a, b) => b.sortAt - a.sortAt).map(({ sortAt: _s, ...rest }) => rest));
+    /* sortAt is for ordering only and does not leave this function. */
+    return done(all.sort((a, b) => b.sortAt - a.sortAt).map((row) => {
+      const { sortAt, ...rest } = row;
+      void sortAt;
+      return rest;
+    }));
   } catch (e) {
     return failed(e);
   }

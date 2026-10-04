@@ -100,10 +100,12 @@ export default async function ClientsPage({
 
   const people = sortPeople(narrowPeople(everyone, contacted, narrowing), contacted, sort);
   /* What the two quick chips count: people still being worked. A closed client
-     with no recent call is finished, not neglected. */
+     with no recent call is finished, not neglected. Each count keeps the other
+     filters already set, so "3 overdue" beside a stage filter is what pressing
+     it will show, not a number for the whole book. */
   const working = everyone.filter((p) => !isTerminal(p.stage) && !p.archivedAt);
-  const overdue = narrowPeople(working, contacted, { stage: "any", next: "overdue", contact: "any" }).length;
-  const quiet = narrowPeople(working, contacted, { stage: "any", next: "any", contact: "quiet" }).length;
+  const overdue = narrowPeople(working, contacted, { ...narrowing, next: "overdue" }).length;
+  const quiet = narrowPeople(working, contacted, { ...narrowing, contact: "quiet" }).length;
   const filtered = narrowing.stage !== "any" || narrowing.next !== "any" || narrowing.contact !== "any" || status !== "all" || side !== "all" || searching;
 
   /* A failed or skipped read is not an empty book of business.

@@ -322,7 +322,11 @@
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl-hov tbody tr { transition: background .1s; }
 .tbl-hov tbody tr:hover { background: var(--canvas); }
-.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* position: relative so the scroller is the containing block for anything
+   absolutely positioned inside it. Without it a .sr-only label in a table
+   header escaped the scroller and widened the whole page: /buy/programs
+   scrolled sideways to 779px on a 320px phone. */
+.scroll-x { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .num-c { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------------- meter ---------------- */

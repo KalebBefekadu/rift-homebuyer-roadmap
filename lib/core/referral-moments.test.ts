@@ -184,7 +184,7 @@ describe("the queue", () => {
 });
 
 describe("a recorded decision is the answer", () => {
-  const states: MomentState[] = ["sent", "acted", "declined", "held", "waiting", "due"];
+  const states: MomentState[] = ["sent", "acted", "declined", "held"];
 
   it("does not quietly reopen anything a human has decided", () => {
     for (const state of states) {
@@ -192,6 +192,15 @@ describe("a recorded decision is the answer", () => {
       const l = life({ stage: "Closed", closedOn: "2026-01-01", mood: "good" });
       expect(find(l, "closing_day", rec, at("2026-02-01")).state).toBe(state);
     }
+  });
+
+  /* Reopen on a held moment records "due". That hands the moment back to
+     its window rather than pinning "Ask now" on it for good. */
+  it("hands a reopened moment back to its window", () => {
+    const rec: RecordedMoment[] = [{ momentId: "closing_day", occurrence: 0, state: "due" }];
+    const l = life({ stage: "Closed", closedOn: "2026-01-01", mood: "good" });
+    expect(find(l, "closing_day", rec, at("2026-01-05")).state).toBe("due");
+    expect(find(l, "closing_day", rec, at("2026-03-01")).state).toBe("passed");
   });
 
   it("lets only a due moment be asked, whatever was recorded around it", () => {

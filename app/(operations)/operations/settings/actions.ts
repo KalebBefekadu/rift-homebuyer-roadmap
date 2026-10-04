@@ -8,6 +8,9 @@ import { askBrevoAboutSender } from "@/lib/db/sender";
 import type { BusinessRules } from "@/lib/core/settings";
 import { profileChanges, PROFILE_FIELDS, type ProfileField } from "@/lib/core/profile";
 import type { SenderVerdict } from "@/lib/core/setup";
+import { recordRate } from "@/lib/db/rates";
+import { PMMS_SOURCE } from "@/lib/core/pmms";
+import { georgiaDay } from "@/lib/core/day";
 
 /**
  * Settings, written.
@@ -105,4 +108,29 @@ export async function checkEmailSender(): Promise<{ ok: true; verdict: SenderVer
   const verdict = await askBrevoAboutSender();
   revalidatePath("/operations/settings");
   return { ok: true, verdict };
+}
+
+/**
+ * The week's mortgage rate, typed in.
+ *
+ * The Friday job reads it from Freddie Mac's file, and when that fails the rate
+ * goes on ageing visibly on every figure. Recording it used to mean a terminal
+ * command, which the Today item told the agent to run. The same guard as the
+ * job (recordRate refuses an implausible number), plus a date that is not in
+ * the future: a rate dated next week would read as fresh for a week longer
+ * than it is.
+ */
+export async function recordRateByHand(pct: number, asOf: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf) || asOf > georgiaDay()) {
+    return { ok: false as const, error: "The date must be the survey's date, not a future one" };
+  }
+
+  const r = await recordRate({ pct, asOf, source: `${PMMS_SOURCE} (entered by hand)`, sourceUrl: "https://www.freddiemac.com/pmms" });
+  revalidatePath("/operations", "layout");
+
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
 }

@@ -28,6 +28,13 @@
 .tbl tbody tr:hover { background: var(--sunk); }
 .tbl tr[aria-selected="true"] { background: var(--sunk); box-shadow: inset 3px 0 0 var(--ink); }
 .name { font-weight: 600; color: var(--ink); }
+/* The whole row opens the person, not only the name: the name's link is
+   stretched over its row, so the row is one target with one accessible name,
+   rather than a second, unlabelled click handler on the <tr>. */
+.tbl tbody tr { position: relative; cursor: pointer; }
+.name::after { content: ""; position: absolute; inset: 0; }
+.name:focus-visible { outline: none; }
+.tbl tbody tr:has(.name:focus-visible) { box-shadow: inset 0 0 0 2px var(--ink); }
 .sub { margin-top: 2px; font-size: 12px; color: var(--ink-4); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .nowrap { white-space: nowrap; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { HomeCard, type HomeCardData } from "@/components/rift/HomeCard";
 import { AddHome, type HomeInput } from "@/components/rift/AddHome";
 import type { SearchCriterion } from "@/lib/core/search";
@@ -45,14 +45,7 @@ export function Homes({ journeyId, homes, criteria, against }: {
         <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
           {live.map((h) => (
             <HomeCard key={h.id} home={h} criteria={criteria}>
-              <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} disabled={busy}
-                onClick={() => {
-                  const why = prompt("Why is it coming off the list? (sold, they passed, withdrawn)");
-                  if (!why?.trim()) return;
-                  void write("take-off", { journeyId, homeId: h.id, reason: why });
-                }}>
-                Take off the list
-              </button>
+              <TakeOff busy={busy} onTakeOff={(reason) => void write("take-off", { journeyId, homeId: h.id, reason })} />
             </HomeCard>
           ))}
         </div>
@@ -83,5 +76,48 @@ export function Homes({ journeyId, homes, criteria, against }: {
         </div>
       ) : null}
     </div>
+  );
+}
+
+const REASONS = ["Sold", "They passed", "Withdrawn"] as const;
+
+/**
+ * Why a home is coming off the list, asked in place.
+ *
+ * This was the browser's own prompt(): a box outside the page's design that
+ * blocks every tab, cannot be styled or read by a screen reader the way the
+ * rest of the page is, and is suppressed outright by some browsers after the
+ * first use. The three usual answers are one press; anything else is typed.
+ */
+function TakeOff({ busy, onTakeOff }: { busy: boolean; onTakeOff: (reason: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [other, setOther] = useState(false);
+  const id = useId();
+
+  if (!open) {
+    return <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} disabled={busy} onClick={() => setOpen(true)}>Take off the list</button>;
+  }
+  const close = () => { setOpen(false); setReason(""); setOther(false); };
+  const submit = (why: string) => { if (why.trim()) { onTakeOff(why.trim()); close(); } };
+  return (
+    <fieldset style={{ marginTop: 8, border: 0, padding: 0 }}>
+      <legend className="t-xs c-2" style={{ marginBottom: 6 }}>Why is it coming off the list?</legend>
+      <div className="row gap-2" style={{ flexWrap: "wrap" }}>
+        {REASONS.map((r) => (
+          <button key={r} type="button" className="btn btn-s btn-sm" disabled={busy} onClick={() => submit(r)}>{r}</button>
+        ))}
+        <button type="button" className="btn btn-g btn-sm" aria-pressed={other} onClick={() => setOther(!other)}>Another reason</button>
+        <button type="button" className="btn btn-g btn-sm" onClick={close}>Cancel</button>
+      </div>
+      {other ? (
+        <form className="row gap-2" style={{ marginTop: 6 }} onSubmit={(e) => { e.preventDefault(); submit(reason); }}>
+          <label className="sr-only" htmlFor={id}>Reason</label>
+          <input id={id} className="input input-sm" value={reason} maxLength={200} autoFocus
+            onChange={(e) => setReason(e.target.value)} placeholder="Under contract with another buyer" style={{ flex: 1, minWidth: 0 }} />
+          <button className="btn btn-p btn-sm" disabled={busy || !reason.trim()}>Take it off</button>
+        </form>
+      ) : null}
+    </fieldset>
   );
 }

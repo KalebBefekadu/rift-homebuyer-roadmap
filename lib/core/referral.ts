@@ -403,7 +403,11 @@ export function momentsFor(
       (r) => r.momentId === moment.id && r.occurrence === occurrence,
     );
 
-    if (decided) {
+    /* A recorded "waiting" or "due" is no decision: it is what Reopen writes
+       on a held moment, and it hands the moment back to its window, so a
+       reopened ask whose window has closed reads "Window passed" rather than
+       "Ask now" forever. Held could not be undone at all before this. */
+    if (decided && decided.state !== "due" && decided.state !== "waiting") {
       return { moment, state: decided.state, occurrence, blockedBecause: null, since: null, closesInDays: null };
     }
 

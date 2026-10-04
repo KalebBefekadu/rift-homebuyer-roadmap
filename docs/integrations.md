@@ -311,14 +311,16 @@ Snapshots rather than one mutable row, because a readout is an immutable record 
 somebody was told. When a plan later disagrees with their readout, "the rate moved from 6.5%
 on 19 Aug to 6.75% on 6 Sep" is the explanation — and it only exists if the old value was kept.
 
+**Recorded every Friday by `/api/rates/refresh`**, which reads Freddie Mac's published PMMS
+file (an authoritative CSV, not a scraped page) the morning after Thursday's release. A file
+it cannot parse leaves the existing rate in place to age visibly. It was a weekly command
+first, and it went ten weeks unrecorded. When the job fails, Today raises it and
+**Operations › Settings › Mortgage rate** records it by hand, with the same 1 to 20% guard
+and no future dates. The command still works:
+
 ```bash
 npm run rift:rate -- 6.72 --source "Freddie Mac PMMS" --as-of 2026-09-04
 ```
-
-**Deliberately a weekly command, not a scraper.** Free rate APIs are unreliable and their
-terms change, and a wrong rate pulled automatically is worse than a right one typed weekly
-because nobody is watching the automatic one. Replace the argument with a fetch when there is
-a licensed feed; everything else stays.
 
 ---
 

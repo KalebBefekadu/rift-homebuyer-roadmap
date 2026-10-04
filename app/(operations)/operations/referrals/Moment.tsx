@@ -135,7 +135,11 @@ export function MomentRow({
         <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("declined")}>
           They declined
         </button>
-        {state === "held" ? null : (
+        {state === "held" ? (
+          <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("due")}>
+            Reopen
+          </button>
+        ) : (
           <button type="button" className="btn btn-sm btn-g" disabled={pending} onClick={() => decide("held")}>
             Hold back
           </button>

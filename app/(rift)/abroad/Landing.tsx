@@ -10,6 +10,7 @@ import { Announce } from "@/components/rift/Live";
 import { translator, servedIn, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
 import { money } from "@/lib/core/compute";
+import { PhoneMenu } from "@/components/rift/site/SiteHeader";
 import {
   abroadReturns, statusById, STATUSES, ASSUMPTIONS,
   type AbroadInputs, type StatusId,
@@ -153,7 +154,17 @@ export function Landing({ initial, initialLocale, localePinned }: {
           <div className="row gap-2">
             <LocaleToggle locale={locale} onChange={setLocale} />
             <Link href="/buy" className="t-sm c-2 hide-sm" style={script}>{t("nav.domestic")}</Link>
-            <Link href={`/book?v=abroad&lang=${locale}`} className="btn btn-p btn-sm" style={script}>{t("nav.talk")}</Link>
+            {/* Below 400px the language toggle leaves no room for this beside
+                the menu, so there it moves into the menu, first. */}
+            <Link href={`/book?v=abroad&lang=${locale}`} className="btn btn-p btn-sm hide-xs" style={script}>{t("nav.talk")}</Link>
+            {/* The domestic link is hidden on a phone; this is how a phone
+                reaches it. "How it works" is in English, as it is lower down
+                this page: there is no reviewed Amharic for it yet. */}
+            <PhoneMenu style={script} links={[
+              { href: `/book?v=abroad&lang=${locale}`, label: t("nav.talk") },
+              { href: "/buy", label: t("nav.domestic") },
+              { href: "/abroad/how", label: "How it works" },
+            ]} />
           </div>
         </div>
         <Tibeb className="c-brand" height={8} style={{ opacity: 0.5 }} />

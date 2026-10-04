@@ -222,7 +222,7 @@ export function deskItems(input: DeskInput): DeskItem[] {
   }
 
   if (input.rate.stale) {
-    push({ key: "rate:stale", group: "attention", title: `The rate everyone is shown is ${input.rate.pct.toFixed(2)}%`, why: "Every monthly figure depends on it", owner: me, about: null, evidence: input.rate.age, due: null, next: "Record this week's rate with npm run rift:rate -- <rate>; there is no screen for it yet", href: null, tone: "warn", order: 8 });
+    push({ key: "rate:stale", group: "attention", title: `The rate everyone is shown is ${input.rate.pct.toFixed(2)}%`, why: "Every monthly figure depends on it", owner: me, about: null, evidence: input.rate.age, due: null, next: "Record this week's rate in Settings, or check why the Friday refresh failed", href: "/operations/settings#rate", tone: "warn", order: 8 });
   }
 
   for (const c of input.commitments) {

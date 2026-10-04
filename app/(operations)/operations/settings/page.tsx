@@ -18,6 +18,9 @@ import { PageHead, Section, Notice } from "../ui";
 import { signOut } from "../actions";
 import { Rules } from "./Rules";
 import { ProfileForm } from "./ProfileForm";
+import { RateForm } from "./RateForm";
+import { currentRate } from "@/lib/db/rates";
+import { georgiaDay } from "@/lib/core/day";
 import { Checklist, SetupRow, StateWord } from "./Checklist";
 import s from "./settings.module.css";
 
@@ -29,6 +32,7 @@ const NAV = [
   { id: "profile", label: "Profile" },
   { id: "rules", label: "Business rules" },
   { id: "programs", label: "Programs" },
+  { id: "rate", label: "Mortgage rate" },
   { id: "email", label: "Email and follow-ups" },
   { id: "integrations", label: "Integrations" },
   { id: "privacy", label: "Data and privacy" },
@@ -75,11 +79,12 @@ export default async function SettingsPage() {
   if (session.state === "signed-out") redirect("/operations/sign-in");
   const agent = session.agent;
 
-  const [rulesRead, profileRead, historyRead, jobsRead] = await Promise.all([
+  const [rulesRead, profileRead, historyRead, jobsRead, rate] = await Promise.all([
     readAgentRules(agent.agentId),
     agentProfile(agent.agentId),
     profileHistory(agent.agentId),
     jobsHealth().catch(() => null),
+    currentRate(),
   ]);
 
   const ruleData = rulesRead.ok && "data" in rulesRead ? rulesRead.data : null;
@@ -161,6 +166,31 @@ export default async function SettingsPage() {
                 text="Named against every program that is overdue, so the task has a person on it." />
               <JobRow job={job("program-check")} jobsKnown={Boolean(jobs)} title="Weekly program check"
                 text="Reads each program's official page on Mondays and flags the changed ones for you on Programs." />
+            </div>
+          </Section>
+
+          <Section id="rate" title="Mortgage rate" hint="The one assumption every monthly figure shares. Read from Freddie Mac's weekly survey on Fridays; record it here when that fails.">
+            <div className={s.card}>
+              <div className={s.row}>
+                <div className={s.rowHead}>
+                  <div style={{ minWidth: 0, flex: "1 1 300px" }}>
+                    <div className={s.rowTitle}>{rate.pct.toFixed(2)}%, {rate.freshness === "fresh" ? "current" : rate.freshness}</div>
+                    <p className={s.rowText}>{rate.label}.</p>
+                  </div>
+                  <div className={s.rowControl}>
+                    <span className={`${s.state} ${rate.freshness === "fresh" ? "c-pos" : "c-warn"}`}>
+                      {rate.freshness === "fresh" ? <Ico.checkCircle size={12} /> : <Ico.alert size={12} />}
+                      {rate.freshness === "fresh" ? "Fresh" : rate.freshness === "ageing" ? "Ageing" : "Stale"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <JobRow job={job("rates-refresh")} jobsKnown={Boolean(jobs)} title="Weekly rate refresh"
+                text="Reads Freddie Mac's published survey file on Friday mornings, the day after it comes out." />
+              <div className={s.row}>
+                <div className={s.rowTitle} style={{ marginBottom: 8 }}>Record it by hand</div>
+                <RateForm today={georgiaDay()} />
+              </div>
             </div>
           </Section>
 

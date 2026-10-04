@@ -14,7 +14,7 @@ import { test, expect, devices } from "@playwright/test";
 test.use({ ...devices["Pixel 7"] });
 
 const PAGES = [
-  "/", "/buy", "/sell", "/abroad", "/privacy", "/book",
+  "/", "/buy", "/sell", "/abroad", "/privacy", "/book", "/buy/programs",
   "/buy/cash-to-close?p=350000&d=3.5&c=Fulton",
   "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5",
 ];
@@ -84,14 +84,18 @@ test.describe("a sentence stays a sentence", () => {
           if (style.display !== "flex" || style.flexDirection.startsWith("column")) continue;
           if (style.flexWrap === "wrap") continue;
 
-          const kids = [...el.children] as HTMLElement[];
+          /* What is on screen: a child hidden at this width, or the inside
+             of a closed menu, is not part of any line a reader sees. With
+             textContent the header's hidden links and its closed phone menu
+             read as one long run-on row. */
+          const kids = ([...el.children] as HTMLElement[]).filter((k) => k.getBoundingClientRect().width > 0);
           if (kids.length < 3) continue;
 
           /* A sentence cut into pieces: several siblings on one line, each
              holding a fragment that ends mid-thought. A row of buttons or
              stats is not this: its children are short BECAUSE they are
              labels, and they do not run on into each other. */
-          const texts = kids.map((k) => (k.textContent ?? "").trim());
+          const texts = kids.map((k) => (k.innerText ?? "").trim());
           const wordy = texts.filter((t) => t.split(/\s+/).length >= 3).length;
           const endsOpen = texts.filter((t) => t && !/[.!?:]$/.test(t) && /\s/.test(t)).length;
           if (wordy >= 2 && endsOpen >= 2 && texts.join(" ").length > 80) {
@@ -135,11 +139,14 @@ test.describe("a phone can get from one value to another", () => {
   /* The header hides its links below 720px. For a while nothing replaced
      them, so on a phone the only way from one side's value to another was
      the footer. Each side's menu has to reach the other two. */
+  /* By where the links go, not their words: the abroad landing's menu is in
+     whichever language the reader chose. Someone buying from abroad is not
+     selling here, so that menu reaches buying and how it works. */
   for (const [path, others] of [
-    ["/", ["Buying", "Selling", "From abroad"]],
-    ["/buy", ["Selling", "From abroad"]],
-    ["/sell", ["Buying", "From abroad"]],
-    ["/abroad", ["Buying", "Selling"]],
+    ["/", ["/buy", "/sell", "/abroad"]],
+    ["/buy", ["/sell", "/abroad"]],
+    ["/sell", ["/buy", "/abroad"]],
+    ["/abroad", ["/buy", "/abroad/how"]],
   ] as const) {
     test(`${path} has a menu that reaches the other sides`, async ({ page }) => {
       await page.goto(path);
@@ -149,7 +156,7 @@ test.describe("a phone can get from one value to another", () => {
       expect(box!.height, "the menu button is too small to hit").toBeGreaterThanOrEqual(40);
       await menu.click();
       const panel = page.locator(".site-menu-panel");
-      for (const name of others) await expect(panel.getByRole("link", { name, exact: true })).toBeVisible();
+      for (const href of others) await expect(panel.locator(`a[href="${href}"]`)).toBeVisible();
     });
   }
 });
