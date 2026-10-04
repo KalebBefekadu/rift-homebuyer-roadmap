@@ -57,7 +57,7 @@ Companion files in this folder:
 
 ---
 
-## 1. Where Rift stands (28 September 2026)
+## 1. Where Rift stands (4 October 2026)
 
 Live at https://rift-homebuyer-roadmap.vercel.app. Code at
 https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
@@ -66,10 +66,10 @@ https://github.com/KalebBefekadu/rift-homebuyer-roadmap.
 
 | Area | What exists |
 | --- | --- |
-| Lead side | Front door; buyer, seller and abroad landings, questionnaires and readouts (computed on the server, shareable, dated snapshots); Georgia programs list; how-it-works pages; unclaimed money page; public offer form; booking request; privacy page with "delete all of it"; first-touch attribution; answer-free telemetry; follow-up emails with consent and stop rules |
+| Lead side | Front door; buyer, seller and abroad landings; the values, each a few questions and an answer computed on the server, and saved plans (D31; v4 readouts are kept for people who have one); a phone menu on every public page; Georgia programs list; how-it-works pages; unclaimed money page; public offer form; booking request; privacy page with "delete all of it"; first-touch attribution; answer-free telemetry; follow-up emails with consent and stop rules |
 | Client side | Email sign-in by invitation; household members with scopes; the buyer's Today, search priorities, homes and reactions, showings answers, offer answers, checked contract dates, "You own your home" after a confirmed closing, and a printable records page |
 | Operations | A sidebar and quick switcher on every page; Today in five groups with new leads and recent activity, snooze, pin and delegate; Relationships with a detail panel; person records with plan, decisions, agreement, journeys; the journey workspace (overview, search, homes and showings, offers and documents, contract, household, history); Transactions; Offers; Calendar; Outbox; Advocacy; Programs; Reports; Questions, where the values' wording is edited and versioned and Kaleb's own questions are added (D37); settings; morning summary email |
-| Platform | Supabase with row-level security on every table, history-only tables, idempotent writes, job-run tracking and health checks, release switch `RIFT_BUYER_SEARCH`, Brevo email, Sentry |
+| Platform | Supabase with row-level security on every table, history-only tables, idempotent writes, job-run tracking and health checks, release switch `RIFT_BUYER_SEARCH`, Brevo email, Sentry; deploys only through `npm run deploy` after CI, and a migration ledger the health check compares with the code (D39) |
 
 Blueprint v4 packages built: W00 to W13. W10 (money v2) and W13 (seller journey and campaigns)
 were built 28 Sep (D27 to D29). Details and dates: `docs/handoff.md` §8.2 and §14 below.
@@ -85,7 +85,11 @@ were built 28 Sep (D27 to D29). Details and dates: `docs/handoff.md` §8.2 and �
   values, and the Georgia programs need rethinking (§4, §5, §6).
 - Operations needs a major UI and UX redesign (§8).
 
-### Not built, in one list (28 Sep 2026)
+Operations was rebuilt page by page on 2 Oct (D38 lists the defaults chosen), and a platform
+audit on 3 Oct listed what is left by priority: `docs/audit/platform-2026-10.md`, with a
+progress table at the top.
+
+### Not built, in one list (4 Oct 2026)
 
 Built since 24 Sep, each with its status line in the section named: the design rules (§4), the lead
 side as separate values (§5), the page-by-page public changes (§5.6 to §5.9), the assistance
@@ -94,6 +98,11 @@ redesign (§8), money v2, the client money area and the side-by-side comparison 
 - Cal.com (§10): built as an adapter, waiting for the key.
 - Discovery research for more assistance programs (§6 status).
 - The pilot itself: 3 to 5 real buyers, added by hand (§13).
+- The client side's design pass (§7.2).
+- Email for real clients: a custom sending domain, and a mail server for Supabase's sign-in
+  links (audit #5).
+- What only Kaleb or the broker can settle: the broker's written rules and retention, what the
+  public pages must show of the licence and brokerage, the Amharic review, D38's defaults.
 
 ---
 

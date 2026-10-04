@@ -100,9 +100,9 @@ export interface Step {
   sell?: Version;
   abroad?: Version;
   /**
-   * The step only carries the plan's link, which the save email already
-   * carried. Not sent to somebody whose save email is recorded as sent: it
-   * would be the same link, again, within the day.
+   * The step, in its plan words, only carries the plan's link, which the save
+   * email already carried. Not sent to somebody whose save email is recorded
+   * as sent: it would be the same link, again, within a day.
    */
   coveredBySaveEmail?: true;
 }
@@ -224,7 +224,13 @@ export const SEQUENCES: Sequence[] = [
     steps: [
       { id: "l1", day: 0, channel: "email", auto: true, says: "Your readout: keep this, it stays live", gives: "The readout itself, permanently linked.", body: "Here are your numbers. Nothing needed from you; this is yours to keep and come back to.", plan: { says: "Your saved plan: keep this, it stays yours", body: "Your plan is saved as you left it. Nothing needed from you; it is yours to keep and come back to." }, coveredBySaveEmail: true },
       { id: "l2", day: 14, channel: "email", auto: true, says: "The savings target that gets you there fastest", gives: "A monthly figure derived from their own gap and their own stated date.", body: "The one figure that decides how long this takes, and what it would take to shorten it.", sell: { skip: SELLER_NO_TARGET }, abroad: { skip: ABROAD_NO_TARGET } },
-      { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check: what changed in your county", gives: "Local price and programme movement, recomputed against their saved position.", body: "A quarter on, here is what has changed in your county and what it does to your position." },
+      /* This promised "what has changed in your county" and carried no county
+         figure at all: nothing in the product reads local prices. It says what
+         the plan can actually do, which is work their numbers out again with
+         this quarter's rate and programs. */
+      { id: "l3", day: 90, channel: "email", auto: true, says: "Quarter check: your numbers with today's rate and programs", gives: "A prompt to work their numbers out again with this quarter's rate and program rules. No local market figures: nothing here reads them.", body: "A quarter on, the mortgage rate and the Georgia programs your numbers rest on may have moved. Open your plan to work them out again with today's figures.",
+        sell: { says: "Quarter check: what selling would leave you now", body: "A quarter on, what you owe and what selling costs in Georgia may have moved. Open your plan to work out what selling would leave you again." },
+        abroad: { says: "Quarter check: your costs with today's rate", body: "A quarter on, the mortgage rate your costs rest on may have moved. Open your plan to work out what buying would cost you again." } },
       { id: "l4", day: 180, channel: "email", auto: true, says: "Half-year: your gap, recomputed", gives: "The single figure they cared about, updated, with no ask attached.", body: "Half a year on, your gap recomputed. No ask attached to this one.",
         sell: { says: "Half-year: what selling would leave you, recomputed", body: "Half a year on, your numbers may have moved. Open your plan to work out what selling would leave you again. No ask attached to this one." },
         abroad: { says: "Half-year: your costs, recomputed", body: "Half a year on, your numbers may have moved. Open your plan to work out what buying would cost you again. No ask attached to this one." } },
@@ -236,7 +242,10 @@ export const SEQUENCES: Sequence[] = [
     why: "Incomplete assessment, no contact detail, or explicitly not now. Two touches, both useful, then stop. A list you cannot stop sending to is not a list, it is a liability.",
     ends: "Stops. Re-entry only if they come back on their own.",
     steps: [
-      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through. Here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them.", plan: { says: "Your plan is saved, whenever it becomes useful", body: "You saved a plan with us, and it is still here exactly as you left it." } },
+      { id: "d1", day: 1, channel: "email", auto: true, says: "You were most of the way through. Here is what you had so far", gives: "Their partial answers, resumable in one tap. Recovery, not pursuit.", body: "Your answers are still here, exactly where you left them.", plan: { says: "Your plan is saved, whenever it becomes useful", body: "You saved a plan with us, and it is still here exactly as you left it." },
+        /* For a plan this is the save email again, a day later. The partial-
+           answers version for somebody who stopped part way is still sent. */
+        coveredBySaveEmail: true },
       { id: "d2", day: 30, channel: "email", auto: true, says: "Still here if it becomes useful. Nothing needed.", gives: "A standing door and an explicit end. Says outright that this is the last one.", body: "Still here if this becomes useful. Nothing is needed from you." },
     ],
   },

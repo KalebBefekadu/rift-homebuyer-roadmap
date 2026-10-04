@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { withTimeout, READ_DEADLINE_MS } from "@/lib/core/timeout";
+import { withTimeout, READ_DEADLINE_MS, COLD_START_MS } from "@/lib/core/timeout";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 /**
@@ -91,9 +91,7 @@ let missingUntil = 0;
 
 const MISSING_RETRY_MS = 10_000;
 
-/** The second try's deadline. Long enough to absorb a cold connection, short
-    enough to stay well inside the six-second write deadline behind it. */
-const COLD_START_MS = 3_500;
+
 
 export async function currentAgentId(): Promise<string | null> {
   if (agentId) return agentId;

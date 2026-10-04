@@ -252,14 +252,15 @@ describe("the copy for a saved plan", () => {
 });
 
 describe("the steps a save email covers", () => {
-  it("are the day-zero emails that only carry the plan's link, and no others", () => {
+  it("are the emails in the first day that only carry the plan's link, and no others", () => {
     /* The save email carries the link the moment they save. A day-zero touch
-       is the same link again within the day; nothing later is. */
+       is the same link again within the day, and so is the dormant day-one
+       touch in its plan words ("your plan is saved"); nothing later is. */
     const covered = SEQUENCES.flatMap((s) => s.steps).filter((x) => x.coveredBySaveEmail).map((x) => x.id);
-    expect(covered).toEqual(["n1", "s1", "l1"]);
+    expect(covered).toEqual(["n1", "s1", "l1", "d1"]);
     for (const s of SEQUENCES.flatMap((q) => q.steps)) {
       if (s.coveredBySaveEmail) {
-        expect(s.day, s.id).toBe(0);
+        expect(s.day, s.id).toBeLessThanOrEqual(1);
         expect(s.channel, s.id).toBe("email");
         expect(s.plan, `${s.id} needs plan copy: the covered touch is the plan's`).toBeDefined();
       }

@@ -116,7 +116,16 @@ export async function sendSavedPlan(p: SavedPlanEmail): Promise<SendResult> {
 export async function sendTouch(t: TouchEmail): Promise<SendResult> {
   const built = buildTouch(t);
   if (!built) {
-    return { ok: true, skipped: true, reason: "no readout figures for this lead, so nothing worth sending" };
+    /* A readout with figures but no cash to close is a seller's, from before
+       plans replaced readouts (D31). These touches quote a buyer's figures, so
+       it is skipped; "no figures" would be untrue of somebody who has them. */
+    const sellerReadout = Boolean(t.figures && Object.keys(t.figures).length);
+    return {
+      ok: true, skipped: true,
+      reason: sellerReadout
+        ? "a seller readout from before saved plans: this email quotes a buyer's figures, so it was not sent"
+        : "no readout figures for this lead, so nothing worth sending",
+    };
   }
   return send({
     to: [{ email: t.to, ...(t.name ? { name: t.name } : {}) }],

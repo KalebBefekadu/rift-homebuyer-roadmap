@@ -56,6 +56,15 @@ export async function withTimeout<T>(
 export const READ_DEADLINE_MS = 2_000;
 
 /**
+ * The agent lookup's second try (lib/db/service.ts). Long enough to absorb a
+ * cold connection, short enough to stay well inside the six-second write
+ * deadline behind it. Here rather than beside its one caller so a test can
+ * shorten it: one that waited it out for real failed whenever the machine was
+ * busy.
+ */
+export const COLD_START_MS = 3_500;
+
+/**
  * Longer than a read, because there is no fallback worth rushing to and the
  * work may genuinely be slow, but bounded, because an unbounded write is a
  * held-open function rather than a patient one.

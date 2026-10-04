@@ -35,6 +35,7 @@ vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: vi.fn() }));
 vi.mock("@/lib/core/timeout", async (orig) => ({
   ...(await orig<typeof import("@/lib/core/timeout")>()),
   READ_DEADLINE_MS: 20,
+  COLD_START_MS: 40,
 }));
 
 async function fresh() {
@@ -60,18 +61,13 @@ describe("currentAgentId on a cold instance", () => {
        rather than answer "no agent" from memory for ten seconds. */
     const svc = await fresh();
     replies = ["hang", "hang"];
-    // The second attempt has a longer deadline; cap the test's patience.
-    const first = await Promise.race([
-      svc.currentAgentId(),
-      new Promise<string | null>((r) => setTimeout(() => r("still waiting"), 4500)),
-    ]);
-    expect(first === null || first === "still waiting").toBe(true);
+    expect(await svc.currentAgentId()).toBeNull();
 
     replies = ["ok"];
     const before = calls;
     expect(await svc.currentAgentId()).toBe("agent-1");
     expect(calls).toBeGreaterThan(before);
-  }, 12_000);
+  });
 
   it("never remembers a transport error as absence", async () => {
     const svc = await fresh();

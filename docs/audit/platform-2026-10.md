@@ -47,6 +47,12 @@ Operations, data, security, reliability, engineering, compliance and growth.
 | 20 | Done | "Take off the list" asks in place: Sold, They passed, Withdrawn, or a typed reason |
 | 21 | Done | A held Advocacy moment has Reopen, which hands it back to its window (a reopened ask past its window reads "Window passed") |
 | 24 | Done | The whole Relationships row opens the panel; the overdue and quiet chips count within the other filters already set |
+| 25 | Done | The quarterly email promises what the plan can do (work the numbers out again with this quarter's rate and programs), not county news it never carried; seller and abroad words of their own |
+| 26 | Done | The dormant day-one email, in its saved-plan words, is skipped when the save email went out; the partial-answers version still goes |
+| 27 | Kept | Abroad buyers are buyers: `rift_leads.side` is buy or sell, Operations filters on it, and the emails take the audience from the plan. Adding a third side would change every side filter for no difference a reader sees |
+| 28 | Done | A pre-D31 seller readout is skipped with a true reason instead of "no readout figures" |
+| 34 | Done | `agent-lookup` waited out a real 3.5 s deadline; `COLD_START_MS` moved to `lib/core/timeout.ts` so the test shortens it (now 0.2 s). `query-shapes` has a 30 s budget |
+| 40 | Done | Blueprint §1 brought to 4 Oct |
 | 38 | Partly | The unused `_s` is gone and lint is clean. `.sr-only` already exists in `rift.css` (the audit was wrong about that) |
 
 ---
