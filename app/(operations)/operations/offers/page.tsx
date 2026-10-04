@@ -97,7 +97,7 @@ export default async function OffersPage({ searchParams }: { searchParams: Promi
             actions={<Tabs label="Which offers" current={view} items={VIEWS.map((v) => ({ id: v.id, label: v.label, href: href(v.id), count: v.id === "all" ? counts!.all : counts![v.id] }))} />}
           >
             {view === "inbound" ? (
-              board.inbound.length ? <InboundCards offers={board.inbound} now={now} /> : (
+              board.inbound.length ? <InboundCards offers={board.inbound} now={now} answeredOf={new Map(board.items.filter((i) => i.side === "inbound").map((i) => [i.key.slice(3), i.stands.word === "Replied"]))} /> : (
                 <Empty title="Nothing has come in through the form yet">
                   The page works with no account and no login, so the way this fills up is somebody sending the link to an agent who is writing an offer today.
                 </Empty>

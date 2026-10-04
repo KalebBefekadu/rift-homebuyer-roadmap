@@ -9,6 +9,7 @@ import type { InboundOffer } from "@/lib/db/offer-intake";
 import type { Candidates } from "@/lib/core/offer-extract";
 import k from "../_business/kit.module.css";
 import s from "./offers.module.css";
+import { Answer } from "./Answer";
 
 /** What the PDF reader found, in the words a person reads rather than the field names it stores. */
 const FIELD_LABEL: Record<keyof Candidates, string> = {
@@ -27,7 +28,12 @@ const said = (field: string, v: string) =>
  * or one of the two people looking is being told something the other is not),
  * the paperwork that is missing, and where the PDF disagrees with the boxes.
  */
-export function InboundCards({ offers, now }: { offers: InboundOffer[]; now: Date }) {
+export function InboundCards({ offers, now, answeredOf }: {
+  offers: InboundOffer[];
+  now: Date;
+  /** What the board decided for each offer: recorded, or inferred from the lead's reply. */
+  answeredOf: Map<string, boolean>;
+}) {
   return (
     <div className={s.cards}>
       {offers.map((o) => {
@@ -79,6 +85,16 @@ export function InboundCards({ offers, now }: { offers: InboundOffer[]; now: Dat
             ) : null}
 
             {o.note ? <p className={s.note}>&ldquo;{o.note}&rdquo;</p> : null}
+
+            {o.answerable ? (
+              <Answer
+                offerId={o.id}
+                answered={answeredOf.get(o.id) ?? false}
+                respondBy={o.answer?.respondBy ?? null}
+                inferred={!o.answer}
+                by={o.answer?.by ?? null}
+              />
+            ) : null}
 
             <div className={s.contact}>
               {o.email ? <a href={`mailto:${o.email}`} className={k.link}>{o.email}</a> : null}

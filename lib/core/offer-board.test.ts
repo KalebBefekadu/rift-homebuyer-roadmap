@@ -99,6 +99,19 @@ describe("an offer that came in through the form", () => {
     financing: "va", financingOther: null, at: "2026-09-27T12:00:00Z", submitterLeadId: "l5", repliedAt: null, listing: null, ...over,
   });
 
+  it("takes a recorded answer over the lead's reply, either way", () => {
+    /* Answered by phone: the lead has no reply on record. */
+    expect(inboundItem(inbound({ answer: { answered: true, respondBy: null } })).stands.word).toBe("Replied");
+    /* An unrelated reply to the lead does not answer the offer once the agent says it does not. */
+    expect(inboundItem(inbound({ repliedAt: "2026-09-28T12:00:00Z", answer: { answered: false, respondBy: null } })).stands.word).toBe("Needs a reply");
+    expect(inboundItem(inbound({ repliedAt: "2026-09-28T12:00:00Z" })).stands.word).toBe("Replied");
+  });
+
+  it("carries the sender's deadline while it is unanswered, and drops it once answered", () => {
+    expect(inboundItem(inbound({ answer: { answered: false, respondBy: "2026-09-30" } })).by).toEqual({ day: "2026-09-30", basis: "the sender's deadline, as you recorded it" });
+    expect(inboundItem(inbound({ answer: { answered: true, respondBy: "2026-09-30" } })).by).toBeNull();
+  });
+
   it("is labelled with the loan, not the code", () => {
     expect(inboundItem(inbound()).terms).toBe("$380,000 · VA");
     expect(inboundItem(inbound({ financing: "other", financingOther: "Seller financing" })).terms).toContain("Other: Seller financing");

@@ -124,12 +124,26 @@ export function businessFunnel(i: {
   attributions: AttributionRow[];
   /** Sessions that finished at least one value in the period, or null when that read failed. */
   finishedOne: number | null;
+  /**
+   * Sessions seen using a value in the period (from the value events). One
+   * with no recorded first visit at all is still a visitor: the first-visit
+   * record is written by the landing pages, and a session that opened a value
+   * from a shared link never passed one. Counting only first visits made the
+   * step below it larger than the step above (63 finished a value, 27 visits).
+   */
+  sessionsSeen?: string[];
   days: Period;
   now: Date;
 }): BusinessFunnel {
   const sinceDay = georgiaDay(i.now, -i.days);
   const cohort = i.leads.filter((l) => arrived(l) && inPeriod(l.createdAt, sinceDay));
-  const visitors = new Set(i.attributions.filter((a) => inPeriod(a.firstAt, sinceDay)).map((a) => a.sessionId)).size;
+  const recorded = new Set(i.attributions.map((a) => a.sessionId));
+  /* A session whose first visit WAS recorded, before this period, is not a
+     visitor of this period, so only sessions with no record are added. */
+  const visitors = new Set([
+    ...i.attributions.filter((a) => inPeriod(a.firstAt, sinceDay)).map((a) => a.sessionId),
+    ...(i.sessionsSeen ?? []).filter((sid) => !recorded.has(sid)),
+  ]).size;
   const clients = cohort.filter((l) => l.stage !== null);
   const closed = cohort.filter((l) => l.stage === "Closed");
 
@@ -137,7 +151,7 @@ export function businessFunnel(i: {
     n === null || of === null || of === 0 || n > of ? null : { pct: Math.round((n / of) * 100), of: label };
 
   const steps: FunnelStep[] = [
-    { id: "visitors", label: "Visitors", count: visitors, counts: "Browser sessions whose first visit was in this period.", rate: null },
+    { id: "visitors", label: "Visitors", count: visitors, counts: "Browser sessions whose first visit was in this period, including sessions that used a value with no first visit recorded.", rate: null },
     { id: "finished", label: "Finished a value", count: i.finishedOne, counts: "Sessions that answered at least one value in this period.", rate: rate(i.finishedOne, visitors, "visitors") },
     { id: "leads", label: "Leads", count: cohort.length, counts: "People who left a way to reach them in this period, from the site or a referral.", rate: rate(cohort.length, i.finishedOne ?? visitors, i.finishedOne === null ? "visitors" : "who finished a value") },
     { id: "clients", label: "Taken on", count: clients.length, counts: "Of those leads, the ones you have since given a stage: you are working with them.", rate: rate(clients.length, cohort.length, "leads") },

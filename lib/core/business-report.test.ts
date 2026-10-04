@@ -44,6 +44,13 @@ describe("the funnel", () => {
     expect(by).toEqual({ visitors: 5, finished: 5, leads: 3, clients: 2, closed: 1 });
   });
 
+  it("counts a session that used a value with no first visit recorded, and not one recorded before the period", () => {
+    /* s-new opened a value from a shared link and never passed a landing
+       page; s-d's first visit was recorded in May, before the window. */
+    const f = businessFunnel({ leads, attributions, finishedOne: 5, sessionsSeen: ["s-a", "s-new", "s-d"], days: 90, now: NOW });
+    expect(f.steps.find((s) => s.id === "visitors")!.count).toBe(6);
+  });
+
   it("leaves a lead added by hand out of the funnel and says how many there were", () => {
     expect(businessFunnel({ leads, attributions, finishedOne: 5, days: 90, now: NOW }).addedByHand).toBe(1);
   });

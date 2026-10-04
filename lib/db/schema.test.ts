@@ -640,6 +640,19 @@ describe("offer PDFs and the AI record (Blueprint v5 §5.9, §10.2)", () => {
     await rejects(c, "insert into rift_ai_usage (workflow, model, prompt_version, outcome) values ('chat','claude-opus-5','offer-extract-test','ok')", [], /check/);
   });
 
+  test("whether an inbound offer was answered is history: a new row, never an edit", async (c) => {
+    const { rows } = await c.query(`${offer("", [])} returning id`);
+    const { rows: a } = await c.query(
+      "insert into rift_offer_answers (agent_id, offer_id, answered, respond_by, actor_label) values ($1, $2, false, '2026-10-10', 'Kaleb') returning id",
+      [AGENT, rows[0].id]);
+    await rejects(c, "update rift_offer_answers set answered = true where id = $1", [a[0].id], /history/);
+    await rejects(c, "insert into rift_offer_answers (agent_id, offer_id, answered, actor_label) values ($1, $2, true, '')", [AGENT, rows[0].id], /check/);
+    /* Removing the offer removes what was recorded about it. */
+    await c.query("delete from rift_offers where id = $1", [rows[0].id]);
+    const { rows: left } = await c.query("select count(*)::int as n from rift_offer_answers where offer_id = $1", [rows[0].id]);
+    expect(left[0].n).toBe(0);
+  });
+
   test("'other' financing is described only when it is other, and due diligence is 0 to 60 days", async (c) => {
     await c.query(offer("financing_other", ["other", "Seller financing"]), ["other", "Seller financing"]);
     await rejects(c, offer("financing_other", ["cash", "Seller financing"]), ["cash", "Seller financing"], /financing_other_said/);

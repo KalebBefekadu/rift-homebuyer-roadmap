@@ -44,7 +44,8 @@ export async function BusinessView({ days, agentId, now }: { days: Period; agent
   const conv = convRead.ok && "data" in convRead ? convRead.data : null;
   const history = finished.ok && "data" in finished ? outcomesFrom(finished.data) : [];
 
-  const funnel = businessFunnel({ leads, attributions, finishedOne: ladder ? ladder.finishedOne : null, days, now });
+  const sessionsSeen = ladderRead.ok && "data" in ladderRead ? [...new Set(ladderRead.data.map((e) => e.session))] : [];
+  const funnel = businessFunnel({ leads, attributions, finishedOne: ladder ? ladder.finishedOne : null, sessionsSeen, days, now });
   const sources = bySource({ leads, attributions, days, now });
   const commissionPct = rules.rules.commissionPct.value;
   const assumed = rules.undecided.includes("commissionPct");

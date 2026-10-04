@@ -144,6 +144,7 @@ export async function offerBoard(agentFirst: string): Promise<DbResult<Board>> {
         id: o.id, address: o.address, from: o.from, firm: o.firm, price: o.price, financing: o.financing, financingOther: o.financingOther,
         at: o.at, submitterLeadId: o.submitterLeadId,
         repliedAt: o.submitterLeadId ? ((leadOf.get(o.submitterLeadId)?.human_replied_at as string | null) ?? null) : null,
+        answer: o.answer,
         listing: o.address ? listings.get(streetOf(o.address)) ?? null : null,
       }));
     }

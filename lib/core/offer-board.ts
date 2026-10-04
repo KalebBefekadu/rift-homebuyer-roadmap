@@ -211,6 +211,8 @@ export interface InboundInput {
   submitterLeadId: string | null;
   /** When the agent last answered the person who sent it, if anybody has. */
   repliedAt: string | null;
+  /** What the agent recorded on the offer itself, which wins over `repliedAt`. */
+  answer?: { answered: boolean; respondBy: string | null } | null;
   listing: { person: string; href: string } | null;
 }
 
@@ -223,7 +225,7 @@ export interface InboundInput {
 export const answered = (at: string, repliedAt: string | null) => repliedAt !== null && repliedAt >= at;
 
 export function inboundItem(o: InboundInput): OfferItem {
-  const done = answered(o.at, o.repliedAt);
+  const done = o.answer ? o.answer.answered : answered(o.at, o.repliedAt);
   return {
     key: `in:${o.id}`,
     side: "inbound",
@@ -237,7 +239,7 @@ export function inboundItem(o: InboundInput): OfferItem {
       ? "You have answered them. Nothing is waiting on you."
       : `Reply to ${o.from.split(",")[0]}: they were told their offer was delivered.`,
     waitingOn: done ? "other side" : "you",
-    by: null,
+    by: !done && o.answer?.respondBy ? { day: o.answer.respondBy, basis: "the sender's deadline, as you recorded it" } : null,
     since: o.at,
     onListing: o.listing,
   };

@@ -6,6 +6,7 @@ import { captureLead } from "./leads";
 import type { Submission } from "@/lib/core/offer-intake";
 import type { Candidates } from "@/lib/core/offer-extract";
 import { attachOfferPdf } from "./offer-read";
+import { offerAnswers, type OfferAnswer } from "./offer-answers";
 import { captureOpError } from "@/lib/monitoring/capture";
 
 /**
@@ -175,6 +176,14 @@ export interface InboundOffer {
   pdfUrl: string | null;
   /** What the automatic read proposed, to set beside what was sent. */
   read: Candidates | null;
+  /**
+   * Whether the agent recorded it answered, and by when it must be. Null
+   * when nothing is recorded (or the table is not migrated yet), and then the
+   * board falls back to the lead's reply.
+   */
+  answer: OfferAnswer | null;
+  /** False when the answers could not be read or are not migrated, so the page does not offer to record one. */
+  answerable: boolean;
 }
 
 export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]>> {
@@ -197,6 +206,10 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
   if (!r.ok) return r;
 
   const rows = ("data" in r ? r.data : []) as unknown as Record<string, unknown>[];
+  /* A failed read of the answers is not a reason to hide the offers: they show
+     with the old signal, and the page does not offer to record an answer. */
+  const answersRead = await offerAnswers(rows.map((o) => o.id as string));
+  const answers = answersRead.ok && "data" in answersRead ? answersRead.data : null;
   /* Ten minutes: long enough to open, short enough that a copied link does not become a way in. */
   const links = new Map<string, string>();
   await Promise.all(rows.filter((o) => typeof o.document_path === "string").map(async (o) => {
@@ -227,5 +240,7 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
     dueDiligenceDays: typeof o.due_diligence_days === "number" ? o.due_diligence_days : null,
     pdfUrl: links.get(o.id as string) ?? null,
     read: (o.read_candidates as Candidates | null) ?? null,
+    answer: answers?.get(o.id as string) ?? null,
+    answerable: answers !== null,
   })));
 }

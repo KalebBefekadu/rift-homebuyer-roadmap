@@ -45,8 +45,10 @@ Operations, data, security, reliability, engineering, compliance and growth.
 | 8 | Done | `scripts/local/run.sh <command>` sets the local environment itself and refuses to start unless the database is local; `dev:local` uses it |
 | 2 (more) | Done | The abroad landing has its own bilingual header, which the first e2e run caught without a menu; it now has one, and below 400px "Talk to Kaleb" moves into it so the header fits 320px. `/buy/programs` scrolled sideways to 779px at 320px (a screen-reader label escaping its table's scroller); `.scroll-x` now contains it, and the page is in the phone suite |
 | 17 | Done | Operations › Settings › Mortgage rate: the current rate and its age, the Friday job's last run, and a form to record it by hand (1 to 20%, no future dates); Today's stale-rate item links there |
+| 18 | Done | `rift_offer_answers` (history, migration 20261004100000): each inbound offer card records answered or not and the sender's respond-by day; a recorded answer wins over the lead-reply guess, and an unanswered offer with a deadline sorts by it on the board |
 | 20 | Done | "Take off the list" asks in place: Sold, They passed, Withdrawn, or a typed reason |
 | 21 | Done | A held Advocacy moment has Reopen, which hands it back to its window (a reopened ask past its window reads "Window passed") |
+| 22 | Done | Visitors include sessions that used a value with no first visit recorded (opened from a shared link, never past a landing page), but not sessions first recorded before the period |
 | 24 | Done | The whole Relationships row opens the panel; the overdue and quiet chips count within the other filters already set |
 | 25 | Done | The quarterly email promises what the plan can do (work the numbers out again with this quarter's rate and programs), not county news it never carried; seller and abroad words of their own |
 | 26 | Done | The dormant day-one email, in its saved-plan words, is skipped when the save email went out; the partial-answers version still goes |
