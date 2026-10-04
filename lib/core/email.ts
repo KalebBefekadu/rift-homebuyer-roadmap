@@ -529,3 +529,34 @@ export function buildSavedPlan(p: SavedPlanEmail): { subject: string; html: stri
 </div>`.trim();
   return { subject: p.review ? "Kaleb has your numbers" : "Your Rift plan", html };
 }
+
+export interface SignInEmail {
+  to: string;
+  /** The one-time link, already pointing at /auth/callback on this site. */
+  link: string;
+}
+
+/**
+ * The buyer's sign-in link, sent through Brevo rather than by Supabase.
+ *
+ * Supabase's built-in mailer allows a few messages an hour and, on a project
+ * without custom SMTP, may deliver only to the project team's own addresses.
+ * Both fail the same way from the outside: the buyer is told "check your
+ * email" and nothing ever arrives. Brevo is already the product's sender.
+ *
+ * No unsubscribe link. This is not marketing: it was asked for a second ago,
+ * and an opt-out here would only lock somebody out of their own move.
+ */
+export function buildSignIn(s: SignInEmail): { subject: string; html: string } {
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">Hello,</p>
+  <p style="font-size:15px">Here is your link to sign in to your move on Rift.</p>
+  <p style="font-size:15px"><a href="${escapeHtml(s.link)}" style="color:#c2351e">Sign in</a></p>
+  <p style="font-size:12px;color:#888">
+    It works once and expires soon. If you did not ask for it, you can ignore this email:
+    nobody can sign in without opening the link.
+  </p>
+</div>`.trim();
+  return { subject: "Your Rift sign-in link", html };
+}
