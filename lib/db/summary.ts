@@ -1,6 +1,6 @@
 import "server-only";
 import { serviceClient, currentAgentId } from "./service";
-import { boundedRead } from "./bounded";
+import { boundedReport } from "./bounded";
 import { done, skipped, type DbResult } from "./result";
 import { journeyTablesMissing } from "./journeys";
 import { datesNeedingAttention } from "./deadlines";
@@ -15,6 +15,12 @@ import type { Band } from "@/lib/core/lead";
  *
  * Only what a MEMBER did is activity. Something the agent recorded on their
  * behalf (an answer he was told on the phone) is his own work, not news.
+ *
+ * Every read here waits the agent's deadline, not a visitor's. Nobody is
+ * waiting on the scheduled run or on Today the way a stranger waits on a
+ * value, and the run is always a cold start: fourteen reads at once, each
+ * given two seconds that a cold function spends before the query is sent,
+ * failed the job while each query took fifty milliseconds warm.
  */
 
 export interface SummaryParts {
@@ -34,7 +40,7 @@ export async function summaryParts(since: Date, now = new Date()): Promise<DbRes
   if (!agentId) return skipped("no agent row exists yet");
   const [activity, leads, dates, jobs] = await Promise.all([
     householdActivity(since),
-    boundedRead(db.from("rift_leads").select("name,side,band").eq("agent_id", agentId).gte("created_at", since.toISOString()).limit(500), "the summary"),
+    boundedReport(db.from("rift_leads").select("name,side,band").eq("agent_id", agentId).gte("created_at", since.toISOString()).limit(500), "the summary"),
     datesNeedingAttention(now),
     jobsHealth(now),
   ]);
@@ -62,11 +68,11 @@ export async function householdActivity(since: Date): Promise<DbResult<Activity[
   if (!agentId) return skipped("no agent row exists yet");
   const from = since.toISOString();
   const mine = (table: string, cols: string) =>
-    boundedRead(db.from(table).select(cols).eq("agent_id", agentId).gte("created_at", from).limit(500), "the summary");
+    boundedReport(db.from(table).select(cols).eq("agent_id", agentId).gte("created_at", from).limit(500), "the summary");
 
   const [journeys, members, reactions, homesAdded, tours, feedback, answers, briefAnswers, proposals, work] = await Promise.all([
-    boundedRead(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).limit(1000), "the summary"),
-    boundedRead(db.from("rift_journey_members").select("id,journey_id,display_name,email,accepted_at").eq("agent_id", agentId).limit(2000), "the summary"),
+    boundedReport(db.from("rift_journeys").select("id,label,origin_lead_id").eq("agent_id", agentId).limit(1000), "the summary"),
+    boundedReport(db.from("rift_journey_members").select("id,journey_id,display_name,email,accepted_at").eq("agent_id", agentId).limit(2000), "the summary"),
     mine("rift_home_reactions", "journey_id,home_id,member_id,reaction,reason,created_at"),
     mine("rift_shortlist_homes", "journey_id,address,added_by_member,created_at"),
     mine("rift_tour_stops", "journey_id,home_id,requested_by_member,created_at"),
@@ -87,10 +93,10 @@ export async function householdActivity(since: Date): Promise<DbResult<Activity[
   const journeyIds = journeyRows.map((j) => j.id as string);
   const leadIds = [...new Set(journeyRows.map((j) => j.origin_lead_id as string))];
   const [people, homes, bids, stops] = journeyIds.length ? await Promise.all([
-    boundedRead(db.from("rift_leads").select("id,name").eq("agent_id", agentId).in("id", leadIds), "the summary"),
-    boundedRead(db.from("rift_shortlist_homes").select("id,address").eq("agent_id", agentId).in("journey_id", journeyIds).limit(2000), "the summary"),
-    boundedRead(db.from("rift_bids").select("id,home_id").eq("agent_id", agentId).in("journey_id", journeyIds).limit(1000), "the summary"),
-    boundedRead(db.from("rift_tour_stops").select("id,home_id").eq("agent_id", agentId).in("journey_id", journeyIds).limit(2000), "the summary"),
+    boundedReport(db.from("rift_leads").select("id,name").eq("agent_id", agentId).in("id", leadIds), "the summary"),
+    boundedReport(db.from("rift_shortlist_homes").select("id,address").eq("agent_id", agentId).in("journey_id", journeyIds).limit(2000), "the summary"),
+    boundedReport(db.from("rift_bids").select("id,home_id").eq("agent_id", agentId).in("journey_id", journeyIds).limit(1000), "the summary"),
+    boundedReport(db.from("rift_tour_stops").select("id,home_id").eq("agent_id", agentId).in("journey_id", journeyIds).limit(2000), "the summary"),
   ]) : [done([]), done([]), done([]), done([])];
   for (const r of [people, homes, bids, stops]) if (!r.ok && !journeyTablesMissing(r.error)) return r;
 

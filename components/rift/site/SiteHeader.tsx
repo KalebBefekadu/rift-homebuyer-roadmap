@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mark } from "@/components/rift/icons";
+import { Ico, Mark } from "@/components/rift/icons";
 
 export type SiteSide = "home" | "buy" | "sell" | "abroad";
 
@@ -23,6 +23,19 @@ const NAV: Record<SiteSide, { href: string; label: string }[]> = {
     { href: "/abroad/how", label: "How it works" },
   ],
 };
+
+const SIDES = NAV.home;
+
+/**
+ * What a phone gets instead of the row of links: this side's pages, then the
+ * other sides. The row is hidden below 720px because it does not fit, and for a
+ * while nothing replaced it, so a buyer reading a value on a phone could reach
+ * another one only through the footer. A <details>, not a script: it opens
+ * before JavaScript arrives, which on a slow connection abroad is a while.
+ */
+function phoneLinks(side: SiteSide) {
+  return side === "home" ? SIDES : [...NAV[side], ...SIDES.filter((s) => s.href !== `/${side}`)];
+}
 
 /**
  * The one header for every public page (Blueprint v5 §4.2).
@@ -55,6 +68,20 @@ export function SiteHeader({ side, current, action }: {
             </Link>
           ))}
           {action ? <Link href={action.href} className="btn btn-s btn-sm">{action.label}</Link> : null}
+          <details className="site-menu">
+            <summary className="btn btn-g btn-ico" aria-label="Menu">
+              <Ico.menu size={18} aria-hidden="true" className="site-menu-open" />
+              <Ico.x size={18} aria-hidden="true" className="site-menu-close" />
+            </summary>
+            <div className="site-menu-panel">
+              {phoneLinks(side).map((n) => (
+                <Link key={n.href} href={n.href} aria-current={current === n.href ? "page" : undefined}>
+                  {n.label}
+                  <Ico.chevR size={14} aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </details>
         </nav>
       </div>
     </header>

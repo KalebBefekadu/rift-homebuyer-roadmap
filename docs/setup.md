@@ -133,7 +133,7 @@ Still to open, with lead times worth knowing now:
 
 ```bash
 scripts/local/up.sh                       # Postgres + PostgREST + a /rest/v1 proxy
-eval "$(scripts/local/env.sh)" && npx next start
+scripts/local/run.sh npx next start       # refuses unless the database is local
 npm run verify:queries
 scripts/local/down.sh
 ```
@@ -273,7 +273,8 @@ where somebody finds out.
   "email": "ready", "calendar": "missing",
   "scheduler": "configured", "monitoring": "configured",
   "rate": "stale (never recorded)",
-  "retention": "clear" } }
+  "retention": "clear", "schema": "current",
+  "jobs": "nurture-run ok, retention-sweep ok, rates-refresh ok, daily-summary ok, program-check ok" } }
 ```
 
 503 only when the database or the agent row is missing, because those stop the product doing
@@ -291,13 +292,30 @@ was one nobody had predicted. It is yes or no and never a count: this endpoint i
 and how many people are in the funnel is not a figure to hand to whoever asks. The answer
 is cached for five minutes per instance so the check cannot be used as an amplifier.
 
+**`schema`** says whether production has the newest migration this code was built with
+(`lib/db/schema-version.ts`, checked against the `rift_schema_migrations` ledger the apply
+script writes). `behind` means a deploy went out ahead of its migration: the pages that read
+the missing column will say "not migrated yet", and this is the line that names the cause.
+
 ## 12. Deployment
 
 Vercel, project `rift-homebuyer-roadmap`. Set the same variables in the Vercel dashboard;
 `SENTRY_AUTH_TOKEN` there enables source-map upload, and without it `next.config.ts` disables
 upload rather than failing the build.
 
-Supabase migrations apply with `scripts/apply-sql-migration.sh`. `scripts/bootstrap-supabase.sh`
+**Deploy with `npm run deploy`** (`scripts/deploy.sh`), never a bare `vercel deploy`. The
+project is not connected to GitHub, so `vercel deploy` uploads whatever folder it is run in:
+untracked files, another session's unfinished work, commits a rejected push never delivered.
+The script refuses unless HEAD is exactly `origin/main` and CI has passed that commit (it waits
+while CI runs), then deploys a clean checkout of it and prints the health status. Connecting
+the Vercel project to the repository (deploy on push to `main`, CI as a required check) would
+replace it.
+
+Supabase migrations apply with `scripts/apply-sql-migration.sh`. It reads
+`SUPABASE_ACCESS_TOKEN` from the environment or `.env.local`, and records each migration in
+`rift_schema_migrations` in the same request, which `/api/health` compares with the code.
+After adding a migration, move `LATEST_MIGRATION` in `lib/db/schema-version.ts`; a test fails
+until you do. `scripts/bootstrap-supabase.sh`
 provisions a project from scratch — useful for a staging environment, and worth having one
 before there is real client data in production.
 

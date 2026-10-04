@@ -11,15 +11,23 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  */
 
 let probe: "ok" | "error" | "hang" = "ok";
+let ledger: "current" | "behind" | "absent" = "current";
+
+const ledgerRead = () => Promise.resolve(
+  ledger === "current" ? { data: [{ name: "x" }], error: null }
+  : ledger === "behind" ? { data: [], error: null }
+  : { data: null, error: { code: "PGRST205", message: "Could not find the table 'public.rift_schema_migrations'" } });
 
 vi.mock("@/lib/db/service", () => ({
   serviceClient: () => ({
-    from: () => ({
-      select: () => ({
-        limit: () => probe === "hang"
-          ? new Promise(() => {})
-          : Promise.resolve(probe === "ok" ? { data: [{ id: "a" }], error: null } : { data: null, error: { message: "fetch failed" } }),
-      }),
+    from: (table: string) => ({
+      select: () => table === "rift_schema_migrations"
+        ? { eq: () => ({ limit: ledgerRead }) }
+        : {
+            limit: () => probe === "hang"
+              ? new Promise(() => {})
+              : Promise.resolve(probe === "ok" ? { data: [{ id: "a" }], error: null } : { data: null, error: { message: "fetch failed" } }),
+          },
     }),
   }),
   currentAgentId: async () => "agent-1",
@@ -40,6 +48,7 @@ const call = (auth?: string) =>
 
 beforeEach(() => {
   probe = "ok";
+  ledger = "current";
   fetchSpy.mockReset();
   process.env.BREVO_API_KEY = "k";
   process.env.BREVO_FROM_EMAIL = "kaleb@example.com";
@@ -101,5 +110,32 @@ describe("the Brevo probe", () => {
     delete process.env.CRON_SECRET;
     await call("Bearer undefined");
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("the schema line", () => {
+  /* "current" is cached for five minutes, and earlier tests in this file
+     have already cached it, so each test here starts well past that. */
+  let later = 0;
+  beforeEach(() => { later += 1; vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2030, 0, 1) + later * 3_600_000); });
+  it("says production has no ledger when the table is missing", async () => {
+    ledger = "absent";
+    const body = await (await call()).json();
+    expect(body.checks.schema).toBe("behind: no migration ledger yet");
+    expect(body.ok).toBe(true);
+  });
+
+  it("says behind, without naming the migration, when the newest is not recorded", async () => {
+    ledger = "behind";
+    const res = await call();
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.checks.schema).toBe("behind: the newest migration is not applied");
+    expect(JSON.stringify(body)).not.toMatch(/[0-9]{14}_/);
+  });
+
+  it("says current when it is", async () => {
+    const body = await (await call()).json();
+    expect(body.checks.schema).toBe("current");
   });
 });

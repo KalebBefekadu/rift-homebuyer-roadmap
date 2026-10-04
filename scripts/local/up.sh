@@ -9,7 +9,7 @@
 # those could have. It is worth being able to do that again in one command.
 #
 #   scripts/local/up.sh          bring it up and apply migrations + seed
-#   scripts/local/env.sh         print the env for `npx next start`
+#   scripts/local/run.sh <cmd>   run a command against it (npx next start)
 #   scripts/local/down.sh        tear it down
 #
 # Local development only. It has no auth, no RLS enforcement and no TLS.
@@ -104,6 +104,6 @@ echo "      run  docker restart rift-postgrest  or every write against the new"
 echo "      column fails with a message about a schema cache."
 echo
 echo "Up. Start the app with:"
-echo "  eval \"\$(scripts/local/env.sh)\" && npx next start"
+echo "  scripts/local/run.sh npx next start"
 echo
 echo "Then: npm run verify:queries"

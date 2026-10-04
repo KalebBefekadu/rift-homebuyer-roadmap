@@ -131,6 +131,29 @@ test("a value can be answered with a thumb", async ({ page }) => {
   await expect(page.locator("body")).toContainText(/\$[\d,]{4,}/);
 });
 
+test.describe("a phone can get from one value to another", () => {
+  /* The header hides its links below 720px. For a while nothing replaced
+     them, so on a phone the only way from one side's value to another was
+     the footer. Each side's menu has to reach the other two. */
+  for (const [path, others] of [
+    ["/", ["Buying", "Selling", "From abroad"]],
+    ["/buy", ["Selling", "From abroad"]],
+    ["/sell", ["Buying", "From abroad"]],
+    ["/abroad", ["Buying", "Selling"]],
+  ] as const) {
+    test(`${path} has a menu that reaches the other sides`, async ({ page }) => {
+      await page.goto(path);
+      const menu = page.locator(".site-menu summary");
+      await expect(menu).toBeVisible();
+      const box = await menu.boundingBox();
+      expect(box!.height, "the menu button is too small to hit").toBeGreaterThanOrEqual(40);
+      await menu.click();
+      const panel = page.locator(".site-menu-panel");
+      for (const name of others) await expect(panel.getByRole("link", { name, exact: true })).toBeVisible();
+    });
+  }
+});
+
 test.describe("on the narrowest phone still in use", () => {
   /* 320 CSS pixels. Not a device anyone tests on, and the width at which an
      unbreakable element gives itself away: the chip that took the seller

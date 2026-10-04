@@ -7,6 +7,7 @@ import { overdue } from "@/lib/db/retention";
 import { KEYS, WRONG_IN_AM, unreviewedAm } from "@/lib/core/i18n";
 import { authoriseCron } from "@/lib/core/cron";
 import { askBrevoAboutSender, SENDER_HEALTH } from "@/lib/db/sender";
+import { LATEST_MIGRATION } from "@/lib/db/schema-version";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,6 +116,39 @@ async function databaseProbe(db: NonNullable<ReturnType<typeof serviceClient>>):
   return !timedOut && Boolean(value) && !value!.error;
 }
 
+/**
+ * Whether production has the migration this code was built against.
+ *
+ * Migrations are applied by hand, one file at a time, and a missed one used
+ * to show up only as a "not migrated yet" notice on whichever page read the
+ * missing column. The apply script records each one in rift_schema_migrations
+ * (lib/db/schema-version.ts has the rest). One indexed read; "current" is
+ * cached like the retention answer, anything else is asked again next time.
+ * Never names the migration: this endpoint is public.
+ */
+let schemaCache: { at: number; value: string } | null = null;
+
+async function schemaCheck(db: NonNullable<ReturnType<typeof serviceClient>>): Promise<string> {
+  const now = Date.now();
+  if (schemaCache && now - schemaCache.at < RETENTION_TTL_MS) return schemaCache.value;
+  const { value, timedOut } = await withTimeout(
+    Promise.resolve(db.from("rift_schema_migrations").select("name").eq("name", LATEST_MIGRATION).limit(1)),
+    READ_DEADLINE_MS,
+    null,
+  );
+  if (timedOut || !value) return "unknown";
+  if (value.error) {
+    /* The ledger itself is the first migration that records anything, so
+       a production without it is behind by definition. */
+    return /rift_schema_migrations|PGRST205|42P01/.test(`${value.error.code ?? ""} ${value.error.message ?? ""}`)
+      ? "behind: no migration ledger yet"
+      : "unknown";
+  }
+  const result = value.data && value.data.length ? "current" : "behind: the newest migration is not applied";
+  if (result === "current") schemaCache = { at: now, value: result };
+  return result;
+}
+
 export async function GET(req: Request) {
   /* The scheduled jobs' rule, so there is one comparison of this secret and
      it is the constant-time one. */
@@ -153,6 +187,10 @@ export async function GET(req: Request) {
     /* Yes or no, never a count. This endpoint is public, and how many people
        are in the funnel is not a figure to hand to whoever asks. */
     checks.retention = await retentionCheck();
+
+    /* Behind is not fatal: the pages that need the missing column say so
+       themselves. It is the cause they cannot name. */
+    checks.schema = await schemaCheck(db).catch(() => "unknown");
 
     /* Each scheduled job's last OUTCOME (W09, REQ-QUALITY-04): ok, failed,
        missed, never or running. States only; the reasons are on the agent's

@@ -25,6 +25,24 @@ Operations, data, security, reliability, engineering, compliance and growth.
 - **Kaleb:** needs your answer or account.
 - **Broker:** needs the broker.
 
+**Corrections after a second look (4 Oct):**
+- **#4 was wrong.** CI does build, checks the bundle budget and runs every `e2e/` suite on
+  each push (`.github/workflows/ci.yml`). The real gap is #3: deploys did not wait for it.
+- **#5 overstated Brevo.** `"set, not verified (deep check requires the cron secret)"` means the
+  public health check did not ask Brevo, not that Brevo refused the sender. Settings shows the
+  real answer. The custom sending domain and Supabase's mailer still stand.
+
+## Progress
+
+| # | State | What changed |
+| --- | --- | --- |
+| 1 | Partly | The summary's reads wait the agent's 8 s deadline, not a visitor's 2 s (a cold scheduled start spent the 2 s before the queries were sent). The recorded reason for the failure is on Operations › Today; read it there to confirm this was the cause, or whether Brevo refused the send |
+| 2 | Done | A menu on phones (a `<details>`, so it opens before JavaScript), reaching this side's pages and the other two sides; an e2e test on each side |
+| 3 | Done in the repo | `npm run deploy` refuses unless HEAD is `origin/main` and CI passed it, then deploys a clean checkout. Connecting Vercel to GitHub would replace it (Kaleb) |
+| 4 | Not a gap | See corrections |
+| 7 | Done | `rift_schema_migrations` records each migration in the same request; `/api/health` says `schema: current` or `behind`; a test keeps `lib/db/schema-version.ts` on the newest file; the token comes from the environment or `.env.local` first |
+| 8 | Done | `scripts/local/run.sh <command>` sets the local environment itself and refuses to start unless the database is local; `dev:local` uses it |
+
 ---
 
 ## P0: fix first

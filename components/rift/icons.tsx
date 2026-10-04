@@ -27,6 +27,7 @@ export const Ico = {
   chevL: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M10 3.5 5.5 8 10 12.5" /></svg>),
   minus: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M3.5 8h9" /></svg>),
   plus: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M8 3.2v9.6M3.2 8h9.6" /></svg>),
+  menu: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" /></svg>),
   x: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M4 4l8 8M12 4l-8 8" /></svg>),
   search: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><circle cx="7.2" cy="7.2" r="4.6" /><path d="M10.6 10.6 14 14" /></svg>),
   bell: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M4 6.6a4 4 0 0 1 8 0c0 3 1.2 4.2 1.2 4.2H2.8S4 9.6 4 6.6Z" /><path d="M6.6 13.2a1.6 1.6 0 0 0 2.8 0" /></svg>),

@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "dev:local": "eval \"$(scripts/local/env.sh)\" && next dev --turbopack",
+    "dev:local": "scripts/local/run.sh next dev --turbopack",
     "dev:clean": "rm -rf .next && next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "deploy": "scripts/deploy.sh",
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",

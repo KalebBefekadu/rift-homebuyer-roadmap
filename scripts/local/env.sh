@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Prints the environment for running the app against the local stack.
-#   eval "$(scripts/local/env.sh)" && npx next start
+# Use it through run.sh, which also refuses to start against anything but the
+# local stack:
+#   scripts/local/run.sh npx next start
+# Never `source <(scripts/local/env.sh)`: on bash 3.2 that sets nothing and the
+# app falls back to the production keys in .env.local.
 set -euo pipefail
 
 SECRET="rift-local-test-secret-at-least-32-chars-long"

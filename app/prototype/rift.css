@@ -530,6 +530,25 @@
 .site-nav a:not(.btn) { font-size: 13.5px; color: var(--ink-2); padding: 6px 2px; }
 .site-nav a:not(.btn):hover { color: var(--ink); }
 .site-nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+/* The phone menu (SiteHeader): hidden wherever the row of links fits. */
+.site-menu { display: none; position: relative; }
+.site-menu > summary { list-style: none; cursor: pointer; width: 40px; height: 40px; }
+.site-menu > summary::-webkit-details-marker { display: none; }
+.site-menu > summary svg { flex: none; }
+.site-menu .site-menu-close, .site-menu[open] .site-menu-open { display: none; }
+.site-menu[open] .site-menu-close { display: block; }
+.site-menu-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px; max-width: calc(100vw - 28px);
+  background: var(--paper); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--sh-2);
+  padding: 6px; display: flex; flex-direction: column;
+}
+.site-nav .site-menu-panel a {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 0 10px; border-radius: 7px; font-size: 15px; color: var(--ink);
+}
+.site-nav .site-menu-panel a:hover { background: var(--sunk); }
+.site-nav .site-menu-panel a svg { color: var(--ink-4); flex: none; }
+@media (max-width: 720px) { .site-menu { display: block; } }
 .site-foot { border-top: 1px solid var(--line-2); margin-top: clamp(56px,7vw,96px); background: var(--canvas); }
 .site-foot-grid {
   display: grid; grid-template-columns: minmax(0,1.6fr) repeat(3, minmax(0,1fr));
