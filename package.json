@@ -27,7 +27,7 @@
     "@sentry/nextjs": "^10.66.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
-    "next": "^15.5.25",
+    "next": "^15.5.27",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "server-only": "^0.0.1"
@@ -47,6 +47,12 @@
     "pg": "^8.23.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.1"
+    "vite-node": "^6.0.0",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "^8.5.28"
+    }
   }
 }
