@@ -7,7 +7,7 @@ import {
   rankOffers, headlineTrap, gapsIn, FINANCING_LABEL,
   type Financing, type Offer, type SellerCosts,
 } from "@/lib/core/offers";
-import { recordOffer, releaseOffer, deleteOffer, saveSellerCosts } from "./actions";
+import { useSellerOps } from "./useSellerOps";
 import { typedNumber } from "@/lib/core/typed";
 import { showDay } from "@/lib/core/day";
 import { Section, Notice } from "../../ui";
@@ -24,14 +24,17 @@ import { Section, Notice } from "../../ui";
  * driving; presenting it unreviewed is how somebody replies to a number before
  * anybody has read the terms under it.
  */
-export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }: {
+export function Offers({ leadId, offers, costs, agentFirst, unavailable = null, journeyId }: {
   leadId: string;
   offers: Offer[];
   costs: SellerCosts | null;
   agentFirst: string;
   /** Why the offers could not be read. `offers` is then empty, which is not "none recorded". */
   unavailable?: string | null;
+  /** Set on the sale's journey tab, where writes go through its route (useSellerOps). */
+  journeyId?: string;
 }) {
+  const ops = useSellerOps(leadId, journeyId, `${costs?.payoff}:${costs?.commissionPct}|${offers.map((o) => `${o.id}:${o.releasedAt}`).join(",")}`);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -121,7 +124,7 @@ export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }
             <button className="btn btn-s btn-sm" disabled={pending || !payoff.trim()}
               onClick={() => {
                 const n = amounts([["What is still owed", payoff], ["The commission", commission]]);
-                if (n) run(() => saveSellerCosts(leadId, n[0]!, n[1]!));
+                if (n) run(() => ops.costs(n[0]!, n[1]!));
               }}>
               Save
             </button>
@@ -209,14 +212,14 @@ export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }
 
                 <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
                   <button className="btn btn-g btn-sm" disabled={pending}
-                    onClick={() => run(() => releaseOffer(leadId, o.id, !o.releasedAt))}>
+                    onClick={() => run(() => ops.release(o.id, !o.releasedAt))}>
                     {o.releasedAt ? "Take it back" : "Release to them"}
                   </button>
                   <span className="spacer" />
                   <button className="t-2xs c-4" disabled={pending}
                     onClick={() => {
                       /* A delete, not an archive: the offer and its terms are gone. */
-                      if (window.confirm(`Remove the offer from ${o.from}? It is deleted, not archived.`)) run(() => deleteOffer(leadId, o.id));
+                      if (window.confirm(`Remove the offer from ${o.from}? It is deleted, not archived.`)) run(() => ops.remove(o.id));
                     }}>Remove</button>
                 </div>
               </div>
@@ -272,7 +275,7 @@ export function Offers({ leadId, offers, costs, agentFirst, unavailable = null }
                   if (!n) return;
                   if (!(n[0]! > 0)) { setError("Give the offer price"); return; }
                   run(
-                    () => recordOffer(leadId, {
+                    () => ops.record({
                       from: from.trim(), price: n[0]!,
                       concessions: n[1]!,
                       repairCredit: n[2]!,

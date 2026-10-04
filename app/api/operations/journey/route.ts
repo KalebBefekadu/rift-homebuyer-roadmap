@@ -7,9 +7,11 @@ import {
   inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
-  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds, listingHappened, showingStep, weeklyReview,
+  documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds, listingHappened, showingStep, weeklyReview, sellerOp, type SellerOp,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
+import type { Financing } from "@/lib/core/offers";
+import type { Owner as PlanOwner } from "@/lib/core/plan";
 import { BID_FINANCING, STEP_KINDS, type BidFinancing, type StepKind, type Terms } from "@/lib/core/bid";
 import { TOUR_STATUSES, type TourStatus } from "@/lib/core/tour";
 import type { CheckResult } from "@/lib/core/pilot";
@@ -100,6 +102,43 @@ function facts(v: unknown): PropertyFacts {
   /* Only the known facts, whatever else was posted: this becomes jsonb. */
   const given = (v ?? {}) as Record<string, unknown>;
   return Object.fromEntries((Object.keys(EMPTY_FACTS) as (keyof PropertyFacts)[]).map((k) => [k, given[k] ?? null])) as unknown as PropertyFacts;
+}
+
+const FINANCING: Financing[] = ["conventional", "fha", "va", "usda", "cash", "other"];
+const OWNERS: PlanOwner[] = ["client", "agent", "other"];
+
+/** Only the known fields of a sale's offer or step change, each as its own type. */
+function sellerOpOf(b: Body): SellerOp | null {
+  const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+  const text = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+  switch (str(b.kind, 20)) {
+    case "costs": return { kind: "costs", payoff: n(b.payoff), commissionPct: n(b.commissionPct) };
+    case "offer-record": {
+      const o = (b.offer ?? {}) as Body;
+      const financing = str(o.financing, 20) as Financing;
+      if (!FINANCING.includes(financing)) return null;
+      return { kind: "offer-record", offer: {
+        from: str(o.from, 200), price: n(o.price), concessions: n(o.concessions ?? 0), repairCredit: n(o.repairCredit ?? 0),
+        earnest: n(o.earnest ?? 0), financing,
+        closeOn: text(o.closeOn, 10), preapproval: o.preapproval === true, proofOfFunds: o.proofOfFunds === true,
+        contingencies: Array.isArray(o.contingencies) ? o.contingencies.filter((c): c is string => typeof c === "string").slice(0, 10) : [],
+        note: text(o.note, 1000),
+      } };
+    }
+    case "offer-release": return { kind: "offer-release", offerId: str(b.offerId, 40), released: b.released === true };
+    case "offer-delete": return { kind: "offer-delete", offerId: str(b.offerId, 40) };
+    case "take-approve": return { kind: "take-approve", take: str(b.take, 4000) };
+    case "take-withdraw": return { kind: "take-withdraw" };
+    case "choice-reopen": return { kind: "choice-reopen" };
+    case "step-add": {
+      const owner = str(b.owner, 10) as PlanOwner;
+      if (!OWNERS.includes(owner)) return null;
+      return { kind: "step-add", title: str(b.title, 160), owner, ownerName: text(b.ownerName, 80), dueOn: text(b.dueOn, 10) };
+    }
+    case "step-tick": return { kind: "step-tick", itemId: str(b.itemId, 40), done: b.done === true };
+    case "step-drop": return { kind: "step-drop", itemId: str(b.itemId, 40) };
+    default: return null;
+  }
 }
 
 export async function POST(req: Request) {
@@ -307,6 +346,11 @@ export async function POST(req: Request) {
     }
     case "take-off":
       return json(await takeHomeOff(journeyId, str(b.homeId, 40), str(b.reason, 500)));
+    case "seller": {
+      const op = sellerOpOf(b);
+      if (!op) return json({ ok: false, error: "Reload the page and try again." }, 400);
+      return json(await sellerOp(journeyId, op));
+    }
     default:
       return json({ ok: false, error: "Unknown action." }, 400);
   }

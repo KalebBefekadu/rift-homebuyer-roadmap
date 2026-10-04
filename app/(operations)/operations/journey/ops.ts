@@ -27,6 +27,11 @@ import type { CheckResult } from "@/lib/core/pilot";
 import type { Instruction, StepInput as BidStepInput, Terms } from "@/lib/core/bid";
 import type { ContractInput, ContractOutcome, JourneyStatus, Stage, WorkInput, Workstream } from "@/lib/core/progress";
 import { isUuid } from "@/lib/core/ids";
+import { journeyFor } from "@/lib/db/journeys";
+import { addOffer, setOfferReleased, removeOffer, setSellerCosts, type NewOffer } from "@/lib/db/offers";
+import { approveTake, withdrawTake, reopenChoice } from "@/lib/db/offer-room";
+import { addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
+import type { Owner as PlanOwner } from "@/lib/core/plan";
 
 /**
  * Operations writes for journeys, the search brief, the Matrix search and
@@ -438,5 +443,64 @@ export async function weeklyReview(journeyId: string, input: { weekOf: string; m
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordReview(journeyId, input, g.name, requestId);
   revalidatePath(`/operations/journey/${journeyId}`);
+  return out(r);
+}
+
+/* ------------------------------------------------------------------ *
+ * A sale's offers and preparation
+ * ------------------------------------------------------------------ */
+
+/** What can be done to a sale's offers and preparation from its journey. */
+export type SellerOp =
+  | { kind: "costs"; payoff: number; commissionPct: number }
+  | { kind: "offer-record"; offer: Omit<NewOffer, "leadId"> }
+  | { kind: "offer-release"; offerId: string; released: boolean }
+  | { kind: "offer-delete"; offerId: string }
+  | { kind: "take-approve"; take: string }
+  | { kind: "take-withdraw" }
+  | { kind: "choice-reopen" }
+  | { kind: "step-add"; title: string; owner: PlanOwner; ownerName: string | null; dueOn: string | null }
+  | { kind: "step-tick"; itemId: string; done: boolean }
+  | { kind: "step-drop"; itemId: string };
+
+/**
+ * The same writes the person's record makes (lead/[id]/actions.ts), from the
+ * journey's Offers and Preparation tabs, which used to be read-only and send
+ * the agent to the record for every change. The person is the journey's,
+ * resolved here: the page names the journey, never whose offers they are.
+ */
+export async function sellerOp(journeyId: string, op: SellerOp) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(journeyId)) return { ok: false as const, error: "Reload the page and try again" };
+  const j = await journeyFor(journeyId);
+  if (!j.ok) return { ok: false as const, error: j.error };
+  if (!("data" in j) || !j.data) return { ok: false as const, error: "That journey could not be found" };
+  if (j.data.side !== "sell") return { ok: false as const, error: "Offers and preparation here are for a sale" };
+  const leadId = j.data.leadId;
+
+  const r: DbResult<object> = await (async () => {
+    switch (op.kind) {
+      case "costs": return setSellerCosts(leadId, op.payoff, op.commissionPct);
+      case "offer-record": return addOffer({ ...op.offer, leadId });
+      case "offer-release": return setOfferReleased(op.offerId, op.released);
+      case "offer-delete": return removeOffer(op.offerId);
+      case "take-approve": return approveTake(leadId, op.take);
+      case "take-withdraw": return withdrawTake(leadId);
+      case "choice-reopen": return reopenChoice(leadId);
+      case "step-add": return addPlanItem({ leadId, title: op.title, owner: op.owner, ownerName: op.ownerName, dueOn: op.dueOn });
+      case "step-tick": return setPlanItemDone(op.itemId, op.done);
+      case "step-drop": return removePlanItem(op.itemId);
+    }
+  })();
+  revalidatePath(`/operations/journey/${journeyId}`);
+  revalidatePath(`/operations/lead/${leadId}`);
+  if (op.kind === "choice-reopen") revalidatePath("/operations");
+
+  /* The database refuses to delete an offer the seller chose, said in English
+     as the record page says it. */
+  if (!r.ok && op.kind === "offer-delete" && /rift_offer_rooms_chosen_is_theirs/.test(r.error)) {
+    return { ok: false as const, error: "The seller chose this offer. Reopen their choice before deleting it" };
+  }
   return out(r);
 }

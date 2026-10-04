@@ -136,8 +136,9 @@ Visual
 ## Left, and why
 
 - `prompt()` for "why is it coming off the list" on Homes: needs its own dialog component.
-- Seller Offers and Preparation are still worked on the person's record (server actions on the
-  journey page can hang, see journey/ops.ts); the tab now says so and puts the link first.
+- ~~Seller Offers and Preparation are still worked on the person's record.~~ Done 4 Oct: the
+  tabs use the record's own controls, writing through the journey route
+  (`lead/[id]/useSellerOps.ts`, `sellerOp` in journey/ops.ts).
 - Free text typed by the agent (evidence, dependency notes, history notes) can contain ISO dates;
   that is their text, not a rendering defect.
 - Showing, Offers, Dates, SearchSetup and Brief editor forms keep their markup inside the new panels.

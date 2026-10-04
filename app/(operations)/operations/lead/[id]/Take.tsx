@@ -8,7 +8,7 @@ import {
   draftTake, canApprove, takeIsCurrent, wasEdited, RECOMMENDATION_MARKER, TAKE_MAX,
   type OfferRoom,
 } from "@/lib/core/offer-room";
-import { approveOfferTake, withdrawOfferTake, reopenOfferChoice } from "./actions";
+import { useSellerOps } from "./useSellerOps";
 import { showTime } from "@/lib/core/day";
 import { Section, Notice } from "../../ui";
 
@@ -29,12 +29,15 @@ const AT = (iso: string) => showTime(iso, {
  * released an offer since" are three different states, and the third is the
  * one an agent would not otherwise know he was in.
  */
-export function Take({ leadId, offers, costs, room }: {
+export function Take({ leadId, offers, costs, room, journeyId }: {
   leadId: string;
   offers: Offer[];
   costs: SellerCosts | null;
   room: OfferRoom | null;
+  /** Set on the sale's journey tab (useSellerOps). */
+  journeyId?: string;
 }) {
+  const ops = useSellerOps(leadId, journeyId, `${room?.take ?? ""}:${room?.approvedAt ?? ""}:${room?.chosenAt ?? ""}`);
   const released = offers.filter((o) => o.releasedAt);
   const draft = draftTake(released, costs);
   const current = room ? takeIsCurrent(room, released) : false;
@@ -85,7 +88,7 @@ export function Take({ leadId, offers, costs, room }: {
               </p>
             </div>
             <button className="btn btn-s btn-sm" disabled={pending}
-              onClick={() => { if (confirm("Reopen their choice? They will be able to choose again.")) run(() => reopenOfferChoice(leadId)); }}>
+              onClick={() => { if (confirm("Reopen their choice? They will be able to choose again.")) run(() => ops.reopenChoice()); }}>
               Reopen
             </button>
           </div>
@@ -135,13 +138,13 @@ export function Take({ leadId, offers, costs, room }: {
                 </button>
               ) : null}
               {room?.take ? (
-                <button className="btn btn-s btn-sm" disabled={pending} onClick={() => run(() => withdrawOfferTake(leadId))}>
+                <button className="btn btn-s btn-sm" disabled={pending} onClick={() => run(() => ops.withdrawTake())}>
                   Withdraw
                 </button>
               ) : null}
               <button className="btn btn-p btn-sm" disabled={pending || Boolean(blocked)}
                 title={blocked ?? undefined}
-                onClick={() => run(() => approveOfferTake(leadId, text))}>
+                onClick={() => run(() => ops.approveTake(text))}>
                 {current ? "Approve changes" : "Approve and show seller"}
               </button>
             </div>

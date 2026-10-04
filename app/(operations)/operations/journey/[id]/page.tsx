@@ -35,7 +35,9 @@ import { SellerProperty } from "./SellerProperty";
 import { SellerPricing } from "./SellerPricing";
 import { SellerProceeds } from "./SellerProceeds";
 import { SellerListing } from "./SellerListing";
-import { SellerOffersView, SellerPrepView } from "./SellerRecord";
+import { Offers as SellerOffers } from "../../lead/[id]/Offers";
+import { Take } from "../../lead/[id]/Take";
+import { Steps } from "../../lead/[id]/Steps";
 import { offersFor } from "@/lib/db/offers";
 import { roomFor } from "@/lib/db/offer-room";
 import { readPlanForAgent } from "@/lib/db/plan";
@@ -442,20 +444,21 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
           </Section>
         ) : null}
 
+        {/* Worked here, not on the person's record: the same controls, with
+            writes through this page's route (lead/[id]/useSellerOps.ts). */}
         {tab === "seller-offers" ? (
-          <Section title="Offers" hint="Every offer received, none discarded, with what each would leave the seller."
-            actions={<Link href={`/operations/lead/${journey.leadId}`} className="btn btn-s btn-sm">Record or release an offer</Link>}>
-            {offerData
-              ? <SellerOffersView leadId={journey.leadId} offers={offerData.offers} costs={offerData.costs} room={room} />
-              : <Unread what="offers" />}
-          </Section>
+          offerData ? (
+            <>
+              <SellerOffers leadId={journey.leadId} journeyId={id} offers={offerData.offers} costs={offerData.costs} agentFirst={agentFirst} />
+              <Take leadId={journey.leadId} journeyId={id} offers={offerData.offers} costs={offerData.costs} room={room} />
+            </>
+          ) : <Section title="Offers"><Unread what="offers" /></Section>
         ) : null}
 
         {tab === "prep" ? (
-          <Section title="Preparation" hint="The work before launch, each item with who does it and when: the same plan the seller sees on their page."
-            actions={<Link href={`/operations/lead/${journey.leadId}`} className="btn btn-s btn-sm">Add or tick off steps</Link>}>
+          <Section title="Preparation" hint="The work before launch, each item with who does it and when: the same plan the seller sees on their page.">
             {planItems && planRead && planRead.ok && "data" in planRead
-              ? <SellerPrepView leadId={journey.leadId} items={planRead.data.items} agentFirst={agentFirst} clientFirst={person} />
+              ? <Panel><Steps leadId={journey.leadId} journeyId={id} items={planRead.data.items} agentFirst={agentFirst} clientFirst={person} /></Panel>
               : <Unread what="plan" />}
           </Section>
         ) : null}
