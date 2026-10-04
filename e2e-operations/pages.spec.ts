@@ -62,6 +62,11 @@ test("the whole Relationships row opens the person beside the list", async ({ pa
      "intercepted", which is the design working. */
   const cell = page.locator('tbody tr td[data-label="Arrived"]').first();
   await cell.waitFor();
+  /* The search bar above the table streams in after the first paint and
+     moves the rows down; a position measured before that is clicked into
+     nothing. */
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByLabel("Find someone")).toBeVisible();
   const box = await cell.boundingBox();
   expect(box, "no rows to click").not.toBeNull();
   await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);

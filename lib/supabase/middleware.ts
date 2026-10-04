@@ -40,17 +40,24 @@ export async function updateSession(request: NextRequest) {
   const url = serverUrl()!;
   const key = serverKey()!;
 
+  /* A response that refreshes somebody's session must never be cached by a
+     CDN, or one person's token can be served to another. @supabase/ssr hands
+     the headers that say so to the FIRST setAll only, and the response is
+     rebuilt on every call below, so they are kept and applied each time. */
+  const noStore: Record<string, string> = {};
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+      setAll(cookiesToSet, headers) {
+        Object.assign(noStore, headers);
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         supabaseResponse = NextResponse.next({ request });
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options),
         );
+        Object.entries(noStore).forEach(([k, v]) => supabaseResponse.headers.set(k, v));
       },
     },
   });

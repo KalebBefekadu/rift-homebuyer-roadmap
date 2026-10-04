@@ -20,7 +20,9 @@ export async function createClient() {
       getAll() {
         return cookieStore.getAll();
       },
-      setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+      /* Server components cannot set headers; the middleware's refresh is the
+         response that carries the no-store headers (lib/supabase/middleware.ts). */
+      setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options),
