@@ -26,9 +26,15 @@ import { defineConfig, devices } from "@playwright/test";
  * run from picking up .env.local, which points at PRODUCTION.
  */
 const BLANK = {
+  /* SUPABASE_URL and SUPABASE_ANON_KEY too: the server reads them BEFORE the
+     NEXT_PUBLIC_ pair, and with only the pair blanked a local run of this
+     "no database" suite read production through the anon key. */
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
   NEXT_PUBLIC_SUPABASE_URL: "",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
   SUPABASE_SERVICE_ROLE_KEY: "",
+  SENTRY_DSN: "",
   BREVO_API_KEY: "",
   BREVO_FROM_EMAIL: "",
   CAL_API_KEY: "",

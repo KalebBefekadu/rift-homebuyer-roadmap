@@ -88,7 +88,8 @@
   .nextAct { align-self: flex-start; }
   .attn li { flex-wrap: wrap; }
   .attnText { flex-basis: calc(100% - 96px); }
-  .attnGo { margin-left: 86px; flex-basis: 100%; }
+  /* The margin is inside the basis: 100% plus 86px was wider than the row. */
+  .attnGo { margin-left: 86px; flex-basis: calc(100% - 86px); white-space: normal; }
   .hist li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .panel { padding: 14px; }
 }

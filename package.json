@@ -20,7 +20,8 @@
     "local:seed-demo": "node scripts/local/seed-demo.mjs | docker exec -i rift-pg psql -U postgres -q -v ON_ERROR_STOP=1",
     "verify": "tsc --noEmit && next lint && vitest run && next build",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:operations": "playwright test -c playwright.operations.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
@@ -44,6 +45,7 @@
     "axe-core": "^4.13.0",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.5.25",
+    "jiti": "^2.7.0",
     "pg": "^8.23.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",

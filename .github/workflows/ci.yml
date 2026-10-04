@@ -144,6 +144,25 @@ jobs:
       - name: End-to-end
         run: npx playwright test
 
+      # Operations, signed in, against the schema the query-shape step built:
+      # the local agent row and the made-up demo book, served through the
+      # same /rest/v1 proxy the local stack uses. The build above is started
+      # again with SUPABASE_URL pointing at it (playwright.operations.config.ts).
+      # Until this ran, the agent's pages were covered by unit tests only.
+      - name: Agent row and demo book for the Operations walk
+        env:
+          PGPASSWORD: pw
+        run: |
+          P="psql -h localhost -p 55432 -U postgres -q -v ON_ERROR_STOP=1"
+          $P -c "insert into auth.users (id) values ('cccc0000-0000-4000-8000-000000000001') on conflict do nothing;
+                 insert into rift_agents (id, auth_user_id, name, email, brokerage)
+                 values ('dddd0000-0000-4000-8000-000000000001','cccc0000-0000-4000-8000-000000000001','Kaleb Befekadu','kaleb@example.com','Peachtree Cardinal')
+                 on conflict do nothing;"
+          node scripts/local/seed-demo.mjs | $P
+
+      - name: End-to-end, Operations
+        run: npx playwright test -c playwright.operations.config.ts
+
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

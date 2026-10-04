@@ -135,8 +135,14 @@ Still to open, with lead times worth knowing now:
 scripts/local/up.sh                       # Postgres + PostgREST + a /rest/v1 proxy
 scripts/local/run.sh npx next start       # refuses unless the database is local
 npm run verify:queries
+npm run test:e2e:operations              # Operations in a browser, signed in, against this stack
 scripts/local/down.sh
 ```
+
+`test:e2e:operations` opens every Operations page as the local agent with the demo book
+(`npm run local:seed-demo`) on desktop and phone, and fails on a page that says a read failed
+or scrolls sideways. CI runs it on every push. Locally, `PW_CHANNEL=chrome` uses an installed
+Chrome instead of Playwright's own browser download.
 
 A local stand-in for Supabase: it applies every migration, seeds the registry, creates the
 agent row, and prints the environment to run the app against it.
