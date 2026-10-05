@@ -365,3 +365,27 @@ async function withPeople(db: NonNullable<ReturnType<typeof serviceClient>>, age
     createdAt: x.created_at as string, person: names.get(x.origin_lead_id as string) ?? "A client",
   }));
 }
+
+/**
+ * The invited member a link belongs to, for emailing it (manual review
+ * WS10.4). The agent's browser posts back the link it was shown; it is only
+ * emailed if its token hashes to this member's open invitation, so the button
+ * cannot be used to send any other link under the product's name.
+ */
+export async function invitedMemberForToken(journeyId: string, memberId: string, token: string): Promise<DbResult<{ email: string; name: string | null; journeyLabel: string }>> {
+  const s = await agentScope();
+  if (!s.db) return skipped(s.why!);
+  if (!/^[A-Za-z0-9_-]{30,60}$/.test(token)) return failed("That link is not an invitation from this page");
+  const r = await boundedReport(
+    s.db.from("rift_journey_members").select("email,display_name,accepted_at,revoked_at,invite_expires_at")
+      .eq("id", memberId).eq("journey_id", journeyId).eq("agent_id", s.agentId).eq("invite_token_hash", hashToken(token)).maybeSingle(),
+    "the invitation",
+  );
+  if (!r.ok) return r;
+  const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
+  if (!row) return failed("That link is no longer this person's invitation. Make a new one");
+  if (shapeMember({ ...row, id: memberId }).state !== "invited") return failed("That invitation is no longer open");
+  const j = await journeyFor(journeyId);
+  const label = j.ok && "data" in j && j.data ? j.data.label : "Your move";
+  return done({ email: row.email as string, name: (row.display_name as string | null) ?? null, journeyLabel: label });
+}

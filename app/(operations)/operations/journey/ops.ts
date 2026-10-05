@@ -5,8 +5,9 @@ import { siteUrl } from "@/lib/core/site";
 import { buyerSearchOn, type Role, type Scope, type Side } from "@/lib/core/journey";
 import type { Cadence, PropertyFacts, SearchBrief } from "@/lib/core/search";
 import type { DbResult } from "@/lib/db/result";
-import { createJourney, invite, joinedMemberEmail, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
+import { createJourney, invite, invitedMemberForToken, joinedMemberEmail, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
 import { sendSignInLink } from "@/lib/db/signin";
+import { sendInvitation } from "@/lib/db/email";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
@@ -144,7 +145,27 @@ export async function inviteMember(journeyId: string, input: { email: string; na
   if (!origin) return { ok: false as const, error: "This deployment does not know its own address, so it cannot make a link" };
   const r = await invite(journeyId, { email: input.email, name: input.name || null, role: input.role, scopes: input.scopes });
   revalidatePath(`/operations/journey/${journeyId}`);
-  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt }));
+  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt, memberId: d.memberId }));
+}
+
+/**
+ * Emails an invitation link the agent was just shown, when he presses Send
+ * after reading the email (manual review WS10.4, decision D04).
+ */
+export async function emailInvitation(journeyId: string, memberId: string, link: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(memberId)) return { ok: false as const, error: "That person could not be found" };
+  const token = /\/app\/invite\/([A-Za-z0-9_-]+)$/.exec(link)?.[1] ?? "";
+  const r = await invitedMemberForToken(journeyId, memberId, token);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  const origin = siteUrl();
+  if (!origin) return { ok: false as const, error: "This deployment does not know its own address" };
+  const sent = await sendInvitation({ to: r.data.email, name: r.data.name, agentName: g.name, journeyLabel: r.data.journeyLabel, link: `${origin}/app/invite/${token}` });
+  if (!sent.ok) return { ok: false as const, error: "The email could not be sent. Check the email settings in /api/health" };
+  if ("skipped" in sent) return { ok: false as const, error: "Email is not set up on this deployment, so nothing was sent. Copy the link instead" };
+  return { ok: true as const };
 }
 
 export async function newInviteLink(journeyId: string, memberId: string) {
@@ -154,7 +175,7 @@ export async function newInviteLink(journeyId: string, memberId: string) {
   if (!origin) return { ok: false as const, error: "This deployment does not know its own address, so it cannot make a link" };
   const r = await reissueInvite(memberId);
   revalidatePath(`/operations/journey/${journeyId}`);
-  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt }));
+  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt, memberId: d.memberId }));
 }
 
 /**

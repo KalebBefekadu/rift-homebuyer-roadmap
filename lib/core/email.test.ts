@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildSavedPlan, buildSignIn, escapeHtml } from "./email";
+import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildSavedPlan, buildSignIn, buildInvitation, escapeHtml } from "./email";
 
 /**
  * The emails, against the real builders.
@@ -256,5 +256,15 @@ describe("the sign-in link", () => {
     const built = buildSignIn({ to: "a@b.com", link: "https://x.test/auth/callback", purpose: "reset" });
     expect(built.subject).toMatch(/password/i);
     expect(built.html).toContain("new password");
+  });
+});
+
+describe("the invitation email", () => {
+  it("names the agent and the move, carries the link escaped, and has no unsubscribe", () => {
+    const b = buildInvitation({ to: "a@b.com", name: "Abel Tesfaye", agentName: "Kaleb Befekadu", journeyLabel: "Abel's search", link: 'https://x.test/app/invite/abc"><script>' });
+    expect(b.subject).toContain("Kaleb Befekadu");
+    expect(b.text).toContain("Hello Abel,");
+    expect(b.html).not.toContain("<script>");
+    expect(b.html).not.toContain("unsubscribe");
   });
 });

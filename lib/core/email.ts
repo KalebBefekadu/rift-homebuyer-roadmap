@@ -565,3 +565,37 @@ export function buildSignIn(s: SignInEmail): { subject: string; html: string } {
 </div>`.trim();
   return { subject: reset ? "Reset your Rift password" : "Your Rift sign-in link", html };
 }
+
+export interface InvitationEmail {
+  to: string;
+  /** Their name as the agent typed it, or nothing. */
+  name: string | null;
+  agentName: string;
+  journeyLabel: string;
+  /** The invitation link, /app/invite/<token> on this site. */
+  link: string;
+}
+
+/**
+ * An invitation, emailed by the product when the agent presses Send (manual
+ * review WS10.4). The agent sees exactly this text before it goes, which is
+ * the approval decision D04 asks for. Plain, and no unsubscribe: it was
+ * asked for by the agent for one person, and is not marketing.
+ */
+export function buildInvitation(e: InvitationEmail): { subject: string; text: string; html: string } {
+  const first = e.agentName.trim().split(/\s+/)[0] || e.agentName;
+  const hello = e.name ? `Hello ${e.name.split(/\s+/)[0]},` : "Hello,";
+  const lines = [
+    hello,
+    `${e.agentName} has invited you to "${e.journeyLabel}" on Rift, where you can see your move as it happens: what ${first} shares with you, and what needs your answer.`,
+    "Open the link, create a password (or ask for a sign-in email), and you are in. It works for this email address only.",
+  ];
+  const subject = `${e.agentName} invited you to your move on Rift`;
+  const text = `${lines.join("\n\n")}\n\n${e.link}`;
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  ${lines.map((l) => `<p style="font-size:15px">${escapeHtml(l)}</p>`).join("\n  ")}
+  <p style="font-size:15px"><a href="${escapeHtml(e.link)}" style="color:#c2351e">Open your invitation</a></p>
+</div>`.trim();
+  return { subject, text, html };
+}

@@ -508,7 +508,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
           <>
             <Section title="Household" hint={`Who can sign in to this journey, and what each person sees.`}>
               {memberList ? (
-                <Household journeyId={id} side={journey.side} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
+                <Household journeyId={id} side={journey.side} agentName={agent.name} journeyLabel={journey.label} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
               ) : <Unread what="household" />}
             </Section>
             <Section title="Summary links" hint="A read-only summary for someone outside the household. It never shows money, notes or documents.">
