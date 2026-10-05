@@ -371,6 +371,10 @@
 /* ---------------- responsive ---------------- */
 .split { display: grid; grid-template-columns: minmax(0,1fr) 296px; gap: 22px; align-items: start; }
 .split-w { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); gap: 16px; }
+/* The Equb hero drawing sits against the right edge beside the text, and
+   centred under it once the columns stack (manual review WS2.1). */
+.equb-hero-art { display: flex; justify-content: flex-end; }
+@media (max-width: 760px) { .equb-hero-art { justify-content: center; } .equb-hero-art > svg { max-width: 320px !important; } }
 
 @media (max-width: 1120px) {
   .g4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
