@@ -534,6 +534,8 @@ export interface SignInEmail {
   to: string;
   /** The one-time link, already pointing at /auth/callback on this site. */
   link: string;
+  /** "reset" when it was asked for from Forgot password: same link, different words. */
+  purpose?: "signin" | "reset";
 }
 
 /**
@@ -548,15 +550,18 @@ export interface SignInEmail {
  * and an opt-out here would only lock somebody out of their own move.
  */
 export function buildSignIn(s: SignInEmail): { subject: string; html: string } {
+  const reset = s.purpose === "reset";
   const html = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
   <p style="font-size:15px">Hello,</p>
-  <p style="font-size:15px">Here is your link to sign in to your move on Rift.</p>
-  <p style="font-size:15px"><a href="${escapeHtml(s.link)}" style="color:#c2351e">Sign in</a></p>
+  <p style="font-size:15px">${reset
+    ? "Here is your link to sign in and choose a new password for your move on Rift."
+    : "Here is your link to sign in to your move on Rift."}</p>
+  <p style="font-size:15px"><a href="${escapeHtml(s.link)}" style="color:#c2351e">${reset ? "Choose a new password" : "Sign in"}</a></p>
   <p style="font-size:12px;color:#888">
     It works once and expires soon. If you did not ask for it, you can ignore this email:
     nobody can sign in without opening the link.
   </p>
 </div>`.trim();
-  return { subject: "Your Rift sign-in link", html };
+  return { subject: reset ? "Reset your Rift password" : "Your Rift sign-in link", html };
 }

@@ -43,13 +43,22 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 
 Used for four things, and it is worth naming them separately because they fail differently:
 
-1. **Auth** — Supabase Auth email links, read on the server (`lib/db/session.ts` for the
-   agent, `lib/db/portal.ts` for clients).
-   A client's link is minted by Supabase but **delivered by Brevo** when `BREVO_API_KEY`
-   and `BREVO_FROM_EMAIL` are set (`lib/db/signin.ts`), because Supabase's built-in mailer
-   sends a few messages an hour and, without custom SMTP, may deliver only to the project
-   team. Without Brevo it falls back to Supabase's mailer, as it did before. The agent's own
-   sign-in still uses Supabase's mailer.
+1. **Auth** — Supabase Auth, read on the server (`lib/db/session.ts` for the agent,
+   `lib/db/portal.ts` for clients). Clients sign in with a **password or an email link**;
+   the agent with an email link.
+   - Email links are minted by Supabase but **delivered by Brevo** when `BREVO_API_KEY`
+     and `BREVO_FROM_EMAIL` are set (`lib/db/signin.ts`), for clients and, through
+     `app/api/auth/agent-link`, for the agent. Supabase's built-in mailer sends a few
+     messages an hour and, without custom SMTP, may deliver only to the project team.
+     Without Brevo it falls back to that mailer. Setting Supabase's custom SMTP to Brevo
+     covers the fallback too.
+   - Every link lands on `/auth/callback`, a page with a **Continue** button. The token is
+     spent by the POST to `/auth/confirm`, never by a GET, so an email scanner that opens
+     links does not use it up.
+   - Passwords are only created from an open invitation (a new login for the invited
+     address, never a change to an existing one) or on `/app/account` by somebody already
+     signed in. Forgot password sends an email link to `/app/account`. Needs the Email
+     provider with passwords enabled in Supabase Auth (the default).
 2. **Postgres + RLS** — the data layer. See [schema.md](schema.md) for the model to build.
 3. **Storage** — client documents. Not yet used; phase 6.
 4. **Realtime** — not needed yet. Do not reach for it before there is a second concurrent

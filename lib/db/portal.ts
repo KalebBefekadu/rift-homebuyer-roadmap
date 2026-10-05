@@ -243,6 +243,31 @@ export async function mayReceiveSignIn(email: string): Promise<boolean> {
   return r.ok && "data" in r && ((r.data as unknown[]) ?? []).length > 0;
 }
 
+/**
+ * Who else is on a journey, for the account page. Names and roles only, never
+ * another member's address (the projection rule at the top of this file), and
+ * only people who have joined or are still invited, not withdrawn ones.
+ */
+export async function householdOf(m: Membership): Promise<DbResult<{ name: string; role: Role; joined: boolean; you: boolean }[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await boundedReport(
+    db.from("rift_journey_members").select("id,display_name,role,accepted_at,revoked_at,invite_expires_at")
+      .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).is("revoked_at", null).order("invited_at").limit(20),
+    "who is on your move",
+  );
+  if (!r.ok) return r;
+  const rows = (("data" in r ? r.data : null) ?? []) as Record<string, unknown>[];
+  return done(rows
+    .filter((x) => memberState({ acceptedAt: x.accepted_at as string | null, revokedAt: null, inviteExpiresAt: x.invite_expires_at as string | null }) !== "expired")
+    .map((x) => ({
+      name: (x.display_name as string | null)?.trim() || (x.id === m.memberId ? m.name : "Invited guest"),
+      role: x.role as Role,
+      joined: Boolean(x.accepted_at),
+      you: x.id === m.memberId,
+    })));
+}
+
 /* ------------------------------------------------------------------------ */
 /* Homes, as a member sees them                                              */
 /* ------------------------------------------------------------------------ */

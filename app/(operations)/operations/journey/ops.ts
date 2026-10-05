@@ -5,7 +5,8 @@ import { siteUrl } from "@/lib/core/site";
 import { buyerSearchOn, type Role, type Scope, type Side } from "@/lib/core/journey";
 import type { Cadence, PropertyFacts, SearchBrief } from "@/lib/core/search";
 import type { DbResult } from "@/lib/db/result";
-import { createJourney, invite, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
+import { createJourney, invite, joinedMemberEmail, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
+import { sendSignInLink } from "@/lib/db/signin";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
@@ -154,6 +155,21 @@ export async function newInviteLink(journeyId: string, memberId: string) {
   const r = await reissueInvite(memberId);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt }));
+}
+
+/**
+ * Emails a joined member a sign-in link, when the agent presses the button
+ * (manual review WS1.7). Pressing it is the approval decision D04 asks for.
+ */
+export async function sendMemberSignIn(journeyId: string, memberId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(memberId)) return { ok: false as const, error: "That person could not be found" };
+  const r = await joinedMemberEmail(journeyId, memberId);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  const sent = await sendSignInLink(r.data, `/app/j/${journeyId}`);
+  return sent ? { ok: true as const } : { ok: false as const, error: "The email could not be sent. Check the email settings in /api/health" };
 }
 
 export async function withdrawAccess(journeyId: string, memberId: string) {

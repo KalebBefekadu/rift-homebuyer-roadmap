@@ -46,6 +46,8 @@ export interface Member {
   acceptedAt: string | null;
   revokedAt: string | null;
   inviteExpiresAt: string | null;
+  /** When this member last signed in, from Supabase Auth. Null: never, or not joined. */
+  lastSignInAt: string | null;
 }
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -65,11 +67,12 @@ function shapeMember(r: Record<string, unknown>, now = new Date()): Member {
     scopes: (r.scopes as Scope[]) ?? [],
     state: memberState(m, now),
     invitedAt: r.invited_at as string,
+    lastSignInAt: null,
     ...m,
   };
 }
 
-const MEMBER_COLUMNS = "id,email,display_name,role,scopes,invited_at,accepted_at,revoked_at,invite_expires_at";
+const MEMBER_COLUMNS = "id,email,display_name,role,scopes,invited_at,accepted_at,revoked_at,invite_expires_at,auth_user_id";
 
 async function agentScope() {
   const db = serviceClient();
@@ -183,7 +186,33 @@ export async function membersOf(journeyId: string): Promise<DbResult<Member[]>> 
     "who is on it",
   );
   if (!r.ok) return journeyTablesMissing(r.error) ? done([]) : r;
-  return done((("data" in r ? r.data : []) as Record<string, unknown>[]).map((x) => shapeMember(x)));
+  const rows = ("data" in r ? r.data : []) as Record<string, unknown>[];
+  /* "Did they ever open it?" (manual review WS1.7). The last sign-in lives in
+     Supabase Auth, not in our table. At most twenty lookups, in parallel, and
+     a failed one is an unknown, not a "never". */
+  const seen = await Promise.all(rows.map(async (x) => {
+    const id = x.auth_user_id as string | null;
+    if (!id || x.revoked_at) return null;
+    const u = await s.db!.auth.admin.getUserById(id).catch(() => null);
+    return u?.data.user?.last_sign_in_at ?? null;
+  }));
+  return done(rows.map((x, i) => ({ ...shapeMember(x), lastSignInAt: seen[i] ?? null })));
+}
+
+/** A joined member's address, for the agent to send them a sign-in email. */
+export async function joinedMemberEmail(journeyId: string, memberId: string): Promise<DbResult<string>> {
+  const s = await agentScope();
+  if (!s.db) return skipped(s.why!);
+  const r = await boundedReport(
+    s.db.from("rift_journey_members").select("email,accepted_at,revoked_at")
+      .eq("id", memberId).eq("journey_id", journeyId).eq("agent_id", s.agentId).maybeSingle(),
+    "who is on it",
+  );
+  if (!r.ok) return r;
+  const row = ("data" in r ? r.data : null) as { email: string; accepted_at: string | null; revoked_at: string | null } | null;
+  if (!row || row.revoked_at) return failed("That person no longer has access");
+  if (!row.accepted_at) return failed("They have not joined yet. Send them the invitation link instead");
+  return done(row.email);
 }
 
 export interface Invitation { memberId: string; token: string; expiresAt: string }
@@ -200,7 +229,9 @@ function newToken() {
  *
  * Inviting an address that already has a live row reissues that row's link
  * (a new token, a new expiry, the old link dead) rather than adding a second
- * membership for the same person.
+ * membership for the same person. One token per member is kept on purpose,
+ * so the agent always knows which link works; the Household panel says
+ * plainly that the previous link stops working (manual review WS1.6).
  */
 export async function invite(journeyId: string, input: {
   email: string; name: string | null; role: Role; scopes?: Scope[];

@@ -13,6 +13,7 @@ export function ClientShell({ agentName, children }: { agentName: string | null;
           </Link>
           <div className="row gap-2">
             {agentName ? <span className="t-xs c-4 hide-sm">With {agentName}</span> : null}
+            {agentName ? <Link href="/app/account" className="btn btn-g btn-sm">Account</Link> : null}
             <form action="/app/sign-out" method="post">
               <button className="btn btn-g btn-sm" type="submit">Sign out</button>
             </form>

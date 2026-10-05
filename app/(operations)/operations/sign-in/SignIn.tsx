@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { Ico, Mark } from "@/components/rift/icons";
 
 export function SignIn({ reason }: { reason?: string }) {
@@ -10,29 +9,31 @@ export function SignIn({ reason }: { reason?: string }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error" | "unconfigured">("idle");
   const [error, setError] = useState("");
 
+  /* Through the server, which sends with Brevo (app/api/auth/agent-link). The
+     browser no longer talks to Supabase's mailer directly. */
   const send = async () => {
-    const supabase = createClient();
-    if (!supabase) { setState("unconfigured"); return; }
-
+    if (!email.trim() || state === "sending") return;
     setState("sending");
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/operations`,
-        /* No implicit sign-up. An account that appears because somebody typed
-           an address into this box would be an agent account. */
-        shouldCreateUser: false,
-      },
-    });
-
-    if (err) {
+    try {
+      const res = await fetch("/api/auth/agent-link", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; unconfigured?: boolean } | null;
+      if (data?.unconfigured) { setState("unconfigured"); return; }
+      if (!res.ok || !data?.ok) {
+        setState("error");
+        /* Deliberately vague. "No account with that address" tells anybody who
+           finds this page which addresses are real, and there is one. */
+        setError(res.status === 429 ? "Too many tries in a row. Wait a few minutes." : "That did not work. If the address is right, check the inbox anyway.");
+        return;
+      }
+      setState("sent");
+    } catch {
       setState("error");
-      /* Deliberately vague. "No account with that address" tells anybody who
-         finds this page which addresses are real, and there is one. */
-      setError("That did not work. If the address is right, check the inbox anyway.");
-      return;
+      setError("We could not reach the server. Check your connection and try again.");
     }
-    setState("sent");
   };
 
   return (
@@ -50,8 +51,8 @@ export function SignIn({ reason }: { reason?: string }) {
             <span className="t-md w6">Check your email.</span>
           </div>
           <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
-            There is a link in your inbox that signs you in. It works once and expires shortly,
-            so open it on the device you want to be signed in on.
+            If that is the agent&rsquo;s address, there is a link in your inbox that signs you in. It works
+            once and expires shortly, on any device.
           </p>
         </div>
       ) : (
@@ -80,6 +81,8 @@ export function SignIn({ reason }: { reason?: string }) {
               <Ico.info size={12} style={{ flex: "none", marginTop: 2 }} />
               {reason === "expired"
                 ? "That link had already been used or has expired. They are single-use on purpose."
+                : reason === "other_device"
+                  ? "That link was opened in a different browser from the one that asked for it. Ask for a new one."
                 : reason === "unconfigured"
                   ? "Authentication is not configured on this deployment yet."
                   : "Something was missing from that link. Ask for a fresh one."}

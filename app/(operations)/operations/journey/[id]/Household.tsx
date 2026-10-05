@@ -17,6 +17,7 @@ export interface MemberView {
   state: MemberState;
   acceptedAt: string | null;
   inviteExpiresAt: string | null;
+  lastSignInAt: string | null;
 }
 
 const STATE_LABEL: Record<MemberState, string> = {
@@ -45,8 +46,9 @@ const sees = (side: "buy" | "sell", scopes: Scope[]) =>
  *
  * The invitation is a link the agent sends himself. Rift does not email it:
  * a message to a client is an external action he approves (decision D04),
- * and pasting it into his own email is that approval. The person opening it
- * must sign in with the same address before it grants anything.
+ * and pasting it into his own email is that approval. Opening it, the person
+ * creates a password for the invited address or asks for an email link to it,
+ * and only that address can join.
  */
 export function Household({ journeyId, side, members, defaultEmail, defaultName }: {
   side: "buy" | "sell";
@@ -63,6 +65,7 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
   const [scopes, setScopes] = useState<Scope[]>(DEFAULT_SCOPES[nobodyYet ? "buyer" : "co-buyer"]);
   const [link, setLink] = useState<{ link: string; expiresAt: string; who: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
   const { busy, error, setError, write } = useWrite(members.map((m) => `${m.id}:${m.state}:${m.inviteExpiresAt}`).join("|"));
 
   const done = (r: Sent, who: string) => {
@@ -88,14 +91,28 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
                 </div>
                 <div className="t-2xs c-4" style={{ marginTop: 3 }}>
                   {m.email} · sees {sees(side, m.scopes)}
+                  {m.state === "active" ? <> · {m.lastSignInAt ? `last signed in ${DAY(m.lastSignInAt)}` : "no sign-in on record yet"}</> : null}
                 </div>
               </div>
               {m.state !== "revoked" ? (
                 <div className="row gap-1">
                   {m.state === "invited" || m.state === "expired" ? (
                     <button className="btn btn-g btn-sm" disabled={busy}
-                      onClick={async () => { done(await write("new-link", { journeyId, memberId: m.id }, { reload: false }), m.name ?? m.email); }}>
+                      onClick={async () => {
+                        if (m.state === "invited" && !confirm(`Make a new link for ${m.name ?? m.email}? The link you sent before stops working.`)) return;
+                        done(await write("new-link", { journeyId, memberId: m.id }, { reload: false }), m.name ?? m.email);
+                      }}>
                       New link
+                    </button>
+                  ) : null}
+                  {m.state === "active" ? (
+                    <button className="btn btn-g btn-sm" disabled={busy}
+                      onClick={async () => {
+                        if (!confirm(`Email ${m.email} a sign-in link now?`)) return;
+                        const r = await write("send-signin", { journeyId, memberId: m.id }, { reload: false });
+                        if (r.ok) setSent(m.email);
+                      }}>
+                      Send sign-in email
                     </button>
                   ) : null}
                   <button className="btn btn-g btn-sm" disabled={busy}
@@ -116,12 +133,14 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
       )}
 
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
+      {sent ? <p role="status" className="t-xs c-pos" style={{ marginTop: 8 }}>Sign-in link sent to {sent}.</p> : null}
 
       {link ? (
         <div role="status" className="card p-3" style={{ marginTop: 10, borderColor: "var(--pos-line)", background: "var(--pos-wash)" }}>
           <div className="t-sm w6">Invitation link for {link.who}</div>
           <p className="t-2xs c-3" style={{ marginTop: 4, lineHeight: 1.5 }}>
-            Shown once. Send it yourself, by email or text. It works until {DAY(link.expiresAt)}, and only for somebody who signs in with that address.
+            Shown once. Send it yourself, by email or text. It works until {DAY(link.expiresAt)}. Opening it, they create a password
+            (or ask for an email link) for that address and join in one step. Any earlier link for them has stopped working.
           </p>
           <div className="row gap-2" style={{ marginTop: 8 }}>
             <input className="input" readOnly value={link.link} onFocus={(e) => e.currentTarget.select()} aria-label="Invitation link" />

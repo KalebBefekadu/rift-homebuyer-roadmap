@@ -251,4 +251,10 @@ describe("the sign-in link", () => {
     expect(built.html).not.toContain("<script>");
     expect(built.html).not.toContain("unsubscribe");
   });
+
+  it("says what a reset link is for", () => {
+    const built = buildSignIn({ to: "a@b.com", link: "https://x.test/auth/callback", purpose: "reset" });
+    expect(built.subject).toMatch(/password/i);
+    expect(built.html).toContain("new password");
+  });
 });

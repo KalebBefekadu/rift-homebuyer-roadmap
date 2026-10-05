@@ -7,13 +7,18 @@ export const metadata: Metadata = { title: "Sign in", robots: { index: false } }
 const WHY: Record<string, string> = {
   expired: "That sign-in link has expired or was already used. Ask for a new one below.",
   missing_code: "That sign-in link was incomplete. Ask for a new one below.",
+  other_device: "That link was opened in a different browser from the one that asked for it. Ask for a new one below, or sign in with your password.",
   unconfigured: "Sign-in is not set up on this site right now. Your agent can still help by phone or email.",
 };
 
 /**
- * The buyer's sign-in. A link by email, never a password, and never an
- * account for an address nobody invited: see app/api/app/route.ts.
+ * The buyer's sign-in: a password, or a link by email. Never an account for
+ * an address nobody invited (app/api/app/route.ts): passwords are created from
+ * an invitation or from the account page, not here.
  */
+
+/* Back to where they were going, but only within the client's own pages. */
+const safeNext = (n: string | undefined) => (n && /^\/app(\/|$|\?)/.test(n) && !n.startsWith("//") ? n : "/app");
 export default async function ClientSignIn({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const q = await searchParams;
   const reason = q.error ? WHY[q.error] ?? WHY.expired : q.out ? "You are signed out." : null;
@@ -26,10 +31,10 @@ export default async function ClientSignIn({ searchParams }: { searchParams: Pro
       <div className="card p-5">
         <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>Sign in to your move</h1>
         <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-          For buyers and sellers your agent has invited. We email you a link; there is no password to remember.
+          For buyers and sellers your agent has invited. Use your password, or we can email you a link.
         </p>
         {reason ? <p className="t-xs c-3" style={{ marginTop: 10 }}>{reason}</p> : null}
-        <SignInForm />
+        <SignInForm next={safeNext(q.next)} />
       </div>
       {/* Blueprint v5 §7.3. The form sends nothing to an address nobody
           invited, and cannot say so without revealing who is a client, so the
@@ -37,8 +42,8 @@ export default async function ClientSignIn({ searchParams }: { searchParams: Pro
       <div className="t-sm c-3" style={{ marginTop: 18, lineHeight: 1.6, paddingInline: 4 }}>
         <div className="w6 c-2">First time here?</div>
         <p style={{ marginTop: 4 }}>
-          Access starts with an invitation link from your agent. Open that link once and you are in; after
-          that, sign in here with the same email. If you have not had an invitation, ask your agent for one.
+          Access starts with an invitation link from your agent. Open it, create a password, and you are in;
+          after that, sign in here with the same email. If you have not had an invitation, ask your agent for one.
         </p>
       </div>
     </main>

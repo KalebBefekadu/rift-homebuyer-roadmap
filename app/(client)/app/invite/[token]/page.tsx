@@ -10,10 +10,13 @@ export const dynamic = "force-dynamic";
 /**
  * Opening an invitation.
  *
- * The link alone grants nothing. It says whose invitation it is (with the
- * address masked, because the link may have been forwarded), then asks the
- * holder to sign in with that address. Only a signed-in session whose
- * verified address matches can accept, and accepting spends the link.
+ * It says whose invitation it is (with the address masked, because the link
+ * may have been forwarded), then offers two ways in: create a password, which
+ * makes a NEW login for the invited address and joins in one step, or an
+ * email link to that address. A login that already exists is never given a
+ * password from here (lib/db/signin.ts, createPasswordAccount). Only a
+ * session whose verified address matches can accept, and accepting spends
+ * the link.
  */
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

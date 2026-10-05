@@ -93,7 +93,7 @@ built against.
 | Public product | `app/(rift)` | The buyer surfaces |
 | Agent surface | `app/(studio)` | Studio |
 | Specification prototype | `app/prototype`, `components/rift`, `lib/prototype` | The agreed product, running |
-| Auth | `lib/supabase`, `lib/db/session.ts`, `app/auth/callback` | Supabase Auth: email links for clients and the agent |
+| Auth | `lib/supabase`, `lib/db/session.ts`, `lib/db/signin.ts`, `app/(client)/auth/callback`, `app/auth/confirm` | Supabase Auth: passwords or email links for clients, email links for the agent |
 | Messaging | `lib/brevo/sync.ts` | Contact upsert and event projection (no caller yet) |
 | Observability | `lib/monitoring`, `instrumentation*.ts`, `sentry.*.config.ts` | Capture failures without PII |
 | Domain | `lib/core` | The compute engine and every product rule, pure and tested |

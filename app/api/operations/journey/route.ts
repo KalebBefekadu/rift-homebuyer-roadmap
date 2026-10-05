@@ -4,7 +4,7 @@ import { SCOPES, type Role, type Scope, type Side } from "@/lib/core/journey";
 import { CADENCE_LABEL, EMPTY_FACTS, type Cadence, type PropertyFacts, type SearchBrief } from "@/lib/core/search";
 import {
   startJourney, relabelJourney, saveBrief, approveSearch, confirmSearchSetUp, pauseSearch,
-  inviteMember, newInviteLink, withdrawAccess, addShortlistHome, takeHomeOff,
+  inviteMember, newInviteLink, sendMemberSignIn, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
   moveStage, setJourneyStatus, openContract, closeContract, updateWork,
   documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds, listingHappened, showingStep, weeklyReview, sellerOp, type SellerOp,
@@ -185,6 +185,8 @@ export async function POST(req: Request) {
       return json(await newInviteLink(journeyId, str(b.memberId, 40)));
     case "withdraw":
       return json(await withdrawAccess(journeyId, str(b.memberId, 40)));
+    case "send-signin":
+      return json(await sendMemberSignIn(journeyId, str(b.memberId, 40)));
     case "add-home": {
       const h = (b.home ?? {}) as Body;
       return json(await addShortlistHome(journeyId, {
