@@ -8,6 +8,7 @@ import { BAND_LABEL, type Band } from "@/lib/core/lead";
 import { Section, Notice } from "../../ui";
 import type { Background } from "@/lib/db/lead-background";
 import css from "./record.module.css";
+import { fromVisitor } from "@/lib/core/people";
 
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric", year: "numeric" });
 
@@ -73,7 +74,7 @@ export function Wants({ side, source, score, band, saved, background }: {
       {nothing ? (
         <div className="card p-4">
           <p className="t-sm c-3" style={{ lineHeight: 1.6 }}>
-            {source === "funnel"
+            {fromVisitor(source)
               ? "They arrived without a recorded set of answers and have not saved a plan."
               : "Added by hand, so there are no funnel answers or saved plan. What you learn goes in a note, and a journey holds their search brief."}
           </p>
