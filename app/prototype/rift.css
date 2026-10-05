@@ -125,7 +125,10 @@
 /* ---------------- type ---------------- */
 .serif { font-family: Zodiak, "Iowan Old Style", Georgia, serif; font-weight: 400; letter-spacing: -0.012em; }
 
-.d1 { font-size: clamp(42px, 6.4vw, 82px); line-height: 0.98; letter-spacing: -0.028em; }
+/* Smaller, and with room under it (manual review WS3.1): at 82px the title
+   crowded the line beneath it on the home, buy and sell pages alike. */
+.d1 { font-size: clamp(34px, 5.2vw, 64px); line-height: 1.02; letter-spacing: -0.026em; }
+.d1 + .lede, .d1 + p { margin-top: 30px; }
 .d2 { font-size: clamp(32px, 4.4vw, 52px); line-height: 1.04; letter-spacing: -0.024em; }
 .d3 { font-size: clamp(25px, 3vw, 34px); line-height: 1.1;  letter-spacing: -0.02em; }
 

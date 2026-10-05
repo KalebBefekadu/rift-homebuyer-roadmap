@@ -4,10 +4,12 @@ import { Ico } from "@/components/rift/icons";
 import { AgentSchema } from "@/components/rift/Agent";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
-import { CashStack, ProceedsFlow } from "@/components/rift/value/artifacts";
+import { ProceedsBar } from "@/components/rift/value/artifacts";
+import { CashBreakdown } from "@/components/rift/value/CashBreakdown";
+import { ValueArt } from "@/components/rift/value/ValueArt";
 import { money, cashToClose, BUYER_DEFAULTS, SELLER_DEFAULTS } from "@/lib/core/compute";
 import { sellerNet } from "@/lib/core/seller";
-import { valuesFor } from "@/lib/core/values";
+import { valueById, valuesFor } from "@/lib/core/values";
 
 export const metadata: Metadata = {
   title: "Know the real number before you talk to anyone",
@@ -25,7 +27,8 @@ export const revalidate = 86400;
  * same engine the values use, so the number here cannot drift from the number
  * one click later. The three "trust points" are gone ("just useless"); what
  * replaces them is the list of questions each side can answer, which says
- * what this is by showing it. "No account" is said once, quietly (principle 2).
+ * what this is by showing it. The footer note about cost and commission went
+ * with the 5 October review (decision D3); /privacy still says how Kaleb is paid.
  */
 export default function HomePage() {
   const buy = cashToClose({ ...BUYER_DEFAULTS, assistance: 0 });
@@ -59,10 +62,10 @@ export default function HomePage() {
             kicker="I'm buying"
             title="The down payment is not the number."
             figure={money(buy.total)}
-            caption={`is the cash a ${money(BUYER_DEFAULTS.price)} home in Georgia takes, not the ${money(buy.down)} down payment.`}
-            art={<CashStack lines={buy.lines} total={buy.total} down={buy.down} />}
+            caption={`Cash you need for a ${money(BUYER_DEFAULTS.price)} home: more than the ${money(buy.down)} down payment.`}
+            art={<CashBreakdown lines={buy.lines} total={buy.total} down={buy.down} />}
             href="/buy"
-            cta="Start with buying"
+            cta="See what buying will cost me"
             questions={valuesFor("buy").map((v) => ({ href: v.href, label: v.question }))}
           />
           <Door
@@ -70,41 +73,46 @@ export default function HomePage() {
             kicker="I'm selling"
             title="The sale price is not the number either."
             figure={money(sell.net)}
-            caption={`is what a ${money(SELLER_DEFAULTS.price)} sale leaves after the loan payoff and Georgia's costs of selling, before the commission you agree.`}
-            art={<ProceedsFlow price={SELLER_DEFAULTS.price} parts={sellParts} net={sell.net} />}
+            caption={`What you keep from a ${money(SELLER_DEFAULTS.price)} sale after the loan and selling costs (before any commission).`}
+            art={<ProceedsBar price={SELLER_DEFAULTS.price} parts={sellParts} net={sell.net} />}
             href="/sell"
-            cta="Start with selling"
+            cta="See what I'd walk away with"
             questions={valuesFor("sell").map((v) => ({ href: v.href, label: v.question }))}
           />
         </section>
 
-        <section className="sec pair" aria-label="Also here">
-          <Link href="/sell/unclaimed" className="card p-5 lift value-card sell">
-            <div className="kicker c-brand">Own a home in Georgia?</div>
-            <div className="t-xl serif">You may be paying more tax than you need to.</div>
-            <p className="t-sm c-3 grow" style={{ lineHeight: 1.6 }}>
-              Homestead and senior exemptions, and assessment appeals, whether or not you ever move.
-            </p>
-            <span className="row gap-1 t-sm w6 c-brand">Check what I may be missing<Ico.arrowR size={14} /></span>
-          </Link>
-          <Link href="/abroad" className="card p-5 lift value-card abroad">
-            <div className="kicker c-brand">Living outside the United States?</div>
-            <div className="t-xl serif">You can own a home in the United States.</div>
-            <p className="t-sm c-3 grow" style={{ lineHeight: 1.6 }}>
-              You don&apos;t need citizenship, a green card, or a visa to own property in the United
-              States, and you don&apos;t need to be here to close.
-            </p>
-            <span className="row gap-1 t-sm w6 c-brand">Check if I can buy<Ico.arrowR size={14} /></span>
-          </Link>
+        <section className="sec" aria-labelledby="more-h">
+          <h2 id="more-h" className="serif d3 ctr">More you can work out here</h2>
+          <div className="trio mt-4">
+            {MORE.map((c) => (
+              <Link key={c.href} href={c.href} className={`card p-5 lift value-card ${c.tone}`}>
+                <ValueArt id={c.art} style={{ margin: "0 auto 4px" }} />
+                <div className="kicker c-brand">{c.kicker}</div>
+                <div className="t-xl serif">{c.title}</div>
+                <p className="t-sm c-3 grow" style={{ lineHeight: 1.6 }}>{c.body}</p>
+                <span className="row gap-1 t-sm w6 c-brand">{c.cta}<Ico.arrowR size={14} /></span>
+              </Link>
+            ))}
+          </div>
         </section>
-
-        <p className="t-sm c-4 ctr sec-sm">Free to use, with nothing to sign up for. Kaleb is paid a commission only if you buy or sell with him.</p>
       </main>
 
       <SiteFooter />
     </div>
   );
 }
+
+/* Manual review WS3.7: two buyer values, two seller values, Equb and abroad,
+   each with its own drawing. The links come from the value catalogue, so a
+   card cannot point at a tool that was renamed or removed. */
+const MORE = [
+  { art: "cash", tone: "buy", kicker: "Buying", title: "Cash to close", body: "Everything you bring on closing day, not just the down payment.", href: valueById("cash")!.href, cta: "Work out my cash" },
+  { art: "assistance", tone: "buy", kicker: "Buying", title: "Georgia down payment help", body: "Programs from the state, counties, cities and lenders that may help you buy.", href: valueById("assistance")!.href, cta: "Check what may help" },
+  { art: "proceeds", tone: "sell", kicker: "Selling", title: "What you'd walk away with", body: "Your sale price, less the loan and the costs of selling.", href: valueById("proceeds")!.href, cta: "Work out what I keep" },
+  { art: "unclaimed", tone: "sell", kicker: "Own a home", title: "Money you may be missing", body: "Homestead and senior exemptions and tax appeals, whether or not you ever move.", href: valueById("unclaimed")!.href, cta: "Check what I may be missing" },
+  { art: "equb", tone: "equb", kicker: "Save together", title: "Equb for your down payment", body: "A group savings plan, the way families have always done it, aimed at a home.", href: "/equb", cta: "See how Equb works" },
+  { art: "eligibility", tone: "abroad", kicker: "Living abroad", title: "Own a home in the United States", body: "You don't need citizenship, a green card or a visa, and you don't need to be here to close.", href: "/abroad", cta: "Check if I can buy" },
+] as const;
 
 function Door({ tone, kicker, title, figure, caption, art, href, cta, questions }: {
   tone: "buy" | "sell";

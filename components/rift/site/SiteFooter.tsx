@@ -50,9 +50,6 @@ export function SiteFooter() {
             <Mark size={18} />
             <span className="mark-name" style={{ fontSize: 17 }}>Rift</span>
           </Link>
-          <p className="t-sm c-3" style={{ marginTop: 12, lineHeight: 1.6 }}>
-            Guided by Kaleb Befekadu, Peachtree Cardinal, Georgia. Using Rift costs you nothing.
-          </p>
         </div>
         {cols.map((c) => (
           <nav key={c.title} className="col" aria-label={c.title}>
@@ -62,9 +59,13 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="shell-w site-foot-base">
-        <p className="t-xs c-4" style={{ lineHeight: 1.6, maxWidth: 760 }}>
-          Every figure is a planning estimate from your answers and published Georgia terms, not a
-          lending commitment, approval, or valuation, and not tax or legal advice.
+        {/* Kept, in small type, until the broker agrees they can go (manual
+            review D2): the brokerage line is how Georgia advertising rules
+            expect the brokerage to be identified, and the disclaimer is what
+            keeps a computed figure from reading as a lending commitment. */}
+        <p className="t-2xs c-4" style={{ lineHeight: 1.6, maxWidth: 760 }}>
+          Kaleb Befekadu, Peachtree Cardinal, Georgia. Figures are planning estimates, not a lending
+          commitment, valuation, or tax or legal advice.
         </p>
       </div>
     </footer>
