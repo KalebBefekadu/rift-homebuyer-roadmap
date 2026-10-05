@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Mark } from "@/components/rift/icons";
 
 /** The bar across the buyer's pages: where they are, whose, and a way out. */
-export function ClientShell({ agentName, children }: { agentName: string | null; children: React.ReactNode }) {
+export function ClientShell({ agentName, preview, children }: { agentName: string | null; preview?: boolean; children: React.ReactNode }) {
   return (
     <>
       <header style={{ borderBottom: "1px solid var(--line-2)", background: "var(--paper)" }}>
@@ -13,10 +13,15 @@ export function ClientShell({ agentName, children }: { agentName: string | null;
           </Link>
           <div className="row gap-2">
             {agentName ? <span className="t-xs c-4 hide-sm">With {agentName}</span> : null}
-            {agentName ? <Link href="/app/account" className="btn btn-g btn-sm">Account</Link> : null}
-            <form action="/app/sign-out" method="post">
-              <button className="btn btn-g btn-sm" type="submit">Sign out</button>
-            </form>
+            {/* The agent's preview has no account and must not sign the agent out. */}
+            {preview ? <span className="chip t-2xs">Preview</span> : (
+              <>
+                {agentName ? <Link href="/app/account" className="btn btn-g btn-sm">Account</Link> : null}
+                <form action="/app/sign-out" method="post">
+                  <button className="btn btn-g btn-sm" type="submit">Sign out</button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </header>

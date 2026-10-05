@@ -105,6 +105,11 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
                       New link
                     </button>
                   ) : null}
+                  {m.state === "active" || m.state === "invited" ? (
+                    <a className="btn btn-g btn-sm" href={`/app/preview/${journeyId}/${m.id}`} target="_blank" rel="noopener">
+                      Preview as {side === "sell" ? "seller" : "client"}
+                    </a>
+                  ) : null}
                   {m.state === "active" ? (
                     <button className="btn btn-g btn-sm" disabled={busy}
                       onClick={async () => {

@@ -78,10 +78,10 @@ export interface Membership {
 
 const MEMBERSHIP_SELECT = "id,journey_id,agent_id,role,scopes,display_name,email,accepted_at,revoked_at,invite_expires_at";
 
-async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
+async function hydrate(rows: Record<string, unknown>[], anyState = false): Promise<Membership[]> {
   const db = serviceClient();
   if (!db || rows.length === 0) return [];
-  const live = rows.filter((r) => memberState({
+  const live = anyState ? rows : rows.filter((r) => memberState({
     acceptedAt: r.accepted_at as string | null, revokedAt: r.revoked_at as string | null,
     inviteExpiresAt: r.invite_expires_at as string | null,
   }) === "active");
@@ -134,6 +134,28 @@ export async function memberOf(userId: string, journeyId: string): Promise<DbRes
   const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
   if (!row) return done(null);
   const [m] = await hydrate([row]);
+  return done(m ?? null);
+}
+
+/**
+ * A member as the agent previews them (manual review WS10.2). Scoped to the
+ * agent's own journeys by the caller's agent id, and including a member who
+ * has not joined yet, so the agent can check what an invitation will show
+ * before it is opened. It grants nothing: the preview page only reads, and
+ * the agent's session is never turned into the member's.
+ */
+export async function memberForPreview(agentId: string, journeyId: string, memberId: string): Promise<DbResult<Membership | null>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await boundedReport(
+    db.from("rift_journey_members").select(MEMBERSHIP_SELECT)
+      .eq("id", memberId).eq("journey_id", journeyId).eq("agent_id", agentId).is("revoked_at", null).maybeSingle(),
+    "that member",
+  );
+  if (!r.ok) return journeyTablesMissing(r.error) ? done(null) : r;
+  const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
+  if (!row) return done(null);
+  const [m] = await hydrate([row], true);
   return done(m ?? null);
 }
 

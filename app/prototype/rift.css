@@ -838,3 +838,7 @@
   .ops-foot { margin: 0; flex-direction: row; padding: 0; }
 }
 @media print { .ops-frame { display: block; } }
+
+/* A heading reached from an in-page link lands below a sticky bar, not
+   under it (the client journey's section menu, manual review WS11.2). */
+.rift h2[id], .rift section[id] { scroll-margin-top: 64px; }
