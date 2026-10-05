@@ -110,3 +110,41 @@ export function ReturnBars({ cashFlow, principal, appreciation, labels, lang }: 
     </svg>
   );
 }
+
+/**
+ * Four ways one home pays you back (manual review WS6.2): rent, growth in
+ * value, an asset held in dollars, and a place to stay. It replaced three
+ * bars that said nothing without their numbers and were clipped at the
+ * edges. No figures here, so nothing to keep honest; the labels are passed in
+ * so they switch language with the page, and every label sits inside the
+ * drawing at any width.
+ */
+export function FourWays({ labels, label, lang }: {
+  labels: [string, string, string, string];
+  label: string;
+  lang?: string;
+}) {
+  const spots = [
+    { x: 70, y: 46, icon: "M-9 4h18M-6 4V-4h12v8M-2 -4v-4h4v4" },
+    { x: 250, y: 46, icon: "M-10 8 -3 0 2 4 10 -7M4 -7h6v6" },
+    { x: 70, y: 174, icon: "M0 -10v20M6 -6c0-3-3-4-6-4s-6 1-6 4 3 4 6 4 6 1 6 4-3 4-6 4-6-1-6-4" },
+    { x: 250, y: 174, icon: "M-10 8V-1L0 -9 10 -1V8ZM-3 8V2h6v6" },
+  ];
+  return (
+    <svg role="img" aria-label={label} lang={lang} viewBox="0 0 320 220" style={{ width: "100%", height: "auto", display: "block" }}>
+      <g stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinejoin="round">
+        <path d="M128 110 L160 82 L192 110" />
+        <path d="M136 104 V142 H184 V104" />
+        <rect x="153" y="122" width="14" height="20" />
+      </g>
+      {spots.map((p, i) => (
+        <g key={i}>
+          <path d={`M160 112 L${p.x} ${p.y}`} stroke="currentColor" strokeWidth="1" strokeDasharray="3 4" opacity=".4" />
+          <circle cx={p.x} cy={p.y} r="22" fill="var(--paper)" stroke="currentColor" strokeWidth="1.4" />
+          <path d={p.icon} transform={`translate(${p.x} ${p.y})`} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <text x={p.x} y={p.y < 110 ? p.y - 30 : p.y + 38} textAnchor="middle" fontSize="12" fill="var(--ink-2)">{labels[i]}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}

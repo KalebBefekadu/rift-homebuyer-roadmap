@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico, Mark } from "@/components/rift/icons";
-import { Tibeb, Distance, ReturnBars } from "@/components/rift/art";
+import { Tibeb, Distance, FourWays } from "@/components/rift/art";
 import { LocaleToggle } from "@/components/rift/LocaleToggle";
-import { FaqSchema } from "@/components/rift/Agent";
+import { ValueArt } from "@/components/rift/value/ValueArt";
 import { Announce } from "@/components/rift/Live";
 import { translator, servedIn, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { useTrack, useCaptureTouch, track } from "@/lib/rift/track";
@@ -126,26 +126,13 @@ export function Landing({ initial, initialLocale, localePinned }: {
      already been given above, so there is nothing left to ask. */
   const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}&lang=${locale}`;
 
-  /* One array, two consumers: the cards below and the structured data beside
-     them. Written out rather than generated from a range, because a missing
-     key must fail the i18n test loudly rather than render a card reading
-     "faq.q7". */
-  const faq: [string, string][] = [
-    [t("faq.q1"), t("faq.a1")],
-    [t("faq.q2"), t("faq.a2", { pct: `${ASSUMPTIONS.managementPct}%` })],
-    [t("faq.q3"), t("faq.a3")],
-    [t("faq.q4"), t("faq.a4")],
-    [t("faq.q5"), t("faq.a5")],
-    [t("faq.q6"), t("faq.a6")],
-  ];
-
   return (
     <div className="buy" lang={locale}>
-      <header style={{
-        position: "sticky", top: 0, zIndex: 40, background: "rgba(251,250,248,.86)",
-        backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line-2)",
-      }}>
-        <div className="shell-w between" style={{ height: 58 }}>
+      {/* The same header classes as every other public page (WS6.3): this one
+          had its own height, background and blur, which is why it sat
+          differently from the rest of the site. */}
+      <header className="site-head">
+        <div className="shell-w between site-head-in">
           <Link href="/abroad" className="row gap-2">
             <Mark size={20} />
             <span className="mark-name hide-xs" style={{ fontSize: 19 }}>Rift</span>
@@ -233,10 +220,11 @@ export function Landing({ initial, initialLocale, localePinned }: {
           {/* The other two values, each its own page (§5.4, D20 order). */}
           <div className="pair mt-4" style={{ maxWidth: 940 }} lang="en">
             {[
-              { href: `/abroad/cost?st=${status}&lang=${locale}`, kicker: "Cost to buy and own", q: "What would buying and owning cost me?", b: "The cash you would send, and what owning costs each year." },
-              { href: `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&lang=${locale}`, kicker: "The return", q: "What would it earn if I rented it out?", b: "Rent, costs and what is left, marked as an estimate." },
+              { art: "abroad-cost", href: `/abroad/cost?st=${status}&lang=${locale}`, kicker: "Cost to buy and own", q: "What would buying and owning cost me?", b: "The cash you would send, and what owning costs each year." },
+              { art: "abroad-return", href: `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&lang=${locale}`, kicker: "The return", q: "What would it earn if I rented it out?", b: "Rent, costs and what is left, marked as an estimate." },
             ].map((v) => (
               <Link key={v.href} href={v.href} className="card p-5 lift value-card">
+                <ValueArt id={v.art} style={{ maxWidth: 170 }} />
                 <div className="kicker c-brand">{v.kicker}</div>
                 <div className="t-lg w6 serif">{v.q}</div>
                 <p className="t-sm c-3 grow" style={{ lineHeight: 1.55 }}>{v.b}</p>
@@ -264,10 +252,9 @@ export function Landing({ initial, initialLocale, localePinned }: {
               <p className="t-md c-3" style={{ marginTop: 14, lineHeight: am ? 1.9 : 1.65, maxWidth: 420, ...script }}>
                 {t("why.lede")}
               </p>
-              <div className="card p-4" style={{ marginTop: 20, background: "var(--sunk)" }}>
-                <ReturnBars cashFlow={r.year1.cashFlow} principal={r.year1.principal}
-                  appreciation={r.year1.appreciation} lang={locale}
-                  labels={[t("bar.rent"), t("bar.principal"), t("bar.appreciation")]} />
+              <div className="card p-4 c-brand" style={{ marginTop: 20, background: "var(--sunk)", ...script }}>
+                <FourWays lang={locale} label={t("four.label")}
+                  labels={[t("four.rent"), t("four.growth"), t("four.dollar"), t("four.stay")]} />
               </div>
             </div>
             <div className="card" style={{ overflow: "hidden" }}>
@@ -278,7 +265,6 @@ export function Landing({ initial, initialLocale, localePinned }: {
                   cash: money(r.cashIn), price: money(price),
                 })],
                 [Ico.spark, t("why.3"), t("why.3.body")],
-                [Ico.doc, t("why.4"), t("why.4.body")],
               ] as const).map(([Icon, t, b], i, arr) => (
                 <div key={t} className="row gap-3" style={{
                   padding: "14px 18px", alignItems: "flex-start",
@@ -295,68 +281,23 @@ export function Landing({ initial, initialLocale, localePinned }: {
           </div>
         </section>
 
-        {/* The objections, answered before they're raised. */}
-        <section className="shell-w sec">
-          <h2 className={am ? "" : "serif"} style={{
-            fontSize: am ? "clamp(21px,2.4vw,28px)" : "clamp(24px,2.8vw,34px)",
-            letterSpacing: am ? "0" : "-0.02em", maxWidth: 620,
-            lineHeight: am ? 1.45 : undefined, ...script,
-          }}>
-            {t("faq.h2")}
-          </h2>
-          {/* Declared to a search engine from the SAME array the page renders
-              from. Google's rule is that structured data must match what the
-              visitor sees, and a second copy written for crawlers drifts from
-              the page inside a release: at which point the product is making
-              two different claims about the same thing, one of them invisible.
-
-              Locale-aware, because the Amharic page is a real addressable
-              version of this page rather than a widget on top of the English
-              one, and declaring English answers on it would describe a page
-              that does not exist. */}
-          <FaqSchema locale={locale} items={faq.map(([q, a]) => ({ q, a }))} />
-
-          <div className="g2 gap-3" style={{ marginTop: 24 }}>
-            {faq.map(([q, a]) => (
-              <div key={q} className="card p-4">
-                <div className="t-md w6" style={script}>{q}</div>
-                <p className="t-sm c-3" style={{ marginTop: 7, lineHeight: am ? 1.9 : 1.65, ...script }}>{a}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Three doors at three commitment levels. */}
+        {/* One call to action (WS6.1). The other two doors are in the header
+            (Talk to Kaleb) and on /abroad/how, with the questions that used
+            to be here. */}
         <section className="shell-w sec">
           <div className="card" style={{ padding: "clamp(26px,3.4vw,44px)", background: "var(--ink)", borderColor: "var(--ink)" }}>
-            <h3 className={am ? "" : "serif"} style={{
+            <h2 className={am ? "" : "serif"} style={{
               fontSize: am ? "clamp(20px,2.4vw,28px)" : "clamp(23px,2.8vw,34px)", color: "#fff",
               letterSpacing: am ? "0" : "-0.02em", lineHeight: am ? 1.45 : 1.15, maxWidth: 620, ...script,
             }}>
-              {t("doors.h3")}
-            </h3>
+              {t("abroad.cta.h")}
+            </h2>
             <p style={{ marginTop: 12, color: "rgba(255,255,255,.62)", fontSize: 15, lineHeight: am ? 1.9 : 1.6, maxWidth: 560, ...script }}>
-              {t("doors.lede")}
+              {t("abroad.cta.b")}
             </p>
-            <div className="g3 gap-3" style={{ marginTop: 26 }}>
-              {[
-                { t: t("doors.1"), b: t("doors.1.body"), cta: t("doors.1.cta"), href: go, primary: true },
-                { t: t("doors.2"), b: t("doors.2.body"), cta: t("doors.2.cta"), href: `/book?v=abroad&lang=${locale}`, primary: false },
-                { t: t("doors.3"), b: t("doors.3.body"), cta: t("doors.3.cta"), href: "/buy", primary: false },
-              ].map((d) => (
-                <div key={d.t} className="col" style={{ justifyContent: "space-between", gap: 16 }}>
-                  <div>
-                    <div className="t-lg w6" style={{ color: "#fff", ...script }}>{d.t}</div>
-                    <p style={{ marginTop: 7, color: "rgba(255,255,255,.62)", fontSize: 14, lineHeight: am ? 1.8 : 1.55, ...script }}>{d.b}</p>
-                  </div>
-                  <Link href={d.href} className="btn" style={
-                    d.primary
-                      ? { background: "#fff", color: "var(--ink)", width: "100%" }
-                      : { background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.24)", width: "100%" }
-                  }><span style={script}>{d.cta}</span> <Ico.arrowR size={15} /></Link>
-                </div>
-              ))}
-            </div>
+            <Link href={go} className="btn" style={{ marginTop: 22, background: "#fff", color: "var(--ink)" }}>
+              <span style={script}>{t("doors.1.cta")}</span> <Ico.arrowR size={15} />
+            </Link>
           </div>
         </section>
 
@@ -379,7 +320,7 @@ export function Landing({ initial, initialLocale, localePinned }: {
                 <div className="col gap-2">
                   <div className="kicker c-4">This product</div>
                   <Link href={go} className="t-sm c-3">My readout</Link>
-                  <Link href="/abroad/how" className="t-sm c-3">How it works</Link>
+                  <Link href="/abroad/how" className="t-sm c-3">How it works and questions</Link>
                   <Link href="/buy" className="t-sm c-3">Buying to live here</Link>
                 </div>
                 <div className="col gap-2">

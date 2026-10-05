@@ -94,7 +94,7 @@ const en: Dict = {
 
   "lender.title": "What a lender will ask you for",
 
-  "why.kicker": "Why Georgia, and why now",
+  "why.kicker": "Why the United States, and why now",
   "why.h2": "One asset, priced in dollars, that four things pay you at once.",
   "why.lede":
     "Money sent home is spent once. A house keeps paying: in rent, in a loan someone else is retiring, and in a price that is not set in your local currency.",
@@ -111,8 +111,7 @@ const en: Dict = {
   "why.3.body":
     "Rent arrives monthly in dollars, into a U.S. account, whatever is happening to the currency where you live.",
   "why.4": "A title that doesn't depend on who you know",
-  "why.4.body":
-    "Georgia deeds are public record and searchable. Ownership is a document, not a relationship you have to maintain from abroad.",
+  "why.4.body": "Property deeds in the United States are public record and searchable. Ownership is a document, not a relationship you have to maintain from abroad.",
 
   "faq.h2": "The questions everyone asks, answered before you have to ask them.",
   "faq.q1": "Do I have to come to America to close?",
@@ -397,6 +396,15 @@ const en: Dict = {
   "eq.reserve.title": "Save your seat",
   "eq.reserve.lede": "Two short steps. Your details reach us after the first one.",
   "eq.back": "Back to Bet Equb",
+
+  /* The simpler abroad page (manual review WS6). */
+  "four.label": "Four ways one home pays you back: rent, growth in value, an asset held in dollars, and a place to stay when you visit.",
+  "four.rent": "Rent",
+  "four.growth": "Growth",
+  "four.dollar": "A dollar asset",
+  "four.stay": "A place to stay",
+  "abroad.cta.h": "See your whole picture",
+  "abroad.cta.b": "What it would cost and what it could earn, worked out from your answers. No account and no passport scan.",
 };
 
 const am: Dict = {
@@ -404,7 +412,7 @@ const am: Dict = {
   "nav.domestic": "እዚህ ለመኖር የሚገዙ",
   "nav.talk": "ካሌብን ያናግሩ",
 
-  "hero.h1": "በጆርጂያ ንብረት ለመግዛት ግሪን ካርድ አያስፈልግዎትም።",
+  "hero.h1": "በአሜሪካ ንብረት ለመግዛት ግሪን ካርድ አያስፈልግዎትም።",
   "hero.lede":
     "ዜግነት አያስፈልግም፣ ቪዛ አያስፈልግም፣ የአሜሪካ አድራሻ አያስፈልግም፣ እና አንድ ቀን እንኳ አሜሪካ መርገጥ አያስፈልግም። የሚያስፈልግዎት ለማንም ሰው ሰነድ ከመላክዎ በፊት ትክክለኛውን ቁጥር ማወቅ ነው። እውነተኛው ቁጥር ደግሞ ከእነዚህ ውስጥ የትኛው እንደሆኑ ይወስናል።",
 
@@ -455,7 +463,7 @@ const am: Dict = {
 
   "lender.title": "አበዳሪው የሚጠይቅዎት ነገር",
 
-  "why.kicker": "ለምን ጆርጂያ፣ ለምን አሁን",
+  "why.kicker": "ለምን አሜሪካ፣ ለምን አሁን",
   "why.h2": "በዶላር የተተመነ አንድ ንብረት፤ በአራት መንገድ ይከፍልዎታል።",
   "why.lede":
     "ወደ አገር ቤት የተላከ ገንዘብ አንድ ጊዜ ወጪ ሆኖ ያልቃል። ቤት ግን መክፈሉን ይቀጥላል፦ በኪራይ፣ ሌላ ሰው በሚከፍለው ብድር፣ እና በአካባቢዎ ምንዛሬ ባልተወሰነ ዋጋ።",
@@ -472,8 +480,7 @@ const am: Dict = {
   "why.3.body":
     "ኪራዩ በየወሩ በዶላር፣ ወደ አሜሪካ የባንክ ሂሳብ ይገባል፤ እርስዎ በሚኖሩበት አገር ምንዛሬ ላይ ምንም ይሁን ምን።",
   "why.4": "በማንም ትውውቅ ላይ የማይመሰረት ባለቤትነት",
-  "why.4.body":
-    "በጆርጂያ የቤት ባለቤትነት ሰነድ ይፋዊ መዝገብ ነው፤ ማንም ሊያረጋግጠው ይችላል። ባለቤትነት ሰነድ ነው፣ ከውጭ ሆነው መጠበቅ ያለብዎት ግንኙነት አይደለም።",
+  "why.4.body": "በአሜሪካ የቤት ባለቤትነት ሰነድ ይፋዊ መዝገብ ነው፤ ማንም ሊያረጋግጠው ይችላል። ባለቤትነት ሰነድ ነው፣ ከውጭ ሆነው መጠበቅ ያለብዎት ግንኙነት አይደለም።",
 
   "faq.h2": "ሁሉም ሰው የሚጠይቃቸው ጥያቄዎች፣ ከመጠየቅዎ በፊት ተመልሰዋል።",
   "faq.q1": "ለመፈረም አሜሪካ መምጣት አለብኝ?",
@@ -730,6 +737,15 @@ const am: Dict = {
   "eq.reserve.title": "ቦታዎን ይያዙ",
   "eq.reserve.lede": "ሁለት አጭር ደረጃዎች። ከመጀመሪያው በኋላ መረጃዎ ይደርሰናል።",
   "eq.back": "ወደ ቤት እቁብ ይመለሱ",
+
+  /* The simpler abroad page (manual review WS6). */
+  "four.label": "አንድ ቤት በአራት መንገድ ይከፍልዎታል፦ ኪራይ፣ የዋጋ ዕድገት፣ በዶላር የተያዘ ንብረት፣ እና ሲመጡ የሚያርፉበት ቦታ።",
+  "four.rent": "ኪራይ",
+  "four.growth": "የዋጋ ዕድገት",
+  "four.dollar": "በዶላር የተያዘ ንብረት",
+  "four.stay": "የሚያርፉበት ቦታ",
+  "abroad.cta.h": "ሙሉውን ምስል ይመልከቱ",
+  "abroad.cta.b": "ምን እንደሚያስወጣ እና ምን ሊያስገኝ እንደሚችል፣ ከመልሶችዎ የተሰላ። መለያ የለም፣ ፓስፖርት መቃኘት የለም።",
 };
 
 const DICTS: Record<Locale, Dict> = { en, am };

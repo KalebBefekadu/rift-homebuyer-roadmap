@@ -19,7 +19,7 @@ const AGENT = readFileSync("components/rift/Agent.tsx", "utf8");
    number and telephone are deliberately absent, so a guard that greps the raw
    file fails on the sentence saying the thing is not there. */
 const AGENT_CODE = AGENT.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-const ABROAD = readFileSync("app/(rift)/abroad/Landing.tsx", "utf8");
+const ABROAD = readFileSync("app/(rift)/abroad/how/page.tsx", "utf8");
 
 describe("the agent block", () => {
   it("asserts nothing that is not recorded", () => {
@@ -59,7 +59,9 @@ describe("the FAQ block", () => {
        exist. The whole reason for having written it is that somebody
        searching in Amharic can find it. */
     expect(AGENT_CODE).toMatch(/inLanguage: locale/);
-    expect(ABROAD).toMatch(/<FaqSchema locale=\{locale\}/);
+    /* The questions moved to /abroad/how (manual review WS6.1), which is
+       English only, and says so in the schema. */
+    expect(ABROAD).toMatch(/<FaqSchema locale="en"/);
   });
 
   it("is fed from the same array the page renders", () => {
