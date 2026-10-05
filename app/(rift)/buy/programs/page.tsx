@@ -50,7 +50,7 @@ export default async function ProgramsPage() {
               <div className="t-md w6">Which of these fit you?</div>
               <p className="t-sm c-2" style={{ marginTop: 4 }}>Six quick questions check your answers against every rule, and show what still needs confirming.</p>
             </div>
-            <Link href="/buy/assistance" className="btn btn-brand btn-lg">See which programs fit me<Ico.arrowR size={15} /></Link>
+            <Link href="/buy/assistance" className="btn btn-brand btn-lg" style={{ maxWidth: "100%", whiteSpace: "normal", textAlign: "center" }}>See which programs fit me<Ico.arrowR size={15} /></Link>
           </div>
         </section>
 

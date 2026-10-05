@@ -5,8 +5,9 @@ engineering work: what changes, where in the code, and how we know it is done. I
 the three investigations he asked for: the client sign-in journey, Operations, and the client
 portal.
 
-**Nothing here has been built.** This is the plan. Per AGENTS.md, the decisions in §1 should be
-answered, or parked in `docs/handoff.md` §8, before the work that depends on them starts.
+**Status, 5 October (later the same day):** built on `claude/brave-curie-rdcpja`, using the
+engineering view in §1 for each decision. §5 lists what was built, what was built differently,
+and what is still open. Kaleb can overturn any §1 default; each is a small change.
 
 **How this was gathered:**
 - Kaleb's written review (every page item below comes from it).
@@ -273,3 +274,44 @@ that affect daily use are repeated at the end so this is one list.
 - **Every table ships with its RLS policy:** WS1.6, WS8.3 and WS11.3 add or change tables.
 - **Docs and tests change with the code:** `docs/integrations.md` for WS1, and
   `lib/core/docs.test.ts` if any number in a document changes.
+
+## 5. Status
+
+Built with the §1 engineering view as the default for each decision. Checked with `npm run verify`
+and the browser suites (phone, styling, accessibility, smoke, funnel, and the new
+`e2e/review.spec.ts`), all passing.
+
+**Built**
+- WS1.1, WS1.2, WS1.3, WS1.7, WS10.1, WS10.3, WS11.7: password from the invitation, password
+  sign-in with Forgot password, `/auth/callback` with Continue (POST to `/auth/confirm`), the agent's
+  link through Brevo, last sign-in and Send sign-in email in Household, `/app/account`.
+- WS1.6: the cheaper option. One link per member is kept; New link now warns that the old link
+  stops working. No migration.
+- WS2.1 to WS2.10: the Equb page, Amharic first pass (`eq.*` keys, unreviewed, D6), `/equb/reserve`
+  two-step form with a signed six-hour token (`lib/core/signed.ts`). Headline is the first proposal.
+- WS3.1 to WS3.7, WS4, WS5, WS9.2: shared title style, grouped "Other costs" row, `ProceedsBar`,
+  captions, CTAs, six cards, one drawing per value (`components/rift/value/ValueArt.tsx`).
+- WS3.6 with D2 and D3 defaults: the commission line moved to `/privacy`; the brokerage line and
+  disclaimer stay in the footer in small type until the broker answers.
+- WS6.1 to WS6.5: abroad cut down, FAQ moved to `/abroad/how`, `FourWays` drawing, shared header
+  classes, card drawings, United States in general copy.
+- WS7: email required on page and server. The booking now records a shorter email note
+  (`BOOKING_EMAIL_NOTE`) as its consent wording, because the long one is no longer shown.
+- WS8.1, WS8.4, WS8.5, WS8.6: upload first, errors under each box, no default contingencies, cards.
+- WS9.1: Start over on every answer page, and a notice when answers came from a last visit.
+- WS9.3: Equb pages and `/offer` added to the phone suite (it found three overflows, fixed).
+- WS10.2: Preview as client at `/app/preview/[journey]/[member]`, read-only.
+- WS10.4: Email this invitation, shown first, sent on Send, only for that member's own link.
+- WS10.5: Equb leads labelled "Equb seat request" (read from the lead's input; no migration).
+- WS11.2, partly: the section menu stays at the top and scrolls sideways on a phone.
+
+**Still open**
+- WS1.4, WS1.5: settings only (Vercel environment, Supabase custom SMTP and redirect list), then
+  deploy. Nothing in the code can do these.
+- WS1.8: the full sign-in journey in a browser needs a local Supabase Auth stack. The parts that
+  run without one are in `e2e/review.spec.ts`.
+- WS8.2, WS8.3: "uploading counts as sending" and several PDFs per offer change tables, so they
+  wait for the review gate (and Kaleb's pick of sender details first or "sender unknown").
+- WS11.2 tabs, WS11.3 client uploads, WS11.4 messages, WS11.5 new-item alerts, WS11.6 Amharic
+  portal: each needs a schema change or a decision from Kaleb.
+- D5 (attorney on the Equb safety copy) and D6 (Amharic review) before `/equb` is indexed.

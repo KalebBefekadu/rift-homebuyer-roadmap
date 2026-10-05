@@ -63,7 +63,7 @@ export function EqubHeader({ locale, onLocale }: { locale: Locale; onLocale: (l:
           <a href="/equb#how" className="hide-sm" style={script}>{t("eq.nav.how")}</a>
           <a href="/equb#faq" className="hide-sm" style={script}>{t("eq.nav.faq")}</a>
           <LocaleToggle locale={locale} onChange={onLocale} />
-          <span className="hide-xs"><Cta id="equb_cta_header" label={t("eq.cta.seat")} locale={locale} style={{ ...script, height: 34, padding: "0 12px", fontSize: 13 }} /></span>
+          <span className="hide-sm"><Cta id="equb_cta_header" label={t("eq.cta.seat")} locale={locale} style={{ ...script, height: 34, padding: "0 12px", fontSize: 13 }} /></span>
         </nav>
       </div>
       <Tibeb className="c-brand" height={8} style={{ opacity: 0.5 }} />

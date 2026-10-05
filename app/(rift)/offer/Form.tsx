@@ -212,7 +212,7 @@ export function Form() {
             Start here. We read it and fill in the offer for you to check, whatever we manage to find.
             Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB.
           </p>
-          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
+          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer", position: "relative" }}>
             <Ico.doc size={15} />{reading_ === "reading" ? "Reading your offer…" : documentToken ? "Choose a different PDF" : "Choose the PDF"}
             <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
               onChange={(e) => {
