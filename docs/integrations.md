@@ -45,6 +45,11 @@ Used for four things, and it is worth naming them separately because they fail d
 
 1. **Auth** — Supabase Auth email links, read on the server (`lib/db/session.ts` for the
    agent, `lib/db/portal.ts` for clients).
+   A client's link is minted by Supabase but **delivered by Brevo** when `BREVO_API_KEY`
+   and `BREVO_FROM_EMAIL` are set (`lib/db/signin.ts`), because Supabase's built-in mailer
+   sends a few messages an hour and, without custom SMTP, may deliver only to the project
+   team. Without Brevo it falls back to Supabase's mailer, as it did before. The agent's own
+   sign-in still uses Supabase's mailer.
 2. **Postgres + RLS** — the data layer. See [schema.md](schema.md) for the model to build.
 3. **Storage** — client documents. Not yet used; phase 6.
 4. **Realtime** — not needed yet. Do not reach for it before there is a second concurrent

@@ -71,8 +71,8 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan,
-  type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn,
+  type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
@@ -194,6 +194,17 @@ export async function sendResume(r: ResumeEmail): Promise<SendResult> {
     htmlContent: html,
     tags: ["recovery"],
   }, "email.resume");
+}
+
+/** The buyer's sign-in link. See buildSignIn for why Brevo sends it. */
+export async function sendSignIn(s: SignInEmail): Promise<SendResult> {
+  const { subject, html } = buildSignIn(s);
+  return send({
+    to: [{ email: s.to }],
+    subject,
+    htmlContent: html,
+    tags: ["signin"],
+  }, "email.signin");
 }
 
 /**

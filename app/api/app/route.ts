@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { respondToPricing } from "@/lib/db/seller";
 import { limited, readJson } from "@/lib/db/guard";
-import { createClient } from "@/lib/supabase/server";
-import { siteUrl } from "@/lib/core/site";
+import { sendSignInLink } from "@/lib/db/signin";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
@@ -27,10 +26,11 @@ export const dynamic = "force-dynamic";
  *
  * Two kinds of action:
  *
- *   SIGNING IN. `signin` and `invite-link` ask Supabase to email a one-time
- *   link. Only to an address that holds an invitation or a membership, so
- *   this is never an open sign-up; and `signin` answers the same whether or
- *   not the address is known, so it does not reveal who is a client.
+ *   SIGNING IN. `signin` and `invite-link` email a one-time link (Brevo, or
+ *   Supabase without it: lib/db/signin.ts). Only to an address that holds
+ *   an invitation or a membership, so this is never an open sign-up; and
+ *   `signin` answers the same whether or not the address is known, so it
+ *   does not reveal who is a client.
  *
  *   EVERYTHING ELSE requires a session and resolves the membership from
  *   scratch for the journey named in the request (lib/db/portal.ts). The
@@ -40,24 +40,6 @@ export const dynamic = "force-dynamic";
 type Body = Record<string, unknown>;
 const str = (v: unknown, max = 5000) => (typeof v === "string" ? v.slice(0, max) : "");
 const json = (body: object, status = 200) => NextResponse.json(body, { status, headers: { "cache-control": "no-store" } });
-
-async function sendLink(email: string, next: string): Promise<boolean> {
-  const supabase = await createClient();
-  if (!supabase) return false;
-  const origin = siteUrl();
-  if (!origin) return false;
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      /* Allowed only because the caller has already established that this
-         address holds an invitation or a membership. */
-      shouldCreateUser: true,
-    },
-  });
-  if (error) captureOpError(error, { op: "app.signin" });
-  return !error;
-}
 
 export async function POST(req: Request) {
   if (!buyerSearchOn(process.env)) return json({ ok: false, error: "This is switched off at the moment." }, 503);
@@ -74,7 +56,7 @@ export async function POST(req: Request) {
     if (action === "signin") {
       const email = str(b.email, 254).trim().toLowerCase();
       if (!email) return json({ ok: false, error: "Enter your email address." }, 400);
-      if (await mayReceiveSignIn(email)) await sendLink(email, "/app");
+      if (await mayReceiveSignIn(email)) await sendSignInLink(email, "/app");
       /* The same answer either way. */
       return json({ ok: true });
     }
@@ -85,7 +67,7 @@ export async function POST(req: Request) {
     if (!inv.data || inv.data.state !== "invited") {
       return json({ ok: false, error: "This invitation is no longer open. Ask your agent for a new one." }, 404);
     }
-    const sent = await sendLink(inv.data.email, `/app/invite/${token}`);
+    const sent = await sendSignInLink(inv.data.email, `/app/invite/${token}`);
     return sent
       ? json({ ok: true, to: inv.data.maskedEmail })
       : json({ ok: false, error: "The sign-in email could not be sent just now. Try again in a few minutes." }, 502);

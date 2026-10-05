@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildSavedPlan, escapeHtml } from "./email";
+import { buildReadout, buildTouch, buildPlanTouch, buildResume, buildSavedPlan, buildSignIn, escapeHtml } from "./email";
 
 /**
  * The emails, against the real builders.
@@ -239,5 +239,16 @@ describe("the other links a customer is sent are escaped too", () => {
     const hostile = 'https://x/"><script>alert(1)</script>';
     expect(buildResume({ to: "a@b.com", says: "s", body: "b", resumeUrl: hostile, answered: 1, of: 7 }).html).not.toContain("<script>");
     expect(buildSavedPlan({ to: "a@b.com", planUrl: hostile, values: [], review: false }).html).not.toContain("<script>");
+  });
+});
+
+describe("the sign-in link", () => {
+  it("carries the link, escaped, and no unsubscribe", () => {
+    /* No unsubscribe because an opt-out here would lock a buyer out of their
+       own move; escaped because the next path inside it came from a URL. */
+    const built = buildSignIn({ to: "a@b.com", link: 'https://x.test/auth/callback?token_hash=abc&next=/app"><script>' });
+    expect(built.html).toContain("token_hash=abc");
+    expect(built.html).not.toContain("<script>");
+    expect(built.html).not.toContain("unsubscribe");
   });
 });
