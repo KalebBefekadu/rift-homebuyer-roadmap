@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { ASK_SHORT, answerLabel, answersToQuery, type Answers, type AskDef } from "@/lib/core/asks";
 import type { Assumption } from "@/lib/core/compute";
 import type { InputKey, ValueDef } from "@/lib/core/values";
+import { StartOver } from "./StartOver";
 
 /**
  * The pieces every value page is built from, so the values look and behave
@@ -57,6 +58,7 @@ export function BasedOn({ def, answers, defs }: { def: ValueDef; answers: Answer
           <Ico.chevD size={11} className="c-4" />
         </Link>
       ))}
+      <StartOver href={def.href} tool={def.id} className="btn-link t-sm" />
     </div>
   );
 }

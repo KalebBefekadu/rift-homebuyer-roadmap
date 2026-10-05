@@ -8,6 +8,7 @@ import type { InputKey } from "@/lib/core/values";
 import { readAnswers, writeAnswers } from "@/lib/rift/answers";
 import { track, useCaptureTouch } from "@/lib/rift/track";
 import { MoneyField } from "./MoneyField";
+import { StartOver } from "./StartOver";
 
 /**
  * Asks a value's questions, only the ones not already answered, one at a
@@ -40,6 +41,9 @@ export function ValueFlow({ tool, side, href, asks, given, only, defs }: {
   const [answers, setAnswers] = useState<Answers>(given);
   const [queue, setQueue] = useState<InputKey[] | null>(null);
   const [i, setI] = useState(0);
+  /* Whether some answers were filled in from an earlier visit, so the page
+     can say so and offer to clear them (manual review WS9.1). */
+  const [restored, setRestored] = useState(false);
   const shownAt = useRef(Date.now());
   const done = useRef(false);
   const trackSide = side === "abroad" ? undefined : side;
@@ -54,7 +58,9 @@ export function ValueFlow({ tool, side, href, asks, given, only, defs }: {
   };
 
   useEffect(() => {
-    const merged = { ...readAnswers(), ...given };
+    const stored = readAnswers();
+    const merged = { ...stored, ...given };
+    setRestored(asks.some((k) => stored[k] !== undefined && given[k] === undefined));
     const q = only ? [only] : asks.filter((k) => merged[k] === undefined);
     setAnswers(merged);
     track({ name: "value_view", side: trackSide, meta: { tool, answered: asks.length - q.length, of: asks.length } });
@@ -99,6 +105,11 @@ export function ValueFlow({ tool, side, href, asks, given, only, defs }: {
         ) : <span />}
         {queue.length > 1 ? <span className="t-xs c-4">Question {i + 1} of {queue.length}</span> : null}
       </div>
+      {restored && !only ? (
+        <p className="t-xs c-3 ctr row gap-2" style={{ justifyContent: "center", marginTop: 8 }}>
+          Some answers are from your last visit. <StartOver href={href} tool={tool} className="btn-link t-xs" />
+        </p>
+      ) : null}
 
       <div key={key} className="fade-in" style={{ marginTop: 18 }}>
         <h1 className="serif ctr" style={{ fontSize: "clamp(26px,3.6vw,38px)", lineHeight: 1.12, letterSpacing: "-0.022em" }}>
