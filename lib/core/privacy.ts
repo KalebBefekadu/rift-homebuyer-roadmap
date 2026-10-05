@@ -121,6 +121,15 @@ export const PHONE_CONSENT =
   "I understand this is not a condition of buying or selling anything, that message " +
   "and data rates may apply, and that I can stop it any time by replying STOP.";
 
+/**
+ * What /book shows under the email field, and so what is recorded as the
+ * email consent for a booking. Shorter than EMAIL_NOTE, which the 5 October
+ * review removed from that page; the record must hold the words the person
+ * actually saw, so a booking stores these and not EMAIL_NOTE.
+ */
+export const BOOKING_EMAIL_NOTE =
+  "Kaleb replies here about your call. No newsletter, and one click unsubscribes.";
+
 export const EMAIL_NOTE =
   "We email you what you worked out here and tell you when something in it changes. No newsletter, " +
   "no list, and nothing sold on. One click unsubscribes.";

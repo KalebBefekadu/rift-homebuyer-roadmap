@@ -34,9 +34,8 @@ const sentence = (s: string) => {
  *   1. It names what the call is ABOUT: the computed blocker, carried in the
  *      URL from the readout. A generic slot asks somebody to decide what to
  *      talk about, which is work, and work at the moment of conversion.
- *   2. It says what the call is NOT. The objection that stops most people is
- *      the fear of being sold to, and the only thing that answers it is saying
- *      so plainly before they ask.
+ *   2. It is short. The 5 October review cut it to a heading, one line and
+ *      the form; "what this call is not" went with it.
  *   3. The phone consent box is unticked, specific, separate from everything
  *      else, and blocks submission while a phone number is present. Consent
  *      bundled into a "by continuing you agree" line is not consent.
@@ -94,14 +93,11 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
 
   const blocked = Boolean(phone) && !consent;
   const phoneOk = phone.replace(/\D/g, "").length >= 10;
-  /* The calendar holds a time only for an email address (the booking and any
-     change to it are sent there), so the server books nothing without one.
-     This page called the email optional beside real times and let the button
-     say "Book this time" without it: the time was asked for and never held.
-     With real times on offer the address is required, and the page says why.
-     With no calendar there is nothing to hold, and it stays optional. */
+  /* Email is always required (manual review WS7.3). The calendar holds a time
+     only for an address, and without a calendar it is where Kaleb confirms
+     the time he offers. The server refuses a booking without one too. */
   const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
-  const ready = phoneOk && (live ? Boolean(slot) && emailOk : true) && !blocked;
+  const ready = phoneOk && emailOk && (live ? Boolean(slot) : true) && !blocked;
 
   const submit = async () => {
     if (!ready || state === "sending") return;
@@ -163,8 +159,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
               </span>
             </div>
             <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.65 }}>
-              {live && !held ? "The time is not held in Kaleb's calendar yet. He" : "Kaleb"} confirms
-              by phone{email ? " or email" : ""}, usually within a few hours, and
+              {live && !held ? "The time is not held in Kaleb's calendar yet. He" : "Kaleb"}{" "}
+              {live ? "confirms" : "replies with a time"} by email or phone, usually within a few hours, and
               always the same day. If it stops working, say so and it moves; there is nothing to
               cancel and no deposit.
             </p>
@@ -203,26 +199,10 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
             around it. He speaks English and Amharic.
           </p>
         ) : null}
+        {/* Simpler (manual review WS7.1): the heading, one line, the form. */}
         <p className="lede" style={{ marginTop: 14 }}>
-          Not a pitch, not a tour of houses, and not a credit check. One conversation about the
-          thing standing between you and a date.
+          One conversation about what stands between you and a move.
         </p>
-
-        <div className="card p-4" style={{ marginTop: 20, background: "var(--sunk)" }}>
-          <div className="t-sm w6" style={{ marginBottom: 8 }}>What this call is not</div>
-          <div className="col gap-1">
-            {[
-              "You are not committing to work with Kaleb, or to buy anything.",
-              "Nobody runs your credit, and no lender is called on your behalf.",
-              "If the answer is that you should wait a year, that is what you will be told.",
-            ].map((t) => (
-              <div key={t} className="row gap-2" style={{ alignItems: "flex-start" }}>
-                <Ico.x size={11} className="c-4" style={{ flex: "none", marginTop: 4 }} />
-                <span className="t-xs c-3" style={{ lineHeight: 1.55 }}>{t}</span>
-              </div>
-            ))}
-          </div>
-        </div>
 
         <div className="card p-5" style={{ marginTop: 20 }}>
           <label className="field">
@@ -247,15 +227,10 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
           ) : null}
 
           <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Email {live ? null : <span className="c-4 w5">(optional)</span>}</span>
+            <span className="label">Email</span>
             <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-              required={live} aria-describedby={live ? "book-email-why" : undefined} />
-            {live ? (
-              <span id="book-email-why" className="t-2xs c-3" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>
-                Needed to hold a time: the calendar sends your booking, and any change to it, to this address.
-              </span>
-            ) : null}
-            <span className="t-2xs c-4" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>{emailNote}</span>
+              required aria-describedby="book-email-note" />
+            <span id="book-email-note" className="t-2xs c-4" style={{ marginTop: 5, display: "block", lineHeight: 1.5 }}>{emailNote}</span>
           </label>
 
           <div className="field" style={{ marginTop: 16 }}>
@@ -286,11 +261,11 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
                   value={slot}
                   onChange={(e) => setSlot(e.target.value)}
                 />
-                <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
-                  {source === "error"
-                    ? "The calendar is not responding, so we are not going to show you times that might not exist. Tell us roughly when suits and Kaleb comes back with a slot."
-                    : "Live booking is not switched on yet. Tell us roughly when suits and Kaleb comes back with a time, usually the same day."}
-                </p>
+                {source === "error" ? (
+                  <p className="t-2xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>
+                    The calendar is not responding, so we are not going to show you times that might not exist. Tell us roughly when suits.
+                  </p>
+                ) : null}
               </>
             )}
           </div>
@@ -305,11 +280,8 @@ export function Booking({ phoneConsent, emailNote, slots, source }: {
 
           <button className="btn btn-p" style={{ width: "100%", marginTop: 16 }} disabled={!ready || state === "sending"} onClick={submit}>
             {state === "sending" ? "Sending…" : !phoneOk ? "Add your phone number" : blocked ? "Tick the box so Kaleb can call you"
-              : live && !emailOk ? "Add your email so the time can be held" : live && !slot ? "Choose a time" : live ? "Book this time" : "Ask for a call"}
+              : !emailOk ? "Add your email" : live && !slot ? "Choose a time" : live ? "Book this time" : "Ask for a call"}
           </button>
-          <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.5 }}>
-            Your answers stay yours either way, whether or not you book anything.
-          </p>
         </div>
       </main>
       <SiteFooter />

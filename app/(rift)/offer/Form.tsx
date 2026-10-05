@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { LiveRegion } from "@/components/rift/Live";
@@ -8,7 +8,7 @@ import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import type { Candidates, Field } from "@/lib/core/offer-extract";
 import {
-  readSubmission, read, ASSUMED_COMMISSION_PCT,
+  readSubmission, read, ASSUMED_COMMISSION_PCT, type FieldErrors, type SubmissionField,
   MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_OFFER_PDF_BYTES, MAX_OFFER_PDF_SAY,
 } from "@/lib/core/offer-intake";
 import { sessionId } from "@/lib/rift/session";
@@ -50,7 +50,9 @@ export function Form() {
   const [financingOther, setFinancingOther] = useState("");
   const [closeOn, setCloseOn] = useState("");
   const [dueDiligenceDays, setDueDiligenceDays] = useState("");
-  const [contingencies, setContingencies] = useState<string[]>(["Inspection", "Appraisal"]);
+  /* None ticked until the sender or their PDF says so (manual review WS8.5):
+     a pre-ticked box is a term the sender never chose. */
+  const [contingencies, setContingencies] = useState<string[]>([]);
   const [preapproval, setPreapproval] = useState(false);
   const [proofOfFunds, setProofOfFunds] = useState(false);
   /* Kept as typed. It was stored as a clamped number, so the box re-rendered
@@ -81,6 +83,11 @@ export function Form() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  /* Upload first (WS8.1): the boxes appear once a PDF is chosen, or when the
+     sender says they have none. */
+  const [byHand, setByHand] = useState(false);
+  const showForm = byHand || reading_ !== "idle";
   /* Distinguished from "you left the address blank": one is theirs to fix and
      one is ours, and only ours warrants sending them somewhere else. */
   const [failedToSend, setFailedToSend] = useState(false);
@@ -149,10 +156,29 @@ export function Form() {
     setReading("done");
   };
 
+  /* The first box with a problem gets focus, so a keyboard or screen reader
+     user lands where the fix is rather than at a list at the bottom. */
+  const [focusTo, setFocusTo] = useState<SubmissionField | null>(null);
+  useEffect(() => {
+    if (!focusTo) return;
+    document.getElementById(`offer-${focusTo}`)?.focus();
+    setFocusTo(null);
+  }, [focusTo]);
+
   const send = async () => {
-    if (unreadable.length) { setErrors(unreadable); setFailedToSend(false); return; }
+    if (unreadable.length) { setErrors(unreadable); setFieldErrors({}); setFailedToSend(false); return; }
     const real = readSubmission({ ...draft, address, from, email, phone, representing });
-    if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
+    if (!real.ok) {
+      setFieldErrors(real.fields);
+      /* Messages with a box go under the box; anything without one stays in the list. */
+      const placed = new Set(Object.values(real.fields));
+      setErrors(real.errors.filter((e) => !placed.has(e)));
+      setFailedToSend(false);
+      const order: SubmissionField[] = ["address", "price", "financing", "financingOther", "dueDiligenceDays", "closeOn", "representing", "from", "phone", "email"];
+      setFocusTo(order.find((f) => real.fields[f]) ?? null);
+      return;
+    }
+    setFieldErrors({});
     setErrors([]);
     setFailedToSend(false);
     setSending(true);
@@ -183,7 +209,7 @@ export function Form() {
         <section className="card p-5" style={{ marginTop: 24, background: "var(--brand-wash)", borderColor: "var(--brand-line)" }}>
           <div className="t-md w6">Upload your offer in PDF</div>
           <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            We read it and fill in the boxes below for you to check. Or skip this and type them.
+            Start here. We read it and fill in the offer for you to check, whatever we manage to find.
             Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB.
           </p>
           <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
@@ -205,20 +231,23 @@ export function Form() {
           </LiveRegion>
         </section>
 
+        {showForm ? (<>
         <section className="card p-5" style={{ marginTop: 24 }}>
           <div className="t-sm w6">The offer</div>
 
           <label className="field" style={{ marginTop: 14 }}>
             <span className="label">Property address<FromPdf c={fromPdf.address} /></span>
-            <input className="input" value={address} onChange={(e) => { setAddress(e.target.value); touched("address"); }}
-              placeholder="119 Peachtree Way, Atlanta, GA 30309" />
+            <input id="offer-address" className="input" value={address} onChange={(e) => { setAddress(e.target.value); touched("address"); }}
+              placeholder="119 Peachtree Way, Atlanta, GA 30309" {...invalid(fieldErrors.address, "address")} />
+            <Err id="address" msg={fieldErrors.address} />
           </label>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
               <span className="label">Offer price<FromPdf c={fromPdf.price} /></span>
-              <input className="input" inputMode="numeric" value={price}
-                onChange={(e) => { setPrice(e.target.value); touched("price"); }} placeholder="410,000" />
+              <input id="offer-price" className="input" inputMode="numeric" value={price}
+                onChange={(e) => { setPrice(e.target.value); touched("price"); }} placeholder="410,000" {...invalid(fieldErrors.price, "price")} />
+              <Err id="price" msg={fieldErrors.price} />
             </label>
             <label className="field">
               <span className="label">Earnest money<FromPdf c={fromPdf.earnest} /></span>
@@ -235,28 +264,31 @@ export function Form() {
             </label>
             <label className="field">
               <span className="label">Due diligence days<FromPdf c={fromPdf.dueDiligenceDays} /></span>
-              <input className="input" inputMode="numeric" value={dueDiligenceDays}
-                onChange={(e) => { setDueDiligenceDays(e.target.value.replace(/[^0-9]/g, "")); touched("dueDiligenceDays"); }} placeholder="10" />
+              <input id="offer-dueDiligenceDays" className="input" inputMode="numeric" value={dueDiligenceDays}
+                onChange={(e) => { setDueDiligenceDays(e.target.value.replace(/[^0-9]/g, "")); touched("dueDiligenceDays"); }} placeholder="10" {...invalid(fieldErrors.dueDiligenceDays, "dueDiligenceDays")} />
+              <Err id="dueDiligenceDays" msg={fieldErrors.dueDiligenceDays} />
             </label>
           </div>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
               <span className="label">Financing<FromPdf c={fromPdf.financing} /></span>
-              <select className="input" value={financing} onChange={(e) => { setFinancing(e.target.value); touched("financing"); }}>
+              <select id="offer-financing" className="input" value={financing} onChange={(e) => { setFinancing(e.target.value); touched("financing"); }} {...invalid(fieldErrors.financing, "financing")}>
                 {FINANCING.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
             <label className="field">
               <span className="label">Target closing date<FromPdf c={fromPdf.closeOn} /></span>
-              <input className="input" type="date" value={closeOn} onChange={(e) => { setCloseOn(e.target.value); touched("closeOn"); }} />
+              <input id="offer-closeOn" className="input" type="date" value={closeOn} onChange={(e) => { setCloseOn(e.target.value); touched("closeOn"); }} {...invalid(fieldErrors.closeOn, "closeOn")} />
+              <Err id="closeOn" msg={fieldErrors.closeOn} />
             </label>
           </div>
           {financing === "other" ? (
             <label className="field" style={{ marginTop: 12 }}>
               <span className="label">What kind of financing?<FromPdf c={fromPdf.financingOther} /></span>
-              <input className="input" value={financingOther} maxLength={80}
-                onChange={(e) => { setFinancingOther(e.target.value); touched("financingOther"); }} placeholder="For example, seller financing" />
+              <input id="offer-financingOther" className="input" value={financingOther} maxLength={80}
+                onChange={(e) => { setFinancingOther(e.target.value); touched("financingOther"); }} placeholder="For example, seller financing" {...invalid(fieldErrors.financingOther, "financingOther")} />
+              <Err id="financingOther" msg={fieldErrors.financingOther} />
             </label>
           ) : null}
 
@@ -359,30 +391,40 @@ export function Form() {
         <section className="card p-5" style={{ marginTop: 16 }}>
           <div className="t-md w6">Send it to Kaleb</div>
 
-          <fieldset style={{ marginTop: 12, border: 0, padding: 0 }}>
+          {/* Two cards that read as a choice at a glance (WS8.6): a border, a
+              radio mark and a hover state, and a real radio group underneath. */}
+          <fieldset style={{ marginTop: 12, border: 0, padding: 0 }} aria-describedby={fieldErrors.representing ? "offer-representing-err" : undefined}>
             <legend className="label">You are</legend>
-            <div className="row gap-2 wrap" style={{ marginTop: 6 }}>
-              {([["buyer", "A real estate agent"], ["self", "The buyer"]] as const).map(([v, l]) => (
-                <button key={v} type="button" className={`btn btn-sm ${representing === v ? "btn-p" : "btn-g"}`}
-                  aria-pressed={representing === v} onClick={() => setRepresenting(v)}>{l}</button>
+            <div className="g2 gap-2" style={{ marginTop: 6 }} role="radiogroup">
+              {([["buyer", "A real estate agent", "Sending for a buyer you represent"], ["self", "The buyer", "Sending your own offer"]] as const).map(([v, l, sub], k) => (
+                <label key={v} className="opt lift" data-on={representing === v}
+                  style={{ cursor: "pointer", alignItems: "flex-start", ...(fieldErrors.representing ? { borderColor: "var(--neg)" } : {}) }}>
+                  <input type="radio" name="representing" id={k === 0 ? "offer-representing" : undefined}
+                    checked={representing === v} onChange={() => setRepresenting(v)} style={{ marginTop: 3 }} />
+                  <span><span className="t-sm w6" style={{ display: "block" }}>{l}</span><span className="t-xs c-3">{sub}</span></span>
+                </label>
               ))}
             </div>
+            <Err id="representing" msg={fieldErrors.representing} />
           </fieldset>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
               <span className="label">Your name</span>
-              <input className="input" autoComplete="name" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <input id="offer-from" className="input" autoComplete="name" value={from} onChange={(e) => setFrom(e.target.value)} {...invalid(fieldErrors.from, "from")} />
+              <Err id="from" msg={fieldErrors.from} />
             </label>
             <label className="field">
               <span className="label">Phone</span>
-              <input className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input id="offer-phone" className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} {...invalid(fieldErrors.phone, "phone")} />
+              <Err id="phone" msg={fieldErrors.phone} />
             </label>
           </div>
 
           <label className="field" style={{ marginTop: 12 }}>
             <span className="label">Email</span>
-            <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input id="offer-email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} {...invalid(fieldErrors.email, "email")} />
+            <Err id="email" msg={fieldErrors.email} />
           </label>
 
           <label className="field" style={{ marginTop: 12 }}>
@@ -400,6 +442,12 @@ export function Form() {
           </p>
 
           <LiveRegion kind="alert">
+            {Object.keys(fieldErrors).length ? (
+              <p className="t-xs c-neg row gap-2" style={{ marginTop: 10 }}>
+                <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />
+                {Object.keys(fieldErrors).length === 1 ? "One box needs a fix. It is marked above." : `${Object.keys(fieldErrors).length} boxes need a fix. Each is marked above.`}
+              </p>
+            ) : null}
             {errors.length ? (
               <div style={{ marginTop: 10 }}>
                 <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
@@ -440,6 +488,12 @@ export function Form() {
             </button>
           )}
         </section>
+        </>) : (
+          <p className="t-sm c-3" style={{ marginTop: 14 }}>
+            No PDF?{" "}
+            <button type="button" className="btn-link" onClick={() => setByHand(true)}>Fill in the offer by hand</button>.
+          </p>
+        )}
       </main>
       <SiteFooter />
     </>
@@ -452,6 +506,23 @@ function FromPdf({ c }: { c?: { page: number; quote: string } }) {
   return (
     <span className="chip chip-brand t-2xs" style={{ marginLeft: 6, height: 20 }} title={`“${c.quote}”`}>
       From your PDF, page {c.page}<span className="sr-only">: “{c.quote}”. Check it.</span>
+    </span>
+  );
+}
+
+/* aria-invalid plus the message's id, so a screen reader hears the problem on the box. */
+function invalid(msg: string | undefined, id: SubmissionField) {
+  return msg
+    ? { "aria-invalid": true as const, "aria-describedby": `offer-${id}-err`, style: { borderColor: "var(--neg)", boxShadow: "0 0 0 1px var(--neg)" } }
+    : {};
+}
+
+/** The message under a box: an icon and words, never the red border alone (rule 10). */
+function Err({ id, msg }: { id: SubmissionField; msg?: string }) {
+  if (!msg) return null;
+  return (
+    <span id={`offer-${id}-err`} className="t-xs c-neg row gap-1" style={{ marginTop: 5, alignItems: "flex-start" }}>
+      <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{msg}
     </span>
   );
 }

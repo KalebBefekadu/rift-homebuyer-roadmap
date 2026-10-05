@@ -126,54 +126,63 @@ export const isFinancing = (v: unknown): v is Financing =>
  * silently corrected into something the sender did not write is worse than one
  * refused with a reason.
  */
-export function readSubmission(raw: Record<string, unknown>): { ok: true; value: Submission } | { ok: false; errors: string[] } {
+export type SubmissionField =
+  | "address" | "price" | "from" | "email" | "financing" | "financingOther"
+  | "representing" | "phone" | "dueDiligenceDays" | "closeOn";
+export type FieldErrors = Partial<Record<SubmissionField, string>>;
+
+export function readSubmission(raw: Record<string, unknown>): { ok: true; value: Submission } | { ok: false; errors: string[]; fields: FieldErrors } {
   const errors: string[] = [];
+  /* Each refusal also keyed to its box, so the form can put the message under
+     the box itself (manual review WS8.4). The first message per box wins. */
+  const fields: FieldErrors = {};
+  const bad = (f: SubmissionField, msg: string) => { errors.push(msg); fields[f] ??= msg; };
 
   const address = String(raw.address ?? "").trim();
-  if (address.length < 6) errors.push("A property address is needed: street, city and state.");
-  if (address.length > 200) errors.push("That address is too long to be one.");
+  if (address.length < 6) bad("address", "A property address is needed: street, city and state.");
+  if (address.length > 200) bad("address", "That address is too long to be one.");
 
   const price = Number(raw.price);
   if (!Number.isFinite(price) || price < MIN_PRICE || price > MAX_PRICE) {
-    errors.push("An offer price is needed, and it has to be a plausible one.");
+    bad("price", "An offer price is needed, and it has to be a plausible one.");
   }
 
   const from = String(raw.from ?? "").trim();
-  if (from.length < 2 || from.length > 120) errors.push("A name is needed, the one the seller should see.");
+  if (from.length < 2 || from.length > 120) bad("from", "A name is needed, the one the seller should see.");
 
   const email = String(raw.email ?? "").trim().toLowerCase();
   /* Deliberately loose. The only thing worth rejecting here is something that
      cannot be an address at all; a stricter pattern turns valid addresses away
      and the confirmation is what proves it, not a regex. */
   if (!/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(email) || email.length > 200) {
-    errors.push("An email address is needed so somebody can reply to this.");
+    bad("email", "An email address is needed so somebody can reply to this.");
   }
 
   const financing = isFinancing(raw.financing) ? raw.financing : null;
-  if (!financing) errors.push("Say how this is being financed.");
+  if (!financing) bad("financing", "Say how this is being financed.");
   const financingOther = String(raw.financingOther ?? "").trim();
   if (financing === "other" && (financingOther.length < 2 || financingOther.length > 80)) {
-    errors.push("Say what kind of financing \"other\" is.");
+    bad("financingOther", "Say what kind of financing \"other\" is.");
   }
 
   /* Blueprint v5 §5.9: sending is the point of the page, so who is sending
      it and how to reach them by phone are required, not optional. */
   const representing = raw.representing === "self" || raw.representing === "buyer" ? raw.representing : null;
-  if (!representing) errors.push("Say whether you are the buyer or a real estate agent.");
+  if (!representing) bad("representing", "Say whether you are the buyer or a real estate agent.");
   const phone = String(raw.phone ?? "").trim();
-  if (phone.replace(/\D/g, "").length < 10 || phone.length > 40) errors.push("A phone number is needed, with its area code.");
+  if (phone.replace(/\D/g, "").length < 10 || phone.length > 40) bad("phone", "A phone number is needed, with its area code.");
 
   const ddRaw = String(raw.dueDiligenceDays ?? "").trim();
   const dueDiligenceDays = ddRaw === "" ? null : Number(ddRaw);
   if (dueDiligenceDays !== null && (!Number.isInteger(dueDiligenceDays) || dueDiligenceDays < 0 || dueDiligenceDays > 60)) {
-    errors.push("Due diligence is a number of days, from 0 to 60.");
+    bad("dueDiligenceDays", "Due diligence is a number of days, from 0 to 60.");
   }
 
   const closeOnRaw = String(raw.closeOn ?? "").trim();
   const closeOn = /^\d{4}-\d{2}-\d{2}$/.test(closeOnRaw) ? closeOnRaw : null;
-  if (closeOnRaw && !closeOn) errors.push("A closing date has to be a calendar date.");
+  if (closeOnRaw && !closeOn) bad("closeOn", "A closing date has to be a calendar date.");
 
-  if (errors.length) return { ok: false, errors };
+  if (errors.length) return { ok: false, errors, fields };
 
   const contingencies = (Array.isArray(raw.contingencies) ? raw.contingencies : [])
     .map((c) => String(c).trim())
