@@ -9,4 +9,4 @@ import "server-only";
  * to touch the missing column. schema-version.test.ts fails when a migration is
  * added without moving this line, so the two cannot drift apart unnoticed.
  */
-export const LATEST_MIGRATION = "20261006100000_rift_offer_uploads";
+export const LATEST_MIGRATION = "20261006110000_rift_client_documents";

@@ -7,7 +7,7 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
-  proposeRevision, reactAsMember, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
+  clientUploadFinish, clientUploadSlot, proposeRevision, reactAsMember, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
 } from "@/lib/db/portal";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
@@ -147,6 +147,25 @@ export async function POST(req: Request) {
   if ("skipped" in m) return json({ ok: false, error: m.reason }, 503);
   if (!m.data) return json({ ok: false, error: "You do not have access to this any more. Ask your agent." }, 403);
   const member = m.data;
+
+  /* Sending a document (manual review WS11.3): the same two steps as the
+     agent's upload. The slot answers with where to put the bytes, so it
+     returns its data rather than a bare ok. */
+  if (action === "doc-slot") {
+    const slot = await clientUploadSlot(member);
+    if (!slot.ok) return refusal(action, slot.error);
+    if ("skipped" in slot) return json({ ok: false, error: slot.reason }, 503);
+    return json({ ok: true, path: slot.data.path, url: slot.data.url });
+  }
+  if (action === "doc-finish") {
+    const fin = await clientUploadFinish(member, {
+      path: str(b.path, 200), filename: str(b.filename, 300), type: str(b.type, 100), kind: str(b.kind, 20), label: str(b.label, 160),
+    });
+    if (!fin.ok) return refusal(action, fin.error);
+    if ("skipped" in fin) return json({ ok: false, error: fin.reason }, 503);
+    if ("refused" in fin.data) return json({ ok: false, error: `That file could not be kept: ${fin.data.refused.join("; ")}.` }, 400);
+    return json({ ok: true });
+  }
 
   let r: { ok: boolean; error?: string; reason?: string } & Record<string, unknown>;
   switch (action) {

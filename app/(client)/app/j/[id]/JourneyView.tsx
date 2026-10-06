@@ -11,7 +11,8 @@ import { lineFor, stateOf } from "@/lib/core/dependency";
 import { LedgerView } from "@/components/rift/money/LedgerView";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
-import { clientBids, clientBrief, clientHomes, clientProgress, clientTours, type Membership } from "@/lib/db/portal";
+import { clientBids, clientBrief, clientHomes, clientProgress, clientTours, householdDocuments, type Membership } from "@/lib/db/portal";
+import { SendDocument } from "./SendDocument";
 import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
 import { todayFor } from "@/lib/core/today";
 import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";
@@ -52,7 +53,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
   const sellerMoneyOn = member.side === "sell" && member.scopes.includes("money");
-  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead, listingRead] = await Promise.all([
+  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead, listingRead, sentRead] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
@@ -62,7 +63,10 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
     dependenciesFor(member.journeyId, member.agentId),
     sellerMoneyOn ? sellerMoney(member.journeyId, member.agentId) : Promise.resolve(null),
     member.side === "sell" ? listingOf(member.journeyId, member.agentId) : Promise.resolve(null),
+    householdDocuments(member),
   ]);
+  /* What the household sent (WS11.3). A failed read shows a sentence, not an empty list. */
+  const sent = sentRead.ok && "data" in sentRead ? sentRead.data : null;
   /* The listing's summary line only: never the showing agents' names, the
      feedback text or anything about access (S06 to S08). */
   const listingData = listingRead && listingRead.ok && "data" in listingRead ? listingRead.data : null;
@@ -425,6 +429,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       {active === "documents" ? (
         <section id="documents" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="docs-h">
           <h2 id="docs-h" className="t-md w6">Documents</h2>
+          <h3 className="t-sm w6" style={{ marginTop: 10 }}>From {agentFirst}</h3>
           <p className="t-xs c-4" style={{ marginTop: 2 }}>Everything {agentFirst} has shared with you, in one place.</p>
           {documents.length ? (
           <ul style={{ marginTop: 10, display: "grid", gap: 6 }}>
@@ -436,6 +441,21 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
             ))}
           </ul>
           ) : <p className="t-sm c-3" style={{ marginTop: 10 }}>Nothing has been shared yet. When {agentFirst} shares a document, it appears here.</p>}
+
+          <h3 className="t-sm w6" style={{ marginTop: 18 }}>From you{respond ? " and the people buying with you" : ""}</h3>
+          {!sent ? (
+            <p className="t-sm c-3" style={{ marginTop: 6 }}>What you sent did not load. That is not the same as nothing being there; reload in a moment.</p>
+          ) : sent.length ? (
+            <ul style={{ marginTop: 8, display: "grid", gap: 6 }}>
+              {sent.map((d) => (
+                <li key={d.id} className="between gap-2 wrap t-sm">
+                  <a className="btn-link" href={`/api/app/document?journeyId=${member.journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>
+                  <span className="t-xs c-4">{d.mine ? "You" : d.by} · {DAY(d.at)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="t-sm c-3" style={{ marginTop: 6 }}>Nothing yet.</p>}
+          {respond ? <SendDocument journeyId={member.journeyId} agentFirst={agentFirst} /> : null}
         </section>
       ) : null}
 

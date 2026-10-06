@@ -213,9 +213,16 @@ describe("erasure, from a readout", () => {
     await c.query(
       `insert into rift_search_revisions (agent_id, journey_id, revision, schema_version, criteria, author_kind, author_label)
        values ($1,$2,1,1,'[]','agent','Kaleb')`, [AGENT, j.id]);
-    await c.query(
+    const { rows: [mem] } = await c.query(
       `insert into rift_journey_members (agent_id, journey_id, email, role, scopes, invite_token_hash, invite_expires_at)
-       values ($1,$2,'person@example.com','buyer','{search}',$3, now() + interval '1 day')`, [AGENT, j.id, "f".repeat(64)]);
+       values ($1,$2,'person@example.com','buyer','{search}',$3, now() + interval '1 day') returning id`, [AGENT, j.id, "f".repeat(64)]);
+    /* A document they sent from the portal (WS11.3). It names them, and the
+       erasure must still take both: documents are history and refuse the
+       update a SET NULL would make. */
+    await c.query(
+      `insert into rift_documents (agent_id, journey_id, family, label, filename, kind, bytes, sha256, storage_path, actor_label, from_member_id)
+       values ($1,$2,'lender','Pre-approval letter','letter.pdf','pdf',100,$3,$4,'Person',$5)`,
+      [AGENT, j.id, "a".repeat(64), `clean/${AGENT}/${j.id}/x.pdf`, mem.id]);
 
     await forget(c, "gone-6");
 
@@ -223,6 +230,7 @@ describe("erasure, from a readout", () => {
     expect(await count(c, "rift_journeys", "id=$1", [j.id])).toBe(0);
     expect(await count(c, "rift_search_revisions", "journey_id=$1", [j.id])).toBe(0);
     expect(await count(c, "rift_journey_members", "journey_id=$1", [j.id])).toBe(0);
+    expect(await count(c, "rift_documents", "journey_id=$1", [j.id])).toBe(0);
   });
 
   test("removes a consent record that only the assessment points at", async (c) => {

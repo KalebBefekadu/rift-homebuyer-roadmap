@@ -41,6 +41,8 @@ export interface DocumentRecord {
   sha256: string;
   by: string;
   at: string;
+  /** The household member who sent it from the portal (WS11.3); null when the agent uploaded it. */
+  fromMember: string | null;
 }
 
 const NOT_YET = "Documents need a database update that has not been applied yet (migration 20260924020000).";
@@ -49,18 +51,24 @@ const shape = (r: Record<string, unknown>): DocumentRecord => ({
   id: r.id as string, family: r.family as Family, label: r.label as string, filename: r.filename as string,
   kind: r.kind as DocKind, bytes: r.bytes as number, sha256: r.sha256 as string,
   by: r.actor_label as string, at: r.created_at as string,
+  fromMember: (r.from_member_id as string | null | undefined) ?? null,
 });
 
 export async function readDocuments(journeyId: string, agentId: string): Promise<DbResult<{ documents: DocumentRecord[]; unavailable?: string }>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
-  const r = await boundedReport(
-    db.from("rift_documents").select("id,family,label,filename,kind,bytes,sha256,actor_label,created_at")
+  const read = (cols: string) => boundedReport(
+    db.from("rift_documents").select(cols)
       .eq("journey_id", journeyId).eq("agent_id", agentId).order("created_at", { ascending: false }).limit(200),
     "the documents",
   );
+  const COLS = "id,family,label,filename,kind,bytes,sha256,actor_label,created_at";
+  /* from_member_id arrives with migration 20261006110000; until then, read
+     what exists rather than show no documents at all. */
+  let r = await read(`${COLS},from_member_id`);
+  if (!r.ok && /from_member_id/.test(r.error)) r = await read(COLS);
   if (!r.ok) return journeyTablesMissing(r.error) ? done({ documents: [], unavailable: NOT_YET }) : r;
-  return done({ documents: (("data" in r ? r.data : []) as Record<string, unknown>[]).map(shape) });
+  return done({ documents: (("data" in r ? r.data : []) as unknown as Record<string, unknown>[]).map(shape) });
 }
 
 export async function documentsFor(journeyId: string) {
@@ -75,16 +83,25 @@ export async function documentsFor(journeyId: string) {
  * never finished is deleted, not kept.
  */
 export async function uploadSlot(journeyId: string): Promise<DbResult<{ path: string; url: string }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
+  return slotFor(agentId, journeyId, null);
+}
+
+/**
+ * The slot itself, for the agent (memberId null) or a household member
+ * (WS11.3). A member's file goes to a name that carries their id, so a
+ * finish call from one member can never claim another's upload.
+ */
+export async function slotFor(agentId: string, journeyId: string, memberId: string | null): Promise<DbResult<{ path: string; url: string }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
   const j = await boundedReport(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
   if (!j.ok) return j;
   if (!("data" in j) || !j.data) return failed("That journey could not be found");
 
   await sweepQuarantine(agentId);
-  const path = `quarantine/${agentId}/${randomUUID()}`;
+  const path = `quarantine/${agentId}/${memberId ? `m${memberId}_` : ""}${randomUUID()}`;
   const slot = await boundedWrite(db.storage.from(BUCKET).createSignedUploadUrl(path), "the upload link");
   if (!slot.ok) return /not found|bucket/i.test(slot.error) ? failed("File storage is not set up yet (migration 20260924020000)") : slot;
   return done({ path, url: ("data" in slot && slot.data ? slot.data.signedUrl : "") });
@@ -110,11 +127,20 @@ async function sweepQuarantine(agentId: string): Promise<void> {
 export async function finishUpload(
   journeyId: string, path: string, filename: string, declaredType: string, family: string, label: string, agentLabel: string,
 ): Promise<DbResult<{ id: string } | { refused: string[] }>> {
-  const db = serviceClient();
-  if (!db) return skipped("no database configured");
   const agentId = await currentAgentId();
   if (!agentId) return skipped("no agent row exists yet");
-  if (!new RegExp(`^quarantine/${agentId}/[0-9a-f-]{36}$`).test(path)) return failed("That upload could not be found. Try again");
+  return finishFor(agentId, journeyId, path, filename, declaredType, family, label, agentLabel, null);
+}
+
+/** The finish, for the agent (memberId null) or a household member (WS11.3). */
+export async function finishFor(
+  agentId: string, journeyId: string, path: string, filename: string, declaredType: string, family: string, label: string,
+  actorLabel: string, memberId: string | null,
+): Promise<DbResult<{ id: string } | { refused: string[] }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const own = memberId ? `m${memberId}_[0-9a-f-]{36}` : "[0-9a-f-]{36}";
+  if (!new RegExp(`^quarantine/${agentId}/${own}$`).test(path)) return failed("That upload could not be found. Try again");
   const bad = labelError(label, family);
   if (bad) return failed(bad);
   const j = await boundedReport(db.from("rift_journeys").select("id").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey");
@@ -139,7 +165,8 @@ export async function finishUpload(
     db.from("rift_documents").insert({
       id, agent_id: agentId, journey_id: journeyId, family, label: label.trim(), filename: name, kind: check.kind,
       bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex"), storage_path: clean,
-      actor_label: agentLabel.slice(0, 120),
+      actor_label: actorLabel.slice(0, 120),
+      ...(memberId ? { from_member_id: memberId } : {}),
     }),
     "the document",
   );

@@ -1,7 +1,12 @@
 import "server-only";
 import { done, failed, type DbResult } from "./result";
 import { readBids, recordResponse } from "./bids";
-import { documentLink, readDocuments } from "./documents";
+import { documentLink, finishFor, readDocuments, slotFor } from "./documents";
+import { sendClientDocument } from "./email";
+import { currentAgentEmail } from "./service";
+import { captureOpError } from "@/lib/monitoring/capture";
+import { siteUrl } from "@/lib/core/site";
+import { clientKind, type Family } from "@/lib/core/document";
 import { buyerBidLine, termsDiff, termsEffects, type BuyerBid, type Instruction } from "@/lib/core/bid";
 import { canRespond } from "@/lib/core/journey";
 import type { Membership } from "./portal";
@@ -87,9 +92,59 @@ export async function respondToBid(
  * version of an offer they were asked about, and only with the money scope.
  */
 export async function clientDocumentLink(m: Membership, documentId: string): Promise<DbResult<{ url: string }>> {
+  /* The household's own uploads first: no bid read needed for those. */
+  const own = await householdDocuments(m);
+  if (own.ok && "data" in own && own.data.some((d) => d.id === documentId)) return documentLink(m.journeyId, m.agentId, documentId);
   const b = await clientBids(m);
   if (!b.ok || !("data" in b)) return b as DbResult<never>;
   const shared = b.data.bids.some((x) => x.sharedDocumentIds.includes(documentId));
   if (!shared) return failed("That document is not shared with you");
   return documentLink(m.journeyId, m.agentId, documentId);
+}
+
+/* ------------------------------------------------------------------ *
+ * Documents the household sends (manual review WS11.3)
+ * ------------------------------------------------------------------ */
+
+export interface HouseholdDocument { id: string; label: string; family: Family; filename: string; by: string; at: string; mine: boolean }
+
+/**
+ * What the household has sent. A buyer or co-buyer sees every one (they are
+ * deciding together); a viewer sees only their own, since a pre-approval
+ * letter or an ID is not a viewer's to read.
+ */
+export async function householdDocuments(m: Membership): Promise<DbResult<HouseholdDocument[]>> {
+  const r = await readDocuments(m.journeyId, m.agentId);
+  if (!r.ok || !("data" in r)) return r as DbResult<never>;
+  const all = canRespond(m.role);
+  return done(r.data.documents
+    .filter((d) => d.fromMember && (all || d.fromMember === m.memberId))
+    .map((d) => ({ id: d.id, label: d.label, family: d.family, filename: d.filename, by: d.by, at: d.at, mine: d.fromMember === m.memberId })));
+}
+
+/** Who may send: the people the journey is for, not a viewer. */
+const maySend = (m: Membership) => canRespond(m.role);
+
+export async function clientUploadSlot(m: Membership) {
+  if (!maySend(m)) return failed("Your access lets you look, not send documents");
+  return slotFor(m.agentId, m.journeyId, m.memberId);
+}
+
+export async function clientUploadFinish(m: Membership, input: { path: string; filename: string; type: string; kind: string; label: string }) {
+  if (!maySend(m)) return failed("Your access lets you look, not send documents");
+  const kind = clientKind(input.kind);
+  if (!kind) return failed("Say what kind of document it is");
+  const r = await finishFor(m.agentId, m.journeyId, input.path, input.filename, input.type, kind.family, input.label, m.name, m.memberId);
+  /* Kaleb hears about it, like an offer PDF: the client was told he has it. */
+  if (r.ok && "data" in r && "id" in r.data) {
+    const to = await currentAgentEmail();
+    if (to) {
+      const sent = await sendClientDocument({
+        to, member: m.name, journeyLabel: m.journeyLabel, label: input.label.trim(),
+        journeyUrl: `${siteUrl() ?? ""}/operations/journey/${m.journeyId}?tab=household`,
+      });
+      if (!sent.ok) captureOpError(new Error(sent.error), { op: "email.clientDocument" });
+    }
+  }
+  return r;
 }

@@ -634,3 +634,28 @@ export function buildOfferUploaded(u: OfferUploadedEmail): { subject: string; ht
 </div>`.trim();
   return { subject: `Offer PDF from ${u.sender}`, html };
 }
+
+export interface ClientDocumentEmail {
+  /** Kaleb's own address. */
+  to: string;
+  member: string;
+  journeyLabel: string;
+  label: string;
+  /** Straight to the journey's household tab in Operations. */
+  journeyUrl: string;
+}
+
+/**
+ * The alert that a client sent a document from the portal (manual review
+ * WS11.3). Names the document, never attaches it: the file stays in the
+ * private bucket and opens from Operations with a one-minute link.
+ */
+export function buildClientDocument(d: ClientDocumentEmail): { subject: string; html: string } {
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:17px;font-weight:600;margin:0 0 10px">${escapeHtml(d.member)} sent you a document.</p>
+  <p style="font-size:14px;margin:0 0 14px">&ldquo;${escapeHtml(d.label)}&rdquo;, on ${escapeHtml(d.journeyLabel)}.</p>
+  <p style="font-size:15px"><a href="${escapeHtml(d.journeyUrl)}" style="color:#e8442a">Open it in Operations</a></p>
+</div>`.trim();
+  return { subject: `${d.member} sent you a document`, html };
+}

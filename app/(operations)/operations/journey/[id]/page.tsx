@@ -136,7 +136,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
     settled(needs("homes", "offers", "property") ? homesOf(id) : null),
     settled(buying ? toursOf(id) : null),
     settled(buying ? bidsFor(id, agentFirst) : null),
-    settled(needs("offers", "contract") ? documentsFor(id) : null),
+    settled(needs("offers", "contract", "household") ? documentsFor(id) : null),
     deadlinesFor(id),
     tab === "household" ? summaryLinksFor(id) : Promise.resolve(null),
     settled(buyerNeeds("money") ? moneyFor(id) : null),
@@ -510,6 +510,24 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
               {memberList ? (
                 <Household journeyId={id} side={journey.side} agentName={agent.name} journeyLabel={journey.label} members={memberList} defaultEmail={leadRow?.email ?? ""} defaultName={leadRow?.name ?? ""} />
               ) : <Unread what="household" />}
+            </Section>
+            {/* What the household sent from the portal (manual review WS11.3). */}
+            <Section title="Documents from the household" hint="Sent by the people on this journey from their portal. Each was checked before it was kept, like yours.">
+              <Panel>
+                {!docData ? <Unread what="documents" /> : (() => {
+                  const fromThem = docData.documents.filter((d) => d.fromMember);
+                  return fromThem.length ? (
+                    <ul style={{ display: "grid", gap: 6 }}>
+                      {fromThem.map((d) => (
+                        <li key={d.id} className="t-sm between gap-2 wrap">
+                          <span><span className="w6">{d.label}</span> <span className="c-4">· from {d.by} · {d.filename} · {showDay(d.at, { month: "short", day: "numeric" })}</span></span>
+                          <a className="u" href={`/api/operations/document?journeyId=${id}&id=${d.id}`} target="_blank" rel="noreferrer">Open</a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="t-sm c-3">Nothing yet. Buyers can send you a pre-approval letter, proof of funds or an ID from the Documents tab of their portal.</p>;
+                })()}
+              </Panel>
             </Section>
             <Section title="Summary links" hint="A read-only summary for someone outside the household. It never shows money, notes or documents.">
               <Panel>

@@ -71,8 +71,8 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded,
-  type OfferUploadedEmail, type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded, buildClientDocument,
+  type OfferUploadedEmail, type ClientDocumentEmail, type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
@@ -263,6 +263,17 @@ export async function sendOfferUploaded(u: OfferUploadedEmail): Promise<SendResu
     htmlContent: html,
     tags: ["agent-alert"],
   }, "email.offerUploaded");
+}
+
+/** The alert that a client sent a document from the portal (WS11.3). Same tag as the other agent alerts. */
+export async function sendClientDocument(d: ClientDocumentEmail): Promise<SendResult> {
+  const { subject, html } = buildClientDocument(d);
+  return send({
+    to: [{ email: d.to, name: "Kaleb" }],
+    subject,
+    htmlContent: html,
+    tags: ["agent-alert"],
+  }, "email.clientDocument");
 }
 
 /**

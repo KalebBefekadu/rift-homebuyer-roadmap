@@ -23,7 +23,7 @@ export interface OfferView {
   view: BidView;
 }
 
-export interface DocView { id: string; family: Family; label: string; filename: string; bytes: number; by: string; at: string }
+export interface DocView { id: string; family: Family; label: string; filename: string; bytes: number; by: string; at: string; fromMember?: string | null }
 
 const usd = money;
 const DAY = (iso: string) => showDay(iso, { month: "short", day: "numeric" });
@@ -207,7 +207,7 @@ function Documents({ journeyId, docs }: { journeyId: string; docs: DocView[] }) 
         <ul style={{ marginTop: 8, display: "grid", gap: 4 }}>
           {docs.map((d) => (
             <li key={d.id} className="t-xs between gap-2 wrap">
-              <span><span className="w6">{d.label}</span> <span className="c-4">· {FAMILY_LABEL[d.family]} · {d.filename}, {SIZE(d.bytes)} · {DAY(d.at)}</span></span>
+              <span><span className="w6">{d.label}</span> <span className="c-4">· {FAMILY_LABEL[d.family]}{d.fromMember ? ` · from ${d.by}` : ""} · {d.filename}, {SIZE(d.bytes)} · {DAY(d.at)}</span></span>
               <a className="u" href={`/api/operations/document?journeyId=${journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">Open</a>
             </li>
           ))}
