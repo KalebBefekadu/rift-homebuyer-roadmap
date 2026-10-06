@@ -599,3 +599,38 @@ export function buildInvitation(e: InvitationEmail): { subject: string; text: st
 </div>`.trim();
   return { subject, text, html };
 }
+
+export interface OfferUploadedEmail {
+  /** Kaleb's own address. */
+  to: string;
+  sender: string;
+  phone: string;
+  email: string | null;
+  fileName: string;
+  /** Straight to the upload on the Offers board. */
+  boardUrl: string;
+}
+
+/**
+ * The alert that an offer PDF arrived (manual review WS8.2). Sent on the
+ * first file, before the sender has finished the form, because the upload is
+ * the delivery: the sender may never press Send, and the PDF may carry a
+ * deadline. Agent-alert, like the lead alert, and no figures: the automatic
+ * read is a proposal the sender has not confirmed.
+ */
+export function buildOfferUploaded(u: OfferUploadedEmail): { subject: string; html: string } {
+  const sender = escapeHtml(u.sender);
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:17px;font-weight:600;margin:0 0 10px">${sender} uploaded an offer PDF.</p>
+  <p style="font-size:14px;margin:0 0 10px">
+    Phone: ${escapeHtml(u.phone)}${u.email ? `<br>Email: ${escapeHtml(u.email)}` : ""}<br>
+    File: ${escapeHtml(u.fileName)}
+  </p>
+  <p style="font-size:13px;color:#666;margin:0 0 14px">
+    They may still be filling in the form. If they stop, the PDF is all there is, and it may carry a deadline.
+  </p>
+  <p style="font-size:15px"><a href="${escapeHtml(u.boardUrl)}" style="color:#e8442a">Open it on the Offers board</a></p>
+</div>`.trim();
+  return { subject: `Offer PDF from ${u.sender}`, html };
+}

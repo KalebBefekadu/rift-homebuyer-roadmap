@@ -71,8 +71,8 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation,
-  type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded,
+  type OfferUploadedEmail, type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
@@ -252,6 +252,17 @@ export async function sendOfferChosen(c: OfferChosenEmail): Promise<SendResult> 
     htmlContent: html,
     tags: ["agent-alert"],
   }, "email.offerChosen");
+}
+
+/** The alert that an offer PDF arrived, before the form is finished. Same tag, same reasons, as the lead alert. */
+export async function sendOfferUploaded(u: OfferUploadedEmail): Promise<SendResult> {
+  const { subject, html } = buildOfferUploaded(u);
+  return send({
+    to: [{ email: u.to, name: "Kaleb" }],
+    subject,
+    htmlContent: html,
+    tags: ["agent-alert"],
+  }, "email.offerUploaded");
 }
 
 /**

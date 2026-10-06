@@ -245,6 +245,43 @@ export function inboundItem(o: InboundInput): OfferItem {
   };
 }
 
+export interface UploadInput {
+  id: string;
+  name: string;
+  phone: string;
+  at: string;
+  /** What the automatic read proposed, if it ran: unconfirmed by the sender. */
+  read: { address?: { value: string }; price?: { value: string } } | null;
+  files: number;
+}
+
+/**
+ * A PDF that arrived without the form being sent (manual review WS8.2). The
+ * sender was told Kaleb has it, so it waits on him like any unanswered offer.
+ * The address and price are the automatic read's, said as such: the sender
+ * never confirmed them.
+ */
+export function uploadItem(u: UploadInput): OfferItem {
+  const price = Number(u.read?.price?.value);
+  return {
+    key: `up:${u.id}`,
+    side: "inbound",
+    person: u.name,
+    personHref: null,
+    href: `/operations/offers?show=inbound#upload-${u.id}`,
+    address: u.read?.address?.value ?? "Address not read",
+    terms: Number.isFinite(price) && price > 0
+      ? `${money(price)}, as read from the PDF · ${u.files} PDF${u.files === 1 ? "" : "s"}`
+      : `${u.files} PDF${u.files === 1 ? "" : "s"}, terms not read`,
+    stands: { word: "PDF only", tone: "warn" },
+    needs: `Call ${u.name.split(/\s+/)[0]} at ${u.phone}: they uploaded an offer but did not finish the form.`,
+    waitingOn: "you",
+    by: null,
+    since: u.at,
+    onListing: null,
+  };
+}
+
 /* ------------------------------------------------------------------ *
  * Ordering and counting
  * ------------------------------------------------------------------ */

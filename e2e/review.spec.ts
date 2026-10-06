@@ -45,7 +45,16 @@ test("the offer page starts with the PDF, and the form opens by hand", async ({ 
   /* Errors go under the box, and focus lands on the first one (WS8.4). */
   await page.getByRole("button", { name: /Send this offer/ }).click();
   await expect(page.locator("#offer-address-err")).toBeVisible();
-  await expect(page.locator("#offer-address")).toBeFocused();
+  /* Who is sending is asked first, with the upload (WS8.2), so it is the first box to fix. */
+  await expect(page.locator("#offer-from")).toBeFocused();
+});
+
+test("an offer PDF cannot be chosen before a name and phone (WS8.2)", async ({ page }) => {
+  await page.goto("/offer");
+  await page.getByText("Choose the PDF").click();
+  await expect(page.locator("#offer-from-err")).toBeVisible();
+  await expect(page.locator("#offer-phone-err")).toBeVisible();
+  await expect(page.locator("#offer-from")).toBeFocused();
 });
 
 test("the Equb page switches to Amharic and every call to action opens the form page", async ({ page }) => {

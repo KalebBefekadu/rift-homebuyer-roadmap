@@ -11,6 +11,7 @@ import {
   readSubmission, read, ASSUMED_COMMISSION_PCT, type FieldErrors, type SubmissionField,
   MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_OFFER_PDF_BYTES, MAX_OFFER_PDF_SAY,
 } from "@/lib/core/offer-intake";
+import { readSender, MAX_OFFER_FILES, type SenderField } from "@/lib/core/offer-upload";
 import { sessionId } from "@/lib/rift/session";
 import { money } from "@/lib/core/compute";
 import { typedNumber } from "@/lib/core/typed";
@@ -40,6 +41,11 @@ const CONTINGENCIES = ["Inspection", "Appraisal", "Financing", "Sale of buyer's 
  * changes or confirms it; a read that is off, over its limit or failed says
  * so and leaves the boxes to fill by hand. Sending is the point of the page,
  * so who is sending and a phone number are required.
+ *
+ * The upload is itself a delivery (manual review WS8.2): the name and phone
+ * are asked before the file, and the moment the PDF is stored Kaleb has it,
+ * whether or not the boxes below are ever sent. More PDFs (addenda) can be
+ * added to the same offer from the same place (WS8.3).
  */
 export function Form() {
   const [address, setAddress] = useState("");
@@ -76,7 +82,10 @@ export function Form() {
      PDF" until the sender edits it, so nothing read is mistaken for typed. */
   const [reading_, setReading] = useState<"idle" | "reading" | "done">("idle");
   const [readSay, setReadSay] = useState<string | null>(null);
-  const [documentToken, setDocumentToken] = useState<string | null>(null);
+  /* The signed name of this offer's upload, sent back with addenda and the form. */
+  const [uploadToken, setUploadToken] = useState<string | null>(null);
+  const [files, setFiles] = useState<{ name: string }[]>([]);
+  const [senderErrors, setSenderErrors] = useState<Partial<Record<SenderField, string>>>({});
   const [fromPdf, setFromPdf] = useState<Candidates>({});
   const touched = (f: Field) => setFromPdf((c) => { const n = { ...c }; delete n[f]; return n; });
 
@@ -109,11 +118,11 @@ export function Form() {
     address: address || "placeholder address",
     price: num(price), concessions: num(concessions),
     earnest: num(earnest), financing, financingOther, closeOn, dueDiligenceDays, contingencies,
-    preapproval, proofOfFunds, documentToken,
+    preapproval, proofOfFunds, uploadToken,
     from: from || "Someone", email: email || "someone@example.com",
     phone: phone || "000 000 0000", note, representing: representing ?? "buyer",
   }), [address, price, concessions, earnest, financing, financingOther, closeOn, dueDiligenceDays,
-       contingencies, preapproval, proofOfFunds, documentToken, from, email, phone, note, representing]);
+       contingencies, preapproval, proofOfFunds, uploadToken, from, email, phone, note, representing]);
 
   const parsed = readSubmission(draft);
   const reading = parsed.ok && !unreadable.length && num(price) > 0 ? read(parsed.value, commissionPct) : null;
@@ -121,8 +130,20 @@ export function Form() {
   const toggle = (c: string) =>
     setContingencies((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
 
+  /* Who is sending, asked before the file: the upload is the delivery. */
+  const sender = readSender({ name: from, phone, email });
+  const checkSender = () => {
+    if (sender.ok) { setSenderErrors({}); return true; }
+    setSenderErrors(sender.fields);
+    const firstBad = Object.keys(sender.fields)[0];
+    document.getElementById(`offer-${firstBad === "name" ? "from" : firstBad}`)?.focus();
+    return false;
+  };
+
   const upload = async (file: File | undefined) => {
     if (!file) return;
+    if (!checkSender()) return;
+    const addendum = files.length > 0;
     /* Checked here because past about 4.5 MB the host refuses the upload
        before our route runs, and what comes back is its error page, not a
        sentence. Nothing is sent that could only fail. */
@@ -132,12 +153,21 @@ export function Form() {
     try {
       const body = new FormData();
       body.append("file", file);
+      body.append("name", from);
+      body.append("phone", phone);
+      body.append("email", email);
+      if (uploadToken) body.append("upload", uploadToken);
       const res = await fetch("/api/offer/read", { method: "POST", body });
-      const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; token?: string | null; candidates?: Candidates };
+      const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; upload?: string | null; files?: { name: string }[]; candidates?: Candidates; fields?: Partial<Record<SenderField, string>> };
+      if (j?.fields) setSenderErrors(j.fields);
       /* A 413 without our JSON is the host's limit, reached despite the check
          above (a limit lowered after this page loaded): still a size. */
       if (!j?.ok) { setReadSay(j?.error ?? (res.status === 413 ? MAX_OFFER_PDF_SAY : "That file could not be read. Fill in the boxes instead.")); setReading("done"); return; }
-      setDocumentToken(j.token ?? null);
+      if (j.upload) setUploadToken(j.upload);
+      if (j.files?.length) setFiles(j.files);
+      /* An addendum is kept, not read: the boxes are the offer's, and the
+         sender may already have corrected them. */
+      if (addendum) { setReadSay(j.say ?? null); setReading("done"); return; }
       const c = j.candidates ?? {};
       if (c.address) setAddress(c.address.value);
       if (c.price) setPrice(c.price.value);
@@ -174,7 +204,7 @@ export function Form() {
       const placed = new Set(Object.values(real.fields));
       setErrors(real.errors.filter((e) => !placed.has(e)));
       setFailedToSend(false);
-      const order: SubmissionField[] = ["address", "price", "financing", "financingOther", "dueDiligenceDays", "closeOn", "representing", "from", "phone", "email"];
+      const order: SubmissionField[] = ["from", "phone", "email", "address", "price", "financing", "financingOther", "dueDiligenceDays", "closeOn", "representing"];
       setFocusTo(order.find((f) => real.fields[f]) ?? null);
       return;
     }
@@ -209,20 +239,58 @@ export function Form() {
         <section className="card p-5" style={{ marginTop: 24, background: "var(--brand-wash)", borderColor: "var(--brand-line)" }}>
           <div className="t-md w6">Upload your offer in PDF</div>
           <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            Start here. We read it and fill in the offer for you to check, whatever we manage to find.
-            Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB.
+            Start here. Kaleb has your offer the moment the PDF uploads, even if you stop there. We also read it
+            and fill in the boxes below for you to check, whatever we manage to find. Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB a file.
           </p>
-          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer", position: "relative" }}>
-            <Ico.doc size={15} />{reading_ === "reading" ? "Reading your offer…" : documentToken ? "Choose a different PDF" : "Choose the PDF"}
-            <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
-              onChange={(e) => {
-                /* Cleared once taken, so choosing the same file again after
-                   a failed read tries again instead of doing nothing. */
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                void upload(file);
-              }} />
+
+          {/* Asked before the file, because the upload is the delivery and an
+              offer nobody can be called about cannot be answered (WS8.2). */}
+          <div className="g2 gap-2" style={{ marginTop: 12 }}>
+            <label className="field">
+              <span className="label">Your name</span>
+              <input id="offer-from" className="input" autoComplete="name" value={from}
+                onChange={(e) => setFrom(e.target.value)} {...invalid(senderErrors.name ?? fieldErrors.from, "from")} />
+              <Err id="from" msg={senderErrors.name ?? fieldErrors.from} />
+            </label>
+            <label className="field">
+              <span className="label">Phone</span>
+              <input id="offer-phone" className="input" type="tel" autoComplete="tel" value={phone}
+                onChange={(e) => setPhone(e.target.value)} {...invalid(senderErrors.phone ?? fieldErrors.phone, "phone")} />
+              <Err id="phone" msg={senderErrors.phone ?? fieldErrors.phone} />
+            </label>
+          </div>
+          <label className="field" style={{ marginTop: 10 }}>
+            <span className="label">Email <span className="c-4">(needed to send the form, not to upload)</span></span>
+            <input id="offer-email" className="input" type="email" autoComplete="email" value={email}
+              onChange={(e) => setEmail(e.target.value)} {...invalid(senderErrors.email ?? fieldErrors.email, "email")} />
+            <Err id="email" msg={senderErrors.email ?? fieldErrors.email} />
           </label>
+
+          {files.length ? (
+            <ul className="t-sm" style={{ marginTop: 12, display: "grid", gap: 4 }} aria-label="PDFs Kaleb has">
+              {files.map((f, k) => (
+                <li key={`${f.name}-${k}`} className="row gap-2">
+                  <Ico.check size={13} className="c-pos" style={{ flex: "none", marginTop: 3 }} />
+                  <span>{f.name}<span className="t-xs c-3"> · {k === 0 ? "the offer" : "added"}, delivered</span></span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {files.length < MAX_OFFER_FILES ? (
+            <label className={`btn ${files.length ? "btn-g" : "btn-brand"}`} style={{ marginTop: 12, cursor: "pointer", position: "relative" }}>
+              <Ico.doc size={15} />{reading_ === "reading" ? (files.length ? "Adding…" : "Reading your offer…") : files.length ? "Add another PDF (an addendum)" : "Choose the PDF"}
+              <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
+                onClick={(e) => { if (!checkSender()) e.preventDefault(); }}
+                onChange={(e) => {
+                  /* Cleared once taken, so choosing the same file again after
+                     a failed read tries again instead of doing nothing. */
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  void upload(file);
+                }} />
+            </label>
+          ) : <p className="t-xs c-3" style={{ marginTop: 10 }}>That is the most one offer can carry here. Email anything else to Kaleb.</p>}
           {/* Always in the page, so a screen reader is listening before the
               answer arrives: a live region inserted with its text already
               in it is often not read out at all. */}
@@ -408,24 +476,13 @@ export function Form() {
             <Err id="representing" msg={fieldErrors.representing} />
           </fieldset>
 
-          <div className="g2 gap-2" style={{ marginTop: 12 }}>
-            <label className="field">
-              <span className="label">Your name</span>
-              <input id="offer-from" className="input" autoComplete="name" value={from} onChange={(e) => setFrom(e.target.value)} {...invalid(fieldErrors.from, "from")} />
-              <Err id="from" msg={fieldErrors.from} />
-            </label>
-            <label className="field">
-              <span className="label">Phone</span>
-              <input id="offer-phone" className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} {...invalid(fieldErrors.phone, "phone")} />
-              <Err id="phone" msg={fieldErrors.phone} />
-            </label>
-          </div>
-
-          <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Email</span>
-            <input id="offer-email" className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} {...invalid(fieldErrors.email, "email")} />
-            <Err id="email" msg={fieldErrors.email} />
-          </label>
+          {/* The name, phone and email are asked once, at the top with the
+              upload; repeated here they were two boxes bound to one value. */}
+          <p className="t-sm c-2" style={{ marginTop: 12 }}>
+            From {from.trim() || <span className="c-3">(your name, above)</span>}
+            {phone.trim() ? `, ${phone.trim()}` : ""}{email.trim() ? `, ${email.trim()}` : ""}.{" "}
+            <a className="btn-link t-xs" href="#offer-from">Change</a>
+          </p>
 
           <label className="field" style={{ marginTop: 12 }}>
             <span className="label">Anything else <span className="c-4">(optional)</span></span>
@@ -436,8 +493,8 @@ export function Form() {
               deliver an offer is not consent to be called about anything else,
               and nothing here stores one. */}
           <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.6 }}>
-            We keep the offer, the PDF if you uploaded one, and your name, phone and email so Kaleb
-            can reply. None of it is used for marketing.{" "}
+            We keep the offer, any PDFs you uploaded (from the moment they upload), and your name,
+            phone and email so Kaleb can reply. None of it is used for marketing.{" "}
             <Link href="/privacy" className="btn-link">What we keep</Link>.
           </p>
 

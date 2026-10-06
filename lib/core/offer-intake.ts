@@ -1,6 +1,5 @@
 import { GA_TRANSFER_TAX_RATE } from "./compute";
 import { gapsIn, type Financing, type Offer } from "./offers";
-import { isUuid } from "./ids";
 
 /**
  * An offer submitted from outside, by somebody with no account.
@@ -73,8 +72,12 @@ export interface Submission {
   closeOn: string | null;
   /** The due diligence period, in days (§5.9). */
   dueDiligenceDays: number | null;
-  /** The uploaded PDF, waiting to be attached (lib/db/offer-read.ts). */
-  documentToken: string | null;
+  /**
+   * The upload this offer's PDFs are on (lib/db/offer-upload.ts), as the
+   * signed token the upload step handed back. Checked on the server; here it
+   * is only shaped, because the secret is not this layer's to hold.
+   */
+  uploadToken: string | null;
   contingencies: string[];
   preapproval: boolean;
   proofOfFunds: boolean;
@@ -205,7 +208,7 @@ export function readSubmission(raw: Record<string, unknown>): { ok: true; value:
       financingOther: financing === "other" ? financingOther : null,
       closeOn,
       dueDiligenceDays,
-      documentToken: isUuid(String(raw.documentToken ?? "")) ? String(raw.documentToken) : null,
+      uploadToken: /^[0-9a-f-]{36}\.[0-9a-z]+\.[A-Za-z0-9_-]{20,}$/.test(String(raw.uploadToken ?? "")) ? String(raw.uploadToken) : null,
       contingencies,
       preapproval: raw.preapproval === true,
       proofOfFunds: raw.proofOfFunds === true,
