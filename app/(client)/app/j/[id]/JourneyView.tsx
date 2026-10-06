@@ -27,7 +27,8 @@ import { Help } from "../../Help";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
 import { showDay } from "@/lib/core/day";
-import { PORTAL_TABS, TAB_LABEL, pickTab, type PortalTab } from "@/lib/core/portal-tabs";
+import { PORTAL_TABS, pickTab, type PortalTab } from "@/lib/core/portal-tabs";
+import { portalT } from "../../lang";
 
 
 const DAY = (iso: string) => showDay(iso, { month: "long", day: "numeric" });
@@ -51,6 +52,12 @@ const FOR_BUYER: Record<SearchStatus, (agent: string, since: string | null) => s
  */
 export async function JourneyView({ member, preview, tab }: { member: Membership; preview?: { by: string }; tab?: unknown }) {
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
+  /* Amharic for what the page itself says (WS11.6). Sentences worked out from
+     records stay English for now, marked lang="en", and the page says so. */
+  const { locale, t } = await portalT();
+  const A = { agent: agentFirst };
+  /* What the records say is worked out in English; marked so, on an Amharic page. */
+  const EN = locale === "am" ? "en" : undefined;
 
   const sellerMoneyOn = member.side === "sell" && member.scopes.includes("money");
   const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead, listingRead, sentRead] = await Promise.all([
@@ -185,37 +192,41 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       {/* A disabled fieldset switches off every control inside it, so a
           preview cannot answer, react or confirm on the member's behalf. */}
       <fieldset disabled={Boolean(preview)} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <Link href="/app" className="t-sm c-3">← Your move</Link>
+      <Link href="/app" className="t-sm c-3">{t("pt.back")}</Link>
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>{member.journeyLabel}</h1>
       <p className="t-xs c-4" style={{ marginTop: 4 }}>
-        With {member.agentName} · {preview ? `${member.name} is` : `you are signed in as ${member.name}`} ({ROLE_LABEL[member.role].toLowerCase()})
-        {" · "}<Link className="btn-link" href={`/app/j/${member.journeyId}/records`}>Your records</Link>
+        {preview
+          ? <>With {member.agentName} · {member.name} is ({ROLE_LABEL[member.role].toLowerCase()})</>
+          : t("pt.signedAs", { agent: member.agentName, name: member.name, role: t(`pt.role.${member.role}`) })}
+        {" · "}<Link className="btn-link" href={`/app/j/${member.journeyId}/records`}>{t("pt.records")}</Link>
       </p>
+      {locale === "am" ? <p className="t-2xs c-4" style={{ marginTop: 4 }}>{t("pt.english")}</p> : null}
       {/* Stays at the top while scrolling, in one swipeable row on a phone.
           Links, not buttons: each tab is its own address, so Back works and
           an email can open the right one. */}
-      <nav aria-label="Your move" className="row gap-1" style={{
+      <nav aria-label={t("pt.nav")} className="row gap-1" style={{
         marginTop: 12, position: "sticky", top: 0, zIndex: 5, background: "var(--paper)",
         padding: "8px 0", overflowX: "auto", flexWrap: "nowrap", scrollbarWidth: "none",
         borderBottom: "1px solid var(--line-2)",
       }}>
-        {tabs.map((t) => (
-          <Link key={t} href={`?tab=${t}`} scroll={false} aria-current={t === active ? "page" : undefined}
-            className={`chip ${t === active ? "chip-brand" : ""}`} style={{ height: 32, padding: "0 14px", flex: "none" }}>
-            {TAB_LABEL[t]}
+        {tabs.map((tab_) => (
+          <Link key={tab_} href={`?tab=${tab_}`} scroll={false} aria-current={tab_ === active ? "page" : undefined}
+            className={`chip ${tab_ === active ? "chip-brand" : ""}`} style={{ height: 32, padding: "0 14px", flex: "none" }}>
+            {t(`pt.tab.${tab_}`)}
           </Link>
         ))}
       </nav>
 
       {active === "today" && member.side !== "buy" ? (
         <p className="t-sm c-3" style={{ marginTop: 16, lineHeight: 1.6 }}>
-          {agentFirst} will share more here as your sale moves forward.
+          {t("pt.sellerNote", A)}
         </p>
       ) : null}
 
       {active === "today" ? (
       <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
-        <h2 id="today-h" className="t-md w6">Today</h2>
+        <h2 id="today-h" className="t-md w6">{t("pt.today.h")}</h2>
+        <div lang={EN}>
         {listingSays ? <p className="t-sm" style={{ marginTop: 6 }}>{listingSays}</p> : null}
         {latestReview ? (
           <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.6 }}>
@@ -230,10 +241,10 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
         ) : null}
         {!p ? (
           <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-            What is due did not load. That is not the same as nothing being due; reload in a moment, or ask {agentFirst}.
+            {t("pt.today.failed", A)}
           </p>
         ) : p.unavailable || !today ? (
-          <p className="t-sm c-3" style={{ marginTop: 8 }}>This part is being set up. Ask {agentFirst} what comes next.</p>
+          <p className="t-sm c-3" style={{ marginTop: 8 }}>{t("pt.today.setup", A)}</p>
         ) : p.detail ? (
           <Today
             journeyId={member.journeyId}
@@ -257,6 +268,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
             agentFirst={agentFirst}
           />
         )}
+        </div>
       </section>
       ) : null}
 
@@ -264,8 +276,8 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
           owner does next, each with the office that runs it. */}
       {active === "today" && member.side === "buy" && p?.closed ? (
         <section id="moving-in" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="movein-h">
-          <h2 id="movein-h" className="t-md w6">Moving in</h2>
-          <ul style={{ marginTop: 10, display: "grid", gap: 10 }}>
+          <h2 id="movein-h" className="t-md w6">{t("pt.movein.h")}</h2>
+          <ul lang={EN} style={{ marginTop: 10, display: "grid", gap: 10 }}>
             {MOVE_IN.map((m) => (
               <li key={m.id}>
                 <div className="between gap-2 wrap"><span className="t-sm w6">{m.title}</span><span className="chip t-2xs">{m.who === "you" ? "You" : m.who === "your agent" ? agentFirst : "Your lender"}</span></div>
@@ -280,26 +292,26 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
 
       {active === "offers" && offersOn ? (
         <section id="offers" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="offers-h">
-          <h2 id="offers-h" className="t-md w6">Offers</h2>
+          <h2 id="offers-h" className="t-md w6">{t("pt.offers.h")}</h2>
           {!o ? (
-            <p className="t-sm c-3" style={{ marginTop: 8 }}>Your offers did not load. That is not the same as there being none; reload in a moment.</p>
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>{t("pt.offers.failed")}</p>
           ) : o.unavailable ? (
-            <p className="t-sm c-3" style={{ marginTop: 8 }}>This part is being set up. Ask {agentFirst} about any offer.</p>
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>{t("pt.offers.setup", A)}</p>
           ) : (
-            <ClientOffers journeyId={member.journeyId} bids={buyerBids} canRespond={respond} agentFirst={agentFirst} />
+            <div lang={EN}><ClientOffers journeyId={member.journeyId} bids={buyerBids} canRespond={respond} agentFirst={agentFirst} /></div>
           )}
         </section>
       ) : null}
 
       {active === "homes" && member.side === "buy" && member.scopes.includes("search") ? (
         <section id="priorities" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pri-h">
-          <h2 id="pri-h" className="t-md w6">Your search priorities</h2>
+          <h2 id="pri-h" className="t-md w6">{t("pt.pri.h")}</h2>
           {!b ? (
-            <p className="t-sm c-3" style={{ marginTop: 8 }}>Your priorities did not load. Nothing is lost; reload in a moment.</p>
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>{t("pt.pri.failed")}</p>
           ) : !b.revision ? (
             <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>{FOR_BUYER.draft(agentFirst, null)} You will see them here, and can correct anything, once {agentFirst} has.</p>
           ) : (
-            <>
+            <div lang={EN}>
               <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.6 }}>{FOR_BUYER[b.status](agentFirst, b.activeSince)}</p>
 
               {diff && (diff.changes.length || diff.questionsAdded.length) ? (
@@ -352,7 +364,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
                 hiddenMoney={b.hidden > 0}
                 agentFirst={agentFirst}
               />
-            </>
+            </div>
           )}
         </section>
       ) : null}
@@ -360,14 +372,14 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       {active === "homes" && member.side === "buy" && member.scopes.includes("homes") ? (
         <section id="homes" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="homes-h">
           <div className="between gap-2 wrap">
-            <h2 id="homes-h" className="t-md w6">Homes</h2>
-            {(h?.filter((x) => !x.withdrawnAt).length ?? 0) >= 2 ? <Link href={`/app/j/${member.journeyId}/compare`} className="btn btn-g btn-sm">Compare side by side</Link> : null}
+            <h2 id="homes-h" className="t-md w6">{t("pt.homes.h")}</h2>
+            {(h?.filter((x) => !x.withdrawnAt).length ?? 0) >= 2 ? <Link href={`/app/j/${member.journeyId}/compare`} className="btn btn-g btn-sm">{t("pt.homes.compare")}</Link> : null}
           </div>
           <p className="t-xs c-4" style={{ marginTop: 2 }}>
-            Homes you or {agentFirst} added. Reacting tells {agentFirst} what you think; it does not change your search.
+            {t("pt.homes.note", A)}
           </p>
           {h ? (
-            <ClientHomes
+            <div lang={EN}><ClientHomes
               journeyId={member.journeyId}
               homes={h.map((x) => ({ ...x, historyCount: x.history.length }))}
               criteria={b?.revision?.brief.criteria ?? []}
@@ -375,17 +387,17 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
               canRespond={respond}
               showings={showings}
               agentFirst={agentFirst}
-            />
+            /></div>
           ) : (
-            <p className="t-sm c-3" style={{ marginTop: 8 }}>The homes did not load. That is not the same as an empty list; reload in a moment.</p>
+            <p className="t-sm c-3" style={{ marginTop: 8 }}>{t("pt.homes.failed")}</p>
           )}
         </section>
       ) : null}
 
       {active === "money" && sellerMoneyOn && latestOpinion ? (
         <section id="pricing" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pricing-h">
-          <h2 id="pricing-h" className="t-md w6">Pricing</h2>
-          <div style={{ marginTop: 8 }}>
+          <h2 id="pricing-h" className="t-md w6">{t("pt.pricing.h")}</h2>
+          <div lang={EN} style={{ marginTop: 8 }}>
             <ClientPricing
               journeyId={member.journeyId}
               opinion={{ ...latestOpinion, responses: [] }}
@@ -400,9 +412,9 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
 
       {active === "money" && sellerMoneyOn && saleViews.length ? (
         <section id="proceeds" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="proceeds-h">
-          <h2 id="proceeds-h" className="t-md w6">What you would keep</h2>
-          <p className="t-sm w6" style={{ marginTop: 6 }}>{proceedsLine(saleViews)}</p>
-          <ul className="t-sm" style={{ marginTop: 8, display: "grid", gap: 4 }}>
+          <h2 id="proceeds-h" className="t-md w6">{t("pt.proceeds.h")}</h2>
+          <p lang={EN} className="t-sm w6" style={{ marginTop: 6 }}>{proceedsLine(saleViews)}</p>
+          <ul lang={EN} className="t-sm" style={{ marginTop: 8, display: "grid", gap: 4 }}>
             {[...saleViews].reverse().map((v) => (
               <li key={v.at}>
                 <span className="w6">{FIGURE_LABEL[v.kind]}</span>: {v.net < 0 ? `${usd(-v.net)} short` : usd(v.net)} on a {usd(v.price)} sale, owed {usd(v.owed)} ({OWED_LABEL[v.owedSource]}){v.commissionPct === null ? ", commission not agreed yet" : `, ${v.commissionPct}% commission`}.
@@ -410,27 +422,26 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
               </li>
             ))}
           </ul>
-          <p className="t-xs c-4" style={{ marginTop: 8 }}>Until the settlement statement, these are plans, not money in hand.</p>
+          <p className="t-xs c-4" style={{ marginTop: 8 }}>{t("pt.proceeds.note")}</p>
         </section>
       ) : null}
 
       {active === "money" && moneyOn ? (
         <section id="money" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="money-h">
-          <h2 id="money-h" className="t-md w6">Money</h2>
+          <h2 id="money-h" className="t-md w6">{t("pt.money.h")}</h2>
           <p className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
-            What you pay before closing, what you bring to the table, and what your savings leave, worked out from
-            {moneyData?.answersFrom ? " the plan you saved" : " typical Georgia figures"} and the amounts {agentFirst} has recorded. Each line says where it came from.
+            {t("pt.money.note", { ...A, source: t(moneyData?.answersFrom ? "pt.money.saved" : "pt.money.typical") })}
           </p>
-          {moneyData ? <LedgerView l={moneyData.ledger} audience="client" />
-            : <p className="t-sm c-3">This did not load. That is not the same as there being nothing to show; reload in a moment.</p>}
+          {moneyData ? <div lang={EN}><LedgerView l={moneyData.ledger} audience="client" /></div>
+            : <p className="t-sm c-3">{t("pt.money.failed")}</p>}
         </section>
       ) : null}
 
       {active === "documents" ? (
         <section id="documents" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="docs-h">
-          <h2 id="docs-h" className="t-md w6">Documents</h2>
-          <h3 className="t-sm w6" style={{ marginTop: 10 }}>From {agentFirst}</h3>
-          <p className="t-xs c-4" style={{ marginTop: 2 }}>Everything {agentFirst} has shared with you, in one place.</p>
+          <h2 id="docs-h" className="t-md w6">{t("pt.docs.h")}</h2>
+          <h3 className="t-sm w6" style={{ marginTop: 10 }}>{t("pt.docs.from", A)}</h3>
+          <p className="t-xs c-4" style={{ marginTop: 2 }}>{t("pt.docs.fromNote", A)}</p>
           {documents.length ? (
           <ul style={{ marginTop: 10, display: "grid", gap: 6 }}>
             {documents.map((d) => (
@@ -440,34 +451,33 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
               </li>
             ))}
           </ul>
-          ) : <p className="t-sm c-3" style={{ marginTop: 10 }}>Nothing has been shared yet. When {agentFirst} shares a document, it appears here.</p>}
+          ) : <p className="t-sm c-3" style={{ marginTop: 10 }}>{t("pt.docs.none", A)}</p>}
 
-          <h3 className="t-sm w6" style={{ marginTop: 18 }}>From you{respond ? " and the people buying with you" : ""}</h3>
+          <h3 className="t-sm w6" style={{ marginTop: 18 }}>{t(respond ? "pt.docs.yoursAll" : "pt.docs.yours")}</h3>
           {!sent ? (
-            <p className="t-sm c-3" style={{ marginTop: 6 }}>What you sent did not load. That is not the same as nothing being there; reload in a moment.</p>
+            <p className="t-sm c-3" style={{ marginTop: 6 }}>{t("pt.docs.sentFailed")}</p>
           ) : sent.length ? (
             <ul style={{ marginTop: 8, display: "grid", gap: 6 }}>
               {sent.map((d) => (
                 <li key={d.id} className="between gap-2 wrap t-sm">
                   <a className="btn-link" href={`/api/app/document?journeyId=${member.journeyId}&id=${d.id}`} target="_blank" rel="noreferrer">{d.label}</a>
-                  <span className="t-xs c-4">{d.mine ? "You" : d.by} · {DAY(d.at)}</span>
+                  <span className="t-xs c-4">{d.mine ? t("pt.docs.you") : d.by} · {DAY(d.at)}</span>
                 </li>
               ))}
             </ul>
-          ) : <p className="t-sm c-3" style={{ marginTop: 6 }}>Nothing yet.</p>}
-          {respond ? <SendDocument journeyId={member.journeyId} agentFirst={agentFirst} /> : null}
+          ) : <p className="t-sm c-3" style={{ marginTop: 6 }}>{t("pt.docs.nothing")}</p>}
+          {respond ? <SendDocument journeyId={member.journeyId} agentFirst={agentFirst} locale={locale} /> : null}
         </section>
       ) : null}
 
       {active === "help" ? <Help agentName={member.agentName} agentEmail={member.agentEmail} next={today?.where ?? null} /> : (
         <p className="t-xs c-4" style={{ marginTop: 18 }}>
-          Questions? <Link className="btn-link" href="?tab=help">Help</Link> says how to reach {agentFirst}.
+          <Link className="btn-link" href="?tab=help">{t("pt.questions", A)}</Link>
         </p>
       )}
 
       <p className="t-2xs c-4" style={{ marginTop: 24, lineHeight: 1.6 }}>
-        Only people {agentFirst} invited can see this page, and only the parts shared with them. Nothing here is a
-        contract, an offer, or a loan decision.
+        {t("pt.foot", A)}
       </p>
       </fieldset>
     </ClientShell>

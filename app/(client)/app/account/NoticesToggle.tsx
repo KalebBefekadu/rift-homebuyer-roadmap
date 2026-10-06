@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { post } from "../post";
+import { translator, type Locale } from "@/lib/core/i18n";
 
 /** The client's own switch for "something new was shared" emails (WS11.5). Saved on change. */
-export function NoticesToggle({ journeyId, on: start, agentFirst }: { journeyId: string; on: boolean; agentFirst: string }) {
+export function NoticesToggle({ journeyId, on: start, agentFirst, locale = "en" }: { journeyId: string; on: boolean; agentFirst: string; locale?: Locale }) {
+  const t = translator(locale);
   const [on, setOn] = useState(start);
   const [say, setSay] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -17,10 +19,10 @@ export function NoticesToggle({ journeyId, on: start, agentFirst }: { journeyId:
             setBusy(true); setSay(null);
             const r = await post({ action: "notices", journeyId, on: next });
             setBusy(false);
-            if (r.ok) { setOn(next); setSay({ ok: true, text: next ? "Saved. We will email you." : "Saved. No more of these emails." }); }
-            else setSay({ ok: false, text: r.error ?? "That did not save. Try again." });
+            if (r.ok) { setOn(next); setSay({ ok: true, text: t(next ? "pt.acc.on" : "pt.acc.off") }); }
+            else setSay({ ok: false, text: r.error ?? t("pt.acc.notSaved") });
           }} />
-        <span>Email me when {agentFirst} shares something new or needs my answer. The email says what kind of thing it is, never the details.</span>
+        <span>{t("pt.acc.notices", { agent: agentFirst })}</span>
       </label>
       {say ? <p role={say.ok ? "status" : "alert"} className={`t-xs ${say.ok ? "c-pos" : "c-neg"}`} style={{ marginTop: 4 }}>{say.text}</p> : null}
     </div>

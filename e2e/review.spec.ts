@@ -79,3 +79,14 @@ test("booking needs an email", async ({ page }) => {
   await page.locator("label.opt input[type=checkbox]").check();
   await expect(page.getByRole("button", { name: "Add your email" })).toBeDisabled();
 });
+
+test("the client sign-in switches to Amharic and remembers it (WS11.6)", async ({ page }) => {
+  await page.goto("/app/sign-in");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in to your move");
+  await page.getByRole("button", { name: "አማርኛ" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("ወደ ቤት ጉዳይዎ ይግቡ");
+  await expect(page.locator("main")).toHaveAttribute("lang", "am");
+  /* The choice is a cookie, so the next server-rendered page keeps it. */
+  await page.goto("/app/sign-in");
+  await expect(page.getByLabel("የይለፍ ቃል")).toBeVisible();
+});

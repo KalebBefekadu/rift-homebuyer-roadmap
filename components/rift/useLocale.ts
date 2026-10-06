@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isLocale, type Locale } from "@/lib/core/i18n";
+import { rememberLocale } from "./LangSwitch";
 
 /**
  * The language a page shows, shared by the abroad and Equb pages.
@@ -23,7 +24,8 @@ export function useLocale(initial: Locale, pinned: boolean): [Locale, (l: Locale
   }, [pinned]);
   useEffect(() => {
     document.documentElement.lang = locale;
-    try { window.localStorage.setItem("rift.locale", locale); } catch { /* ignore */ }
+    /* The cookie too, so the choice carries into the client portal (WS11.6). */
+    rememberLocale(locale);
     return () => { document.documentElement.lang = "en"; };
   }, [locale]);
   return [locale, setLocale];

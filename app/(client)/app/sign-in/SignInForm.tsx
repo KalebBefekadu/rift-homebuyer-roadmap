@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Ico } from "@/components/rift/icons";
 import { post } from "../post";
+import { translator, type Locale } from "@/lib/core/i18n";
 
 /* The confirmation replaces the button that was pressed; without this, focus
    drops to the top of the page. Stable, so it runs once when it appears. */
@@ -15,7 +16,8 @@ type Mode = "password" | "link" | "reset";
  * only ever reach what an invitation granted: a login proves an address, and
  * /app shows nothing for an address nobody invited.
  */
-export function SignInForm({ next }: { next: string }) {
+export function SignInForm({ next, locale = "en" }: { next: string; locale?: Locale }) {
+  const t = translator(locale);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<Mode>("password");
@@ -31,13 +33,13 @@ export function SignInForm({ next }: { next: string }) {
     setState("sending");
     if (mode === "password") {
       const r = await post({ action: "password", email, password });
-      if (!r.ok) { setError(r.error ?? "That did not work."); setState("idle"); return; }
+      if (!r.ok) { setError(r.error ?? t("pt.f.failed")); setState("idle"); return; }
       /* A full load: the session cookie arrived with that response. */
       window.location.assign(next);
       return;
     }
     const r = await post({ action: mode === "reset" ? "reset" : "signin", email });
-    if (!r.ok) { setError(r.error ?? "That did not work."); setState("idle"); return; }
+    if (!r.ok) { setError(r.error ?? t("pt.f.failed")); setState("idle"); return; }
     setError(null);
     setState("sent");
   };
@@ -47,14 +49,12 @@ export function SignInForm({ next }: { next: string }) {
   if (state === "sent") {
     return (
       <div role="status" tabIndex={-1} ref={focusOnShow} style={{ marginTop: 16 }}>
-        <div className="row gap-2"><Ico.mail size={16} className="c-pos" /><span className="t-md w6">Check your email.</span></div>
+        <div className="row gap-2"><Ico.mail size={16} className="c-pos" /><span className="t-md w6">{t("pt.f.check")}</span></div>
         <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>
-          If {email.trim()} has been invited, a link is on its way{mode === "reset" ? " to choose a new password" : ""}. It works
-          once, on any device. Nothing arrived after a few minutes? Check spam, check the address is spelled the way your
-          agent has it, then ask your agent to confirm it.
+          {t(mode === "reset" ? "pt.f.sentBodyReset" : "pt.f.sentBody", { email: email.trim() })}
         </p>
         <button type="button" className="btn-link t-xs" style={{ marginTop: 10 }} onClick={() => { setState("idle"); switchTo("password"); }}>
-          Back to sign in
+          {t("pt.f.back")}
         </button>
       </div>
     );
@@ -63,13 +63,13 @@ export function SignInForm({ next }: { next: string }) {
   return (
     <form onSubmit={submit}>
       <label className="field" style={{ marginTop: 16 }}>
-        <span className="label">Email</span>
+        <span className="label">{t("pt.f.email")}</span>
         <input className="input" type="email" autoComplete="email" value={email} placeholder="you@example.com" required
           onChange={(e) => setEmail(e.target.value)} />
       </label>
       {mode === "password" ? (
         <label className="field" style={{ marginTop: 12 }}>
-          <span className="label">Password</span>
+          <span className="label">{t("pt.f.password")}</span>
           <input className="input" type="password" autoComplete="current-password" value={password} required
             onChange={(e) => setPassword(e.target.value)} />
         </label>
@@ -82,17 +82,17 @@ export function SignInForm({ next }: { next: string }) {
       <button type="submit" className="btn btn-p" style={{ marginTop: 14, width: "100%" }}
         disabled={state === "sending" || !email.trim() || (mode === "password" && !password)}>
         {state === "sending"
-          ? (mode === "password" ? "Signing in…" : "Sending…")
-          : mode === "password" ? "Sign in" : mode === "reset" ? "Email me a reset link" : "Email me a sign-in link"}
+          ? (mode === "password" ? t("pt.f.signingIn") : t("pt.f.sending"))
+          : mode === "password" ? t("pt.f.signin") : mode === "reset" ? t("pt.f.reset") : t("pt.f.link")}
       </button>
       <div className="t-xs c-3" style={{ marginTop: 12, lineHeight: 1.8, display: "grid" }}>
         {mode === "password" ? (
           <>
-            <button type="button" className="btn-link" style={{ justifySelf: "start" }} onClick={() => switchTo("reset")}>Forgot password?</button>
-            <button type="button" className="btn-link" style={{ justifySelf: "start" }} onClick={() => switchTo("link")}>Email me a sign-in link instead</button>
+            <button type="button" className="btn-link" style={{ justifySelf: "start" }} onClick={() => switchTo("reset")}>{t("pt.f.forgot")}</button>
+            <button type="button" className="btn-link" style={{ justifySelf: "start" }} onClick={() => switchTo("link")}>{t("pt.f.linkInstead")}</button>
           </>
         ) : (
-          <button type="button" className="btn-link" style={{ justifySelf: "start" }} onClick={() => switchTo("password")}>Sign in with a password</button>
+          <button type="button" className="btn-link" style={{ justifySelf: "start" }} onClick={() => switchTo("password")}>{t("pt.f.withPassword")}</button>
         )}
       </div>
     </form>

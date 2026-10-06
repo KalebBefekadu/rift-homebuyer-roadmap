@@ -3,6 +3,9 @@ import { Mark } from "@/components/rift/icons";
 import { clientSession, invitationByToken } from "@/lib/db/portal";
 import { acceptError, buyerSearchOn } from "@/lib/core/journey";
 import { InviteActions } from "./InviteActions";
+import { LangSwitch } from "@/components/rift/LangSwitch";
+import { ETHIOPIC_STACK } from "@/lib/core/i18n";
+import { portalT } from "../../lang";
 
 export const metadata: Metadata = { title: "Invitation", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -20,11 +23,15 @@ export const dynamic = "force-dynamic";
  */
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const { locale, t } = await portalT();
   const frame = (body: React.ReactNode) => (
-    <main className="shell-w sec" style={{ maxWidth: 520 }}>
-      <div className="row gap-2" style={{ marginBottom: 22 }}>
-        <Mark size={20} />
-        <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
+    <main lang={locale} className="shell-w sec" style={{ maxWidth: 520, ...(locale === "am" ? { fontFamily: ETHIOPIC_STACK } : {}) }}>
+      <div className="between gap-2" style={{ marginBottom: 22 }}>
+        <span className="row gap-2">
+          <Mark size={20} />
+          <span className="mark-name" style={{ fontSize: 19 }}>Rift</span>
+        </span>
+        <LangSwitch locale={locale} label={t("pt.lang")} />
       </div>
       <div className="card p-5">{body}</div>
     </main>
@@ -57,14 +64,13 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const why = signedIn ? acceptError({ email: i.email, acceptedAt: null, revokedAt: null, inviteExpiresAt: null }, session.email) : null;
 
   return frame(<>
-    <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>{i.agentName} invited you to &ldquo;{i.journeyLabel}&rdquo;</h1>
+    <h1 className="serif" style={{ fontSize: 26, letterSpacing: "-0.02em" }}>{t("pt.inv.title", { agent: i.agentName, journey: i.journeyLabel })}</h1>
     {i.state === "invited" ? (
       <>
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>
-          You will see your search priorities and the homes {i.agentName.split(/\s+/)[0]} shares, and you can confirm
-          them, ask for changes and react to homes. This invitation is for {i.maskedEmail}.
+          {t("pt.inv.body", { agent: i.agentName.split(/\s+/)[0] ?? i.agentName, email: i.maskedEmail })}
         </p>
-        <InviteActions token={token} signedIn={signedIn} mismatch={why} masked={i.maskedEmail} />
+        <InviteActions token={token} signedIn={signedIn} mismatch={why} masked={i.maskedEmail} locale={locale} />
       </>
     ) : (
       <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>
