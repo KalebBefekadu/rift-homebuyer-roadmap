@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * signed in with a different address, gets a 404 rather than a page: whether
  * a journey exists is itself not theirs to know.
  */
-export default async function ClientJourney({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientJourney({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[] }> }) {
   if (!buyerSearchOn(process.env)) redirect("/app");
   const session = await clientSession();
   if (session.state === "signed-out") redirect("/app/sign-in");
@@ -32,5 +32,5 @@ export default async function ClientJourney({ params }: { params: Promise<{ id: 
   }
   if (!m.data) notFound();
   const member = m.data;
-  return <JourneyView member={member} />;
+  return <JourneyView member={member} tab={(await searchParams).tab} />;
 }

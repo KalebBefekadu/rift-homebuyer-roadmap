@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
  * the same projection with every control disabled, and nothing here creates,
  * borrows or changes a client session.
  */
-export default async function Preview({ params }: { params: Promise<{ journeyId: string; memberId: string }> }) {
+export default async function Preview({ params, searchParams }: { params: Promise<{ journeyId: string; memberId: string }>; searchParams: Promise<{ tab?: string | string[] }> }) {
   if (!buyerSearchOn(process.env)) redirect("/operations");
   const s = await agentSession();
   if (s.state === "signed-out") redirect("/operations/sign-in");
@@ -34,5 +34,5 @@ export default async function Preview({ params }: { params: Promise<{ journeyId:
     return <ClientShell agentName={null} preview><p className="t-sm c-3">This did not load. Try again in a minute.</p></ClientShell>;
   }
   if (!m.data) notFound();
-  return <JourneyView member={m.data} preview={{ by: s.agent.name }} />;
+  return <JourneyView member={m.data} preview={{ by: s.agent.name }} tab={(await searchParams).tab} />;
 }

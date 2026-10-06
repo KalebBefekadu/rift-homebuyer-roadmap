@@ -26,6 +26,7 @@ import { Help } from "../../Help";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
 import { showDay } from "@/lib/core/day";
+import { PORTAL_TABS, TAB_LABEL, pickTab, type PortalTab } from "@/lib/core/portal-tabs";
 
 
 const DAY = (iso: string) => showDay(iso, { month: "long", day: "numeric" });
@@ -47,7 +48,7 @@ const FOR_BUYER: Record<SearchStatus, (agent: string, since: string | null) => s
  * projection, inside a disabled fieldset so nothing can be answered on their
  * behalf, and with no way to act as them.
  */
-export async function JourneyView({ member, preview }: { member: Membership; preview?: { by: string } }) {
+export async function JourneyView({ member, preview, tab }: { member: Membership; preview?: { by: string }; tab?: unknown }) {
   const agentFirst = member.agentName.trim().split(/\s+/)[0] ?? member.agentName;
 
   const sellerMoneyOn = member.side === "sell" && member.scopes.includes("money");
@@ -150,18 +151,20 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
   for (const x of buyerBids) for (const d of x.asked?.documents ?? []) {
     if (!documents.some((y) => y.id === d.id)) documents.push({ ...d, with: x.address });
   }
-  const sections = [
-    { id: "today-h", label: "Today", on: true },
-    { id: "movein-h", label: "Moving in", on: member.side === "buy" && Boolean(p?.closed) },
-    { id: "offers-h", label: "Offers", on: member.side === "buy" && offers && (!o || o.unavailable || buyerBids.length > 0) },
-    { id: "pri-h", label: "Priorities", on: member.side === "buy" && member.scopes.includes("search") },
-    { id: "homes-h", label: "Homes", on: member.side === "buy" && member.scopes.includes("homes") },
-    { id: "money-h", label: "Money", on: moneyOn },
-    { id: "pricing-h", label: "Pricing", on: sellerMoneyOn && Boolean(latestOpinion) },
-    { id: "proceeds-h", label: "Proceeds", on: sellerMoneyOn && saleViews.length > 0 },
-    { id: "docs-h", label: "Documents", on: documents.length > 0 },
-    { id: "help-h", label: "Help", on: true },
-  ].filter((x) => x.on);
+  /* The tabs this member can see (WS11.2, lib/core/portal-tabs.ts). Documents
+     and Help are always there: an empty Documents tab says so, which is
+     better than a client wondering where it went. */
+  const offersOn = member.side === "buy" && Boolean(offers) && (!o || Boolean(o.unavailable) || buyerBids.length > 0);
+  const can: Record<PortalTab, boolean> = {
+    today: true,
+    homes: member.side === "buy" && (member.scopes.includes("search") || member.scopes.includes("homes")),
+    offers: offersOn,
+    money: moneyOn || (sellerMoneyOn && (Boolean(latestOpinion) || saleViews.length > 0)),
+    documents: true,
+    help: true,
+  };
+  const tabs = PORTAL_TABS.filter((t) => can[t]);
+  const active = pickTab(tab, tabs);
 
   return (
     <ClientShell agentName={member.agentName} preview={Boolean(preview)}>
@@ -184,27 +187,29 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         With {member.agentName} · {preview ? `${member.name} is` : `you are signed in as ${member.name}`} ({ROLE_LABEL[member.role].toLowerCase()})
         {" · "}<Link className="btn-link" href={`/app/j/${member.journeyId}/records`}>Your records</Link>
       </p>
-      {/* One page, so the parts are places on it rather than separate
-          screens (Blueprint v5 §7.2 navigation); only what this person can
-          see is listed. Money joins when money v2 does (§10.1). */}
-      {/* Stays at the top while scrolling, in one swipeable row on a phone, so
-          Documents is one tap away from anywhere on the page (manual review
-          WS11.2). The full tabbed navigation of §7.2 is still to come. */}
-      <nav aria-label="On this page" className="row gap-1" style={{
+      {/* Stays at the top while scrolling, in one swipeable row on a phone.
+          Links, not buttons: each tab is its own address, so Back works and
+          an email can open the right one. */}
+      <nav aria-label="Your move" className="row gap-1" style={{
         marginTop: 12, position: "sticky", top: 0, zIndex: 5, background: "var(--paper)",
         padding: "8px 0", overflowX: "auto", flexWrap: "nowrap", scrollbarWidth: "none",
+        borderBottom: "1px solid var(--line-2)",
       }}>
-        {sections.map((x) => (
-          <a key={x.id} href={`#${x.id}`} className="chip" style={{ height: 30, padding: "0 12px", flex: "none" }}>{x.label}</a>
+        {tabs.map((t) => (
+          <Link key={t} href={`?tab=${t}`} scroll={false} aria-current={t === active ? "page" : undefined}
+            className={`chip ${t === active ? "chip-brand" : ""}`} style={{ height: 32, padding: "0 14px", flex: "none" }}>
+            {TAB_LABEL[t]}
+          </Link>
         ))}
       </nav>
 
-      {member.side !== "buy" ? (
+      {active === "today" && member.side !== "buy" ? (
         <p className="t-sm c-3" style={{ marginTop: 16, lineHeight: 1.6 }}>
           {agentFirst} will share more here as your sale moves forward.
         </p>
       ) : null}
 
+      {active === "today" ? (
       <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
         <h2 id="today-h" className="t-md w6">Today</h2>
         {listingSays ? <p className="t-sm" style={{ marginTop: 6 }}>{listingSays}</p> : null}
@@ -249,10 +254,11 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
           />
         )}
       </section>
+      ) : null}
 
       {/* Blueprint v5 §7.2, B19: once the closing is recorded, what a new
           owner does next, each with the office that runs it. */}
-      {member.side === "buy" && p?.closed ? (
+      {active === "today" && member.side === "buy" && p?.closed ? (
         <section id="moving-in" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="movein-h">
           <h2 id="movein-h" className="t-md w6">Moving in</h2>
           <ul style={{ marginTop: 10, display: "grid", gap: 10 }}>
@@ -268,7 +274,7 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {member.side === "buy" && offers && (!o || o.unavailable || buyerBids.length) ? (
+      {active === "offers" && offersOn ? (
         <section id="offers" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="offers-h">
           <h2 id="offers-h" className="t-md w6">Offers</h2>
           {!o ? (
@@ -281,7 +287,7 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {member.side === "buy" && member.scopes.includes("search") ? (
+      {active === "homes" && member.side === "buy" && member.scopes.includes("search") ? (
         <section id="priorities" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pri-h">
           <h2 id="pri-h" className="t-md w6">Your search priorities</h2>
           {!b ? (
@@ -347,7 +353,7 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {member.side === "buy" && member.scopes.includes("homes") ? (
+      {active === "homes" && member.side === "buy" && member.scopes.includes("homes") ? (
         <section id="homes" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="homes-h">
           <div className="between gap-2 wrap">
             <h2 id="homes-h" className="t-md w6">Homes</h2>
@@ -372,7 +378,7 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {sellerMoneyOn && latestOpinion ? (
+      {active === "money" && sellerMoneyOn && latestOpinion ? (
         <section id="pricing" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="pricing-h">
           <h2 id="pricing-h" className="t-md w6">Pricing</h2>
           <div style={{ marginTop: 8 }}>
@@ -388,7 +394,7 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {sellerMoneyOn && saleViews.length ? (
+      {active === "money" && sellerMoneyOn && saleViews.length ? (
         <section id="proceeds" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="proceeds-h">
           <h2 id="proceeds-h" className="t-md w6">What you would keep</h2>
           <p className="t-sm w6" style={{ marginTop: 6 }}>{proceedsLine(saleViews)}</p>
@@ -404,7 +410,7 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {moneyOn ? (
+      {active === "money" && moneyOn ? (
         <section id="money" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="money-h">
           <h2 id="money-h" className="t-md w6">Money</h2>
           <p className="t-xs c-4" style={{ marginTop: 2, marginBottom: 10 }}>
@@ -416,10 +422,11 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
         </section>
       ) : null}
 
-      {documents.length ? (
+      {active === "documents" ? (
         <section id="documents" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="docs-h">
           <h2 id="docs-h" className="t-md w6">Documents</h2>
           <p className="t-xs c-4" style={{ marginTop: 2 }}>Everything {agentFirst} has shared with you, in one place.</p>
+          {documents.length ? (
           <ul style={{ marginTop: 10, display: "grid", gap: 6 }}>
             {documents.map((d) => (
               <li key={d.id} className="between gap-2 wrap t-sm">
@@ -428,10 +435,15 @@ export async function JourneyView({ member, preview }: { member: Membership; pre
               </li>
             ))}
           </ul>
+          ) : <p className="t-sm c-3" style={{ marginTop: 10 }}>Nothing has been shared yet. When {agentFirst} shares a document, it appears here.</p>}
         </section>
       ) : null}
 
-      <Help agentName={member.agentName} agentEmail={member.agentEmail} next={today?.where ?? null} />
+      {active === "help" ? <Help agentName={member.agentName} agentEmail={member.agentEmail} next={today?.where ?? null} /> : (
+        <p className="t-xs c-4" style={{ marginTop: 18 }}>
+          Questions? <Link className="btn-link" href="?tab=help">Help</Link> says how to reach {agentFirst}.
+        </p>
+      )}
 
       <p className="t-2xs c-4" style={{ marginTop: 24, lineHeight: 1.6 }}>
         Only people {agentFirst} invited can see this page, and only the parts shared with them. Nothing here is a
