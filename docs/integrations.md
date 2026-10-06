@@ -136,6 +136,18 @@ sequence of anyone who unsubscribed or reported spam ("They opted out") or hard-
 opt-out. The key needs no extra permission; IP blocking for API keys must stay off, as for
 sending.
 
+**Product emails beyond the funnel (manual review, October 2026).** Each is skipped, not
+faked, without `BREVO_API_KEY` and `BREVO_FROM_EMAIL`:
+
+| Email | To | Tag | When | Code |
+| --- | --- | --- | --- | --- |
+| Offer PDF uploaded | Kaleb | `agent-alert` | First PDF on an upload at `/offer`, before the form is sent (WS8.2) | `lib/db/offer-upload.ts` |
+| Client sent a document | Kaleb | `agent-alert` | A household member sends a file from the portal (WS11.3) | `lib/db/portal-offers.ts` |
+| Something new in your portal | Joined household members | `client-notice` | A home added, terms put to them, priorities written, a pricing opinion or a new net (WS11.5). One per person per kind in six hours; recorded in `rift_client_notices`; each member can switch them off on `/app/account` | `lib/db/notices.ts`, `lib/core/notice.ts` |
+
+The client notice names the kind of thing and links to the portal tab; it never carries an
+address, a price or a file.
+
 ### The wire-contract rule
 `TimeToBuy` and `ClientStage` are now declared **inside** `lib/brevo/sync.ts` rather than
 imported from the product's domain types. This is deliberate. Attribute values already sitting

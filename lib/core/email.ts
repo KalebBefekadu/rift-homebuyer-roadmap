@@ -17,6 +17,7 @@
  * Building is here. Sending stays in lib/db/email.ts, where the I/O belongs.
  */
 
+import { NOTICE, type NoticeEmail } from "./notice";
 import { money } from "./compute";
 import { showDay } from "./day";
 import { BAND_LABEL, type Band, type Signal } from "./lead";
@@ -658,4 +659,30 @@ export function buildClientDocument(d: ClientDocumentEmail): { subject: string; 
   <p style="font-size:15px"><a href="${escapeHtml(d.journeyUrl)}" style="color:#e8442a">Open it in Operations</a></p>
 </div>`.trim();
   return { subject: `${d.member} sent you a document`, html };
+}
+
+/**
+ * Something new is in a client's portal (manual review WS11.5). The kind of
+ * thing and a link, never the thing itself (lib/core/notice.ts says why).
+ * Not marketing (it is about their own move, sent to someone the agent
+ * invited), but they can still switch it off: the footer links to the
+ * account page, where the switch is.
+ */
+export function buildNotice(n: NoticeEmail): { subject: string; html: string } {
+  const r = NOTICE[n.kind];
+  const first = n.agentName.trim().split(/\s+/)[0] || n.agentName;
+  const hello = n.name ? `Hello ${n.name.trim().split(/\s+/)[0]},` : "Hello,";
+  const link = `${n.journeyUrl}?tab=${r.tab}`;
+  const account = `${n.journeyUrl.replace(/\/app\/j\/[^/?#]+$/, "")}/app/account`;
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">${escapeHtml(hello)}</p>
+  <p style="font-size:15px">${escapeHtml(first)} ${escapeHtml(r.what)}, on &ldquo;${escapeHtml(n.journeyLabel)}&rdquo;.</p>
+  <p style="font-size:15px"><a href="${escapeHtml(link)}" style="color:#c2351e">Open it in Rift</a></p>
+  <p style="font-size:12px;color:#888">
+    The details are in Rift, behind your sign-in, rather than in this email.
+    <a href="${escapeHtml(account)}" style="color:#888">Turn these emails off</a> on your account page.
+  </p>
+</div>`.trim();
+  return { subject: r.asks ? `${first} needs your answer on Rift` : `${first} shared something new on Rift`, html };
 }

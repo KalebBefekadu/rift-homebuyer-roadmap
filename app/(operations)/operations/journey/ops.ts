@@ -8,6 +8,7 @@ import type { DbResult } from "@/lib/db/result";
 import { createJourney, invite, invitedMemberForToken, joinedMemberEmail, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
 import { sendSignInLink } from "@/lib/db/signin";
 import { sendInvitation } from "@/lib/db/email";
+import { tellHousehold } from "@/lib/db/notices";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
@@ -94,6 +95,8 @@ export async function saveBrief(journeyId: string, brief: SearchBrief, expectedL
     return { ok: false as const, error: "The brief is malformed. Reload and try again" };
   }
   const r = await saveAgentRevision(journeyId, brief, expectedLatest, note, g.name);
+  /* The household checks the priorities (WS11.5). Told after the write, never instead of it. */
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "priorities", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   revalidatePath("/operations/search");
   return out(r, (d) => ({ revision: d.revision }));
@@ -207,6 +210,7 @@ export async function addShortlistHome(journeyId: string, input: {
   const g = await gate();
   if ("error" in g) return { ok: false as const, error: g.error };
   const r = await addHome(journeyId, { ...input, url: input.url.trim() || null }, g.name);
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "home", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }
@@ -346,6 +350,8 @@ export async function bidStep(journeyId: string, bidId: string, input: BidStepIn
     return { ok: false as const, error: "Reload the page and try again" };
   }
   const r = await recordBidStep(journeyId, bidId, input, expectedSeq, g.name, first(g.name), requestId);
+  /* Only the step that puts terms to the household is news to them. */
+  if (input.kind === "ask" && r.ok && !("skipped" in r)) await tellHousehold(journeyId, "offer", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
 }
@@ -439,6 +445,7 @@ export async function recordPricing(journeyId: string, input: PricingInput, expe
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId) || !Number.isInteger(expectedVersion) || expectedVersion < 0) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordOpinion(journeyId, input, expectedVersion, g.name, requestId);
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "pricing", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ version: d.version }));
 }
@@ -449,6 +456,7 @@ export async function recordProceeds(journeyId: string, input: FigureInput, requ
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordFigure(journeyId, input, g.name, requestId);
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "proceeds", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }

@@ -224,6 +224,14 @@ describe("erasure, from a readout", () => {
        values ($1,$2,'lender','Pre-approval letter','letter.pdf','pdf',100,$3,$4,'Person',$5)`,
       [AGENT, j.id, "a".repeat(64), `clean/${AGENT}/${j.id}/x.pdf`, mem.id]);
 
+    /* An email that told them something was shared (WS11.5): kind only, history, erased with them. */
+    const { rows: [n] } = await c.query(
+      "insert into rift_client_notices (agent_id, journey_id, member_id, kind, outcome) values ($1,$2,$3,'home','sent') returning id",
+      [AGENT, j.id, mem.id]);
+    await expect(c.query("update rift_client_notices set outcome = 'failed' where id = $1", [n.id])).rejects.toThrow(/history/);
+    await expect(c.query("insert into rift_client_notices (agent_id, journey_id, member_id, kind, outcome) values ($1,$2,$3,'price','sent')", [AGENT, j.id, mem.id])).rejects.toThrow(/check/);
+    await c.query("update rift_journey_members set notices = false where id = $1", [mem.id]);
+
     await forget(c, "gone-6");
 
     expect(await count(c, "rift_leads", "id=$1", [leadId])).toBe(0);
@@ -231,6 +239,7 @@ describe("erasure, from a readout", () => {
     expect(await count(c, "rift_search_revisions", "journey_id=$1", [j.id])).toBe(0);
     expect(await count(c, "rift_journey_members", "journey_id=$1", [j.id])).toBe(0);
     expect(await count(c, "rift_documents", "journey_id=$1", [j.id])).toBe(0);
+    expect(await count(c, "rift_client_notices", "journey_id=$1", [j.id])).toBe(0);
   });
 
   test("removes a consent record that only the assessment points at", async (c) => {

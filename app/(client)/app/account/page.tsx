@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { clientSession, householdOf, myJourneys } from "@/lib/db/portal";
+import { clientSession, householdOf, myJourneys, myNotices } from "@/lib/db/portal";
+import { NoticesToggle } from "./NoticesToggle";
 import { buyerSearchOn, ROLE_LABEL } from "@/lib/core/journey";
 import { ClientShell } from "../ClientShell";
 import { Help } from "../Help";
@@ -28,8 +29,8 @@ export default async function Account({ searchParams }: { searchParams: Promise<
   const mine = await myJourneys(session.userId);
   const list = mine.ok && "data" in mine ? mine.data : [];
   const households = await Promise.all(list.map(async (m) => {
-    const h = await householdOf(m);
-    return { m, people: h.ok && "data" in h ? h.data : [] };
+    const [h, notices] = await Promise.all([householdOf(m), myNotices(m)]);
+    return { m, people: h.ok && "data" in h ? h.data : [], notices };
   }));
 
   return (
@@ -45,7 +46,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         <PasswordForm reset={q.reset === "1"} email={session.email} />
       </section>
 
-      {households.map(({ m, people }) => (
+      {households.map(({ m, people, notices }) => (
         <section key={m.journeyId} className="card p-4" style={{ marginTop: 14 }} aria-labelledby={`h-${m.journeyId}`}>
           <h2 id={`h-${m.journeyId}`} className="t-md w6">Who is on &ldquo;{m.journeyLabel}&rdquo;</h2>
           <ul style={{ marginTop: 8, display: "grid", gap: 6 }}>
@@ -57,6 +58,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
             ))}
           </ul>
           <p className="t-xs c-4" style={{ marginTop: 8, lineHeight: 1.5 }}>To add or remove someone, ask your agent.</p>
+          {notices !== null ? <NoticesToggle journeyId={m.journeyId} on={notices} agentFirst={m.agentName.trim().split(/\s+/)[0] ?? m.agentName} /> : null}
         </section>
       ))}
 

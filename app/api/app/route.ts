@@ -7,7 +7,7 @@ import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
-  clientUploadFinish, clientUploadSlot, proposeRevision, reactAsMember, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
+  clientUploadFinish, clientUploadSlot, proposeRevision, reactAsMember, setMyNotices, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
 } from "@/lib/db/portal";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
@@ -232,6 +232,9 @@ export async function POST(req: Request) {
       r = await respondToBid(member, bidId, Number(b.version), instruction as "proceed" | "change" | "stop", str(b.note, 500) || null, requestId);
       break;
     }
+    case "notices":
+      r = await setMyNotices(member, b.on === true);
+      break;
     case "add-home": {
       const h = (b.home ?? {}) as Partial<NewHome>;
       /* Only the known facts, whatever else was posted: this becomes jsonb. */

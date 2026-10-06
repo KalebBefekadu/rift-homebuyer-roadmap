@@ -290,6 +290,34 @@ export async function householdOf(m: Membership): Promise<DbResult<{ name: strin
     })));
 }
 
+/**
+ * Whether this member wants an email when something new is shared (manual
+ * review WS11.5). Null when it could not be read or the column is not
+ * migrated yet, so the page does not offer a switch that would not stick.
+ */
+export async function myNotices(m: Membership): Promise<boolean | null> {
+  const db = serviceClient();
+  if (!db) return null;
+  const r = await boundedReport(
+    db.from("rift_journey_members").select("notices").eq("id", m.memberId).eq("agent_id", m.agentId).maybeSingle(),
+    "your email settings",
+  );
+  if (!r.ok) return null;
+  const row = ("data" in r ? r.data : null) as { notices: boolean | null } | null;
+  return row ? row.notices !== false : null;
+}
+
+export async function setMyNotices(m: Membership, on: boolean): Promise<DbResult<{ on: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const w = await boundedWrite(
+    db.from("rift_journey_members").update({ notices: on }).eq("id", m.memberId).eq("agent_id", m.agentId),
+    "your email settings",
+  );
+  if (!w.ok) return w;
+  return done({ on });
+}
+
 /* ------------------------------------------------------------------------ */
 /* Homes, as a member sees them                                              */
 /* ------------------------------------------------------------------------ */

@@ -1,5 +1,6 @@
 import "server-only";
 import { captureOpError } from "@/lib/monitoring/capture";
+import type { NoticeEmail } from "@/lib/core/notice";
 
 /**
  * Transactional email, through Brevo.
@@ -71,7 +72,7 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded, buildClientDocument,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded, buildClientDocument, buildNotice,
   type OfferUploadedEmail, type ClientDocumentEmail, type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
 } from "@/lib/core/email";
 
@@ -274,6 +275,17 @@ export async function sendClientDocument(d: ClientDocumentEmail): Promise<SendRe
     htmlContent: html,
     tags: ["agent-alert"],
   }, "email.clientDocument");
+}
+
+/** Something new is in a client's portal (WS11.5). Its own tag, so it can be watched apart from sign-in links. */
+export async function sendNotice(n: NoticeEmail): Promise<SendResult> {
+  const { subject, html } = buildNotice(n);
+  return send({
+    to: [{ email: n.to, ...(n.name ? { name: n.name } : {}) }],
+    subject,
+    htmlContent: html,
+    tags: ["client-notice"],
+  }, "email.notice");
 }
 
 /**
