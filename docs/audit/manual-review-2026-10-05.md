@@ -5,7 +5,7 @@ engineering work: what changes, where in the code, and how we know it is done. I
 the three investigations he asked for: the client sign-in journey, Operations, and the client
 portal.
 
-**Status, 5 October (later the same day):** built on `claude/brave-curie-rdcpja`, using the
+**Status, 6 October:** built on `claude/brave-curie-rdcpja`, using the
 engineering view in §1 for each decision. §5 lists what was built, what was built differently,
 and what is still open. Kaleb can overturn any §1 default; each is a small change.
 
@@ -305,13 +305,39 @@ and the browser suites (phone, styling, accessibility, smoke, funnel, and the ne
 - WS10.5: Equb leads labelled "Equb seat request" (read from the lead's input; no migration).
 - WS11.2, partly: the section menu stays at the top and scrolls sideways on a phone.
 
+**Built on 6 October** (after Kaleb removed the review gate and asked for the rest)
+- WS8.2, WS8.3: the upload step asks for name and phone first (Kaleb's pick over "sender
+  unknown"). Each PDF is stored the moment it arrives (`rift_offer_uploads`, `rift_offer_files`)
+  and Kaleb is emailed on the first one. An upload whose form is never sent is on the Offers
+  board as "PDF only", with a call to make and a Remove button. Addenda join the same offer;
+  Operations lists every PDF. Swept on the offers' retention window.
+- WS11.2: real tabs (Today, Homes, Offers, Money, Documents, Help), each its own address
+  (`?tab=`). "Journey" from Blueprint §7.2 is shown as "Offers", the only section under it.
+- WS11.3: a buyer or co-buyer sends a pre-approval letter, proof of funds, an ID or anything else
+  from the Documents tab, through the same quarantine and checks as the agent's uploads
+  (`rift_documents.from_member_id`). Kaleb is emailed; the journey's Household tab lists them.
+- WS11.5: a home added, terms put to the household, priorities written, a pricing opinion or a
+  new net emails the members who can see it: the kind of thing and a link, never an address or
+  a price. One per person per kind in six hours (`rift_client_notices`). Each member can turn
+  them off on their account page.
+- WS11.6: English or Amharic on the portal, sign-in, invitation and account pages, kept in a
+  cookie so the server renders it (the abroad and Equb pages set it too). What the pages
+  themselves say is translated (`pt.*`, unreviewed, D6). Sentences worked out from records
+  (what is due, offer terms, the ledger) stay English, marked `lang="en"`, and the page says
+  so. The notice emails are English.
+- WS1.8: `npm run test:e2e:auth` (`scripts/e2e-auth.sh`) runs Supabase's own stack in Docker and
+  walks the client's way in: invitation to password, password sign-in, wrong password, email
+  link in the same and another browser, Forgot password, an existing login, a client upload and
+  an offer upload. 9 tests, all passing. It found and fixed a real bug: Sign out did nothing
+  when the server's bind address differed from the browser's.
+- AGENTS.md: the findings-review gate before schema work is removed, at Kaleb's request.
+
 **Still open**
 - WS1.4, WS1.5: settings only (Vercel environment, Supabase custom SMTP and redirect list), then
-  deploy. Nothing in the code can do these.
-- WS1.8: the full sign-in journey in a browser needs a local Supabase Auth stack. The parts that
-  run without one are in `e2e/review.spec.ts`.
-- WS8.2, WS8.3: "uploading counts as sending" and several PDFs per offer change tables, so they
-  wait for the review gate (and Kaleb's pick of sender details first or "sender unknown").
-- WS11.2 tabs, WS11.3 client uploads, WS11.4 messages, WS11.5 new-item alerts, WS11.6 Amharic
-  portal: each needs a schema change or a decision from Kaleb.
-- D5 (attorney on the Equb safety copy) and D6 (Amharic review) before `/equb` is indexed.
+  deploy and apply the three new migrations (20261006100000, 20261006110000, 20261006120000).
+  Nothing in the code can do these.
+- WS11.4 messages: skipped. Kaleb wants messaging only if it reaches people by email or text, not
+  through the portal alone.
+- D5 (attorney on the Equb safety copy) and D6 (Amharic review, now including the portal's
+  `pt.*` strings) before `/equb` is indexed and the Amharic portal is announced.
+- D2: the broker's answer on the footer lines.

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { originOf } from "@/lib/core/origin";
 import { createClient } from "@/lib/supabase/server";
 import { captureOpError } from "@/lib/monitoring/capture";
 
@@ -30,15 +31,6 @@ const field = (f: FormData, k: string) => {
   const v = f.get(k);
   return typeof v === "string" && v.length <= 2_000 ? v : null;
 };
-
-/* The address the browser used. `request.url` can carry the server's own
-   bind address (localhost behind a proxy), and a redirect there leaves the
-   person on a page that never loads, signed in on a host they are not on. */
-function originOf(request: Request): string {
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const proto = request.headers.get("x-forwarded-proto") ?? new URL(request.url).protocol.replace(":", "");
-  return host ? `${proto}://${host}` : new URL(request.url).origin;
-}
 
 export async function POST(request: Request) {
   const origin = originOf(request);

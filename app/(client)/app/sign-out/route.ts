@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { originOf } from "@/lib/core/origin";
 
 export const dynamic = "force-dynamic";
 
@@ -7,5 +8,5 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const supabase = await createClient();
   if (supabase) await supabase.auth.signOut();
-  return NextResponse.redirect(new URL("/app/sign-in?out=1", req.url), { status: 303 });
+  return NextResponse.redirect(`${originOf(req)}/app/sign-in?out=1`, { status: 303 });
 }

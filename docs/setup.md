@@ -175,6 +175,29 @@ magic-link round trip, which needs a real GoTrue.
 
 No auth verification, no RLS enforcement, no TLS. Local development only.
 
+### The client's way in, against a real Supabase Auth
+
+The stand-in above has no Auth server, so it cannot test a client signing in. This can:
+
+```bash
+npm run test:e2e:auth          # scripts/e2e-auth.sh: Supabase in Docker, then e2e-auth/
+scripts/e2e-auth.sh stop
+```
+
+It starts Supabase's own stack (database, Auth, REST, Storage, and Mailpit catching every
+email) in `~/.rift-e2e-auth`, applies the Rift migrations, builds the app against it on port
+3178, and walks: an invitation becoming a password and the journey; signing out and back in;
+a wrong password; an emailed link in the same browser (after Continue) and in another one
+(`other_device`); Forgot password; an invitation to an address that already has a login; a
+client sending a document; an offer PDF kept on upload with an addendum. Needs Docker. On a
+network that blocks Supabase's default registry it pulls the Docker Hub copies
+(`SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`). `PW_EXECUTABLE` points it at an installed
+Chromium.
+
+It found a real defect the first time it ran: Sign out redirected to the server's bind address,
+and the browser refused to follow it after a form post (`form-action 'self'`), so the button did
+nothing (`lib/core/origin.ts`).
+
 ### A full demo book (local only)
 
 An empty database shows every Operations page in its empty state, which is the least useful
