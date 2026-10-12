@@ -289,6 +289,8 @@ Non-negotiable, and each one is cheap now and expensive later:
 
 ```bash
 curl -s https://<host>/api/health | jq
+# Everything below ok/database/agent needs the cron secret:
+curl -s -H "authorization: Bearer $CRON_SECRET" https://<host>/api/health | jq
 ```
 
 Reports **readiness**, not just liveness. A process that is running but cannot reach its

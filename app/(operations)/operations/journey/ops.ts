@@ -166,7 +166,7 @@ export async function emailInvitation(journeyId: string, memberId: string, link:
   const origin = siteUrl();
   if (!origin) return { ok: false as const, error: "This deployment does not know its own address" };
   const sent = await sendInvitation({ to: r.data.email, name: r.data.name, agentName: g.name, journeyLabel: r.data.journeyLabel, link: `${origin}/app/invite/${token}` });
-  if (!sent.ok) return { ok: false as const, error: "The email could not be sent. Check the email settings in /api/health" };
+  if (!sent.ok) return { ok: false as const, error: "The email could not be sent. Settings shows whether email can send." };
   if ("skipped" in sent) return { ok: false as const, error: "Email is not set up on this deployment, so nothing was sent. Copy the link instead" };
   return { ok: true as const };
 }
@@ -193,7 +193,7 @@ export async function sendMemberSignIn(journeyId: string, memberId: string) {
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   const sent = await sendSignInLink(r.data, `/app/j/${journeyId}`);
-  return sent ? { ok: true as const } : { ok: false as const, error: "The email could not be sent. Check the email settings in /api/health" };
+  return sent ? { ok: true as const } : { ok: false as const, error: "The email could not be sent. Settings shows whether email can send." };
 }
 
 export async function withdrawAccess(journeyId: string, memberId: string) {

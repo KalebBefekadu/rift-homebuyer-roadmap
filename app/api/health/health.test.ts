@@ -66,7 +66,7 @@ describe("the database line is an outcome, not a setting", () => {
 
   it("returns 503 when the database errors, whatever is cached", async () => {
     probe = "error";
-    const res = await call();
+    const res = await call("Bearer s3cret");
     const body = await res.json();
     expect(res.status).toBe(503);
     expect(body.ok).toBe(false);
@@ -91,7 +91,8 @@ describe("the Brevo probe", () => {
        owner a security alert. A public ping must not be able to cause that. */
     const body = await (await call()).json();
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(body.checks.email).toMatch(/not verified/);
+    /* Nor does a public request learn about email at all. */
+    expect(body.checks.email).toBeUndefined();
   });
 
   it("does not treat a wrong secret as the right one", async () => {
@@ -120,14 +121,14 @@ describe("the schema line", () => {
   beforeEach(() => { later += 1; vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2030, 0, 1) + later * 3_600_000); });
   it("says production has no ledger when the table is missing", async () => {
     ledger = "absent";
-    const body = await (await call()).json();
+    const body = await (await call("Bearer s3cret")).json();
     expect(body.checks.schema).toBe("behind: no migration ledger yet");
     expect(body.ok).toBe(true);
   });
 
   it("says behind, without naming the migration, when the newest is not recorded", async () => {
     ledger = "behind";
-    const res = await call();
+    const res = await call("Bearer s3cret");
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.checks.schema).toBe("behind: the newest migration is not applied");
@@ -135,7 +136,20 @@ describe("the schema line", () => {
   });
 
   it("says current when it is", async () => {
-    const body = await (await call()).json();
+    const body = await (await call("Bearer s3cret")).json();
     expect(body.checks.schema).toBe("current");
+  });
+});
+
+describe("what a stranger is told", () => {
+  it("is ok and the two lines that decide it, nothing else", async () => {
+    const body = await (await call()).json();
+    expect(Object.keys(body.checks).sort()).toEqual(["agent", "database"]);
+    expect(body.ok).toBe(true);
+  });
+
+  it("is everything with the secret", async () => {
+    const body = await (await call("Bearer s3cret")).json();
+    for (const k of ["email", "scheduler", "amharic", "schema", "jobs"]) expect(body.checks[k], k).toBeDefined();
   });
 });

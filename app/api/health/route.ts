@@ -29,6 +29,13 @@ export const dynamic = "force-dynamic";
  * 200 when it can do its job, 503 when it cannot. Anything degraded but
  * functional stays 200 with a note: paging somebody at 3am because SMS is not
  * wired yet is how alerts get muted.
+ *
+ * Two answers. Anyone gets `ok` and the two lines that decide it (database,
+ * agent), which is all an uptime monitor reads. The rest (email, jobs,
+ * schema, retention, the Amharic review) needs the cron secret, like the
+ * Brevo probe already did: none of it names a secret, but together it is a
+ * map of what is unfinished, handed to whoever asked (audit, 12 October). It
+ * also spares the anonymous path the retention and schema queries.
  */
 /**
  * The retention answer, cached.
@@ -157,9 +164,20 @@ export async function GET(req: Request) {
   const reachable = db ? await databaseProbe(db) : false;
   const agent = db && reachable ? await currentAgentId() : null;
 
-  const checks: Record<string, string> = {
+  const ready = Boolean(db && agent);
+  const fatal: Record<string, string> = {
     database: !db ? "missing" : reachable ? "reachable" : "unreachable",
     agent: agent ? "ready" : !db ? "unknown" : reachable ? "not bootstrapped" : "unknown: database unreachable",
+  };
+  if (!deep) {
+    return NextResponse.json(
+      { ok: ready, checks: fatal, detail: "the rest needs the cron secret" },
+      { status: ready ? 200 : 503, headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  const checks: Record<string, string> = {
+    ...fatal,
     email: await emailCheck(deep),
     calendar: process.env.CAL_API_KEY && process.env.CAL_EVENT_TYPE_ID ? "configured" : "missing",
     /* "Configured" is not "working", and conflating them cost this product
@@ -204,8 +222,8 @@ export async function GET(req: Request) {
   /* Only the two that stop the product doing its job are fatal. The rest are
      features that degrade honestly and say so on screen: including an overdue
      sweep, which is a promise being broken rather than a service being down,
-     and belongs in somebody's morning rather than in their night. */
-  const ready = Boolean(db && agent);
+     and belongs in somebody's morning rather than in their night: `ready`,
+     above. */
 
   return NextResponse.json(
     { ok: ready, checks },
