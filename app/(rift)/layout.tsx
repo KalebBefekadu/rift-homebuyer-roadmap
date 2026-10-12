@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Ethiopic } from "next/font/google";
-import "../prototype/rift.css";
+import "../styles/rift.css";
 import { siteUrl } from "@/lib/core/site";
+import { Fonts } from "@/components/rift/Fonts";
 
 /**
  * Ethiopic, self-hosted.
@@ -58,15 +59,8 @@ export const metadata: Metadata = {
 export default function RiftLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={`rift ${ethiopic.variable}`}>
-      {/* Switzer and Zodiak are not on Google Fonts, so this one stays a
-          third-party request. The preconnects buy back the DNS lookup and TLS
-          handshake, which is most of what it costs on a cold connection. */}
-      <link rel="preconnect" href="https://api.fontshare.com" />
-      <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="" />
-      <link
-        rel="stylesheet"
-        href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@400,500,600,700&f%5B%5D=zodiak@300,400,500&display=swap"
-      />
+      {/* Third-party for now; see components/rift/Fonts.tsx. */}
+      <Fonts preconnect />
       {children}
     </div>
   );

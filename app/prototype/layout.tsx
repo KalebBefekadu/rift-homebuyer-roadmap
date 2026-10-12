@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { internalHidden } from "@/lib/core/internal";
 import { DemoBar } from "@/components/rift/Shell";
-import "./rift.css";
+import "../styles/rift.css";
+import { Fonts } from "@/components/rift/Fonts";
 
 export const metadata: Metadata = {
   title: "Rift",
@@ -16,10 +17,7 @@ export default function PrototypeLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="rift">
-      <link
-        rel="stylesheet"
-        href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@400,500,600,700&f%5B%5D=zodiak@300,400,500&display=swap"
-      />
+      <Fonts />
       {children}
       <DemoBar />
     </div>

@@ -97,7 +97,7 @@ textarea {
  *
  * Eight class rules and two keyframes from the retired portal MVP outlived it
  * in this file, and one of them did damage: a dark-ground `.chip`, which
- * collides with the live `.chip` in prototype/rift.css. Which one won depended
+ * collides with the live `.chip` in styles/rift.css. Which one won depended
  * on the order Next happened to emit two stylesheets, so a selected filter on
  * Studio's People screen rendered as unselected: correct markup, correct
  * class, correct aria-pressed, wrong colour.

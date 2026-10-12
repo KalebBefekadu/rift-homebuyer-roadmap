@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 /**
  * Two stylesheets, one namespace.
  *
- * `app/globals.css` is loaded by the root layout; `app/prototype/rift.css` is
+ * `app/globals.css` is loaded by the root layout; `app/styles/rift.css` is
  * loaded by every Rift and Studio layout inside it. Both are plain global CSS
  * with no module scoping, so a class defined in both is resolved by whichever
  * stylesheet Next happens to emit second, which is not something any of this
@@ -31,7 +31,7 @@ function definedClasses(path: string): Set<string> {
 describe("the two global stylesheets", () => {
   it("do not define the same class twice", () => {
     const globals = definedClasses("app/globals.css");
-    const rift = definedClasses("app/prototype/rift.css");
+    const rift = definedClasses("app/styles/rift.css");
     const both = [...globals].filter((c) => rift.has(c)).sort();
 
     expect(both, "defined in both globals.css and rift.css; which one wins is decided by stylesheet order, not by anything here")
@@ -68,7 +68,7 @@ describe("the two global stylesheets", () => {
  * rendered.
  */
 describe("the button reset", () => {
-  const css = read("app/prototype/rift.css");
+  const css = read("app/styles/rift.css");
 
   it("carries no specificity, so any class beats it", () => {
     const rule = css.split("\n").find((l) => /button\)?\s*\{[^}]*background:\s*none/.test(l));

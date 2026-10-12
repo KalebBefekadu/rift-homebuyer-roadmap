@@ -47,7 +47,7 @@ describe("every landing that answers in place announces its answer", () => {
     expect(src).toContain('aria-atomic="true"');
     expect(src).toContain('className="sr-only"');
 
-    const css = readFileSync("app/prototype/rift.css", "utf8");
+    const css = readFileSync("app/styles/rift.css", "utf8");
     expect(css).toContain(".sr-only");
     /* display:none and visibility:hidden both remove the element from the
        accessibility tree, which removes the announcement with it. */

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import "../prototype/rift.css";
+import "../styles/rift.css";
+import { Fonts } from "@/components/rift/Fonts";
 
 export const metadata: Metadata = {
   title: { default: "Operations · Rift", template: "%s · Operations" },
@@ -9,10 +10,7 @@ export const metadata: Metadata = {
 export default function StudioLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="rift">
-      <link
-        rel="stylesheet"
-        href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@400,500,600,700&f%5B%5D=zodiak@300,400,500&display=swap"
-      />
+      <Fonts />
       {children}
     </div>
   );

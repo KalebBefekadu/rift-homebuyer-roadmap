@@ -1,5 +1,5 @@
 /* Settings only. The shared Operations pieces (PageHead, Section, Notice) are
-   in ../ui.tsx and app/prototype/rift.css; this is the page's own layout: a
+   in ../ui.tsx and app/styles/rift.css; this is the page's own layout: a
    contents list beside the sections on a wide screen, above them on a phone. */
 
 .layout {

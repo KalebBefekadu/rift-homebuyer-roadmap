@@ -1,5 +1,6 @@
 import Link from "next/link";
-import "./prototype/rift.css";
+import "./styles/rift.css";
+import { Fonts } from "@/components/rift/Fonts";
 
 /**
  * Not found, for the whole app.
@@ -17,10 +18,7 @@ import "./prototype/rift.css";
 export default function NotFound() {
   return (
     <div className="rift">
-      <link
-        rel="stylesheet"
-        href="https://api.fontshare.com/v2/css?f%5B%5D=switzer@400,500,600,700&f%5B%5D=zodiak@300,400,500&display=swap"
-      />
+      <Fonts />
       <main className="shell-w sec buy">
         <h1 className="serif" style={{ fontSize: "clamp(24px,3.2vw,36px)", letterSpacing: "-0.02em", maxWidth: 620 }}>
           That page does not exist.
