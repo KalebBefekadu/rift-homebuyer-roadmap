@@ -9,8 +9,8 @@ import "server-only";
  * into "didn't work" is how a product ends up silently not recording anything
  * in production while every local run looks fine.
  *
- * The shape mirrors `lib/brevo/sync.ts`, which is the reference for this in
- * docs/integrations.md.
+ * This is the reference shape for every integration (docs/integrations.md):
+ * the email sender in lib/db/email.ts reports the same three outcomes.
  */
 export type DbResult<T> =
   | { ok: true; data: T }

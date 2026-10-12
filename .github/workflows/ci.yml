@@ -74,15 +74,16 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint
-        run: npx next lint
+        run: npx eslint .
 
-      - name: Test
-        run: npm test
-
-      - name: Fail if the database suites skipped
+      # One run, read twice: it passes, and nothing in it skipped. This ran
+      # the whole suite a second time just to grep it, about a minute a run.
+      # pipefail, or tee's exit status hides a failing test.
+      - name: Test, and fail if the database suites skipped
         # A skip here means the constraints were never exercised, and the suite
         # would pass while proving nothing. That has happened once already.
         run: |
+          set -o pipefail
           npm test 2>&1 | tee /tmp/test.log
           if grep -qi "skipped" /tmp/test.log; then
             echo "::error::Database suites skipped in CI — the constraints were not exercised."

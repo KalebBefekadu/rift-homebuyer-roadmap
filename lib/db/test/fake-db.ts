@@ -3,7 +3,7 @@
    component could reach the modules it stands in for. layers.test.ts asserts
    the property with no exceptions, which is the only way a guard like that
    stays worth anything. Under vitest the import resolves to a shim: see
-   vitest.config.ts. */
+   vitest.config.mts. */
 import "server-only";
 
 /**

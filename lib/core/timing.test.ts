@@ -1,22 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { BUY_FUNNEL, SELL_FUNNEL } from "./funnel";
-import { parseReadoutParams, parseSellerParams } from "./params";
 import { scoreLead } from "./lead";
 
 /**
- * One list of timing answers, written out in three files.
+ * One list of timing answers, written out in two places.
  *
- * The funnel offers them, `params.ts` validates the URL against them, and
- * `scoreLead` ranks on them by prefix. All three carry their own copy of the
- * same four strings, and nothing joined the copies together.
+ * The funnels offer them and `scoreLead` ranks on them by prefix. Each carries
+ * its own copy of the same four strings, and nothing joined the copies
+ * together. (A third copy lived in `params.ts`, the retired readout's URL
+ * parser, deleted on 12 October 2026 with nothing left calling it.)
  *
  * The drift is silent and expensive in a specific way. Change "In the next 3
- * months" in the funnel and `params.ts` stops recognising the answer people
- * actually give: it substitutes "3 to 9 months", which is a real value, so
- * the readout renders a plausible timeline for somebody who said something
- * else. Then `scoreLead` sees a string that matches none of its prefixes and
- * awards 2 points instead of 32 on the strongest signal it has, so every
+ * months" in the funnel and `scoreLead` sees a string that matches none of
+ * its prefixes and awards 2 points instead of 32 on the strongest signal it
+ * has, so every
  * urgent buyer lands in `later` and the agent's ranked list is sorted by
  * something that is not urgency.
  *
@@ -28,16 +26,10 @@ const timingOptions = (f: typeof BUY_FUNNEL) =>
   f.questions.find((q) => q.id === "timing")!.options!.map((o) => o.value);
 
 describe("the four answers are the same four everywhere", () => {
-  const paramsSrc = readFileSync("lib/core/params.ts", "utf8");
-  const declared = [...paramsSrc.slice(paramsSrc.indexOf("const TIMINGS"), paramsSrc.indexOf("] as const", paramsSrc.indexOf("const TIMINGS")))
-    .matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
+  const declared = timingOptions(BUY_FUNNEL);
 
-  it("reads the list params.ts validates against", () => {
+  it("reads the buyer funnel's four", () => {
     expect(declared.length).toBe(4);
-  });
-
-  it("matches the buyer funnel's own options", () => {
-    expect(declared).toEqual(timingOptions(BUY_FUNNEL));
   });
 
   it("matches the seller funnel's own options", () => {
@@ -67,21 +59,6 @@ describe("the four answers are the same four everywhere", () => {
 describe("an urgent answer survives the whole chain", () => {
   const urgent = timingOptions(BUY_FUNNEL)[0]!;
 
-  it("is carried through the URL rather than substituted", () => {
-    const p = parseReadoutParams((k) => (k === "t" ? urgent : undefined));
-    expect(p.timing).toBe(urgent);
-    expect(p.timingStated).toBe(true);
-    /* Substitution here is the quiet failure: a real value replacing the
-       person's own, with the page none the wiser. */
-    expect(p.substituted).not.toContain("timing");
-  });
-
-  it("is carried through the seller URL too", () => {
-    const p = parseSellerParams((k) => (k === "t" ? urgent : undefined));
-    expect(p.timing).toBe(urgent);
-    expect(p.substituted).not.toContain("timing");
-  });
-
   it("reaches the top band once it gets to the scorer", () => {
     const s = scoreLead({
       side: "buy", timing: urgent, completion: 1, hoursSince: 0,
@@ -99,12 +76,5 @@ describe("an urgent answer survives the whole chain", () => {
       value: 325_000, monthsToReady: 0, coBuyer: false, contactable: true, source: "readout",
     });
     expect(s.band).not.toBe("now");
-  });
-
-  it("falls back to a stated middle value when nothing was given", () => {
-    const p = parseReadoutParams(() => undefined);
-    expect(timingOptions(BUY_FUNNEL)).toContain(p.timing);
-    /* And says it was ours, so the readout can disclose it. */
-    expect(p.timingStated).toBe(false);
   });
 });

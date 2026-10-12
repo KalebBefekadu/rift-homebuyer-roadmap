@@ -27,8 +27,6 @@ export default function robots(): MetadataRoute.Robots {
           "/buy/assistance", "/buy/afford", "/buy/lender-questions", "/buy/cash-to-close", "/buy/monthly-cost", "/buy/timeline",
           "/sell", "/sell/proceeds", "/sell/costs", "/sell/prepare", "/sell/how", "/sell/unclaimed", "/offer", "/privacy",
         ],
-        /* /dev is the development index. It is not secret, but it describes what
-           is built and what is only specified, and it is not the product. */
         /* /abroad/results was missing from this list while the other two
            readouts were on it. Same kind of document: one person's price,
            deposit, county and residency status in a URL, and the only one of
@@ -36,7 +34,7 @@ export default function robots(): MetadataRoute.Robots {
            outside the country was the one without the protection. */
         disallow: [
           "/r/", "/summary/", "/buy/results", "/sell/results", "/abroad/results",
-          "/book", "/operations", "/studio", "/api/", "/prototype/", "/dev", "/plan/", "/app", "/saved/",
+          "/book", "/operations", "/studio", "/api/", "/prototype/", "/plan/", "/app", "/saved/",
         ],
       },
     ],

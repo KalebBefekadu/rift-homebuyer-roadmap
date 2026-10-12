@@ -19,7 +19,7 @@ import { resolve } from "node:path";
  * a valid document with no URLs in it and returned 200.
  *
  * Until now nothing tested it, because `server-only` made lib/db unimportable
- * outside Next. It is aliased in vitest.config.ts now, so this walks the whole
+ * outside Next. It is aliased in vitest.config.mts now, so this walks the whole
  * layer with no database configured and asserts the contract on every export
  * that touches one. A new function that throws, or that quietly returns
  * `done()` when there is nothing behind it, fails here.

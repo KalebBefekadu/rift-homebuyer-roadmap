@@ -49,7 +49,7 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
 
   it("reads the list out of robots.ts", () => {
     expect(disallow).toContain("/prototype/");
-    expect(disallow).toContain("/dev");
+    expect(disallow).toContain("/operations");
   });
 
   /* The ones whose refusal lives somewhere this test cannot see: an auth

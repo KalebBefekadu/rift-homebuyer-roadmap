@@ -95,8 +95,8 @@ export const STATUSES: Status[] = [
 /**
  * Turning a URL into abroad inputs.
  *
- * Same trust boundary as lib/core/params.ts and for the same reason: the
- * readout is URL-addressable and ungated, so every figure on it comes from a
+ * Same trust boundary as `parseAnswers` in lib/core/asks.ts and for the same
+ * reason: the readout is URL-addressable and ungated, so every figure on it comes from a
  * query string a stranger can edit. Anything unrecognised falls back to the
  * strictest honest default rather than being passed through: a made-up status
  * would quote a down payment no lender offers.

@@ -1,5 +1,10 @@
 import { defineConfig } from "vitest/config";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+/* ESM, so no CommonJS __dirname: as a .ts file under a CommonJS package it
+   was loaded as CommonJS and Vite warned on every run. */
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   resolve: {

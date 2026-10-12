@@ -11,6 +11,6 @@
  * decide which retention window applies, or which programmes a buyer is shown,
  * could only ever be tested through a live Postgres, and mostly were not.
  *
- * Aliased in vitest.config.ts. Nothing imports this file directly.
+ * Aliased in vitest.config.mts. Nothing imports this file directly.
  */
 export {};
