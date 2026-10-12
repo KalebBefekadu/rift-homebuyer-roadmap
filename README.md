@@ -15,67 +15,56 @@ npm install
 npm run dev
 ```
 
-Open **[http://localhost:3000/prototype](http://localhost:3000/prototype)**. No Supabase, no
-environment variables, no accounts.
+Open **[http://localhost:3000](http://localhost:3000)**. With no environment variables every
+public page still renders and says what is not connected; [docs/setup.md](docs/setup.md)
+connects Supabase, Brevo, Sentry and the rest.
 
-If you are about to write code, read **[AGENTS.md](AGENTS.md)** first, then
-**[docs/handoff.md](docs/handoff.md)**.
+If you are about to write code, read **[AGENTS.md](AGENTS.md)** first.
 
-## What state this is in
+## What state this is in (12 October 2026)
 
-The repository holds two things, and telling them apart matters more than anything else here.
+**Built and live:**
+- **The public site:** a value per question (cash to close, monthly cost, timeline, what fits,
+  assistance, lender questions; what a seller keeps, selling costs, what to fix, unclaimed
+  money; buying from abroad), saved plans, Georgia programs, booking and privacy.
+- **The client portal:** invitation sign-in and the buyer's journey.
+- **Operations:** the agent's workspace, from Today to transactions, calendar and reports.
 
-**The specification** — `app/prototype`, `components/rift`, `lib/prototype`. 30 routes,
-complete and reviewed, running with no configuration. It is the agreed product expressed as
-working software rather than a wireframe, and it encodes the product's rules in executable
-form: value is computed rather than generated, stale assistance programmes are suppressed
-from matching, unapproved assistance is never folded into a headline figure, and an agent
-editing the public questions cannot break the calculations behind them.
+**Not yet:** real traffic and real clients. What stands between here and the pilot is mostly
+not code (email deliverability, the broker's sign-off, counsel, the Amharic review, backups);
+the list with owners is [docs/audit/full-audit-2026-10-12.md](docs/audit/full-audit-2026-10-12.md) §5.
 
-**The plumbing** — `lib/supabase`, `lib/auth`, `lib/brevo`, `lib/monitoring`, and the applied
-Supabase migrations. Real, deployed, and reusable.
-
-**The MVP is built.** `/buy` → `/buy/start` → `/buy/results` → `/book`, with a real schema,
-telemetry from the first visitor, first-touch attribution, TCPA-gated capture, a nurture
-cadence on a schedule, an enforced retention job, and the minimum of Studio needed to answer
-the people it produces.
-
-What it still needs before real traffic: Supabase credentials, `npm run rift:bootstrap`,
-`CRON_SECRET`, a verified Brevo sender, and calendar credentials. Each degrades honestly
-without them rather than pretending — see [docs/setup.md](docs/setup.md).
-
-Seller, client portal, referral and offers are specified and deliberately deferred behind a
-traffic gate: 200 completed assessments or 60 days. [docs/handoff.md](docs/handoff.md) §2.
+The September prototype (`app/prototype`) is kept as reference, answers 404 in production, and
+is not extended.
 
 ## Documentation
 
 | Document | What it answers |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | How to work in this repository. Read first |
-| [docs/agent-kickoff.md](docs/agent-kickoff.md) | The kickoff prompt for an AI coding agent |
-| [docs/handoff.md](docs/handoff.md) | **What ships first**, build order, contracts that must not drift, tests to write first |
+| [docs/blueprint-v5/README.md](docs/blueprint-v5/README.md) | What Rift is and what gets built next. The source of truth for plans |
+| [docs/audit/full-audit-2026-10-12.md](docs/audit/full-audit-2026-10-12.md) | The latest audit: walkthrough scores, what is left, what to cut |
+| [docs/handoff.md](docs/handoff.md) | The engineering record: contracts that must not drift |
 | [docs/setup.md](docs/setup.md) | Clone to running, accounts to open, the pre-launch checklist |
-| [docs/schema.md](docs/schema.md) | The data model and the five decisions that shape it |
+| [docs/schema.md](docs/schema.md) | The data model and the decisions that shape it |
 | [docs/integrations.md](docs/integrations.md) | Every external service, and what happens when it is missing |
 | [docs/calculations.md](docs/calculations.md) | The compute contract and its reference case |
 | [docs/architecture.md](docs/architecture.md) | Technical model, security boundary, engineering rules |
+| [docs/testing-guide.md](docs/testing-guide.md) | How to walk the product by hand |
 | [docs/vision.md](docs/vision.md) | Why Rift exists and what it refuses to do |
-| [docs/product.md](docs/product.md) | The full product and operating model |
-| [docs/prototypes.md](docs/prototypes.md) | Route map of the specification |
-| [docs/benchmark.md](docs/benchmark.md) | The instrument that grades all of it |
 
 ## Commands
 
 ```bash
-npm run dev                    # prototype at /prototype
-npm test                       # vitest — the compute contract
-npm run build                  # must pass before any handoff
-npm run brevo:ensure-attributes # one-time Brevo custom-attribute bootstrap
+npm run dev       # the site, at http://localhost:3000
+npm run verify    # typecheck, lint, test, build: before every commit
+npm test          # vitest: contracts, schema and documentation drift
+npm run test:e2e  # Playwright, against a production build with no database
+npm run deploy    # the only way to production; see docs/setup.md
 ```
 
-## Current grade
+## How it is measured
 
-**93 against [docs/benchmark.md](docs/benchmark.md), and provisional.** The benchmark's own
-rule is that no score above 84 is validated until field metrics exist. Instrumentation is
-built and verified working, and **every number it reports is currently zero**. The first 200
-real assessments are the actual grading event.
+Not by a grade. The thesis is that value converts, so the numbers that matter are in
+Operations, Reports: visitors, values answered, plans saved, calls booked, clients taken on.
+Every one of them is zero until the pilot starts.

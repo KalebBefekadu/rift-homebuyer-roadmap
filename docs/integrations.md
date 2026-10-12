@@ -8,9 +8,11 @@ is decided by the person writing the integration, not by the person using it. Th
 this whole file:
 
 > **A missing integration must produce a visible, named, degraded state — never a silent
-> success and never a crash.** `lib/brevo/sync.ts` is the reference implementation: no API
-> key returns `{ ok: true, skipped: true, reason }`, and the caller can tell the difference
-> between "sent" and "not configured".
+> success and never a crash.** `DbResult` in `lib/db/result.ts` is the reference shape, and
+> the email sender in `lib/db/email.ts` follows it: no API key returns
+> `{ ok: true, skipped: true, reason }`, and the caller can tell the difference between "sent"
+> and "not configured". A `skipped` must reach the person as words: Save my plan says "Not
+> saved." when nothing was stored (fixed 12 October 2026, when it said "Saved.").
 
 The prototype at `/prototype` needs **none** of these. It runs on an empty `.env` file.
 
@@ -20,9 +22,9 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 
 | Service | Purpose | Status | Code |
 | --- | --- | --- | --- |
-| **Supabase** | Auth, Postgres, RLS, file storage | Project live, schema is the retired MVP's | `lib/supabase/*`, `lib/db/*`, `supabase/migrations/` |
+| **Supabase** | Auth, Postgres, RLS, file storage | Live, on the Rift schema; four retired MVP tables are still present and should be exported and dropped | `lib/supabase/*`, `lib/db/*`, `supabase/migrations/` |
 | **Sentry** | Errors, tracing, source maps | Wired and deployed | `next.config.ts`, `instrumentation*.ts`, `lib/monitoring/capture.ts` |
-| **Brevo** | Transactional email, contact attributes | Client written, no caller yet (the unauthenticated server action that wrapped it was removed, 28 Sep) | `lib/brevo/sync.ts` |
+| **Brevo** | Transactional email | Live; a verified sending domain (SPF, DKIM, DMARC) is still to do | `lib/db/email.ts`, `lib/db/sender.ts` |
 | **Vercel** | Hosting, edge, cron | Project linked (`rift-homebuyer-roadmap`) | `.vercel/project.json` |
 | **Anthropic (Claude API)** | Reading an uploaded offer PDF into the form; comparing a changed program page with its record | Built, off until `ANTHROPIC_API_KEY` is set (Blueprint v5 §10.2, D16) | `lib/core/ai.ts`, `lib/db/ai.ts`, `lib/db/offer-read.ts`, `lib/db/program-checks.ts` |
 
@@ -114,8 +116,8 @@ first, and `maskAllText` / `maskAllInputs` get set explicitly rather than inheri
 - A tag for the build phase, so an error in a half-built surface is triageable.
 - Alerts on the two operations where a silent failure costs a client rather than a page
   view: **readout delivery** and **consent recording**.
-- Do not send PII in `extra`. `lib/brevo/sync.ts` shows the pattern — it sends
-  `hasEmail: boolean`, never the address.
+- Do not send PII in `extra`. Send `hasEmail: boolean`, never the address;
+  `lib/monitoring/redact.ts` scrubs what slips through, and is not a reason to send it.
 
 ---
 
@@ -124,9 +126,9 @@ first, and `maskAllText` / `maskAllInputs` get set explicitly rather than inheri
 **Cost:** free tier, 300 emails/day. That ceiling is a real constraint on the nurture
 cadence and is the reason §6 exists.
 
-`syncContactToBrevo()` upserts a contact with four custom attributes: `STAGE`,
-`TIME_TO_BUY`, `RIFT_CLIENT_ID`, `RIFT_EVENT`. Bootstrap them once with
-`npm run brevo:ensure-attributes`.
+Rift sends through Brevo's transactional API only. It keeps no contact list in Brevo: the
+retired MVP's contact sync (`lib/brevo/sync.ts` and its attribute bootstrap) was deleted on 12
+October 2026 with nothing calling it.
 
 **Opt-outs come back from Brevo.** The unsubscribe link in every touch is Brevo's, so an
 opt-out is recorded there. Each nurture run first reads `GET /v3/smtp/blockedContacts`
@@ -147,13 +149,6 @@ faked, without `BREVO_API_KEY` and `BREVO_FROM_EMAIL`:
 
 The client notice names the kind of thing and links to the portal tab; it never carries an
 address, a price or a file.
-
-### The wire-contract rule
-`TimeToBuy` and `ClientStage` are now declared **inside** `lib/brevo/sync.ts` rather than
-imported from the product's domain types. This is deliberate. Attribute values already sitting
-in Brevo are a wire contract with an external system; coupling them to whatever the product
-currently calls a stage means a product-side rename silently orphans every existing contact.
-Widen them on purpose, and migrate existing contacts in the same change.
 
 ### What the build adds
 - **Transactional templates** for the readout delivery and each automatic nurture step.

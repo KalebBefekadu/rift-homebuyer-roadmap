@@ -1,18 +1,12 @@
 # Rift Architecture Reference
 
-## Where this repository actually is
+## Where this repository actually is (12 October 2026)
 
-Two things live here, and confusing them is the fastest way to build the wrong thing.
-
-1. **The specification** — `app/prototype`, `components/rift`, `lib/prototype`. Complete,
-   reviewed, and running. No accounts, no database, no environment variables. It is the
-   agreed product, expressed as working software instead of a wireframe.
-2. **The plumbing** — `lib/supabase`, `lib/brevo`, `lib/monitoring`,
-   `supabase/migrations`, the Sentry config. Real, deployed, and reusable. It came from the
-   portal MVP that Rift replaces.
-
-**Nothing production-facing is built yet.** That is the work, and [handoff.md](handoff.md)
-is its order.
+The product is built and live: the public site, the client portal and Operations, on Supabase
+with row-level security, Brevo, Sentry and Vercel. `app/prototype` and `lib/prototype` are
+the September specification it was built against, kept for reference, 404 in production, and
+not extended. Plans live in [blueprint v5](blueprint-v5/README.md); what is left before real
+traffic is in [the 12 October audit](audit/full-audit-2026-10-12.md) §5.
 
 ### What was removed, and why it is not coming back
 
@@ -35,7 +29,7 @@ Browser
   -> lib/core/*             pure, deterministic domain logic — no I/O, no env
   -> lib/db/*               server-only data access (service role, RLS bypassed)
   -> lib/db + lib/supabase    Supabase Auth and Postgres behind RLS
-  -> lib/brevo              contact and transactional email projection
+  -> lib/db/email.ts        Brevo transactional email
   -> lib/monitoring         Sentry, for anything that fails
 ```
 
@@ -67,19 +61,19 @@ Rift owns pipeline state. Brevo owns messaging. Do not create a second place to 
 
 ## Production routes
 
-Built and live. These are the product; `/prototype` is the specification they were
-built against.
+Built and live. `/prototype` is the September specification they were built against, now
+404 in production.
 
 | Route | What |
 | --- | --- |
-| `/buy` | Landing. Two questions, matched assistance computed on the server before any scroll |
-| `/buy/start` | The assessment. One question per screen, live value panel, resumable |
-| `/buy/results` | The readout. Every figure computed server-side |
+| `/buy`, `/sell`, `/abroad` | The three landings, each listing its values |
+| `/buy/cash-to-close`, `/buy/assistance` and the other values (`lib/core/values.ts`) | One question at a time, only the unanswered ones, then an answer computed on the server |
+| `/buy/start`, `/buy/results`, `/sell/start`, `/sell/results` | Forwarding routes for links in emails already sent; due a check of request logs in January |
 | `/buy/programs` | The whole registry, including closed and stale entries |
 | `/buy/how` | Where the numbers come from and how the agent is paid |
 | `/book` | Consultation booking with the TCPA gate |
 | `/r/[token]` | A shared readout, rendered exactly as it was saved |
-| `/studio` | The agent surface, behind a server-checked session |
+| `/operations` | The agent surface, behind a server-checked session (`/studio` redirects here) |
 | `/api/events`, `/api/attribution` | Telemetry and attribution intake |
 | `/api/capture`, `/api/plan/save` | The capture path. "Ask Kaleb to review my numbers" is a plan saved in review mode. The v4 questionnaire's `/api/assessment/*` and `/api/readout` were retired with it (D31), and `/api/review`, which only the retired readout called, went too; `/r/<token>` still opens readouts already shared |
 | `/api/nurture/run`, `/api/retention/sweep` | Scheduled jobs, secret-protected |
@@ -89,18 +83,19 @@ built against.
 
 | Area | Location | Responsibility |
 | --- | --- | --- |
-| Development index | `app/page.tsx` | What is built, what is specified, and the gate between them |
-| Public product | `app/(rift)` | The buyer surfaces |
-| Agent surface | `app/(studio)` | Studio |
-| Specification prototype | `app/prototype`, `components/rift`, `lib/prototype` | The agreed product, running |
+| Public site | `app/(rift)`, `app/(campaign)` | The values, saved plans, programs, booking, privacy; campaign pages sit in their own group so a missing one is a real 404 |
+| Client portal | `app/(client)` | Invitation sign-in and the client's journey |
+| Operations | `app/(operations)` | The agent's workspace, behind a server-checked session |
+| Stylesheet | `app/styles/rift.css`, `components/rift/Fonts.tsx` | The one stylesheet and the one font link every surface uses |
+| Specification prototype | `app/prototype`, `lib/prototype` | The September specification, 404 in production, reference only |
 | Auth | `lib/supabase`, `lib/db/session.ts`, `lib/db/signin.ts`, `app/(client)/auth/callback`, `app/auth/confirm` | Supabase Auth: passwords or email links for clients, email links for the agent |
-| Messaging | `lib/brevo/sync.ts` | Contact upsert and event projection (no caller yet) |
+| Messaging | `lib/db/email.ts`, `lib/db/sender.ts` | Brevo transactional email, and whether Brevo will actually send |
 | Observability | `lib/monitoring`, `instrumentation*.ts`, `sentry.*.config.ts` | Capture failures without PII |
 | Domain | `lib/core` | The compute engine and every product rule, pure and tested |
 | Data access | `lib/db` | Server-only reads and writes. Every call returns `DbResult` |
-| API | `app/api` | Telemetry and attribution intake |
+| API | `app/api` | Capture, plan save, telemetry, scheduled jobs, health |
 | Schema | `supabase/migrations`, `supabase/seed` | The database, versioned |
-| Session refresh | `middleware.ts` | Scoped to exclude `/prototype` and `/` |
+| Session refresh | `middleware.ts` | Scoped to the signed-in surfaces; the public funnel pays no auth round trip |
 
 ## Persistence
 
@@ -133,8 +128,9 @@ documentation update in the same commit.
   silently wrong the instant it has two. The schema's RLS policies are all
   written for several agents even though the product is built for one; the
   refusal is what keeps that gap loud.
-- Monitoring carries operational context, never buyer PII or raw intake. `lib/brevo/sync.ts`
-  shows the pattern: it reports `hasEmail: boolean`, never the address.
+- Monitoring carries operational context, never buyer PII or raw intake: report
+  `hasEmail: boolean`, never the address. `lib/monitoring/redact.ts` scrubs what slips
+  through.
 - Telemetry stores question ids and timings, **never answer values**, and lives in a
   different table from the answers with different retention. The permitted keys are an
   allowlist (`ALLOWED_META` in `lib/core/telemetry.ts`, mirrored in the `rift_events` CHECK
@@ -161,10 +157,10 @@ its executable half is `lib/core/compute.test.ts` — **change them in the same 
 
 ## Messaging and monitoring
 
-When `BREVO_API_KEY` is present, Rift upserts a contact with name, phone, stage, time-to-buy,
-client id, and a named event. Missing credentials produce an explicit no-op that reports
-itself as skipped; a real API failure returns a failure result and is captured in Sentry.
-Provision the custom attributes once with `npm run brevo:ensure-attributes`.
+When `BREVO_API_KEY` and `BREVO_FROM_EMAIL` are present, Rift sends transactional email
+through Brevo (`lib/db/email.ts`). It keeps no contact list there. Missing credentials produce
+an explicit no-op that reports itself as skipped; a real API failure returns a failure result
+and is captured in Sentry.
 
 Sentry is the backstop for unhandled errors and integration failures. A user-facing flow must
 always present a recoverable message alongside the capture. See
@@ -173,51 +169,33 @@ always present a recoverable message alongside the capture. See
 ## Configuration
 
 Every supported variable is documented in [.env.example](../.env.example), grouped by
-service, each with what happens when it is absent. The prototype requires none of them.
+service, each with what happens when it is absent. Every public page renders with none of them.
 
-## Design prototypes
+## Where the product rules live
 
-The prototypes defined in [prototypes.md](prototypes.md) are built and live under `/prototype`:
-mock fixtures, no authentication, no database, no Brevo, no Sentry, no production code path.
-
-They were originally described as throwaway. **They are not.** They are the specification the
-build is measured against, they encode product rules in executable form, and they stay in the
-repository until the real surface that replaces a given screen has shipped and been checked
-against it. A screen is deleted from `/prototype` when its production equivalent is live —
-one at a time, not as a tree.
+The September prototype (`/prototype`, mock fixtures, no database) was the specification. Every
+screen in it now has a live replacement, so it is reference only; its route map is
+[prototypes.md](prototypes.md). The rules it encoded were promoted into `lib/core`:
 
 | Location | Contents |
 | --- | --- |
-| `app/prototype/rift.css` | Scoped design system. Every token lives under `.rift` so nothing collides with the production palette in `app/globals.css`. `.buy` and `.sell` redefine `--brand` to give the two products separate identities from one stylesheet |
-| `app/prototype/layout.tsx` | `.rift` wrapper, Fontshare `<link>`, demo bar |
-| `app/prototype/buy/`, `sell/` | Two standalone products: landing, assessment, readout, reference pages |
-| `app/prototype/kaleb/` | The agent's own site |
-| `app/prototype/app/` | Client portal — overview, plan, money, decisions, documents, messages, share |
-| `app/prototype/studio/` | Agent surface — today, leads and clients, offers, calendar, settings |
-| `app/prototype/offer/` | Account-free offer submission |
-| `components/rift/ProductShell.tsx` | Buy/sell shell, nav and footer, identity-aware |
-| `components/rift/Shell.tsx` | Client and studio shells, demo bar, command palette host |
-| `components/rift/Ask.tsx` | The assessment kit. `Field` renders any question from the funnel definition |
-| `components/rift/Readout.tsx` | The readout kit — verdict, sections, blocker, steps, question sheet, conversion ladder, capture |
-| `components/rift/FunnelEditor.tsx` | The agent-facing funnel editor |
-| `lib/core/compute.ts` | Deterministic value engine — every customer-facing figure originates here |
+| `app/styles/rift.css` | The design system. Every token lives under `.rift` so nothing collides with `app/globals.css`. `.buy`, `.sell` and `.abroad` redefine `--brand` to give each side its own identity from one stylesheet |
+| `lib/core/compute.ts` | Deterministic value engine: every customer-facing figure originates here |
 | `lib/core/registry.ts` | Verified assistance-program registry with verification dates and suppression |
-| `lib/core/results.ts` | Derives the readout — verdict, blocker, ordered steps, question sheet — from computed values only |
+| `lib/core/values.ts`, `lib/core/asks.ts` | The values, the questions each asks, and how an answer travels in the address |
+| `lib/core/results.ts` | Derives a readout (verdict, blocker, ordered steps, question sheet) from computed values only |
 | `lib/core/lead.ts` | Lead scoring, with the signal breakdown as part of the output rather than a tooltip |
 | `lib/core/funnel.ts` | Question schema, default funnels, and the core/custom split that keeps editing safe |
-| `lib/prototype/funnelStore.ts` | localStorage persistence so editor changes drive the live funnel |
-| `lib/prototype/telemetry.ts` | Funnel instrumentation. Question ids, dwell and session id — never answers |
-| `lib/prototype/attribution.ts` | First-touch capture. First touch is immutable; later visits update last touch only |
-| `lib/core/privacy.ts` | Retention rules and versioned TCPA consent wording — data the server stores and the browser renders |
-| `lib/prototype/privacy.ts` | The browser-side half: acting on a deletion request, reporting what is on this device |
+| `lib/core/telemetry.ts` | The telemetry allowlist. Question ids, dwell and session id, never answers |
+| `lib/core/attribution.ts` | First touch is immutable; later visits update last touch only |
+| `lib/core/privacy.ts` | Retention rules and versioned TCPA consent wording: data the server stores and the browser renders |
 | `lib/core/referral.ts` | Eight referral moments with escalating asks, and the private service check, which raises follow-ups and never decides who is asked for a review |
 | `lib/core/pipeline.ts` | Stage rules, stall detection with named causes, weighted forward view. Weights shrink toward the agent's own closed history and are labelled with their basis |
 | `lib/core/nurture.ts` | The cadence engine. Four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
-| `lib/core/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party — enforced in `promote()`, not in the UI |
-| `lib/core/seam.ts` | The readout→plan crossing. Ten carry rules, a 3% drift threshold, and the preconditions on publishing |
+| `lib/core/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party: enforced in `promote()`, not in the UI |
+| `lib/core/seam.ts` | The readout to plan crossing. Ten carry rules, a 3% drift threshold, and the preconditions on publishing |
 | `lib/core/settings.ts` | The six business decisions that used to be literals, each with its consequence and whose call it is |
 | `components/rift/Trust.tsx` | The four-state trust ladder, rendered. Never colour alone |
-| `lib/prototype/fixtures.ts`, `clients.ts` | Demonstration people, tasks, offers, meetings, documents, playbooks |
 
 ### Editable funnels without breakable maths
 
@@ -263,29 +241,20 @@ These are not decorative. Four product rules from [product.md](product.md) are i
 
 Funding exhaustion is a first-class state, not a hide: a closed or waitlisted program is shown **with** its state rather than removed, because a buyer planning around money that is not currently available needs to know.
 
-### Running the prototypes
+### The prototype
 
-```bash
-npm run dev
-```
-
-Then open `/prototype`. Nothing needs to be configured — no Supabase, no environment variables, no accounts. The prototypes work with the repository as cloned.
-
-### What the prototypes must not do
-
-- Import from `lib/db`, `lib/supabase`, or `lib/brevo`.
-- Write to anything but `localStorage`.
-- Depend on environment variables.
-- Be extended with new features instead of the real product. If a change belongs in the
-  specification, change it here; if it belongs in the product, build it properly.
+`/prototype` answers 404 in production and runs locally with nothing configured. It is not
+extended: a change that belongs in the product is built in the product.
 
 ## Engineering rules
 
 1. **Calculations live in `lib/core/compute.ts`.** Never inline mortgage maths in a
    component, and never let a second module compute the same figure a different way.
 2. **The domain layer stays I/O-free.** Pure functions over plain data. No fetch, no client,
-   no `process.env` below `lib/prototype/`.
-3. **Preserve the auth switch** so local and cloud modes expose the same behaviour.
+   no browser storage under `lib/core/` (`lib/core/layers.test.ts`).
+3. **Sessions are read on the server** (`lib/db/session.ts` for the agent, `lib/db/portal.ts`
+   for clients). Nothing in the browser decides a role; the old localStorage auth switch was
+   removed on 29 Sep 2026 for exactly that reason.
 4. **A readout is a snapshot.** Never overwrite what a person was shown; store the inputs
    alongside it for recompute. See [schema.md](schema.md), decision 1.
 5. **Stage changes are recorded, not just set.** `stage_transitions` is the truth and

@@ -1,9 +1,11 @@
-# Rift — Engineering Handoff
+# Rift: Engineering Handoff
 
-**Status:** MVP built. Phases 1–3 complete. Phase 4 is behind the traffic gate in §2.
-**Date:** 6 September 2026
-**Prototype:** `/prototype` — 30 routes, no accounts, no database, no configuration.
-**Grades against:** [benchmark.md](benchmark.md) — built prototype scores **93** after gap remediation, provisional.
+**Written:** 6 September 2026, for the MVP. **Status, 12 October 2026:** the whole product is
+built and live (public site, client portal, Operations); the pilot has not started.
+**Still binding:** §4 (the contracts that must not drift), §6 (requirements that are easy to
+miss) and §7 (acceptance tests). **Superseded:** §2 and §3 (the MVP cut, the traffic gate and
+the phase order were set aside by blueprint decisions D08 and D21), §5 (it describes the
+prototype, now reference only) and §9 (the MVP as it was on 6 September).
 
 > **Planning moved to [Blueprint v5](blueprint-v5/README.md) on 24 September 2026.** It is the
 > only source of truth for what is built next. This handoff stays the engineering record of what

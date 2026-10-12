@@ -5,26 +5,20 @@ everything that must exist before the first production surface ships.
 
 ---
 
-## 1. Run the specification — zero configuration
+## 1. Run it with nothing configured
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open **http://localhost:3000/prototype**. No Supabase, no `.env`, no accounts. If this needs
-configuration, something has been wired wrong.
+Open **http://localhost:3000**. With no `.env`, every public page still renders and says what
+is not connected: a value computes its answer, Save my plan says "Not saved.", the rate falls
+back to a labelled starting assumption. That degraded state is a contract, walked by the e2e
+suite on every CI run. Operations and the client portal need Supabase (§4 onwards).
 
-Entry points:
-
-| Route | What |
-| --- | --- |
-| `/prototype/buy` | Buyer product — landing, assessment, readout |
-| `/prototype/sell` | Seller product |
-| `/prototype/studio` | The agent surface |
-| `/prototype/studio/queue` | Follow-up cadence, review queue, publishing seam |
-| `/prototype/app` | Client portal |
-| `/prototype/kaleb` | The agent's public site |
+`/prototype` is the September specification, still runnable locally for reference. It answers
+404 in production and is not extended.
 
 ## 2. Verify before touching anything
 
@@ -350,30 +344,34 @@ until you do. `scripts/bootstrap-supabase.sh`
 provisions a project from scratch — useful for a staging environment, and worth having one
 before there is real client data in production.
 
-**Without a connection string**, `output/pending-migrations.sql` is every migration the
-production database is still owed, concatenated in order, ready to paste into the Supabase
-SQL editor. It is idempotent — running it twice is safe — and it has been applied twice in a
-row against a copy of the production schema. Regenerate it by concatenating whichever files
-under `supabase/migrations/` have not been applied; delete it once they have.
+**Without a connection string**, paste the unapplied files under `supabase/migrations/`, in
+order, into the Supabase SQL editor, then record each one in `rift_schema_migrations` so
+`/api/health` agrees. Never paste a schema snapshot: the one that used to sit in `output/` was
+30 migrations stale by the time it was deleted (12 October 2026).
 
 ## 13. Repository map
 
 ```
 app/
-  page.tsx           development index — replaced by the real landing in phase 2
-  prototype/         THE SPECIFICATION — 30 routes, no dependencies
-  auth/callback/     Supabase auth callback
-  actions/           server actions
-components/rift/     the specification's component kit
+  (rift)/            the public site: landings, values, saved plans, programs, booking, privacy
+  (campaign)/        campaign landing pages at /c/<slug>
+  (client)/          the client portal, behind invitation sign-in
+  (operations)/      Operations, the agent's workspace
+  api/               route handlers: capture, plan save, crons, health
+  styles/rift.css    the one stylesheet
+  prototype/         the September specification: 404 in production, reference only
+components/rift/     shared components; value/ holds the pieces every value page uses
 lib/
-  prototype/         domain logic — pure, I/O-free, unit-tested
-  auth/              Supabase auth with a localStorage fallback
-  supabase/          client, server, middleware
-  brevo/             contact sync
-  monitoring/        Sentry capture
+  core/              the domain: compute, rules, wording. Pure, no I/O
+  db/                the data layer, server-only, every call a DbResult
+  rift/              browser helpers for the public site
+  supabase/          server and middleware clients
+  monitoring/        Sentry capture and redaction
+  prototype/         the specification's browser stores
 supabase/
-  migrations/        applied — currently the RETIRED MVP's schema, see schema.md
-  seed/
-scripts/             supabase bootstrap, migration apply, brevo attributes
+  migrations/        the Rift schema, one file per change, each recorded in the ledger
+  seed/              the assistance programs
+scripts/             deploy, migration apply, bootstrap, local stack
+e2e/, e2e-operations/, e2e-auth/   Playwright suites: public, Operations, client sign-in
 docs/                read in the order given in AGENTS.md
 ```

@@ -20,6 +20,23 @@ there is none yet.
 
 ---
 
+## Progress
+
+| Item | State |
+| --- | --- |
+| B1 to B8 | **Fixed** 12 Oct. The phone suite now covers every value, answered and unanswered (306 browser tests pass) |
+| CI double unit run, `next lint`, vitest config warning | **Fixed** 12 Oct |
+| `/api/health` detail | **Fixed** 12 Oct: public answer is ok, database and agent; the rest needs the cron secret |
+| `output/`, `app/dev`, `lib/brevo/sync.ts` and its script, `lib/supabase/client.ts`, `lib/core/params.ts` | **Deleted** 12 Oct |
+| Production depending on `app/prototype/rift.css` | **Fixed** 12 Oct: `app/styles/rift.css`. Fonts are one component |
+| AGENTS.md, README, architecture, setup §1 and §13, integrations, agent-kickoff, the Cursor rule | **Corrected** 12 Oct |
+| Deleting the prototype, blueprint v4, prototypes.md; cutting handoff, benchmark, product and vision | **Waiting on Kaleb.** Blueprint v5 keeps v4 as the record, and blueprint §14 and handoff §8.2 are cross-referenced; each cut is his call |
+| Switching off campaigns, seller workspace, money v2, advocacy, the Equb form; trimming the Operations sidebar | **Waiting on Kaleb.** Each reverses a recorded decision (D27 to D29) |
+| Self-hosted fonts | **Blocked** in the build environment (Fontshare unreachable); one file to change when it is reachable |
+| Everything in §5 owned by Kaleb, the broker or counsel | Open |
+
+---
+
 ## 0. The verdict in five lines
 
 1. **The engineering is unusually good.**
