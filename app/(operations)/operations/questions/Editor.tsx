@@ -409,7 +409,7 @@ function BuiltinCard({ n, k, side, draft, clean, live, mine, open, readOnly, onO
                 </div>
               ) : (
                 <div className={s.previewMoney}>
-                  <MoneyField key={merged.unitLabel} def={merged} value={Number(def.fallback)} onDone={() => {}} />
+                  <MoneyField key={merged.unitLabel} def={merged} onDone={() => {}} />
                 </div>
               )}
             </div>

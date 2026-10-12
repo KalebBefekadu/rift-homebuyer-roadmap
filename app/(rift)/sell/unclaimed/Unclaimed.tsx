@@ -121,12 +121,14 @@ export function Unclaimed({ counties }: { counties: string[] }) {
                   <div key={u.title} className="card p-4">
                     <div className="between wrap gap-2">
                       <span className="t-md w6 grow" style={{ minWidth: 200 }}>{u.title}</span>
-                      <span className="num t-md c-brand" style={{ flex: "none" }}>{u.estimate}</span>
+                      {/* Shrinkable: "Up to $250,000 single / $500,000 married" is wider
+                          than a 320px card, and `flex: none` pushed it 2px off the side. */}
+                      <span className="num t-md c-brand" style={{ flex: "0 1 auto", minWidth: 0 }}>{u.estimate}</span>
                     </div>
                     <p className="t-sm c-3" style={{ marginTop: 8, lineHeight: 1.6 }}>{u.detail}</p>
                     <div className="row gap-2 wrap" style={{ marginTop: 12 }}>
-                      <span className="chip"><Ico.users size={12} />Decided by {u.decidedBy}</span>
-                      {u.urgency ? <span className="chip chip-warn"><Ico.clock size={12} />{u.urgency}</span> : null}
+                      <span className="chip chip-line"><Ico.users size={12} />Decided by {u.decidedBy}</span>
+                      {u.urgency ? <span className="chip chip-warn chip-line"><Ico.clock size={12} />{u.urgency}</span> : null}
                     </div>
                   </div>
                 ))}

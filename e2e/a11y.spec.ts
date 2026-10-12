@@ -60,7 +60,7 @@ const PAGES: Array<[name: string, path: string]> = [
     "seller readout",
     "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5",
   ],
-  ["abroad readout", "/abroad/results?c=Fulton&p=300000&d=60000"],
+  ["abroad readout", "/abroad/results?s=foreign&u=rent&c=Fulton&p=300000"],
   ["closed plan link", "/plan/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
   ["closed readout link", "/r/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
 ];

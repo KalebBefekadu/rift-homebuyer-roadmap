@@ -17,6 +17,22 @@ const PAGES = [
   "/", "/buy", "/sell", "/abroad", "/privacy", "/book", "/buy/programs", "/equb", "/equb/reserve", "/equb?lang=am", "/offer",
   "/buy/cash-to-close?p=350000&d=3.5&c=Fulton",
   "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5",
+  /* Every value, answered. /sell/unclaimed went sideways at every phone width
+     for weeks (two warning chips holding sentences) because it was not on
+     this list; the audit of 12 October found it by walking the site. A value
+     added to lib/core/values.ts belongs here in the same change. */
+  "/sell/unclaimed",
+  "/buy/assistance?c=Fulton&o=none&p=320000&i=72000&h=3&j=educator",
+  "/buy/monthly-cost?p=320000&d=3.5&c=DeKalb",
+  "/buy/timeline?p=320000&d=3.5&s=9000&ms=650",
+  "/buy/afford?cp=2000&i=72000&db=300&d=3.5",
+  "/buy/lender-questions?p=320000&d=3.5&o=none",
+  "/sell/costs?c=Fulton&sp=400000&cm=5",
+  "/sell/prepare?rf=over20&sy=broken&fn=worn",
+  "/abroad/cost?st=foreign&u=rent&p=285000&c=DeKalb",
+  "/abroad/results?s=foreign&u=rent&p=285000&c=DeKalb",
+  /* And unanswered: the first question, which is a different page. */
+  "/buy/assistance", "/buy/afford", "/sell/costs", "/abroad/results",
 ];
 
 test.describe("nothing spills off the side of a phone", () => {

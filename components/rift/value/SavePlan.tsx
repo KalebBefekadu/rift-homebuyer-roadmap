@@ -39,12 +39,19 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
   /* Unticked, and only on the buyer side, where programs are (D14). */
   const [alerts, setAlerts] = useState(false);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
-  const [result, setResult] = useState<{ emailed: boolean; url: string | null; answerWith: string | null } | null>(null);
+  const [result, setResult] = useState<{ stored: boolean; emailed: boolean; url: string | null; answerWith: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   const phoneGiven = phone.trim().length > 0;
   const ready = name.trim().length > 0 && emailValid && (!phoneGiven || phoneOk);
+  /* Why the button is not pressable yet, said beside it. A disabled button
+     with no reason reads as a broken page (the same fix as Record, 28 Sep). */
+  const missing = [
+    name.trim() ? null : "your name",
+    emailValid ? null : email.trim() ? "an email address that looks complete" : "your email",
+    phoneGiven && !phoneOk ? "a tick in the phone box, or no phone number" : null,
+  ].filter(Boolean).join(", ");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,11 +73,14 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
           wordingVersion: questions?.versionId ?? null,
         }),
       });
-      const d = (await res.json()) as { ok: boolean; error?: string; emailed?: boolean; url?: string | null; answerWith?: string | null };
+      const d = (await res.json()) as { ok: boolean; error?: string; emailed?: boolean; url?: string | null; answerWith?: string | null; skipped?: string };
       if (!d.ok) { setError(d.error ?? "That did not go through."); setState("error"); return; }
       track({ name: "email_capture", side: side === "abroad" ? undefined : side, meta: { via: mode === "review" ? "review" : "plan", answered: plan.length } });
       flush();
-      setResult({ emailed: Boolean(d.emailed), url: d.url ?? null, answerWith: d.answerWith ?? null });
+      /* `skipped` means the request was understood and nothing was stored
+         (a build with no database). It was reported as "Saved." with a link
+         that did not exist; it is said plainly instead. */
+      setResult({ stored: !d.skipped, emailed: Boolean(d.emailed), url: d.url ?? null, answerWith: d.answerWith ?? null });
       setState("done");
     } catch {
       setError("That did not go through. Nothing on this page has changed; try again.");
@@ -133,14 +143,22 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
           /* The submit button that had focus is gone; the answer takes it. */
           <div tabIndex={-1} ref={focusOnShow}>
             <h2 id="save-h" className="serif" style={{ fontSize: 26, letterSpacing: "-0.022em" }}>
-              {mode === "review" ? "Kaleb has it." : "Saved."}
+              {!result?.stored ? "Not saved." : mode === "review" ? "Kaleb has it." : "Saved."}
             </h2>
             <p className="t-md c-2 mt-2" style={{ lineHeight: 1.6 }}>
-              {mode === "review"
-                ? "He will look over your numbers and reply by email, on business days usually the same day."
-                : "Your plan is saved."}
-              {" "}
-              {result?.emailed ? `We emailed a link to ${email.trim()} so you can reopen it on any device.` : "Email is not sending right now, so keep the link below."}
+              {!result?.stored
+                ? `This copy of the site is not connected to where plans are kept, so nothing was stored${mode === "review" ? " and Kaleb was not told" : ""}. Your answers are still in this page's address: bookmark it to come back to them.`
+                : <>
+                    {mode === "review"
+                      ? "He will look over your numbers and reply by email, on business days usually the same day."
+                      : "Your plan is saved."}
+                    {" "}
+                    {result.emailed
+                      ? `We emailed a link to ${email.trim()} so you can reopen it on any device.`
+                      : result.url
+                        ? "Email is not sending right now, so keep the link below."
+                        : "The link that reopens it could not be made just now. Kaleb has your details and can send it to you."}
+                  </>}
             </p>
             {result?.url ? (
               <a href={result.url} className="btn btn-s mt-3" style={{ width: "100%" }}>Open my saved plan</a>
@@ -203,6 +221,7 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
             <button type="submit" className="btn btn-brand btn-lg mt-4" style={{ width: "100%" }} disabled={!ready || state === "sending"}>
               {state === "sending" ? "Saving…" : mode === "review" ? "Send it to Kaleb" : "Save my plan"}
             </button>
+            {!ready && state !== "sending" ? <p className="t-xs c-3 mt-2">Still needed: {missing}.</p> : null}
             <p className="t-xs c-4 mt-3" style={{ lineHeight: 1.55 }}>{EMAIL_NOTE}</p>
           </form>
         )}

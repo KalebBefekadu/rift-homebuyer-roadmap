@@ -140,7 +140,7 @@ export function liveVersion(history: Publication[]): number | null {
 
 /**
  * Whether a visit's campaign tag names this campaign. The public page tags the
- * values it links to with `<slug>-v<version>` (app/(rift)/c/[slug]/page.tsx),
+ * values it links to with `<slug>-v<version>` (app/(campaign)/c/[slug]/page.tsx),
  * so a tag is this campaign's when it is the slug or the slug and a version.
  * Matched exactly and never by prefix: "cobb" must not claim "cobb-sellers-v2".
  */

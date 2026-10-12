@@ -10,6 +10,11 @@ import { FALLBACK_RATE } from "@/lib/core/rate";
 import { translator, servedIn, ETHIOPIC_STACK, isLocale, type Locale } from "@/lib/core/i18n";
 import { Ico, Mark } from "@/components/rift/icons";
 import { Keep } from "./Keep";
+import { hasAll, parseAnswers } from "@/lib/core/asks";
+import { valueById, type InputKey } from "@/lib/core/values";
+import { valueWording } from "@/lib/db/questions";
+import { ValueFlow } from "@/components/rift/value/ValueFlow";
+import { ValueLayout } from "@/components/rift/value/parts";
 
 /* The title follows the page. A tab that says one thing in English above a
    page written in Amharic is the same half-translated feeling this work was
@@ -54,7 +59,29 @@ export default async function AbroadResults({
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
 
-  const i = parseAbroadParams(one, GA_COUNTIES);
+  /* Status travels as `s` from the landing page and as `st` from the shared
+     questions (lib/core/asks.ts, where `s` is savings). Either is theirs. */
+  const read = (k: string) => (k === "s" ? one("s") ?? one("st") : one(k));
+
+  /* Asked first, like every other value. Opened with no answers (the values
+     list links here bare), this page showed "It runs $253 a month short" for a
+     DeKalb rental at $285,000 that nobody had described, with nothing saying
+     the figures were defaults. Its four are asked; the down payment keeps the
+     least a lender takes in their situation, which the page says. */
+  const def = valueById("abroad-return")!;
+  const given = parseAnswers((k) => (k === "st" ? read("s") : one(k)));
+  const ask = one("ask") as InputKey | undefined;
+  if (!hasAll(given, def.asks) || (ask && def.asks.includes(ask))) {
+    const words = await valueWording(def);
+    return (
+      <ValueLayout def={def}>
+        {one("lang") === "am" ? <p className="t-sm c-3 mt-3" lang="am">ይህ ገጽ እስካሁን በእንግሊዝኛ ብቻ ነው።</p> : null}
+        <ValueFlow defs={words.defs} tool={def.id} side="abroad" href={def.href} asks={def.asks} given={given} only={ask && def.asks.includes(ask) ? ask : undefined} />
+      </ValueLayout>
+    );
+  }
+
+  const i = parseAbroadParams(read, GA_COUNTIES);
   const rate = await currentRate();
 
   /* Carried from the landing page's toggle. Until this read existed the

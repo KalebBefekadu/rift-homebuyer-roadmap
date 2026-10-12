@@ -154,7 +154,7 @@ export const VALUES: ValueDef[] = [
     question: "What would it earn if I rented it out?",
     gives: "Rent, costs and what is left, marked as an estimate.",
     cta: "See the return",
-    asks: ["status", "use", "price"],
+    asks: ["status", "use", "price", "county"],
     live: true,
   },
 ];

@@ -16,9 +16,11 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ v?: string }> }): Promise<Metadata> {
   const [{ slug }, { v }] = await Promise.all([params, searchParams]);
   const read = await publicCampaign(slug, v);
-  const first = read.ok && "data" in read ? read.data?.recipe.blocks[0] : undefined;
+  const page = read.ok && "data" in read ? read.data : undefined;
+  const first = page?.recipe.blocks[0];
   return {
-    title: first?.type === "heading" ? first.title : "Rift",
+    /* "Rift" here became "Rift · Rift" through the layout's template. */
+    title: first?.type === "heading" ? first.title : page === null ? "Page not found" : { absolute: "Rift" },
     description: first?.type === "heading" ? first.lede : undefined,
     robots: { index: false, follow: true },
   };

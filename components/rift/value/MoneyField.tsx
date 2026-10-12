@@ -14,15 +14,23 @@ const fmt = (n: number) => n.toLocaleString("en-US");
  * typed figure is the answer; the slider is a shortcut that pins at its end
  * when the typed figure is beyond it. Limits are the hard ones in
  * lib/core/asks.ts, and the server checks them again.
+ *
+ * An unanswered field opens empty. It used to open at the question's
+ * fallback ($325,000 for a price), and pressing Continue without typing
+ * recorded that as the person's own answer, which the answer page then
+ * showed back to them as theirs (rule 11: "you said" requires that they said
+ * it). The fallback is shown as a placeholder, which nobody mistakes for a
+ * figure they gave.
  */
 export function MoneyField({ def, value, onDone, cta = "Continue" }: {
   def: AskDef;
-  value: number;
+  /** Their answer so far. Undefined until they give one. */
+  value?: number;
   onDone: (n: number) => void;
   cta?: string;
 }) {
   const id = useId();
-  const [text, setText] = useState(fmt(value));
+  const [text, setText] = useState(value === undefined ? "" : fmt(value));
   const n = Number(text.replace(/[^0-9]/g, ""));
   const lim = def.limits ?? { min: 0, max: 5_000_000 };
   const s = def.slider ?? { min: lim.min, max: lim.max, step: 1_000 };
@@ -47,8 +55,9 @@ export function MoneyField({ def, value, onDone, cta = "Continue" }: {
           autoComplete="off"
           className="num"
           value={text}
+          placeholder={typeof def.fallback === "number" ? fmt(def.fallback) : undefined}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-e` : undefined}
+          aria-describedby={error ? `${id}-e` : text.trim() === "" ? `${id}-h` : undefined}
           onChange={(e) => {
             const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 8);
             setText(digits ? fmt(Number(digits)) : "");
@@ -57,6 +66,9 @@ export function MoneyField({ def, value, onDone, cta = "Continue" }: {
         />
       </div>
       {error ? <p id={`${id}-e`} role="alert" className="t-xs c-neg" style={{ marginTop: 6 }}>{error}</p> : null}
+      {text.trim() === "" ? (
+        <p id={`${id}-h`} className="t-xs c-4" style={{ marginTop: 6 }}>Type a figure or drag the slider.</p>
+      ) : null}
 
       <input
         type="range"

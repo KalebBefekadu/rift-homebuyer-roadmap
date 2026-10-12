@@ -149,7 +149,7 @@ export function ValueFlow({ tool, side, href, asks, given, only, defs }: {
           ) : (
             <MoneyField
               def={def}
-              value={typeof value === "number" ? value : Number(def.fallback)}
+              value={typeof value === "number" ? value : undefined}
               onDone={(n) => answer(n, true)}
             />
           )}

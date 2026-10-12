@@ -36,8 +36,10 @@ import {
 
 
 
-export function Landing({ initial, initialLocale, localePinned }: {
+export function Landing({ initial, carried, initialLocale, localePinned }: {
   initial: AbroadInputs & { downPct: number };
+  /** The answers the address actually carried, as `&k=v`, for the readout's link. */
+  carried: string;
   /* Resolved on the server from ?lang, so Amharic is in the HTML a crawler
      sees and an Amharic reader never watches the page start in English. */
   initialLocale: Locale;
@@ -124,7 +126,7 @@ export function Landing({ initial, initialLocale, localePinned }: {
      closing a cash gap, and its readout names Georgia Dream throughout, which
      requires the buyer to live in the house. Every answer this page needs has
      already been given above, so there is nothing left to ask. */
-  const go = `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&d=${downPct}&lang=${locale}`;
+  const go = `/abroad/results?s=${status}${carried}&lang=${locale}`;
 
   return (
     <div className="buy" lang={locale}>
@@ -221,7 +223,7 @@ export function Landing({ initial, initialLocale, localePinned }: {
           <div className="pair mt-4" style={{ maxWidth: 940 }} lang="en">
             {[
               { art: "abroad-cost", href: `/abroad/cost?st=${status}&lang=${locale}`, kicker: "Cost to buy and own", q: "What would buying and owning cost me?", b: "The cash you would send, and what owning costs each year." },
-              { art: "abroad-return", href: `/abroad/results?s=${status}&u=${use}&p=${price}&c=${encodeURIComponent(county)}&lang=${locale}`, kicker: "The return", q: "What would it earn if I rented it out?", b: "Rent, costs and what is left, marked as an estimate." },
+              { art: "abroad-return", href: go, kicker: "The return", q: "What would it earn if I rented it out?", b: "Rent, costs and what is left, marked as an estimate." },
             ].map((v) => (
               <Link key={v.href} href={v.href} className="card p-5 lift value-card">
                 <ValueArt id={v.art} style={{ maxWidth: 170 }} />

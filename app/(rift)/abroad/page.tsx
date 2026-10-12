@@ -37,6 +37,14 @@ export default async function AbroadPage({
   const sp = await searchParams;
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const initial = parseAbroadParams(one, GA_COUNTIES);
+  /* Only what the address actually carried goes on to the readout. The
+     illustration on this page runs on defaults for price, use and county,
+     and passing those along made the readout present them as the person's
+     own answers; now it asks for the ones nobody gave. */
+  const carried = (["u", "p", "c", "d"] as const)
+    .filter((k) => one(k)?.trim())
+    .map((k) => `&${k}=${encodeURIComponent(one(k)!.trim())}`)
+    .join("");
 
   /* Resolved here rather than in the browser. When the toggle was the only way
      in, the server always rendered English and the switch happened after
@@ -53,6 +61,7 @@ export default async function AbroadPage({
       <AgentSchema />
       <Landing
         initial={initial}
+        carried={carried}
         initialLocale={locale}
         localePinned={pinned}
       />

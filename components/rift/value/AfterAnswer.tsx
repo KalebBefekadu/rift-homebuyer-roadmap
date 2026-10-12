@@ -121,7 +121,7 @@ export function AfterAnswer({ tool, entry, answers, questions }: {
       </section>
 
       <section className="sec-sm" aria-label="Delete what you gave">
-        <p className="t-xs c-4" style={{ marginBottom: 8 }}>Your answers stay on this device for thirty days, so the next question is not asked twice.</p>
+        <p className="t-xs c-4" style={{ marginBottom: 8 }}>Your answers stay on this device for thirty days, so the next question is not asked twice. This page&apos;s link carries them too, so anyone you share it with sees them.</p>
         <ForgetMe side={def.side === "abroad" ? undefined : def.side} />
       </section>
 

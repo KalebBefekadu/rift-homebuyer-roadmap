@@ -11,6 +11,11 @@
  * figure can always be typed, up to the ceilings below. The old sliders
  * stopped at $700,000 for price, which asked "what if I want $1,000,000?".
  *
+ * Private figures (savings, income, debts) used to say "Only you see this".
+ * Every answer travels in the address, so it is in the link "Share this
+ * answer" copies and in the host's request logs. The wording now says what
+ * is true: nobody else sees it unless they share or save it.
+ *
  * Pure: no React, no I/O.
  */
 
@@ -86,7 +91,7 @@ export const ASKS: Record<InputKey, AskDef> = {
   savings: {
     key: "savings", param: "s", type: "money",
     title: "How much have you saved for this so far?",
-    why: "Only you see this. It decides how far away you are, not whether you can buy.",
+    why: "It decides how far away you are, not whether you can buy. Nobody else sees it unless you share or save your answer.",
     slider: { min: 0, max: 150_000, step: 500 },
     limits: { min: 0, max: 5_000_000 },
     unitLabel: "Saved so far",
@@ -107,7 +112,7 @@ export const ASKS: Record<InputKey, AskDef> = {
   income: {
     key: "income", param: "i", type: "money",
     title: "What is your household's income before tax, per year?",
-    why: "Most programs have income limits. Only you see this, and it is never used for anything else.",
+    why: "Most programs have income limits. It is used only to check them, and nobody else sees it unless you share or save your answer.",
     slider: { min: 20_000, max: 300_000, step: 1_000 },
     limits: { min: 0, max: 5_000_000 },
     unitLabel: "Household income",
@@ -116,7 +121,7 @@ export const ASKS: Record<InputKey, AskDef> = {
   debts: {
     key: "debts", param: "db", type: "money",
     title: "What do you pay each month on other debts?",
-    why: "Car loans, credit cards, student loans. Not rent. Only you see this.",
+    why: "Car loans, credit cards, student loans. Not rent. Nobody else sees it unless you share or save your answer.",
     slider: { min: 0, max: 3_000, step: 25 },
     limits: { min: 0, max: 100_000 },
     unitLabel: "Each month",
