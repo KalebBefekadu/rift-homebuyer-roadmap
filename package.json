@@ -21,7 +21,8 @@
     "verify": "tsc --noEmit && next lint && vitest run && next build",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:operations": "playwright test -c playwright.operations.config.ts"
+    "test:e2e:operations": "playwright test -c playwright.operations.config.ts",
+    "test:e2e:auth": "scripts/e2e-auth.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

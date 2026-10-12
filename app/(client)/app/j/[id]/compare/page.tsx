@@ -43,7 +43,7 @@ export default async function ClientCompare({ params, searchParams }: { params: 
 
   return (
     <ClientShell agentName={member.agentName}>
-      <Link href={`/app/j/${id}#homes`} className="t-sm c-3">← {member.journeyLabel}</Link>
+      <Link href={`/app/j/${id}?tab=homes`} className="t-sm c-3">← {member.journeyLabel}</Link>
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>Compare homes</h1>
       <p className="t-sm c-3" style={{ marginTop: 6, marginBottom: 14, lineHeight: 1.6 }}>
         The same facts for each home, and where one is not known it says so.

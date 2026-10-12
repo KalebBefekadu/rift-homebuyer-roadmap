@@ -1,5 +1,6 @@
 import "server-only";
 import { captureOpError } from "@/lib/monitoring/capture";
+import type { NoticeEmail } from "@/lib/core/notice";
 
 /**
  * Transactional email, through Brevo.
@@ -71,8 +72,8 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn,
-  type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded, buildClientDocument, buildNotice,
+  type OfferUploadedEmail, type ClientDocumentEmail, type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
 } from "@/lib/core/email";
 
 /* Re-exported so callers keep importing their email types from one place. */
@@ -196,6 +197,17 @@ export async function sendResume(r: ResumeEmail): Promise<SendResult> {
   }, "email.resume");
 }
 
+/** An invitation the agent approved on screen. See buildInvitation. */
+export async function sendInvitation(e: InvitationEmail): Promise<SendResult> {
+  const { subject, html } = buildInvitation(e);
+  return send({
+    to: [{ email: e.to, ...(e.name ? { name: e.name } : {}) }],
+    subject,
+    htmlContent: html,
+    tags: ["invitation"],
+  }, "email.invitation");
+}
+
 /** The buyer's sign-in link. See buildSignIn for why Brevo sends it. */
 export async function sendSignIn(s: SignInEmail): Promise<SendResult> {
   const { subject, html } = buildSignIn(s);
@@ -241,6 +253,39 @@ export async function sendOfferChosen(c: OfferChosenEmail): Promise<SendResult> 
     htmlContent: html,
     tags: ["agent-alert"],
   }, "email.offerChosen");
+}
+
+/** The alert that an offer PDF arrived, before the form is finished. Same tag, same reasons, as the lead alert. */
+export async function sendOfferUploaded(u: OfferUploadedEmail): Promise<SendResult> {
+  const { subject, html } = buildOfferUploaded(u);
+  return send({
+    to: [{ email: u.to, name: "Kaleb" }],
+    subject,
+    htmlContent: html,
+    tags: ["agent-alert"],
+  }, "email.offerUploaded");
+}
+
+/** The alert that a client sent a document from the portal (WS11.3). Same tag as the other agent alerts. */
+export async function sendClientDocument(d: ClientDocumentEmail): Promise<SendResult> {
+  const { subject, html } = buildClientDocument(d);
+  return send({
+    to: [{ email: d.to, name: "Kaleb" }],
+    subject,
+    htmlContent: html,
+    tags: ["agent-alert"],
+  }, "email.clientDocument");
+}
+
+/** Something new is in a client's portal (WS11.5). Its own tag, so it can be watched apart from sign-in links. */
+export async function sendNotice(n: NoticeEmail): Promise<SendResult> {
+  const { subject, html } = buildNotice(n);
+  return send({
+    to: [{ email: n.to, ...(n.name ? { name: n.name } : {}) }],
+    subject,
+    htmlContent: html,
+    tags: ["client-notice"],
+  }, "email.notice");
 }
 
 /**

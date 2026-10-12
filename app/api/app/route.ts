@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { respondToPricing } from "@/lib/db/seller";
 import { limited, readJson } from "@/lib/db/guard";
-import { sendSignInLink } from "@/lib/db/signin";
+import { createPasswordAccount, passwordSignIn, sendSignInLink, setOwnPassword } from "@/lib/db/signin";
+import { passwordError } from "@/lib/core/password";
 import { buyerSearchOn } from "@/lib/core/journey";
 import { captureOpError } from "@/lib/monitoring/capture";
 import {
   acceptInvitation, addHomeAsMember, clientSession, invitationByToken, mayReceiveSignIn, memberOf,
-  proposeRevision, reactAsMember, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
+  clientUploadFinish, clientUploadSlot, proposeRevision, reactAsMember, setMyNotices, reportWorkAsMember, respondToBid, requestTourAsMember, respondToBrief, tourFeedbackAsMember,
 } from "@/lib/db/portal";
 import { EMPTY_FACTS, type SearchBrief } from "@/lib/core/search";
 import type { NewHome } from "@/lib/db/shortlist";
@@ -26,11 +27,14 @@ export const dynamic = "force-dynamic";
  *
  * Two kinds of action:
  *
- *   SIGNING IN. `signin` and `invite-link` email a one-time link (Brevo, or
- *   Supabase without it: lib/db/signin.ts). Only to an address that holds
- *   an invitation or a membership, so this is never an open sign-up; and
- *   `signin` answers the same whether or not the address is known, so it
- *   does not reveal who is a client.
+ *   SIGNING IN. `signin`, `reset` and `invite-link` email a one-time link
+ *   (Brevo, or Supabase without it: lib/db/signin.ts). `password` signs in
+ *   with a password, and `invite-password` creates a password account from an
+ *   open invitation and joins in the same step. Links go only to an address
+ *   that holds an invitation or a membership, and accounts are only created
+ *   from an invitation, so this is never an open sign-up. `signin`, `reset`
+ *   and `password` answer the same whether or not the address is known, so
+ *   they do not reveal who is a client.
  *
  *   EVERYTHING ELSE requires a session and resolves the membership from
  *   scratch for the journey named in the request (lib/db/portal.ts). The
@@ -49,16 +53,54 @@ export async function POST(req: Request) {
   const b = (body.body ?? {}) as Body;
   const action = str(b.action, 40);
 
-  if (action === "signin" || action === "invite-link") {
+  if (action === "signin" || action === "reset" || action === "invite-link" || action === "password" || action === "invite-password") {
     const refused = limited(req, "signin");
     if (refused) return refused;
 
-    if (action === "signin") {
+    if (action === "signin" || action === "reset") {
       const email = str(b.email, 254).trim().toLowerCase();
       if (!email) return json({ ok: false, error: "Enter your email address." }, 400);
-      if (await mayReceiveSignIn(email)) await sendSignInLink(email, "/app");
+      /* Forgot password is a sign-in link that lands on the account page, where
+         a signed-in person sets a new password. One kind of link to keep
+         working, rather than a second (recovery) token type to verify. */
+      if (await mayReceiveSignIn(email)) {
+        await sendSignInLink(email, action === "reset" ? "/app/account?reset=1" : "/app", action === "reset" ? "reset" : "signin");
+      }
       /* The same answer either way. */
       return json({ ok: true });
+    }
+
+    if (action === "password") {
+      const email = str(b.email, 254).trim().toLowerCase();
+      const password = str(b.password, 200);
+      if (!email || !password) return json({ ok: false, error: "Enter your email and password." }, 400);
+      const r = await passwordSignIn(email, password);
+      if (r.state === "wrong") return json({ ok: false, error: "That email and password do not match. Try again, or use Forgot password." }, 401);
+      if (r.state === "failed") return json({ ok: false, error: "We could not sign you in just now. Try again in a minute." }, 503);
+      return json({ ok: true });
+    }
+
+    if (action === "invite-password") {
+      const token = str(b.token, 80);
+      const password = str(b.password, 200);
+      const inv = await invitationByToken(token);
+      if (!inv.ok || "skipped" in inv) return json({ ok: false, error: "We could not check the invitation just now. Try again in a minute." }, 503);
+      if (!inv.data || inv.data.state !== "invited") {
+        return json({ ok: false, error: "This invitation is no longer open. Ask your agent for a new one." }, 404);
+      }
+      const bad = passwordError(password, inv.data.email);
+      if (bad) return json({ ok: false, error: bad }, 400);
+      const made = await createPasswordAccount(inv.data.email, password);
+      if (made.state === "exists") {
+        return json({ ok: false, exists: true, error: "You already have a login for this address. Sign in with it below, then join." }, 409);
+      }
+      if (made.state === "failed") return json({ ok: false, error: "We could not create your login just now. Try again, or use the email link instead." }, 502);
+      const signedIn = await passwordSignIn(inv.data.email, password);
+      if (signedIn.state !== "ok") return json({ ok: false, error: "Your login was created, but signing in did not finish. Sign in with your new password below." }, 502);
+      const joined = await acceptInvitation(token, signedIn.userId, signedIn.email);
+      if (!joined.ok) return refusal("accept", joined.error);
+      if ("skipped" in joined) return json({ ok: false, error: joined.reason }, 503);
+      return json({ ok: true, journeyId: joined.data.journeyId });
     }
 
     const token = str(b.token, 80);
@@ -80,6 +122,15 @@ export async function POST(req: Request) {
   if (session.state === "unknown") return json({ ok: false, error: "We could not check your sign-in just now. Try again." }, 503);
   if (session.state === "signed-out") return json({ ok: false, error: "Sign in again to do that.", signedOut: true }, 401);
 
+  if (action === "set-password") {
+    const password = str(b.password, 200);
+    const bad = passwordError(password, session.email);
+    if (bad) return json({ ok: false, error: bad }, 400);
+    return (await setOwnPassword(password))
+      ? json({ ok: true })
+      : json({ ok: false, error: "Your password did not save. Nothing was changed. Try again in a minute." }, 502);
+  }
+
   if (action === "accept") {
     const r = await acceptInvitation(str(b.token, 80), session.userId, session.email);
     /* Through the same filter as every other write below: a failed read of
@@ -96,6 +147,25 @@ export async function POST(req: Request) {
   if ("skipped" in m) return json({ ok: false, error: m.reason }, 503);
   if (!m.data) return json({ ok: false, error: "You do not have access to this any more. Ask your agent." }, 403);
   const member = m.data;
+
+  /* Sending a document (manual review WS11.3): the same two steps as the
+     agent's upload. The slot answers with where to put the bytes, so it
+     returns its data rather than a bare ok. */
+  if (action === "doc-slot") {
+    const slot = await clientUploadSlot(member);
+    if (!slot.ok) return refusal(action, slot.error);
+    if ("skipped" in slot) return json({ ok: false, error: slot.reason }, 503);
+    return json({ ok: true, path: slot.data.path, url: slot.data.url });
+  }
+  if (action === "doc-finish") {
+    const fin = await clientUploadFinish(member, {
+      path: str(b.path, 200), filename: str(b.filename, 300), type: str(b.type, 100), kind: str(b.kind, 20), label: str(b.label, 160),
+    });
+    if (!fin.ok) return refusal(action, fin.error);
+    if ("skipped" in fin) return json({ ok: false, error: fin.reason }, 503);
+    if ("refused" in fin.data) return json({ ok: false, error: `That file could not be kept: ${fin.data.refused.join("; ")}.` }, 400);
+    return json({ ok: true });
+  }
 
   let r: { ok: boolean; error?: string; reason?: string } & Record<string, unknown>;
   switch (action) {
@@ -162,6 +232,9 @@ export async function POST(req: Request) {
       r = await respondToBid(member, bidId, Number(b.version), instruction as "proceed" | "change" | "stop", str(b.note, 500) || null, requestId);
       break;
     }
+    case "notices":
+      r = await setMyNotices(member, b.on === true);
+      break;
     case "add-home": {
       const h = (b.home ?? {}) as Partial<NewHome>;
       /* Only the known facts, whatever else was posted: this becomes jsonb. */

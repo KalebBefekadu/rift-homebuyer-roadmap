@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { clientIp, limited, ownLink, readJson, visitorSession } from "@/lib/db/guard";
 import { isUuid } from "@/lib/core/ids";
 import { captureLead } from "@/lib/db/leads";
-import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
+import { PHONE_CONSENT, EMAIL_NOTE, BOOKING_EMAIL_NOTE } from "@/lib/core/privacy";
 import { captureOpError } from "@/lib/monitoring/capture";
 import { sendReadout, sendNewLead } from "@/lib/db/email";
 import { currentAgentEmail } from "@/lib/db/service";
@@ -85,6 +85,13 @@ export async function POST(req: Request) {
     ...(typeof lead.note === "string" && lead.note.trim() ? { note: lead.note.trim().slice(0, 300) } : {}),
   };
 
+  /* A booking always needs an email (manual review WS7.3): Kaleb confirms the
+     time there, and a call request with only a phone number had no way to
+     send the confirmation. Checked here, not only on the page. */
+  if (scored.source === "booking" && !email) {
+    return NextResponse.json({ ok: false, error: "an email address is needed to book a call" }, { status: 400 });
+  }
+
   /* The session, so the person can later be erased.
      
      Without it a lead captured from the abroad readout or from /book has no
@@ -101,7 +108,8 @@ export async function POST(req: Request) {
     email: email || undefined,
     phone: phone || undefined,
     phoneConsent: phone ? { granted: phoneTicked, wording: PHONE_CONSENT } : undefined,
-    emailConsentWording: email ? EMAIL_NOTE : undefined,
+    /* The words the person saw: /book shows the shorter booking note. */
+    emailConsentWording: email ? (scored.source === "booking" ? BOOKING_EMAIL_NOTE : EMAIL_NOTE) : undefined,
     lead: scored,
     /* Recorded as evidence of the consent, and for nothing else. It is never
        used to identify or to enrich, and it is deleted with the record. */

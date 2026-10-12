@@ -7,7 +7,8 @@ import { Ico } from "@/components/rift/icons";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { LandingTrack } from "@/components/rift/site/LandingTrack";
-import { ProceedsFlow } from "@/components/rift/value/artifacts";
+import { ProceedsBar } from "@/components/rift/value/artifacts";
+import { ValueArt } from "@/components/rift/value/ValueArt";
 
 export const metadata: Metadata = {
   title: "Know what selling actually leaves you",
@@ -63,6 +64,7 @@ export default function SellLanding() {
                   </span>
                   <span className="kicker c-brand">{v.name}</span>
                 </div>
+                <ValueArt id={v.id} style={{ maxWidth: 180 }} />
                 <h2 className="serif" style={{ fontSize: 25, lineHeight: 1.15, letterSpacing: "-0.018em" }}>{v.question}</h2>
                 <p className="t-md c-3 grow" style={{ lineHeight: 1.55 }}>{v.gives}</p>
                 {k === 0
@@ -88,7 +90,9 @@ export default function SellLanding() {
             </div>
           </div>
           <figure className="art-box">
-            <ProceedsFlow price={SELLER_DEFAULTS.price} net={r.net} parts={[{ label: "Loan payoff", amount: SELLER_DEFAULTS.payoff }, ...r.costs.lines.map((l) => ({ label: l.short, amount: l.amount }))]} />
+            {/* One bar, two cuts (manual review WS3.3, WS5.3). The cost lines
+                one by one are in the selling-costs value. */}
+            <ProceedsBar price={SELLER_DEFAULTS.price} net={r.net} parts={[{ label: "Loan payoff", amount: SELLER_DEFAULTS.payoff }, { label: "Selling costs", amount: r.costs.total }]} />
           </figure>
         </section>
 

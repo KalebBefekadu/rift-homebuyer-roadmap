@@ -1,6 +1,6 @@
 import type { ManagedLead } from "@/lib/core/pipeline";
 import { STOPS } from "@/lib/core/nurture";
-import { ago, sourceLabel } from "@/lib/core/people";
+import { ago, sourceLabel, fromVisitor } from "@/lib/core/people";
 import { showDay } from "@/lib/core/day";
 import { Ico } from "@/components/rift/icons";
 import { Section, Notice } from "../../ui";
@@ -48,7 +48,7 @@ export function Contact({ lead, background }: { lead: ManagedLead; background: B
               <Channel label="Email" c={c.email} />
               <Channel label="Phone and text" c={c.phone} />
             </div>
-          ) : lead.source === "funnel" ? (
+          ) : fromVisitor(lead.source) ? (
             <p className="t-sm c-3" style={{ lineHeight: 1.55 }}>No consent answer is recorded for them.</p>
           ) : null}
 

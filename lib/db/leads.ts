@@ -469,3 +469,34 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
     return failed(e);
   }
 }
+
+/**
+ * The second step of a lead that arrived in two (the Equb form, manual review
+ * WS2.10): the answers that came after the contact details. Only `timing`,
+ * `value` and `note` change, and the score is recomputed from the merged
+ * input so the lead ranks on what it now says. The caller has already proved
+ * this lead is theirs (lib/core/signed.ts); this function trusts the id.
+ */
+export async function completeLead(id: string, more: { timing?: string; value?: number; note?: string }): Promise<DbResult<{ id: string; score: LeadScore }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  if (!isUuid(id)) return failed("that request could not be found");
+  const read = await withTimeout(Promise.resolve(db.from("rift_leads").select("lead_input").eq("id", id).maybeSingle()), WRITE_DEADLINE_MS, null);
+  if (read.timedOut || !read.value) return failed("the request did not load in time");
+  if (read.value.error) return failed(read.value.error.message);
+  if (!read.value.data) return failed("that request could not be found");
+  const before = (read.value.data.lead_input ?? {}) as LeadInput;
+  const merged: LeadInput = {
+    ...before,
+    ...(more.timing ? { timing: more.timing.slice(0, 200) } : {}),
+    ...(typeof more.value === "number" && more.value > 0 ? { value: more.value } : {}),
+    ...(more.note ? { note: more.note.slice(0, 300) } : {}),
+  };
+  const score = scoreLead(merged);
+  const wrote = await boundedWrite(
+    db.from("rift_leads").update({ lead_input: merged as never, score: score.score, band: score.band, signals: score.signals as never }).eq("id", id),
+    "your answers",
+  );
+  if (!wrote.ok) return wrote;
+  return done({ id, score });
+}

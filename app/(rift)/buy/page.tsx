@@ -9,7 +9,8 @@ import { Ico } from "@/components/rift/icons";
 import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import { LandingTrack } from "@/components/rift/site/LandingTrack";
-import { CashStack } from "@/components/rift/value/artifacts";
+import { CashBreakdown } from "@/components/rift/value/CashBreakdown";
+import { ValueArt } from "@/components/rift/value/ValueArt";
 
 export const metadata: Metadata = {
   title: "What will buying a home in Georgia really take?",
@@ -17,8 +18,9 @@ export const metadata: Metadata = {
     "The down payment is not the number. Check the Georgia programs that may help you, your real cash to close, your monthly cost and when you could buy, from your own numbers.",
 };
 
-/* The program count below is the assistance engine's, after the weekly
-   checks; an hour is short enough to be honest and long enough to be cheap. */
+/* Which programs are shown comes from the weekly checks; an hour is short
+   enough to be honest and long enough to be cheap. The count is no longer
+   printed (manual review WS4.3): it changes as programs open and close. */
 export const revalidate = 3600;
 
 const ICON = { assistance: Ico.spark, cash: Ico.wallet, monthly: Ico.cal, timeline: Ico.clock, afford: Ico.home, lender: Ico.doc } as const;
@@ -72,6 +74,7 @@ export default async function BuyLanding() {
                   </span>
                   <span className="kicker c-brand">{v.name}</span>
                 </div>
+                <ValueArt id={v.id} style={{ maxWidth: 180 }} />
                 <h2 className="serif" style={{ fontSize: 25, lineHeight: 1.15, letterSpacing: "-0.018em" }}>{v.question}</h2>
                 <p className="t-md c-3 grow" style={{ lineHeight: 1.55 }}>{v.gives}</p>
                 {/* One primary action per view (§4.4): the first value carries it. */}
@@ -96,14 +99,14 @@ export default async function BuyLanding() {
               <Link href="/buy/cash-to-close" className="btn btn-brand btn-lg">See my cash to close<Ico.arrowR size={15} /></Link>
             </div>
           </div>
-          <figure className="art-box"><CashStack lines={cash.lines} total={cash.total} down={cash.down} /></figure>
+          <figure className="art-box"><CashBreakdown lines={cash.lines} total={cash.total} down={cash.down} /></figure>
         </section>
 
         <section className="sec">
           <div className="card p-6 between wrap gap-4">
             <div className="measure">
               <div className="kicker c-brand">Georgia programs</div>
-              <h2 className="t-xl serif mt-2">{shown.length > 0 ? `${shown.length} Georgia programs, each checked against its official page.` : "Every program we check, in one table."}</h2>
+              <h2 className="t-xl serif mt-2">{shown.length > 0 ? "Georgia programs, each checked against its official page." : "Every program we check, in one table."}</h2>
               <p className="t-md c-3 mt-2" style={{ lineHeight: 1.6 }}>
                 Down payment help from the state, counties, cities and lenders, each with its official source
                 and the date it was last checked. Filter and sort them yourself.

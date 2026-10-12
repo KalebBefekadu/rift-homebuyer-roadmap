@@ -20,27 +20,15 @@ Everything else exists to make that promise survivable at scale for one person.
 
 **The production product is not built yet.** Building it is the job.
 
-## Before you write any code — the review gate
+## Before you write any code
 
-**Your first deliverable is findings, not a migration.**
+Read the documents and run the prototype first. Schema and product work no longer waits on a
+separate findings review (Kaleb, 5 October 2026): report anything ambiguous or contradictory in
+the same change that builds around it, in `docs/handoff.md` §8 or the commit, so it is still
+written down where the next person will look.
 
-Read the documents, run the prototype, then report: the phase-1 plan, the first migration as
-SQL, **everything you found ambiguous or contradictory, and anything you would push back on.**
-Then stop. Do not apply a migration and do not start product routes until those findings have
-been accepted, rejected, or parked in `docs/handoff.md` §8.
-
-This exists because the failure mode is not refusing to report problems — it is reporting them
-and starting to code in the same breath, so nobody reads them until the decision is already
-cast in a schema. A review pass that arrives alongside the thing it was supposed to review is
-not a review.
-
-Six documentation defects were found this way and fixed before the first migration, including
-a retention period stated as 13 months in `docs/schema.md` and 24 months in the code rendered
-to the customer. An engineer building the deletion job from the document would have shipped a
-product that breaks a promise made on screen, and nothing would have failed.
-
-`npm test` now includes `lib/core/docs.test.ts`, which fails when the docs and the code
-disagree about a number that matters. It does not check prose. Keep finding the rest.
+`npm test` includes `lib/core/docs.test.ts`, which fails when the docs and the code disagree
+about a number that matters. It does not check prose. Keep finding the rest.
 
 ## Read in this order
 
@@ -87,11 +75,6 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 
 ## How to work
 
-- **Kickoff before product code.** A new implementation thread pastes `docs/agent-kickoff.md`
-  (everything below the rule) and **does not write schema, product routes, or persistence
-  until items 3 and 4 have been reviewed**. A capable agent will otherwise implement around
-  problems in a confident spec rather than report them. The tiebreaker is already named:
-  the prototype wins; `docs/handoff.md` §8 covers what is not the engineer's call.
 - **Match the surrounding code.** This codebase comments *why*, not *what*, and the comments
   carry real reasoning. Keep that. A comment restating the line below it is noise; a comment
   explaining why the obvious approach is wrong is the most valuable line in the file.

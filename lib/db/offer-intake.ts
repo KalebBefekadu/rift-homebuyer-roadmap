@@ -5,9 +5,8 @@ import { done, failed, skipped, type DbResult } from "./result";
 import { captureLead } from "./leads";
 import type { Submission } from "@/lib/core/offer-intake";
 import type { Candidates } from "@/lib/core/offer-extract";
-import { attachOfferPdf } from "./offer-read";
+import { filesForOffers, linkUploadToOffer, uploadIdOf, type UploadFile } from "./offer-upload";
 import { offerAnswers, type OfferAnswer } from "./offer-answers";
-import { captureOpError } from "@/lib/monitoring/capture";
 
 /**
  * Storing an offer that arrived from outside.
@@ -73,19 +72,13 @@ export async function submitOffer(s: Submission, meta: { sessionId?: string; ip?
     if (!offer.ok) return offer;
     const offerId = ("data" in offer ? (offer.data as { id: string } | null)?.id : null) ?? null;
 
-    /* The PDF, if there was one, joins the offer it belongs to, with what the
-       automatic read proposed kept beside what the sender actually sent. A
-       failure here never fails the offer: the terms are what was delivered. */
-    if (offerId && s.documentToken) {
-      const att = await attachOfferPdf(s.documentToken, offerId);
-      if (att) {
-        const u = await boundedWrite(
-          db.from("rift_offers").update({ document_path: att.path, read_candidates: att.candidates }).eq("id", offerId),
-          "the offer PDF",
-        );
-        if (!u.ok) captureOpError(new Error(u.error), { op: "offer.attach.row" });
-      }
-    }
+    /* The PDFs, if there were any, join the offer they belong to, with what
+       the automatic read proposed kept beside what the sender actually sent.
+       They were already Kaleb's from the moment they were uploaded; this
+       only says which offer they are. A failure here never fails the offer:
+       the terms are what was delivered. */
+    const uploadId = uploadIdOf(s.uploadToken);
+    if (offerId && uploadId) await linkUploadToOffer(uploadId, offerId);
 
     /**
      * The relationship.
@@ -174,6 +167,8 @@ export interface InboundOffer {
   dueDiligenceDays: number | null;
   /** A short-lived link to the PDF the sender uploaded. */
   pdfUrl: string | null;
+  /** Every PDF on it, the offer first and then any addenda (WS8.3). Empty for an offer sent before uploads were kept. */
+  pdfs: UploadFile[];
   /** What the automatic read proposed, to set beside what was sent. */
   read: Candidates | null;
   /**
@@ -216,6 +211,7 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
     const l = await boundedWrite(db.storage.from("rift-documents").createSignedUrl(o.document_path as string, 600), "the offer PDF link");
     if (l.ok && "data" in l && l.data) links.set(o.id as string, (l.data as { signedUrl: string }).signedUrl);
   }));
+  const pdfs = await filesForOffers(rows.map((o) => o.id as string));
   return done(rows.map((o) => ({
     id: o.id as string,
     address: (o.property_address as string | null) ?? null,
@@ -239,6 +235,7 @@ export async function inboundOffers(limit = 50): Promise<DbResult<InboundOffer[]
     financingOther: (o.financing_other as string | null) ?? null,
     dueDiligenceDays: typeof o.due_diligence_days === "number" ? o.due_diligence_days : null,
     pdfUrl: links.get(o.id as string) ?? null,
+    pdfs: pdfs.get(o.id as string) ?? [],
     read: (o.read_candidates as Candidates | null) ?? null,
     answer: answers?.get(o.id as string) ?? null,
     answerable: answers !== null,

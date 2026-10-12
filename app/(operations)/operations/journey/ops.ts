@@ -5,7 +5,10 @@ import { siteUrl } from "@/lib/core/site";
 import { buyerSearchOn, type Role, type Scope, type Side } from "@/lib/core/journey";
 import type { Cadence, PropertyFacts, SearchBrief } from "@/lib/core/search";
 import type { DbResult } from "@/lib/db/result";
-import { createJourney, invite, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
+import { createJourney, invite, invitedMemberForToken, joinedMemberEmail, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
+import { sendSignInLink } from "@/lib/db/signin";
+import { sendInvitation } from "@/lib/db/email";
+import { tellHousehold } from "@/lib/db/notices";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
@@ -92,6 +95,8 @@ export async function saveBrief(journeyId: string, brief: SearchBrief, expectedL
     return { ok: false as const, error: "The brief is malformed. Reload and try again" };
   }
   const r = await saveAgentRevision(journeyId, brief, expectedLatest, note, g.name);
+  /* The household checks the priorities (WS11.5). Told after the write, never instead of it. */
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "priorities", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   revalidatePath("/operations/search");
   return out(r, (d) => ({ revision: d.revision }));
@@ -143,7 +148,27 @@ export async function inviteMember(journeyId: string, input: { email: string; na
   if (!origin) return { ok: false as const, error: "This deployment does not know its own address, so it cannot make a link" };
   const r = await invite(journeyId, { email: input.email, name: input.name || null, role: input.role, scopes: input.scopes });
   revalidatePath(`/operations/journey/${journeyId}`);
-  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt }));
+  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt, memberId: d.memberId }));
+}
+
+/**
+ * Emails an invitation link the agent was just shown, when he presses Send
+ * after reading the email (manual review WS10.4, decision D04).
+ */
+export async function emailInvitation(journeyId: string, memberId: string, link: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(memberId)) return { ok: false as const, error: "That person could not be found" };
+  const token = /\/app\/invite\/([A-Za-z0-9_-]+)$/.exec(link)?.[1] ?? "";
+  const r = await invitedMemberForToken(journeyId, memberId, token);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  const origin = siteUrl();
+  if (!origin) return { ok: false as const, error: "This deployment does not know its own address" };
+  const sent = await sendInvitation({ to: r.data.email, name: r.data.name, agentName: g.name, journeyLabel: r.data.journeyLabel, link: `${origin}/app/invite/${token}` });
+  if (!sent.ok) return { ok: false as const, error: "The email could not be sent. Check the email settings in /api/health" };
+  if ("skipped" in sent) return { ok: false as const, error: "Email is not set up on this deployment, so nothing was sent. Copy the link instead" };
+  return { ok: true as const };
 }
 
 export async function newInviteLink(journeyId: string, memberId: string) {
@@ -153,7 +178,22 @@ export async function newInviteLink(journeyId: string, memberId: string) {
   if (!origin) return { ok: false as const, error: "This deployment does not know its own address, so it cannot make a link" };
   const r = await reissueInvite(memberId);
   revalidatePath(`/operations/journey/${journeyId}`);
-  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt }));
+  return out(r, (d) => ({ link: `${origin}/app/invite/${d.token}`, expiresAt: d.expiresAt, memberId: d.memberId }));
+}
+
+/**
+ * Emails a joined member a sign-in link, when the agent presses the button
+ * (manual review WS1.7). Pressing it is the approval decision D04 asks for.
+ */
+export async function sendMemberSignIn(journeyId: string, memberId: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  if (!isUuid(memberId)) return { ok: false as const, error: "That person could not be found" };
+  const r = await joinedMemberEmail(journeyId, memberId);
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  const sent = await sendSignInLink(r.data, `/app/j/${journeyId}`);
+  return sent ? { ok: true as const } : { ok: false as const, error: "The email could not be sent. Check the email settings in /api/health" };
 }
 
 export async function withdrawAccess(journeyId: string, memberId: string) {
@@ -170,6 +210,7 @@ export async function addShortlistHome(journeyId: string, input: {
   const g = await gate();
   if ("error" in g) return { ok: false as const, error: g.error };
   const r = await addHome(journeyId, { ...input, url: input.url.trim() || null }, g.name);
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "home", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }
@@ -309,6 +350,8 @@ export async function bidStep(journeyId: string, bidId: string, input: BidStepIn
     return { ok: false as const, error: "Reload the page and try again" };
   }
   const r = await recordBidStep(journeyId, bidId, input, expectedSeq, g.name, first(g.name), requestId);
+  /* Only the step that puts terms to the household is news to them. */
+  if (input.kind === "ask" && r.ok && !("skipped" in r)) await tellHousehold(journeyId, "offer", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
 }
@@ -402,6 +445,7 @@ export async function recordPricing(journeyId: string, input: PricingInput, expe
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId) || !Number.isInteger(expectedVersion) || expectedVersion < 0) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordOpinion(journeyId, input, expectedVersion, g.name, requestId);
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "pricing", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ version: d.version }));
 }
@@ -412,6 +456,7 @@ export async function recordProceeds(journeyId: string, input: FigureInput, requ
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordFigure(journeyId, input, g.name, requestId);
+  if (r.ok && !("skipped" in r)) await tellHousehold(journeyId, "proceeds", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r);
 }

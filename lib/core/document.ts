@@ -119,3 +119,18 @@ export function labelError(label: string, family: string): string | null {
   if (t.length > LABEL_MAX) return `Keep the name under ${LABEL_MAX} characters`;
   return null;
 }
+
+/**
+ * What a household member can send from the portal (manual review WS11.3),
+ * with the family it is filed under and the name it starts with. The member
+ * can rename it; the family is fixed by the choice, so a client never files
+ * anything as an offer or a contract.
+ */
+export const CLIENT_KINDS = [
+  { id: "preapproval", family: "lender", name: "Pre-approval letter", label: "Pre-approval letter" },
+  { id: "funds", family: "lender", name: "Proof of funds", label: "Proof of funds" },
+  { id: "id", family: "other", name: "Photo ID", label: "Photo ID" },
+  { id: "other", family: "other", name: "Something else", label: "" },
+] as const satisfies readonly { id: string; family: Family; name: string; label: string }[];
+export type ClientKind = (typeof CLIENT_KINDS)[number]["id"];
+export const clientKind = (id: unknown) => CLIENT_KINDS.find((k) => k.id === id) ?? null;

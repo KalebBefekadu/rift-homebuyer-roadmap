@@ -205,10 +205,11 @@ describe("sending is required, and says who is sending (Blueprint v5 §5.9)", ()
   });
 
   it("carries a PDF token only in the shape the reader makes", () => {
-    const good = readSubmission({ ...RAW, documentToken: "0f8fad5b-d9cb-469f-a165-70867728950e" });
-    expect(good.ok && good.value.documentToken).toBe("0f8fad5b-d9cb-469f-a165-70867728950e");
-    const bad = readSubmission({ ...RAW, documentToken: "../../etc/passwd" });
-    expect(bad.ok && bad.value.documentToken).toBeNull();
+    const token = "0f8fad5b-d9cb-469f-a165-70867728950e.mabc12.AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-ab";
+    const good = readSubmission({ ...RAW, uploadToken: token });
+    expect(good.ok && good.value.uploadToken).toBe(token);
+    const bad = readSubmission({ ...RAW, uploadToken: "../../etc/passwd" });
+    expect(bad.ok && bad.value.uploadToken).toBeNull();
   });
 });
 

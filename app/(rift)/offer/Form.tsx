@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { LiveRegion } from "@/components/rift/Live";
@@ -8,9 +8,10 @@ import { SiteHeader } from "@/components/rift/site/SiteHeader";
 import { SiteFooter } from "@/components/rift/site/SiteFooter";
 import type { Candidates, Field } from "@/lib/core/offer-extract";
 import {
-  readSubmission, read, ASSUMED_COMMISSION_PCT,
+  readSubmission, read, ASSUMED_COMMISSION_PCT, type FieldErrors, type SubmissionField,
   MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_OFFER_PDF_BYTES, MAX_OFFER_PDF_SAY,
 } from "@/lib/core/offer-intake";
+import { readSender, MAX_OFFER_FILES, type SenderField } from "@/lib/core/offer-upload";
 import { sessionId } from "@/lib/rift/session";
 import { money } from "@/lib/core/compute";
 import { typedNumber } from "@/lib/core/typed";
@@ -40,6 +41,11 @@ const CONTINGENCIES = ["Inspection", "Appraisal", "Financing", "Sale of buyer's 
  * changes or confirms it; a read that is off, over its limit or failed says
  * so and leaves the boxes to fill by hand. Sending is the point of the page,
  * so who is sending and a phone number are required.
+ *
+ * The upload is itself a delivery (manual review WS8.2): the name and phone
+ * are asked before the file, and the moment the PDF is stored Kaleb has it,
+ * whether or not the boxes below are ever sent. More PDFs (addenda) can be
+ * added to the same offer from the same place (WS8.3).
  */
 export function Form() {
   const [address, setAddress] = useState("");
@@ -50,7 +56,9 @@ export function Form() {
   const [financingOther, setFinancingOther] = useState("");
   const [closeOn, setCloseOn] = useState("");
   const [dueDiligenceDays, setDueDiligenceDays] = useState("");
-  const [contingencies, setContingencies] = useState<string[]>(["Inspection", "Appraisal"]);
+  /* None ticked until the sender or their PDF says so (manual review WS8.5):
+     a pre-ticked box is a term the sender never chose. */
+  const [contingencies, setContingencies] = useState<string[]>([]);
   const [preapproval, setPreapproval] = useState(false);
   const [proofOfFunds, setProofOfFunds] = useState(false);
   /* Kept as typed. It was stored as a clamped number, so the box re-rendered
@@ -74,13 +82,21 @@ export function Form() {
      PDF" until the sender edits it, so nothing read is mistaken for typed. */
   const [reading_, setReading] = useState<"idle" | "reading" | "done">("idle");
   const [readSay, setReadSay] = useState<string | null>(null);
-  const [documentToken, setDocumentToken] = useState<string | null>(null);
+  /* The signed name of this offer's upload, sent back with addenda and the form. */
+  const [uploadToken, setUploadToken] = useState<string | null>(null);
+  const [files, setFiles] = useState<{ name: string }[]>([]);
+  const [senderErrors, setSenderErrors] = useState<Partial<Record<SenderField, string>>>({});
   const [fromPdf, setFromPdf] = useState<Candidates>({});
   const touched = (f: Field) => setFromPdf((c) => { const n = { ...c }; delete n[f]; return n; });
 
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  /* Upload first (WS8.1): the boxes appear once a PDF is chosen, or when the
+     sender says they have none. */
+  const [byHand, setByHand] = useState(false);
+  const showForm = byHand || reading_ !== "idle";
   /* Distinguished from "you left the address blank": one is theirs to fix and
      one is ours, and only ours warrants sending them somewhere else. */
   const [failedToSend, setFailedToSend] = useState(false);
@@ -102,11 +118,11 @@ export function Form() {
     address: address || "placeholder address",
     price: num(price), concessions: num(concessions),
     earnest: num(earnest), financing, financingOther, closeOn, dueDiligenceDays, contingencies,
-    preapproval, proofOfFunds, documentToken,
+    preapproval, proofOfFunds, uploadToken,
     from: from || "Someone", email: email || "someone@example.com",
     phone: phone || "000 000 0000", note, representing: representing ?? "buyer",
   }), [address, price, concessions, earnest, financing, financingOther, closeOn, dueDiligenceDays,
-       contingencies, preapproval, proofOfFunds, documentToken, from, email, phone, note, representing]);
+       contingencies, preapproval, proofOfFunds, uploadToken, from, email, phone, note, representing]);
 
   const parsed = readSubmission(draft);
   const reading = parsed.ok && !unreadable.length && num(price) > 0 ? read(parsed.value, commissionPct) : null;
@@ -114,8 +130,20 @@ export function Form() {
   const toggle = (c: string) =>
     setContingencies((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
 
+  /* Who is sending, asked before the file: the upload is the delivery. */
+  const sender = readSender({ name: from, phone, email });
+  const checkSender = () => {
+    if (sender.ok) { setSenderErrors({}); return true; }
+    setSenderErrors(sender.fields);
+    const firstBad = Object.keys(sender.fields)[0];
+    document.getElementById(`offer-${firstBad === "name" ? "from" : firstBad}`)?.focus();
+    return false;
+  };
+
   const upload = async (file: File | undefined) => {
     if (!file) return;
+    if (!checkSender()) return;
+    const addendum = files.length > 0;
     /* Checked here because past about 4.5 MB the host refuses the upload
        before our route runs, and what comes back is its error page, not a
        sentence. Nothing is sent that could only fail. */
@@ -125,12 +153,21 @@ export function Form() {
     try {
       const body = new FormData();
       body.append("file", file);
+      body.append("name", from);
+      body.append("phone", phone);
+      body.append("email", email);
+      if (uploadToken) body.append("upload", uploadToken);
       const res = await fetch("/api/offer/read", { method: "POST", body });
-      const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; token?: string | null; candidates?: Candidates };
+      const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; upload?: string | null; files?: { name: string }[]; candidates?: Candidates; fields?: Partial<Record<SenderField, string>> };
+      if (j?.fields) setSenderErrors(j.fields);
       /* A 413 without our JSON is the host's limit, reached despite the check
          above (a limit lowered after this page loaded): still a size. */
       if (!j?.ok) { setReadSay(j?.error ?? (res.status === 413 ? MAX_OFFER_PDF_SAY : "That file could not be read. Fill in the boxes instead.")); setReading("done"); return; }
-      setDocumentToken(j.token ?? null);
+      if (j.upload) setUploadToken(j.upload);
+      if (j.files?.length) setFiles(j.files);
+      /* An addendum is kept, not read: the boxes are the offer's, and the
+         sender may already have corrected them. */
+      if (addendum) { setReadSay(j.say ?? null); setReading("done"); return; }
       const c = j.candidates ?? {};
       if (c.address) setAddress(c.address.value);
       if (c.price) setPrice(c.price.value);
@@ -149,10 +186,29 @@ export function Form() {
     setReading("done");
   };
 
+  /* The first box with a problem gets focus, so a keyboard or screen reader
+     user lands where the fix is rather than at a list at the bottom. */
+  const [focusTo, setFocusTo] = useState<SubmissionField | null>(null);
+  useEffect(() => {
+    if (!focusTo) return;
+    document.getElementById(`offer-${focusTo}`)?.focus();
+    setFocusTo(null);
+  }, [focusTo]);
+
   const send = async () => {
-    if (unreadable.length) { setErrors(unreadable); setFailedToSend(false); return; }
+    if (unreadable.length) { setErrors(unreadable); setFieldErrors({}); setFailedToSend(false); return; }
     const real = readSubmission({ ...draft, address, from, email, phone, representing });
-    if (!real.ok) { setErrors(real.errors); setFailedToSend(false); return; }
+    if (!real.ok) {
+      setFieldErrors(real.fields);
+      /* Messages with a box go under the box; anything without one stays in the list. */
+      const placed = new Set(Object.values(real.fields));
+      setErrors(real.errors.filter((e) => !placed.has(e)));
+      setFailedToSend(false);
+      const order: SubmissionField[] = ["from", "phone", "email", "address", "price", "financing", "financingOther", "dueDiligenceDays", "closeOn", "representing"];
+      setFocusTo(order.find((f) => real.fields[f]) ?? null);
+      return;
+    }
+    setFieldErrors({});
     setErrors([]);
     setFailedToSend(false);
     setSending(true);
@@ -183,20 +239,58 @@ export function Form() {
         <section className="card p-5" style={{ marginTop: 24, background: "var(--brand-wash)", borderColor: "var(--brand-line)" }}>
           <div className="t-md w6">Upload your offer in PDF</div>
           <p className="t-sm c-2" style={{ marginTop: 6, lineHeight: 1.6 }}>
-            We read it and fill in the boxes below for you to check. Or skip this and type them.
-            Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB.
+            Start here. Kaleb has your offer the moment the PDF uploads, even if you stop there. We also read it
+            and fill in the boxes below for you to check, whatever we manage to find. Up to {MAX_OFFER_PDF_BYTES / 1024 / 1024} MB a file.
           </p>
-          <label className="btn btn-brand" style={{ marginTop: 12, cursor: "pointer" }}>
-            <Ico.doc size={15} />{reading_ === "reading" ? "Reading your offer…" : documentToken ? "Choose a different PDF" : "Choose the PDF"}
-            <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
-              onChange={(e) => {
-                /* Cleared once taken, so choosing the same file again after
-                   a failed read tries again instead of doing nothing. */
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                void upload(file);
-              }} />
+
+          {/* Asked before the file, because the upload is the delivery and an
+              offer nobody can be called about cannot be answered (WS8.2). */}
+          <div className="g2 gap-2" style={{ marginTop: 12 }}>
+            <label className="field">
+              <span className="label">Your name</span>
+              <input id="offer-from" className="input" autoComplete="name" value={from}
+                onChange={(e) => setFrom(e.target.value)} {...invalid(senderErrors.name ?? fieldErrors.from, "from")} />
+              <Err id="from" msg={senderErrors.name ?? fieldErrors.from} />
+            </label>
+            <label className="field">
+              <span className="label">Phone</span>
+              <input id="offer-phone" className="input" type="tel" autoComplete="tel" value={phone}
+                onChange={(e) => setPhone(e.target.value)} {...invalid(senderErrors.phone ?? fieldErrors.phone, "phone")} />
+              <Err id="phone" msg={senderErrors.phone ?? fieldErrors.phone} />
+            </label>
+          </div>
+          <label className="field" style={{ marginTop: 10 }}>
+            <span className="label">Email <span className="c-4">(needed to send the form, not to upload)</span></span>
+            <input id="offer-email" className="input" type="email" autoComplete="email" value={email}
+              onChange={(e) => setEmail(e.target.value)} {...invalid(senderErrors.email ?? fieldErrors.email, "email")} />
+            <Err id="email" msg={senderErrors.email ?? fieldErrors.email} />
           </label>
+
+          {files.length ? (
+            <ul className="t-sm" style={{ marginTop: 12, display: "grid", gap: 4 }} aria-label="PDFs Kaleb has">
+              {files.map((f, k) => (
+                <li key={`${f.name}-${k}`} className="row gap-2">
+                  <Ico.check size={13} className="c-pos" style={{ flex: "none", marginTop: 3 }} />
+                  <span>{f.name}<span className="t-xs c-3"> · {k === 0 ? "the offer" : "added"}, delivered</span></span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {files.length < MAX_OFFER_FILES ? (
+            <label className={`btn ${files.length ? "btn-g" : "btn-brand"}`} style={{ marginTop: 12, cursor: "pointer", position: "relative" }}>
+              <Ico.doc size={15} />{reading_ === "reading" ? (files.length ? "Adding…" : "Reading your offer…") : files.length ? "Add another PDF (an addendum)" : "Choose the PDF"}
+              <input type="file" accept="application/pdf,.pdf" className="sr-only" disabled={reading_ === "reading"}
+                onClick={(e) => { if (!checkSender()) e.preventDefault(); }}
+                onChange={(e) => {
+                  /* Cleared once taken, so choosing the same file again after
+                     a failed read tries again instead of doing nothing. */
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  void upload(file);
+                }} />
+            </label>
+          ) : <p className="t-xs c-3" style={{ marginTop: 10 }}>That is the most one offer can carry here. Email anything else to Kaleb.</p>}
           {/* Always in the page, so a screen reader is listening before the
               answer arrives: a live region inserted with its text already
               in it is often not read out at all. */}
@@ -205,20 +299,23 @@ export function Form() {
           </LiveRegion>
         </section>
 
+        {showForm ? (<>
         <section className="card p-5" style={{ marginTop: 24 }}>
           <div className="t-sm w6">The offer</div>
 
           <label className="field" style={{ marginTop: 14 }}>
             <span className="label">Property address<FromPdf c={fromPdf.address} /></span>
-            <input className="input" value={address} onChange={(e) => { setAddress(e.target.value); touched("address"); }}
-              placeholder="119 Peachtree Way, Atlanta, GA 30309" />
+            <input id="offer-address" className="input" value={address} onChange={(e) => { setAddress(e.target.value); touched("address"); }}
+              placeholder="119 Peachtree Way, Atlanta, GA 30309" {...invalid(fieldErrors.address, "address")} />
+            <Err id="address" msg={fieldErrors.address} />
           </label>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
               <span className="label">Offer price<FromPdf c={fromPdf.price} /></span>
-              <input className="input" inputMode="numeric" value={price}
-                onChange={(e) => { setPrice(e.target.value); touched("price"); }} placeholder="410,000" />
+              <input id="offer-price" className="input" inputMode="numeric" value={price}
+                onChange={(e) => { setPrice(e.target.value); touched("price"); }} placeholder="410,000" {...invalid(fieldErrors.price, "price")} />
+              <Err id="price" msg={fieldErrors.price} />
             </label>
             <label className="field">
               <span className="label">Earnest money<FromPdf c={fromPdf.earnest} /></span>
@@ -235,28 +332,31 @@ export function Form() {
             </label>
             <label className="field">
               <span className="label">Due diligence days<FromPdf c={fromPdf.dueDiligenceDays} /></span>
-              <input className="input" inputMode="numeric" value={dueDiligenceDays}
-                onChange={(e) => { setDueDiligenceDays(e.target.value.replace(/[^0-9]/g, "")); touched("dueDiligenceDays"); }} placeholder="10" />
+              <input id="offer-dueDiligenceDays" className="input" inputMode="numeric" value={dueDiligenceDays}
+                onChange={(e) => { setDueDiligenceDays(e.target.value.replace(/[^0-9]/g, "")); touched("dueDiligenceDays"); }} placeholder="10" {...invalid(fieldErrors.dueDiligenceDays, "dueDiligenceDays")} />
+              <Err id="dueDiligenceDays" msg={fieldErrors.dueDiligenceDays} />
             </label>
           </div>
 
           <div className="g2 gap-2" style={{ marginTop: 12 }}>
             <label className="field">
               <span className="label">Financing<FromPdf c={fromPdf.financing} /></span>
-              <select className="input" value={financing} onChange={(e) => { setFinancing(e.target.value); touched("financing"); }}>
+              <select id="offer-financing" className="input" value={financing} onChange={(e) => { setFinancing(e.target.value); touched("financing"); }} {...invalid(fieldErrors.financing, "financing")}>
                 {FINANCING.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </label>
             <label className="field">
               <span className="label">Target closing date<FromPdf c={fromPdf.closeOn} /></span>
-              <input className="input" type="date" value={closeOn} onChange={(e) => { setCloseOn(e.target.value); touched("closeOn"); }} />
+              <input id="offer-closeOn" className="input" type="date" value={closeOn} onChange={(e) => { setCloseOn(e.target.value); touched("closeOn"); }} {...invalid(fieldErrors.closeOn, "closeOn")} />
+              <Err id="closeOn" msg={fieldErrors.closeOn} />
             </label>
           </div>
           {financing === "other" ? (
             <label className="field" style={{ marginTop: 12 }}>
               <span className="label">What kind of financing?<FromPdf c={fromPdf.financingOther} /></span>
-              <input className="input" value={financingOther} maxLength={80}
-                onChange={(e) => { setFinancingOther(e.target.value); touched("financingOther"); }} placeholder="For example, seller financing" />
+              <input id="offer-financingOther" className="input" value={financingOther} maxLength={80}
+                onChange={(e) => { setFinancingOther(e.target.value); touched("financingOther"); }} placeholder="For example, seller financing" {...invalid(fieldErrors.financingOther, "financingOther")} />
+              <Err id="financingOther" msg={fieldErrors.financingOther} />
             </label>
           ) : null}
 
@@ -359,31 +459,30 @@ export function Form() {
         <section className="card p-5" style={{ marginTop: 16 }}>
           <div className="t-md w6">Send it to Kaleb</div>
 
-          <fieldset style={{ marginTop: 12, border: 0, padding: 0 }}>
+          {/* Two cards that read as a choice at a glance (WS8.6): a border, a
+              radio mark and a hover state, and a real radio group underneath. */}
+          <fieldset style={{ marginTop: 12, border: 0, padding: 0 }} aria-describedby={fieldErrors.representing ? "offer-representing-err" : undefined}>
             <legend className="label">You are</legend>
-            <div className="row gap-2 wrap" style={{ marginTop: 6 }}>
-              {([["buyer", "A real estate agent"], ["self", "The buyer"]] as const).map(([v, l]) => (
-                <button key={v} type="button" className={`btn btn-sm ${representing === v ? "btn-p" : "btn-g"}`}
-                  aria-pressed={representing === v} onClick={() => setRepresenting(v)}>{l}</button>
+            <div className="g2 gap-2" style={{ marginTop: 6 }} role="radiogroup">
+              {([["buyer", "A real estate agent", "Sending for a buyer you represent"], ["self", "The buyer", "Sending your own offer"]] as const).map(([v, l, sub], k) => (
+                <label key={v} className="opt lift" data-on={representing === v}
+                  style={{ cursor: "pointer", alignItems: "flex-start", ...(fieldErrors.representing ? { borderColor: "var(--neg)" } : {}) }}>
+                  <input type="radio" name="representing" id={k === 0 ? "offer-representing" : undefined}
+                    checked={representing === v} onChange={() => setRepresenting(v)} style={{ marginTop: 3 }} />
+                  <span><span className="t-sm w6" style={{ display: "block" }}>{l}</span><span className="t-xs c-3">{sub}</span></span>
+                </label>
               ))}
             </div>
+            <Err id="representing" msg={fieldErrors.representing} />
           </fieldset>
 
-          <div className="g2 gap-2" style={{ marginTop: 12 }}>
-            <label className="field">
-              <span className="label">Your name</span>
-              <input className="input" autoComplete="name" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </label>
-            <label className="field">
-              <span className="label">Phone</span>
-              <input className="input" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </label>
-          </div>
-
-          <label className="field" style={{ marginTop: 12 }}>
-            <span className="label">Email</span>
-            <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
+          {/* The name, phone and email are asked once, at the top with the
+              upload; repeated here they were two boxes bound to one value. */}
+          <p className="t-sm c-2" style={{ marginTop: 12 }}>
+            From {from.trim() || <span className="c-3">(your name, above)</span>}
+            {phone.trim() ? `, ${phone.trim()}` : ""}{email.trim() ? `, ${email.trim()}` : ""}.{" "}
+            <a className="btn-link t-xs" href="#offer-from">Change</a>
+          </p>
 
           <label className="field" style={{ marginTop: 12 }}>
             <span className="label">Anything else <span className="c-4">(optional)</span></span>
@@ -394,12 +493,18 @@ export function Form() {
               deliver an offer is not consent to be called about anything else,
               and nothing here stores one. */}
           <p className="t-2xs c-4" style={{ marginTop: 10, lineHeight: 1.6 }}>
-            We keep the offer, the PDF if you uploaded one, and your name, phone and email so Kaleb
-            can reply. None of it is used for marketing.{" "}
+            We keep the offer, any PDFs you uploaded (from the moment they upload), and your name,
+            phone and email so Kaleb can reply. None of it is used for marketing.{" "}
             <Link href="/privacy" className="btn-link">What we keep</Link>.
           </p>
 
           <LiveRegion kind="alert">
+            {Object.keys(fieldErrors).length ? (
+              <p className="t-xs c-neg row gap-2" style={{ marginTop: 10 }}>
+                <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />
+                {Object.keys(fieldErrors).length === 1 ? "One box needs a fix. It is marked above." : `${Object.keys(fieldErrors).length} boxes need a fix. Each is marked above.`}
+              </p>
+            ) : null}
             {errors.length ? (
               <div style={{ marginTop: 10 }}>
                 <ul className="t-xs c-neg" style={{ paddingLeft: 16, lineHeight: 1.6 }}>
@@ -440,6 +545,12 @@ export function Form() {
             </button>
           )}
         </section>
+        </>) : (
+          <p className="t-sm c-3" style={{ marginTop: 14 }}>
+            No PDF?{" "}
+            <button type="button" className="btn-link" onClick={() => setByHand(true)}>Fill in the offer by hand</button>.
+          </p>
+        )}
       </main>
       <SiteFooter />
     </>
@@ -452,6 +563,23 @@ function FromPdf({ c }: { c?: { page: number; quote: string } }) {
   return (
     <span className="chip chip-brand t-2xs" style={{ marginLeft: 6, height: 20 }} title={`“${c.quote}”`}>
       From your PDF, page {c.page}<span className="sr-only">: “{c.quote}”. Check it.</span>
+    </span>
+  );
+}
+
+/* aria-invalid plus the message's id, so a screen reader hears the problem on the box. */
+function invalid(msg: string | undefined, id: SubmissionField) {
+  return msg
+    ? { "aria-invalid": true as const, "aria-describedby": `offer-${id}-err`, style: { borderColor: "var(--neg)", boxShadow: "0 0 0 1px var(--neg)" } }
+    : {};
+}
+
+/** The message under a box: an icon and words, never the red border alone (rule 10). */
+function Err({ id, msg }: { id: SubmissionField; msg?: string }) {
+  if (!msg) return null;
+  return (
+    <span id={`offer-${id}-err`} className="t-xs c-neg row gap-1" style={{ marginTop: 5, alignItems: "flex-start" }}>
+      <Ico.alert size={12} style={{ flex: "none", marginTop: 2 }} />{msg}
     </span>
   );
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { currentAgent } from "@/lib/db/session";
 import { recordOfferAnswer } from "@/lib/db/offer-answers";
+import { removeUpload } from "@/lib/db/offer-upload";
 
 /**
  * Record whether an offer that came in through the form has been answered,
@@ -20,6 +21,22 @@ export async function setOfferAnswer(offerId: string, answered: boolean, respond
   revalidatePath("/operations/offers");
   revalidatePath("/operations", "layout");
 
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+
+/**
+ * Remove a PDF upload that will never be an offer: a test, a duplicate, the
+ * wrong file. Its files go with it. An upload whose form was sent is part of
+ * that offer and is not removed here.
+ */
+export async function removeOfferUpload(uploadId: string) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const r = await removeUpload(uploadId);
+  revalidatePath("/operations/offers");
+  revalidatePath("/operations", "layout");
   if (!r.ok) return { ok: false as const, error: r.error };
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };

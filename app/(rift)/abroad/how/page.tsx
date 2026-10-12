@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { HowItWorks } from "@/components/rift/site/HowItWorks";
-import { RENT_RATIO_SOURCE } from "@/lib/core/abroad";
+import { ASSUMPTIONS, RENT_RATIO_SOURCE } from "@/lib/core/abroad";
+import { translator } from "@/lib/core/i18n";
+import { FaqSchema } from "@/components/rift/Agent";
 
 export const metadata: Metadata = {
   title: "How buying from abroad works",
@@ -73,8 +75,30 @@ export default function AbroadHowPage() {
 /* The settled facts and the questions with a professional attached: the
    part of the old page worth keeping (see the docblock above). */
 function AbroadDetail() {
+  /* The questions that used to sit on /abroad, moved here when that page was
+     cut down (manual review WS6.1). From the same dictionary, in English like
+     the rest of this page, and declared to search engines from the same array
+     the page renders, so the two cannot drift. */
+  const t = translator("en");
+  const faq = [
+    [t("faq.q1"), t("faq.a1")],
+    [t("faq.q2"), t("faq.a2", { pct: `${ASSUMPTIONS.managementPct}%` })],
+    [t("faq.q3"), t("faq.a3")],
+    [t("faq.q4"), t("faq.a4")],
+    [t("faq.q5"), t("faq.a5")],
+    [t("faq.q6"), t("faq.a6")],
+  ] as const;
   return (
     <section className="sec-sm" style={{ maxWidth: 760, margin: "0 auto" }}>
+      <FaqSchema locale="en" items={faq.map(([q, a]) => ({ q, a }))} />
+      <Block title={t("faq.h2")}>
+        {faq.map(([q, a]) => (
+          <div key={q} style={{ marginTop: 12 }}>
+            <p><strong>{q}</strong></p>
+            <p>{a}</p>
+          </div>
+        ))}
+      </Block>
       <div className="card p-4" style={{ background: "var(--sunk)" }}>
         <div className="row-t gap-2">
           <Ico.alert size={14} className="c-4" style={{ flex: "none", marginTop: 3 }} />

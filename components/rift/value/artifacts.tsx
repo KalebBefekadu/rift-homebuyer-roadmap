@@ -305,3 +305,60 @@ export function PrepRooms({ counts }: { counts: { now: number; maybe: number; sk
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ *
+ * Seller, simpler: one bar for the sale, with what goes cut away
+ * ------------------------------------------------------------------ */
+
+/**
+ * The sale price as one bar, the loan payoff and selling costs cut away from
+ * its left, and what is left highlighted on the right (manual review WS3.3:
+ * the row-per-line flow was hard to read at a glance). Same arithmetic as
+ * ProceedsFlow; widths come from the computed figures, never by hand.
+ */
+export function ProceedsBar({ price, parts, net }: {
+  price: number;
+  parts: { label: string; amount: number }[];
+  net: number;
+}) {
+  const W = 360, H = 190, x0 = 12, span = W - 24, y = 70, h = 46;
+  const shown = parts.filter((p) => p.amount > 0);
+  const scale = (v: number) => (Math.max(v, 0) / Math.max(price, 1)) * span;
+  const kept = Math.max(net, 0);
+  let x = x0;
+  const cuts = shown.map((p) => {
+    const w = scale(p.amount);
+    const out = { ...p, x, w };
+    x += w;
+    return out;
+  });
+  const keepX = x0 + span - scale(kept);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
+      aria-label={net < 0
+        ? `A ${money(price)} sale is ${money(-net)} short of covering ${shown.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`
+        : `From a ${money(price)} sale, ${money(net)} reaches you after ${shown.map((p) => `${p.label} ${money(p.amount)}`).join(", ")}.`}>
+      <text x={x0} y={y - 40} fontSize="12" fill="var(--ink-3)">Sale price</text>
+      <text x={x0} y={y - 22} fontSize="15" className="art-num" fill="var(--ink)">{money(price)}</text>
+      <rect x={x0} y={y} width={span} height={h} rx="4" fill="none" stroke="var(--ink)" strokeWidth="1.5" />
+      {cuts.map((c, k) => (
+        <g key={c.label} className="art-rise" style={{ animationDelay: `${k * 90}ms` }}>
+          <rect x={c.x + 1} y={y + 1} width={Math.max(c.w - 2, 1)} height={h - 2} rx="3"
+            fill={k === 0 ? "var(--sunk)" : "var(--line-2)"} />
+          <path d={`M${c.x + c.w / 2} ${y + h + 4} V${y + h + 16 + k * 30}`} stroke="var(--ink-5)" />
+          <text x={c.x + c.w / 2 + 6} y={y + h + 20 + k * 30} fontSize="11.5" fill="var(--ink-3)">{c.label}</text>
+          <text x={c.x + c.w / 2 + 6} y={y + h + 34 + k * 30} fontSize="12" className="art-num" fill="var(--ink-2)">− {money(c.amount)}</text>
+        </g>
+      ))}
+      {kept > 0 ? (
+        <g className="art-rise" style={{ animationDelay: `${cuts.length * 90}ms` }}>
+          <rect x={keepX + 1} y={y + 1} width={Math.max(scale(kept) - 2, 1)} height={h - 2} rx="3" fill="var(--brand)" />
+          <text x={x0 + span} y={y - 40} textAnchor="end" fontSize="12" fill="var(--brand-2)" fontWeight="600">You keep</text>
+          <text x={x0 + span} y={y - 22} textAnchor="end" fontSize="15" className="art-num" fill="var(--brand-2)">{money(net)}</text>
+        </g>
+      ) : (
+        <text x={x0 + span} y={y - 22} textAnchor="end" fontSize="13" fill="var(--neg, #b3261e)" fontWeight="600">Short {money(-net)} at closing</text>
+      )}
+    </svg>
+  );
+}

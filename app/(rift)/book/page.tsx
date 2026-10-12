@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PHONE_CONSENT, EMAIL_NOTE } from "@/lib/core/privacy";
+import { PHONE_CONSENT, BOOKING_EMAIL_NOTE } from "@/lib/core/privacy";
 import { availability } from "@/lib/db/calendar";
 import { Booking } from "./Booking";
 
@@ -33,7 +33,7 @@ export default async function BookPage() {
     <Suspense fallback={<main className="shell-w sec buy"><p className="t-sm c-4">Loading…</p></main>}>
       <Booking
         phoneConsent={PHONE_CONSENT}
-        emailNote={EMAIL_NOTE}
+        emailNote={BOOKING_EMAIL_NOTE}
         slots={slots}
         source={source as "calendar" | "unconfigured" | "error"}
       />

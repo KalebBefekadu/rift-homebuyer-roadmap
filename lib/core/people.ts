@@ -20,7 +20,11 @@ const SOURCE_LABEL: Record<string, string> = {
   manual: "Added by hand",
   referral: "Referred",
   import: "Imported",
+  equb: "Equb seat request",
 };
+
+/** Whether a person arrived through a public page (the funnel, or the Equb page shown as its own source). */
+export const fromVisitor = (source: string): boolean => source === "funnel" || source === "equb";
 
 /** The source a person is known by, as a phrase. An unknown code is shown as itself rather than guessed at. */
 export const sourceLabel = (source: string): string => SOURCE_LABEL[source] ?? source;

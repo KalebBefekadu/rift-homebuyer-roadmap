@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRefresh } from "@/components/rift/useRefresh";
 import type { TodayItem, TodayKind } from "@/lib/core/today";
+import { placeHref } from "@/lib/core/portal-tabs";
 import type { WorkState, Workstream } from "@/lib/core/progress";
 import { post } from "../../post";
 import { newRequestId } from "@/lib/core/ids";
@@ -97,7 +98,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
                 <li key={`${kind}-${n}`} className="t-sm" style={{ lineHeight: 1.5 }}>
                   <span className="w6">{i.title}</span>
                   <span className="c-3"> {i.detail}</span>
-                  {i.anchor ? <> <a className="btn-link t-xs" href={`#${i.anchor}`}>Go to it</a></> : null}
+                  {i.anchor ? <> <a className="btn-link t-xs" href={placeHref(i.anchor)}>Go to it</a></> : null}
                 </li>
               ))}
             </ul>

@@ -78,10 +78,10 @@ export interface Membership {
 
 const MEMBERSHIP_SELECT = "id,journey_id,agent_id,role,scopes,display_name,email,accepted_at,revoked_at,invite_expires_at";
 
-async function hydrate(rows: Record<string, unknown>[]): Promise<Membership[]> {
+async function hydrate(rows: Record<string, unknown>[], anyState = false): Promise<Membership[]> {
   const db = serviceClient();
   if (!db || rows.length === 0) return [];
-  const live = rows.filter((r) => memberState({
+  const live = anyState ? rows : rows.filter((r) => memberState({
     acceptedAt: r.accepted_at as string | null, revokedAt: r.revoked_at as string | null,
     inviteExpiresAt: r.invite_expires_at as string | null,
   }) === "active");
@@ -134,6 +134,28 @@ export async function memberOf(userId: string, journeyId: string): Promise<DbRes
   const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
   if (!row) return done(null);
   const [m] = await hydrate([row]);
+  return done(m ?? null);
+}
+
+/**
+ * A member as the agent previews them (manual review WS10.2). Scoped to the
+ * agent's own journeys by the caller's agent id, and including a member who
+ * has not joined yet, so the agent can check what an invitation will show
+ * before it is opened. It grants nothing: the preview page only reads, and
+ * the agent's session is never turned into the member's.
+ */
+export async function memberForPreview(agentId: string, journeyId: string, memberId: string): Promise<DbResult<Membership | null>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await boundedReport(
+    db.from("rift_journey_members").select(MEMBERSHIP_SELECT)
+      .eq("id", memberId).eq("journey_id", journeyId).eq("agent_id", agentId).is("revoked_at", null).maybeSingle(),
+    "that member",
+  );
+  if (!r.ok) return journeyTablesMissing(r.error) ? done(null) : r;
+  const row = ("data" in r ? r.data : null) as Record<string, unknown> | null;
+  if (!row) return done(null);
+  const [m] = await hydrate([row], true);
   return done(m ?? null);
 }
 
@@ -241,6 +263,59 @@ export async function mayReceiveSignIn(email: string): Promise<boolean> {
     "the address",
   );
   return r.ok && "data" in r && ((r.data as unknown[]) ?? []).length > 0;
+}
+
+/**
+ * Who else is on a journey, for the account page. Names and roles only, never
+ * another member's address (the projection rule at the top of this file), and
+ * only people who have joined or are still invited, not withdrawn ones.
+ */
+export async function householdOf(m: Membership): Promise<DbResult<{ name: string; role: Role; joined: boolean; you: boolean }[]>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const r = await boundedReport(
+    db.from("rift_journey_members").select("id,display_name,role,accepted_at,revoked_at,invite_expires_at")
+      .eq("journey_id", m.journeyId).eq("agent_id", m.agentId).is("revoked_at", null).order("invited_at").limit(20),
+    "who is on your move",
+  );
+  if (!r.ok) return r;
+  const rows = (("data" in r ? r.data : null) ?? []) as Record<string, unknown>[];
+  return done(rows
+    .filter((x) => memberState({ acceptedAt: x.accepted_at as string | null, revokedAt: null, inviteExpiresAt: x.invite_expires_at as string | null }) !== "expired")
+    .map((x) => ({
+      name: (x.display_name as string | null)?.trim() || (x.id === m.memberId ? m.name : "Invited guest"),
+      role: x.role as Role,
+      joined: Boolean(x.accepted_at),
+      you: x.id === m.memberId,
+    })));
+}
+
+/**
+ * Whether this member wants an email when something new is shared (manual
+ * review WS11.5). Null when it could not be read or the column is not
+ * migrated yet, so the page does not offer a switch that would not stick.
+ */
+export async function myNotices(m: Membership): Promise<boolean | null> {
+  const db = serviceClient();
+  if (!db) return null;
+  const r = await boundedReport(
+    db.from("rift_journey_members").select("notices").eq("id", m.memberId).eq("agent_id", m.agentId).maybeSingle(),
+    "your email settings",
+  );
+  if (!r.ok) return null;
+  const row = ("data" in r ? r.data : null) as { notices: boolean | null } | null;
+  return row ? row.notices !== false : null;
+}
+
+export async function setMyNotices(m: Membership, on: boolean): Promise<DbResult<{ on: boolean }>> {
+  const db = serviceClient();
+  if (!db) return skipped("no database configured");
+  const w = await boundedWrite(
+    db.from("rift_journey_members").update({ notices: on }).eq("id", m.memberId).eq("agent_id", m.agentId),
+    "your email settings",
+  );
+  if (!w.ok) return w;
+  return done({ on });
 }
 
 /* ------------------------------------------------------------------------ */

@@ -6,7 +6,8 @@ import { journeyTablesMissing } from "./journeys";
 import { shapeSteps } from "./bids";
 import { inboundOffers, type InboundOffer } from "./offer-intake";
 import type { BidResponse, Instruction } from "@/lib/core/bid";
-import { bidItem, inboundItem, orderItems, sellerItem, streetOf, type OfferItem } from "@/lib/core/offer-board";
+import { pendingUploads, type PendingUpload } from "./offer-upload";
+import { bidItem, inboundItem, orderItems, sellerItem, streetOf, uploadItem, type OfferItem } from "@/lib/core/offer-board";
 
 /**
  * Every live offer, both sides, in a bounded number of reads (the Offers page).
@@ -22,6 +23,8 @@ export interface Board {
   items: OfferItem[];
   /** The offers that came in through the form, in full, for the detail view. */
   inbound: InboundOffer[];
+  /** PDFs uploaded without the form being sent (WS8.2). */
+  uploads: PendingUpload[];
   /** Parts that could not be read, said by name. */
   problems: { part: string; error: string }[];
 }
@@ -47,6 +50,7 @@ export async function offerBoard(agentFirst: string): Promise<DbResult<Board>> {
     boundedReport(db.from("rift_offer_rooms").select("lead_id,approved_at,approved_for,chosen_offer_id,chosen_at").eq("agent_id", agentId).limit(500), "the offer rooms"),
     inboundOffers(100),
   ]);
+  const uploadsRead = await pendingUploads(100);
 
   /* People: whoever a journey or a seller's offer belongs to, and whoever sent
      an inbound offer (for whether they have been answered). One read. */
@@ -150,5 +154,13 @@ export async function offerBoard(agentFirst: string): Promise<DbResult<Board>> {
     }
   }
 
-  return done({ items: orderItems(items), inbound: inboundList, problems });
+  /* PDFs that arrived without the form. Missing tables (not migrated yet) read as none. */
+  let uploads: PendingUpload[] = [];
+  if (!uploadsRead.ok) problems.push({ part: "Offer PDFs sent without the form", error: uploadsRead.error });
+  else if ("data" in uploadsRead && uploadsRead.data) {
+    uploads = uploadsRead.data;
+    for (const u of uploads) items.push(uploadItem({ id: u.id, name: u.name, phone: u.phone, at: u.at, read: u.read, files: u.files.length }));
+  }
+
+  return done({ items: orderItems(items), inbound: inboundList, uploads, problems });
 }

@@ -43,13 +43,22 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 
 Used for four things, and it is worth naming them separately because they fail differently:
 
-1. **Auth** — Supabase Auth email links, read on the server (`lib/db/session.ts` for the
-   agent, `lib/db/portal.ts` for clients).
-   A client's link is minted by Supabase but **delivered by Brevo** when `BREVO_API_KEY`
-   and `BREVO_FROM_EMAIL` are set (`lib/db/signin.ts`), because Supabase's built-in mailer
-   sends a few messages an hour and, without custom SMTP, may deliver only to the project
-   team. Without Brevo it falls back to Supabase's mailer, as it did before. The agent's own
-   sign-in still uses Supabase's mailer.
+1. **Auth** — Supabase Auth, read on the server (`lib/db/session.ts` for the agent,
+   `lib/db/portal.ts` for clients). Clients sign in with a **password or an email link**;
+   the agent with an email link.
+   - Email links are minted by Supabase but **delivered by Brevo** when `BREVO_API_KEY`
+     and `BREVO_FROM_EMAIL` are set (`lib/db/signin.ts`), for clients and, through
+     `app/api/auth/agent-link`, for the agent. Supabase's built-in mailer sends a few
+     messages an hour and, without custom SMTP, may deliver only to the project team.
+     Without Brevo it falls back to that mailer. Setting Supabase's custom SMTP to Brevo
+     covers the fallback too.
+   - Every link lands on `/auth/callback`, a page with a **Continue** button. The token is
+     spent by the POST to `/auth/confirm`, never by a GET, so an email scanner that opens
+     links does not use it up.
+   - Passwords are only created from an open invitation (a new login for the invited
+     address, never a change to an existing one) or on `/app/account` by somebody already
+     signed in. Forgot password sends an email link to `/app/account`. Needs the Email
+     provider with passwords enabled in Supabase Auth (the default).
 2. **Postgres + RLS** — the data layer. See [schema.md](schema.md) for the model to build.
 3. **Storage** — client documents. Not yet used; phase 6.
 4. **Realtime** — not needed yet. Do not reach for it before there is a second concurrent
@@ -126,6 +135,18 @@ sequence of anyone who unsubscribed or reported spam ("They opted out") or hard-
 ("Their email bounced"). An administrator's block suppresses the send without claiming an
 opt-out. The key needs no extra permission; IP blocking for API keys must stay off, as for
 sending.
+
+**Product emails beyond the funnel (manual review, October 2026).** Each is skipped, not
+faked, without `BREVO_API_KEY` and `BREVO_FROM_EMAIL`:
+
+| Email | To | Tag | When | Code |
+| --- | --- | --- | --- | --- |
+| Offer PDF uploaded | Kaleb | `agent-alert` | First PDF on an upload at `/offer`, before the form is sent (WS8.2) | `lib/db/offer-upload.ts` |
+| Client sent a document | Kaleb | `agent-alert` | A household member sends a file from the portal (WS11.3) | `lib/db/portal-offers.ts` |
+| Something new in your portal | Joined household members | `client-notice` | A home added, terms put to them, priorities written, a pricing opinion or a new net (WS11.5). One per person per kind in six hours; recorded in `rift_client_notices`; each member can switch them off on `/app/account` | `lib/db/notices.ts`, `lib/core/notice.ts` |
+
+The client notice names the kind of thing and links to the portal tab; it never carries an
+address, a price or a file.
 
 ### The wire-contract rule
 `TimeToBuy` and `ClientStage` are now declared **inside** `lib/brevo/sync.ts` rather than

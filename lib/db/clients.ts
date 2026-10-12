@@ -69,7 +69,10 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
     side: r.side as "buy" | "sell",
     stage,
     stageSince,
-    source: (r.source as string) ?? "funnel",
+    /* A funnel lead from the Equb page is shown as one (manual review WS10.5).
+       The column's CHECK allows only four sources, and changing it is a
+       migration, so the page it came from is read from the lead's own input. */
+    source: (r.source as string) === "funnel" && r.input_source === "equb" ? "equb" : ((r.source as string) ?? "funnel"),
     contactBasis: (r.contact_basis as string | null) ?? null,
     score: (r.score as number | null) ?? null,
     band: (r.band as string | null) ?? null,
@@ -88,7 +91,7 @@ function shape(r: Record<string, unknown>, now: Date): ManagedLead {
 }
 
 const SELECT_BASE =
-  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason";
+  "id,name,email,phone,side,stage,stage_since,source,contact_basis,score,band,created_at,archived_at,archived_reason,input_source:lead_input->>source";
 
 /**
  * Whether the follow-up columns exist yet.

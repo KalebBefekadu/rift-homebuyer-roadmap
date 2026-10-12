@@ -7,6 +7,7 @@ import {
 import { useWrite } from "./useWrite";
 import type { Sent } from "../send";
 import { showDay } from "@/lib/core/day";
+import { buildInvitation } from "@/lib/core/email";
 
 export interface MemberView {
   id: string;
@@ -17,6 +18,7 @@ export interface MemberView {
   state: MemberState;
   acceptedAt: string | null;
   inviteExpiresAt: string | null;
+  lastSignInAt: string | null;
 }
 
 const STATE_LABEL: Record<MemberState, string> = {
@@ -43,13 +45,17 @@ const sees = (side: "buy" | "sell", scopes: Scope[]) =>
 /**
  * Who can see this journey, and how much.
  *
- * The invitation is a link the agent sends himself. Rift does not email it:
- * a message to a client is an external action he approves (decision D04),
- * and pasting it into his own email is that approval. The person opening it
- * must sign in with the same address before it grants anything.
+ * The invitation is a link the agent sends himself, or has Rift email after
+ * reading exactly what will go (WS10.4): a message to a client is an external
+ * action he approves (decision D04), and pressing Send on the shown email is
+ * that approval. Opening it, the person
+ * creates a password for the invited address or asks for an email link to it,
+ * and only that address can join.
  */
-export function Household({ journeyId, side, members, defaultEmail, defaultName }: {
+export function Household({ journeyId, side, members, defaultEmail, defaultName, agentName, journeyLabel }: {
   side: "buy" | "sell";
+  agentName: string;
+  journeyLabel: string;
   journeyId: string;
   members: MemberView[];
   defaultEmail: string;
@@ -61,13 +67,21 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
   const [name, setName] = useState(nobodyYet ? defaultName : "");
   const [role, setRole] = useState<Role>(nobodyYet ? "buyer" : "co-buyer");
   const [scopes, setScopes] = useState<Scope[]>(DEFAULT_SCOPES[nobodyYet ? "buyer" : "co-buyer"]);
-  const [link, setLink] = useState<{ link: string; expiresAt: string; who: string } | null>(null);
+  const [link, setLink] = useState<{ link: string; expiresAt: string; who: string; memberId: string; email: string; name: string | null } | null>(null);
+  /* Email this invitation (WS10.4): the email is shown first and sent only on Send. */
+  const [drafting, setDrafting] = useState(false);
+  const [emailed, setEmailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
   const { busy, error, setError, write } = useWrite(members.map((m) => `${m.id}:${m.state}:${m.inviteExpiresAt}`).join("|"));
 
-  const done = (r: Sent, who: string) => {
+  const done = (r: Sent, who: string, email: string, name: string | null) => {
     if (!r.ok) return false;
-    if (typeof r.link === "string") setLink({ link: r.link, expiresAt: String(r.expiresAt), who });
+    if (typeof r.link === "string") {
+      setLink({ link: r.link, expiresAt: String(r.expiresAt), who, memberId: String(r.memberId ?? ""), email, name });
+      setDrafting(false);
+      setEmailed(false);
+    }
     return true;
   };
 
@@ -88,14 +102,33 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
                 </div>
                 <div className="t-2xs c-4" style={{ marginTop: 3 }}>
                   {m.email} · sees {sees(side, m.scopes)}
+                  {m.state === "active" ? <> · {m.lastSignInAt ? `last signed in ${DAY(m.lastSignInAt)}` : "no sign-in on record yet"}</> : null}
                 </div>
               </div>
               {m.state !== "revoked" ? (
                 <div className="row gap-1">
                   {m.state === "invited" || m.state === "expired" ? (
                     <button className="btn btn-g btn-sm" disabled={busy}
-                      onClick={async () => { done(await write("new-link", { journeyId, memberId: m.id }, { reload: false }), m.name ?? m.email); }}>
+                      onClick={async () => {
+                        if (m.state === "invited" && !confirm(`Make a new link for ${m.name ?? m.email}? The link you sent before stops working.`)) return;
+                        done(await write("new-link", { journeyId, memberId: m.id }, { reload: false }), m.name ?? m.email, m.email, m.name);
+                      }}>
                       New link
+                    </button>
+                  ) : null}
+                  {m.state === "active" || m.state === "invited" ? (
+                    <a className="btn btn-g btn-sm" href={`/app/preview/${journeyId}/${m.id}`} target="_blank" rel="noopener">
+                      Preview as {side === "sell" ? "seller" : "client"}
+                    </a>
+                  ) : null}
+                  {m.state === "active" ? (
+                    <button className="btn btn-g btn-sm" disabled={busy}
+                      onClick={async () => {
+                        if (!confirm(`Email ${m.email} a sign-in link now?`)) return;
+                        const r = await write("send-signin", { journeyId, memberId: m.id }, { reload: false });
+                        if (r.ok) setSent(m.email);
+                      }}>
+                      Send sign-in email
                     </button>
                   ) : null}
                   <button className="btn btn-g btn-sm" disabled={busy}
@@ -116,12 +149,14 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
       )}
 
       {error ? <p role="alert" className="t-xs c-neg" style={{ marginTop: 8 }}>{error}</p> : null}
+      {sent ? <p role="status" className="t-xs c-pos" style={{ marginTop: 8 }}>Sign-in link sent to {sent}.</p> : null}
 
       {link ? (
         <div role="status" className="card p-3" style={{ marginTop: 10, borderColor: "var(--pos-line)", background: "var(--pos-wash)" }}>
           <div className="t-sm w6">Invitation link for {link.who}</div>
           <p className="t-2xs c-3" style={{ marginTop: 4, lineHeight: 1.5 }}>
-            Shown once. Send it yourself, by email or text. It works until {DAY(link.expiresAt)}, and only for somebody who signs in with that address.
+            Shown once. Send it yourself, by email or text. It works until {DAY(link.expiresAt)}. Opening it, they create a password
+            (or ask for an email link) for that address and join in one step. Any earlier link for them has stopped working.
           </p>
           <div className="row gap-2" style={{ marginTop: 8 }}>
             <input className="input" readOnly value={link.link} onFocus={(e) => e.currentTarget.select()} aria-label="Invitation link" />
@@ -130,6 +165,34 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
               catch { setError("Could not copy. Select the link and copy it by hand."); }
             }}>{copied ? "Copied" : "Copy"}</button>
           </div>
+          {link.memberId ? (
+            emailed ? (
+              <p role="status" className="t-xs c-pos row gap-1" style={{ marginTop: 8 }}>Emailed to {link.email}.</p>
+            ) : drafting ? (
+              <div className="card p-3" style={{ marginTop: 10, background: "var(--paper)" }}>
+                {(() => {
+                  const e = buildInvitation({ to: link.email, name: link.name, agentName, journeyLabel, link: link.link });
+                  return (
+                    <>
+                      <div className="t-2xs c-4">To {link.email}</div>
+                      <div className="t-sm w6" style={{ marginTop: 4 }}>{e.subject}</div>
+                      <pre className="t-xs c-2" style={{ marginTop: 6, whiteSpace: "pre-wrap", fontFamily: "inherit", lineHeight: 1.55 }}>{e.text}</pre>
+                    </>
+                  );
+                })()}
+                <div className="row gap-2" style={{ marginTop: 8 }}>
+                  <button className="btn btn-p btn-sm" disabled={busy}
+                    onClick={async () => {
+                      const r = await write("email-invite", { journeyId, memberId: link.memberId, link: link.link }, { reload: false });
+                      if (r.ok) { setEmailed(true); setDrafting(false); }
+                    }}>{busy ? "Sending…" : "Send"}</button>
+                  <button className="btn btn-g btn-sm" onClick={() => setDrafting(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button className="btn btn-g btn-sm" style={{ marginTop: 8 }} onClick={() => setDrafting(true)}>Email this invitation</button>
+            )
+          ) : null}
         </div>
       ) : null}
 
@@ -174,7 +237,7 @@ export function Household({ journeyId, side, members, defaultEmail, defaultName 
                   journeyId, email, name, role,
                   /* A seller has no search or homes to see; the server needs at least one scope, so those two ride along and only the price one is a choice. */
                   scopes: side === "sell" ? [...new Set<Scope>(["search", "homes", ...scopes.filter((x) => x === "money")])] : scopes,
-                }, { reload: false }), name || email)) setOpen(false);
+                }, { reload: false }), name || email, email.trim().toLowerCase(), name.trim() || null)) setOpen(false);
               }}>
               {busy ? "Making link…" : "Make invitation link"}
             </button>

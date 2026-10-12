@@ -204,6 +204,29 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       if (error) return failed(error.message);
     }
 
+    /* Offer PDF uploads (manual review WS8.2, WS8.3), on the offers' window:
+       one never sent is still an offer somebody delivered. Run before the
+       offers, because deleting an offer cascades to its upload row and its
+       addenda would be left in storage with nothing naming them. Files
+       first, for the same reason. Missing tables (a deploy ahead of its
+       migration) mean there are none. */
+    const { data: oldUploads, error: upErr } = await db
+      .from("rift_offer_uploads").select("id")
+      .eq("agent_id", agent_id).lte("created_at", ago(WINDOWS.offer.days)).limit(500);
+    if (upErr && !/rift_offer_uploads/.test(upErr.message)) return failed(upErr.message);
+    const expiredUploads = ((oldUploads ?? []) as { id: string }[]).map((u) => u.id);
+    if (expiredUploads.length) {
+      const { data: upFiles, error: fErr } = await db.from("rift_offer_files").select("path").in("upload_id", expiredUploads);
+      if (fErr) return failed(fErr.message);
+      const paths = ((upFiles ?? []) as { path: string }[]).map((f) => f.path);
+      if (paths.length) {
+        const gone = await boundedWrite(db.storage.from("rift-documents").remove(paths), "the expired offer uploads");
+        if (!gone.ok) return failed(gone.error);
+      }
+      const { error } = await db.from("rift_offer_uploads").delete().in("id", expiredUploads);
+      if (error) return failed(error.message);
+    }
+
     /* Offers that came in through /offer (Blueprint v5 §5.9). The promise
        was "24 months" from the day /offer shipped, and nothing deleted them
        until the PDF made the gap impossible to ignore. The file goes first:

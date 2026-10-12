@@ -5,6 +5,7 @@ import { clientSession, myJourneys } from "@/lib/db/portal";
 import { buyerSearchOn, SIDE_LABEL } from "@/lib/core/journey";
 import { ClientShell } from "./ClientShell";
 import { Help } from "./Help";
+import { portalT } from "./lang";
 
 export const metadata: Metadata = { title: "Your move", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -42,21 +43,21 @@ export default async function ClientHome() {
   }
   const list = mine.data;
   if (list.length === 1) redirect(`/app/j/${list[0]!.journeyId}`);
+  const { t } = await portalT();
 
   return (
     <ClientShell agentName={list[0]?.agentName ?? null}>
-      <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em" }}>Your move</h1>
+      <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em" }}>{t("pt.home.title")}</h1>
       {list.length === 0 ? (
         <p className="t-sm c-3" style={{ marginTop: 10, lineHeight: 1.6 }}>
-          You are signed in as {session.email}, but nothing has been shared with this address. If your agent sent you an
-          invitation link, open it. It only works for the address it was sent to.
+          {t("pt.home.none", { email: session.email ?? "" })}
         </p>
       ) : (
         <ul style={{ marginTop: 16, display: "grid", gap: 8 }}>
           {list.map((m) => (
             <li key={m.journeyId}>
               <Link href={`/app/j/${m.journeyId}`} className="card p-4 between gap-2" style={{ display: "flex" }}>
-                <span><span className="t-md w6">{m.journeyLabel}</span><span className="t-xs c-4"> · with {m.agentName}</span></span>
+                <span><span className="t-md w6">{m.journeyLabel}</span><span className="t-xs c-4"> · {t("pt.home.with", { agent: m.agentName })}</span></span>
                 <span className="chip t-2xs">{SIDE_LABEL[m.side]}</span>
               </Link>
             </li>

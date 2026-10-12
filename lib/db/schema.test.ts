@@ -662,6 +662,30 @@ describe("offer PDFs and the AI record (Blueprint v5 §5.9, §10.2)", () => {
   test("a PDF can only be kept at an offer's own path", async (c) => {
     await rejects(c, offer("document_path", ["cash", "offers/incoming/../../x.pdf"]), ["cash", "offers/incoming/../../x.pdf"], /document_path/);
   });
+
+  test("an upload names who sent it, and its PDFs live under it (WS8.2, WS8.3)", async (c) => {
+    await rejects(c, "insert into rift_offer_uploads (agent_id, sender_name, sender_phone) values ($1, 'Dana', '404')", [AGENT], /sender_phone/);
+    await rejects(c, "insert into rift_offer_uploads (agent_id, sender_name, sender_phone) values ($1, ' ', '404 555 0100')", [AGENT], /sender_name/);
+    const { rows: up } = await c.query(
+      "insert into rift_offer_uploads (agent_id, sender_name, sender_phone) values ($1, 'Dana Agent', '(404) 555-0100') returning id", [AGENT]);
+    const id = up[0].id as string;
+    const file = (name: string) => `offers/uploads/${id}/${name}.pdf`;
+    await c.query("insert into rift_offer_files (agent_id, upload_id, path, file_name, size_bytes) values ($1, $2, $3, 'Offer.pdf', 1200)",
+      [AGENT, id, file("0f8fad5b-d9cb-469f-a165-70867728950e")]);
+    await rejects(c, "insert into rift_offer_files (agent_id, upload_id, path, file_name, size_bytes) values ($1, $2, 'offers/uploads/../../x.pdf', 'x.pdf', 10)", [AGENT, id], /path/);
+
+    /* Sent: the offer's document is the upload's first file. */
+    const { rows: o } = await c.query(`${offer("document_path", ["cash", file("0f8fad5b-d9cb-469f-a165-70867728950e")])} returning id`, ["cash", file("0f8fad5b-d9cb-469f-a165-70867728950e")]);
+    await c.query("update rift_offer_uploads set offer_id = $1 where id = $2", [o[0].id, id]);
+    /* One offer, one upload. */
+    const { rows: up2 } = await c.query("insert into rift_offer_uploads (agent_id, sender_name, sender_phone) values ($1, 'Dana Agent', '4045550100') returning id", [AGENT]);
+    await rejects(c, "update rift_offer_uploads set offer_id = $1 where id = $2", [o[0].id, up2[0].id], /unique|duplicate/);
+
+    /* Removing the offer removes the upload and the record of its files. */
+    await c.query("delete from rift_offers where id = $1", [o[0].id]);
+    const { rows: left } = await c.query("select count(*)::int as n from rift_offer_files where upload_id = $1", [id]);
+    expect(left[0].n).toBe(0);
+  });
 });
 
 describe("the outbox, as stored (Blueprint v5 §10.2)", () => {

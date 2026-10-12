@@ -14,7 +14,7 @@ import { test, expect, devices } from "@playwright/test";
 test.use({ ...devices["Pixel 7"] });
 
 const PAGES = [
-  "/", "/buy", "/sell", "/abroad", "/privacy", "/book", "/buy/programs",
+  "/", "/buy", "/sell", "/abroad", "/privacy", "/book", "/buy/programs", "/equb", "/equb/reserve", "/equb?lang=am", "/offer",
   "/buy/cash-to-close?p=350000&d=3.5&c=Fulton",
   "/sell/proceeds?c=Fulton&sp=400000&po=200000&cm=5",
 ];

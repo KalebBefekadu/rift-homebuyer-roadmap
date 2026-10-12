@@ -17,6 +17,7 @@
  * Building is here. Sending stays in lib/db/email.ts, where the I/O belongs.
  */
 
+import { NOTICE, type NoticeEmail } from "./notice";
 import { money } from "./compute";
 import { showDay } from "./day";
 import { BAND_LABEL, type Band, type Signal } from "./lead";
@@ -534,6 +535,8 @@ export interface SignInEmail {
   to: string;
   /** The one-time link, already pointing at /auth/callback on this site. */
   link: string;
+  /** "reset" when it was asked for from Forgot password: same link, different words. */
+  purpose?: "signin" | "reset";
 }
 
 /**
@@ -548,15 +551,138 @@ export interface SignInEmail {
  * and an opt-out here would only lock somebody out of their own move.
  */
 export function buildSignIn(s: SignInEmail): { subject: string; html: string } {
+  const reset = s.purpose === "reset";
   const html = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
   <p style="font-size:15px">Hello,</p>
-  <p style="font-size:15px">Here is your link to sign in to your move on Rift.</p>
-  <p style="font-size:15px"><a href="${escapeHtml(s.link)}" style="color:#c2351e">Sign in</a></p>
+  <p style="font-size:15px">${reset
+    ? "Here is your link to sign in and choose a new password for your move on Rift."
+    : "Here is your link to sign in to your move on Rift."}</p>
+  <p style="font-size:15px"><a href="${escapeHtml(s.link)}" style="color:#c2351e">${reset ? "Choose a new password" : "Sign in"}</a></p>
   <p style="font-size:12px;color:#888">
     It works once and expires soon. If you did not ask for it, you can ignore this email:
     nobody can sign in without opening the link.
   </p>
 </div>`.trim();
-  return { subject: "Your Rift sign-in link", html };
+  return { subject: reset ? "Reset your Rift password" : "Your Rift sign-in link", html };
+}
+
+export interface InvitationEmail {
+  to: string;
+  /** Their name as the agent typed it, or nothing. */
+  name: string | null;
+  agentName: string;
+  journeyLabel: string;
+  /** The invitation link, /app/invite/<token> on this site. */
+  link: string;
+}
+
+/**
+ * An invitation, emailed by the product when the agent presses Send (manual
+ * review WS10.4). The agent sees exactly this text before it goes, which is
+ * the approval decision D04 asks for. Plain, and no unsubscribe: it was
+ * asked for by the agent for one person, and is not marketing.
+ */
+export function buildInvitation(e: InvitationEmail): { subject: string; text: string; html: string } {
+  const first = e.agentName.trim().split(/\s+/)[0] || e.agentName;
+  const hello = e.name ? `Hello ${e.name.split(/\s+/)[0]},` : "Hello,";
+  const lines = [
+    hello,
+    `${e.agentName} has invited you to "${e.journeyLabel}" on Rift, where you can see your move as it happens: what ${first} shares with you, and what needs your answer.`,
+    "Open the link, create a password (or ask for a sign-in email), and you are in. It works for this email address only.",
+  ];
+  const subject = `${e.agentName} invited you to your move on Rift`;
+  const text = `${lines.join("\n\n")}\n\n${e.link}`;
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  ${lines.map((l) => `<p style="font-size:15px">${escapeHtml(l)}</p>`).join("\n  ")}
+  <p style="font-size:15px"><a href="${escapeHtml(e.link)}" style="color:#c2351e">Open your invitation</a></p>
+</div>`.trim();
+  return { subject, text, html };
+}
+
+export interface OfferUploadedEmail {
+  /** Kaleb's own address. */
+  to: string;
+  sender: string;
+  phone: string;
+  email: string | null;
+  fileName: string;
+  /** Straight to the upload on the Offers board. */
+  boardUrl: string;
+}
+
+/**
+ * The alert that an offer PDF arrived (manual review WS8.2). Sent on the
+ * first file, before the sender has finished the form, because the upload is
+ * the delivery: the sender may never press Send, and the PDF may carry a
+ * deadline. Agent-alert, like the lead alert, and no figures: the automatic
+ * read is a proposal the sender has not confirmed.
+ */
+export function buildOfferUploaded(u: OfferUploadedEmail): { subject: string; html: string } {
+  const sender = escapeHtml(u.sender);
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:17px;font-weight:600;margin:0 0 10px">${sender} uploaded an offer PDF.</p>
+  <p style="font-size:14px;margin:0 0 10px">
+    Phone: ${escapeHtml(u.phone)}${u.email ? `<br>Email: ${escapeHtml(u.email)}` : ""}<br>
+    File: ${escapeHtml(u.fileName)}
+  </p>
+  <p style="font-size:13px;color:#666;margin:0 0 14px">
+    They may still be filling in the form. If they stop, the PDF is all there is, and it may carry a deadline.
+  </p>
+  <p style="font-size:15px"><a href="${escapeHtml(u.boardUrl)}" style="color:#e8442a">Open it on the Offers board</a></p>
+</div>`.trim();
+  return { subject: `Offer PDF from ${u.sender}`, html };
+}
+
+export interface ClientDocumentEmail {
+  /** Kaleb's own address. */
+  to: string;
+  member: string;
+  journeyLabel: string;
+  label: string;
+  /** Straight to the journey's household tab in Operations. */
+  journeyUrl: string;
+}
+
+/**
+ * The alert that a client sent a document from the portal (manual review
+ * WS11.3). Names the document, never attaches it: the file stays in the
+ * private bucket and opens from Operations with a one-minute link.
+ */
+export function buildClientDocument(d: ClientDocumentEmail): { subject: string; html: string } {
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:17px;font-weight:600;margin:0 0 10px">${escapeHtml(d.member)} sent you a document.</p>
+  <p style="font-size:14px;margin:0 0 14px">&ldquo;${escapeHtml(d.label)}&rdquo;, on ${escapeHtml(d.journeyLabel)}.</p>
+  <p style="font-size:15px"><a href="${escapeHtml(d.journeyUrl)}" style="color:#e8442a">Open it in Operations</a></p>
+</div>`.trim();
+  return { subject: `${d.member} sent you a document`, html };
+}
+
+/**
+ * Something new is in a client's portal (manual review WS11.5). The kind of
+ * thing and a link, never the thing itself (lib/core/notice.ts says why).
+ * Not marketing (it is about their own move, sent to someone the agent
+ * invited), but they can still switch it off: the footer links to the
+ * account page, where the switch is.
+ */
+export function buildNotice(n: NoticeEmail): { subject: string; html: string } {
+  const r = NOTICE[n.kind];
+  const first = n.agentName.trim().split(/\s+/)[0] || n.agentName;
+  const hello = n.name ? `Hello ${n.name.trim().split(/\s+/)[0]},` : "Hello,";
+  const link = `${n.journeyUrl}?tab=${r.tab}`;
+  const account = `${n.journeyUrl.replace(/\/app\/j\/[^/?#]+$/, "")}/app/account`;
+  const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;color:#1a1a1a;line-height:1.6">
+  <p style="font-size:15px">${escapeHtml(hello)}</p>
+  <p style="font-size:15px">${escapeHtml(first)} ${escapeHtml(r.what)}, on &ldquo;${escapeHtml(n.journeyLabel)}&rdquo;.</p>
+  <p style="font-size:15px"><a href="${escapeHtml(link)}" style="color:#c2351e">Open it in Rift</a></p>
+  <p style="font-size:12px;color:#888">
+    The details are in Rift, behind your sign-in, rather than in this email.
+    <a href="${escapeHtml(account)}" style="color:#888">Turn these emails off</a> on your account page.
+  </p>
+</div>`.trim();
+  return { subject: r.asks ? `${first} needs your answer on Rift` : `${first} shared something new on Rift`, html };
 }

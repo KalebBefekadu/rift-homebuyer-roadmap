@@ -60,6 +60,7 @@ export default function PrivacyPage() {
             <li>We never store what you typed into a question next to who you are. Those are two separate records with two separate lifetimes.</li>
             <li>We never ask for a credit score, a social security number, or a bank login.</li>
             <li>Nothing is sold, shared for advertising, or given to a data broker. There is no advertising on this site.</li>
+            <li>Rift is free to use. Kaleb is paid a commission only if you buy or sell with him.</li>
             <li>
               You can delete everything in one click from the bottom of any answer, with no
               account and without asking anyone.
