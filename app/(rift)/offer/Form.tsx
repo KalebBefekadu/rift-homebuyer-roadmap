@@ -11,7 +11,7 @@ import {
   readSubmission, read, ASSUMED_COMMISSION_PCT, type FieldErrors, type SubmissionField,
   MIN_COMMISSION_PCT, MAX_COMMISSION_PCT, MAX_OFFER_PDF_BYTES, MAX_OFFER_PDF_SAY,
 } from "@/lib/core/offer-intake";
-import { readSender, MAX_OFFER_FILES, type SenderField } from "@/lib/core/offer-upload";
+import { readSender, MAX_OFFER_FILES, PASS_HEADER, type SenderField } from "@/lib/core/offer-upload";
 import { sessionId } from "@/lib/rift/session";
 import { money } from "@/lib/core/compute";
 import { typedNumber } from "@/lib/core/typed";
@@ -84,6 +84,16 @@ export function Form() {
   const [readSay, setReadSay] = useState<string | null>(null);
   /* The signed name of this offer's upload, sent back with addenda and the form. */
   const [uploadToken, setUploadToken] = useState<string | null>(null);
+  /* Asked for on arrival, so it is seconds old by the time a name and phone
+     are typed (lib/core/offer-pass.ts). None when the server cannot sign one,
+     and then none is asked for. */
+  const [pass, setPass] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/offer/pass", { cache: "no-store" })
+      .then((r) => r.json() as Promise<{ pass: string | null }>)
+      .then((j) => setPass(j.pass))
+      .catch(() => { /* the upload then says to reload; the boxes still work */ });
+  }, []);
   const [files, setFiles] = useState<{ name: string }[]>([]);
   const [senderErrors, setSenderErrors] = useState<Partial<Record<SenderField, string>>>({});
   const [fromPdf, setFromPdf] = useState<Candidates>({});
@@ -157,7 +167,7 @@ export function Form() {
       body.append("phone", phone);
       body.append("email", email);
       if (uploadToken) body.append("upload", uploadToken);
-      const res = await fetch("/api/offer/read", { method: "POST", body });
+      const res = await fetch("/api/offer/read", { method: "POST", body, headers: pass ? { [PASS_HEADER]: pass } : undefined });
       const j = await res.json().catch(() => null) as null | { ok: boolean; error?: string; say?: string; upload?: string | null; files?: { name: string }[]; candidates?: Candidates; fields?: Partial<Record<SenderField, string>> };
       if (j?.fields) setSenderErrors(j.fields);
       /* A 413 without our JSON is the host's limit, reached despite the check

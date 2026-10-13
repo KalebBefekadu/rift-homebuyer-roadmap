@@ -278,10 +278,20 @@ Blueprint v5 §10.2 and D16. Two uses, neither of which produces a number a cust
 | Comparing a changed program page with its record | `claude-haiku-4-5` | Reads the summary beside the changed lines, then says whether the record is still right |
 | Drafting a campaign's blocks from a brief | `claude-haiku-4-5` | Reads and edits the draft in the composer, then saves it; a drafted number, promise or link is left out and named |
 
-**The limit is in code.** `MONTHLY_LIMIT_CENTS` in `lib/core/ai.ts` is $50 across all AI. Every
+**The limit is in code.** `MONTHLY_LIMIT_CENTS` in `lib/core/ai.ts` is $50 across all AI, split
+into shares (`SHARE_CENTS`, D41): offer reading $30, program comparison $10, campaign drafting $10.
+Offer reading, the only AI a stranger can start, also stops for the day at $6 (`DAILY_CENTS`). Every
 call is recorded in `rift_ai_usage` (workflow, model, prompt version, tokens, cost; nothing about
-the person or the document), and a call is made only when this month's spend plus a reserve for
-the call stays under the limit. A model with no price in `PRICE_CENTS_PER_MTOK` cannot be called.
+the person or the document), and a call is made only when the month's spend, the workflow's share
+and, for offers, the day's spend each stay under their limit with the call's reserve added. A model
+with no price in `PRICE_CENTS_PER_MTOK` cannot be called.
+
+**The offer upload carries a pass.** The offer page asks `/api/offer/pass` for a signed,
+time-limited pass when it opens, and `/api/offer/read` refuses an upload without one, or with one
+under three seconds old, before the body is read (`lib/core/offer-pass.ts`). It is signed with
+`RIFT_SIGNING_SECRET`, or the service key when that is not set; with neither, no pass is issued or
+asked for. A deterrent against a script posting at the route, not a wall: the share and the daily
+ceiling bound what one written for this site can spend.
 
 **What happens without it.** No key, the limit reached, the spend unreadable, a refusal or an
 error: each is a named state, and the manual path carries on. The offer form says "Fill in the

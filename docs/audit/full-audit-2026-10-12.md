@@ -37,6 +37,7 @@ there is none yet.
 | Consolidating `docs/audit/`, moving the blueprint change log | **Not done, on purpose.** The older audits are dated records cited from code and the blueprint; moving the change log only relocates it |
 | Switching off campaigns, seller workspace, money v2, advocacy, the Equb form; trimming the Operations sidebar | **Kept on**, Kaleb's decision 13 Oct |
 | §3 #2 to #5: program pages, "Email me this", the lead text, the agent on the page | **Built** 13 Oct (D40). The text needs `BREVO_SMS_SENDER`, SMS credits and a phone in Settings; the licence shows once it is in Settings. About 50 "Kaleb" strings remain in public page text; the answer pages' are moved |
+| P13: per-workflow AI budget and a check on the offer upload | **Built** 13 Oct (D41): offer reading $30 of the $50 with a $6 daily ceiling, program comparison and campaign drafting $10 each; the upload needs a signed pass the offer page asks for on arrival. Turnstile is not used (it would add a company to the privacy page). Capture, plan save, Equb and book still have only the rate limiter. Anthropic added to the privacy page's third parties, where it was missing |
 | Self-hosted fonts | **Blocked** in the build environment (Fontshare unreachable); one file to change when it is reachable |
 | Everything in §5 owned by Kaleb, the broker or counsel | Open |
 

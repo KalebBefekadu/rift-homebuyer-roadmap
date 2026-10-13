@@ -180,6 +180,11 @@ export const SUBPROCESSORS: Subprocessor[] = [
     sees: "Technical detail about a failure: the page, the browser, the error. Session recording is switched off, so it never receives what you typed.",
   },
   {
+    name: "Anthropic",
+    does: "Reads an uploaded offer PDF into the offer form, for the sender to check",
+    sees: "Only an offer PDF uploaded on the offer page. Nothing else you give this site is sent to it.",
+  },
+  {
     name: "Cal.com",
     does: "Holds a booked time",
     sees: "Your name, email, and the time you chose, only if you book a call.",

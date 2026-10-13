@@ -14,6 +14,9 @@
 /** The most PDFs one offer carries: the offer and its addenda (WS8.3). */
 export const MAX_OFFER_FILES = 10;
 
+/** The header an upload carries its pass in (lib/core/offer-pass.ts). Here, not there, so the page can name it without the signing code. */
+export const PASS_HEADER = "x-offer-pass";
+
 /** What the signed upload token is for, so a token minted elsewhere is never accepted here. */
 export const UPLOAD_PURPOSE = "offer-upload";
 /** Long enough to read the offer, fix the boxes and add an addendum; short enough that a copied token goes stale. */

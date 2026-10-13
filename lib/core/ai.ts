@@ -1,12 +1,14 @@
-import { GEORGIA_TZ } from "./day";
+import { GEORGIA_TZ, dayIn } from "./day";
 /**
  * What AI may cost, and whether a call may be made (Blueprint v5 §10.2,
  * decision D16, AUTO-06).
  *
  * One hard monthly limit across every AI use: $50 for the pilot, enforced
- * here in code rather than trusted to a dashboard somebody checks. A call is
- * made only when what has been spent this month plus a reserve for the call
- * stays under the limit; otherwise the feature says so and the manual path
+ * here in code rather than trusted to a dashboard somebody checks. Inside it,
+ * each workflow has its own share (§10.2: "limits per workflow and per
+ * month"), and the one a stranger can start has a daily ceiling too. A call is
+ * made only when what has been spent plus a reserve for the call stays under
+ * every limit that applies; otherwise the feature says so and the manual path
  * carries on (a failed or refused read leaves the form, DOC-02).
  *
  * Every call is recorded with its workflow, model, prompt version, tokens and
@@ -60,6 +62,31 @@ export const RESERVE_CENTS: Record<AiWorkflow, number> = {
   "campaign-draft": 10,
 };
 
+/**
+ * Each workflow's share of the month (D41). They add up to the monthly limit.
+ *
+ * One shared pot meant the offer upload, the only AI anybody can start without
+ * signing in, could spend the whole month, and the weekly program-page
+ * comparison then stopped with it: a stranger's script switching off the
+ * check that keeps assistance figures honest (audit 12 Oct §3 I). With shares,
+ * the worst it can do is use up its own.
+ */
+export const SHARE_CENTS: Record<AiWorkflow, number> = {
+  "offer-extraction": 3_000,
+  "program-compare": 1_000,
+  "campaign-draft": 1_000,
+};
+
+/**
+ * A day's ceiling, on the public workflow only. A real offer read costs about
+ * 20 cents, so $6 a day is far more than this business receives; a script
+ * that gets past the upload pass spends at most this much before tomorrow,
+ * and the share lasts the rest of the week for the people it is for.
+ */
+export const DAILY_CENTS: Partial<Record<AiWorkflow, number>> = {
+  "offer-extraction": 600,
+};
+
 export interface Usage {
   input_tokens: number;
   output_tokens: number;
@@ -80,13 +107,22 @@ export type Allowance =
   | { ok: true }
   | { ok: false; reason: "not-configured" | "over-limit"; say: string };
 
-/** Whether a call may be made now. */
-export function allowance(opts: { configured: boolean; spentCents: number; workflow: AiWorkflow; limitCents?: number }): Allowance {
-  const label = AI_LABEL[opts.workflow];
+/** What has been spent, in cents: this month in all, this month on the workflow, and today on it. */
+export interface Spent { month: number; workflow: number; today: number }
+
+/** Whether a call may be made now. The tightest limit decides, and the words say which kind. */
+export function allowance(opts: { configured: boolean; spent: Spent; workflow: AiWorkflow; limitCents?: number }): Allowance {
+  const { workflow, spent } = opts;
+  const label = AI_LABEL[workflow];
   if (!opts.configured) return { ok: false, reason: "not-configured", say: `${label} is not switched on yet.` };
+  const reserve = RESERVE_CENTS[workflow];
   const limit = opts.limitCents ?? MONTHLY_LIMIT_CENTS;
-  if (opts.spentCents + RESERVE_CENTS[opts.workflow] > limit) {
+  if (spent.month + reserve > limit || spent.workflow + reserve > SHARE_CENTS[workflow]) {
     return { ok: false, reason: "over-limit", say: `${label} has reached this month's limit.` };
+  }
+  const daily = DAILY_CENTS[workflow];
+  if (daily !== undefined && spent.today + reserve > daily) {
+    return { ok: false, reason: "over-limit", say: `${label} has reached today's limit and starts again tomorrow.` };
   }
   return { ok: true };
 }
@@ -100,4 +136,12 @@ export function monthStart(now = new Date()): string {
      winter. In winter that counts the last hour of the old month against the
      new one: the boundary can only tighten the limit, never loosen it. */
   return `${y}-${m}-01T04:00:00Z`;
+}
+
+/**
+ * The first moment of today in Georgia, for "spent today". The same 04:00 UTC
+ * boundary as monthStart, with the same direction of error.
+ */
+export function dayStart(now = new Date()): string {
+  return `${dayIn(now, GEORGIA_TZ)}T04:00:00Z`;
 }

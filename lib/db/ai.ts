@@ -3,7 +3,7 @@ import { serviceClient } from "./service";
 import { boundedRead, boundedWrite } from "./bounded";
 import { done, skipped, type DbResult } from "./result";
 import { captureOpError } from "@/lib/monitoring/capture";
-import { AI_LABEL, allowance, costCents, monthStart, type AiWorkflow, type Allowance, type Usage } from "@/lib/core/ai";
+import { AI_LABEL, allowance, costCents, dayStart, monthStart, type AiWorkflow, type Allowance, type Spent, type Usage } from "@/lib/core/ai";
 
 /**
  * The only reader and writer of rift_ai_usage (Blueprint v5 §10.2). The
@@ -13,17 +13,30 @@ import { AI_LABEL, allowance, costCents, monthStart, type AiWorkflow, type Allow
 /** A key is present. Never logged, never sent anywhere but Anthropic. */
 export const aiConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY?.trim());
 
-/** What AI has cost since the start of this month, in cents. */
-export async function spentThisMonth(now = new Date()): Promise<DbResult<number>> {
+/**
+ * What AI has cost this month, in cents: in all, on one workflow, and on that
+ * workflow since midnight in Georgia. One read of the month's rows, which stay
+ * few: at the limit they number in the hundreds.
+ */
+export async function spentThisMonth(workflow: AiWorkflow, now = new Date()): Promise<DbResult<Spent>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
   const r = await boundedRead(
-    db.from("rift_ai_usage").select("cost_cents").gte("created_at", monthStart(now)).limit(10_000),
+    db.from("rift_ai_usage").select("workflow,cost_cents,created_at").gte("created_at", monthStart(now)).limit(10_000),
     "this month's AI spend",
   );
   if (!r.ok) return r;
-  const rows = ("data" in r ? r.data : []) as { cost_cents: number }[];
-  return done(rows.reduce((s, x) => s + (x.cost_cents ?? 0), 0));
+  const rows = ("data" in r ? r.data : []) as { workflow: string; cost_cents: number; created_at: string }[];
+  const today = Date.parse(dayStart(now));
+  const spent: Spent = { month: 0, workflow: 0, today: 0 };
+  for (const x of rows) {
+    const c = x.cost_cents ?? 0;
+    spent.month += c;
+    if (x.workflow !== workflow) continue;
+    spent.workflow += c;
+    if (Date.parse(x.created_at) >= today) spent.today += c;
+  }
+  return done(spent);
 }
 
 /**
@@ -32,12 +45,12 @@ export async function spentThisMonth(now = new Date()): Promise<DbResult<number>
  * limit exists to prevent.
  */
 export async function mayCall(workflow: AiWorkflow): Promise<Allowance> {
-  if (!aiConfigured()) return allowance({ configured: false, spentCents: 0, workflow });
-  const spent = await spentThisMonth();
+  if (!aiConfigured()) return allowance({ configured: false, spent: { month: 0, workflow: 0, today: 0 }, workflow });
+  const spent = await spentThisMonth(workflow);
   if (!spent.ok || "skipped" in spent) {
     return { ok: false, reason: "over-limit", say: `${AI_LABEL[workflow]} is unavailable because this month's AI spend could not be checked.` };
   }
-  return allowance({ configured: true, spentCents: spent.data, workflow });
+  return allowance({ configured: true, spent: spent.data, workflow });
 }
 
 /** Records a call. A failure to record is reported: an unrecorded call loosens the limit. */

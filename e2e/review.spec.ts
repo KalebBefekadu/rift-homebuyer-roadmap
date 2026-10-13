@@ -57,6 +57,21 @@ test("an offer PDF cannot be chosen before a name and phone (WS8.2)", async ({ p
   await expect(page.locator("#offer-from")).toBeFocused();
 });
 
+test("an offer PDF goes through, with the page's pass, and says what happened to it (D41)", async ({ page }) => {
+  const passed = page.waitForResponse((r) => r.url().endsWith("/api/offer/pass"));
+  await page.goto("/offer");
+  expect((await passed).status()).toBe(200);
+  await page.locator("#offer-from").fill("Sam Agent");
+  await page.locator("#offer-phone").fill("404 555 0100");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "offer.pdf", mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n1 0 obj << /Type /Page >> endobj\ntrailer\n%%EOF"),
+  });
+  /* No database and no AI key here: not kept, not read, and both said. */
+  await expect(page.getByText(/could not keep the PDF just now/)).toBeVisible();
+  await expect(page.getByText(/Automatic reading is not switched on yet/)).toBeVisible();
+});
+
 test("the Equb page switches to Amharic and every call to action opens the form page", async ({ page }) => {
   await page.goto("/equb");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Save together. Buy a home.");

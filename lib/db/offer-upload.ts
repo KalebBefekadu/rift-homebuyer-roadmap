@@ -27,7 +27,8 @@ import type { Candidates } from "@/lib/core/offer-extract";
 const BUCKET = "rift-documents";
 /* Its own secret when set; otherwise derived from the service key, which is
    already a secret only the server holds (as app/api/equb/route.ts). */
-const secret = () => process.env.RIFT_SIGNING_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+export const signingSecret = () => process.env.RIFT_SIGNING_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const secret = signingSecret;
 
 export const uploadIdOf = (token: string | null | undefined): string | null => {
   if (!token) return null;

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { limited } from "@/lib/db/guard";
 import { checkFile } from "@/lib/core/document";
 import { readOfferPdf } from "@/lib/db/offer-read";
-import { keepOfferFile, saveUploadRead } from "@/lib/db/offer-upload";
-import { readSender } from "@/lib/core/offer-upload";
+import { keepOfferFile, saveUploadRead, signingSecret } from "@/lib/db/offer-upload";
+import { checkPass, PASS_SAY } from "@/lib/core/offer-pass";
+import { PASS_HEADER, readSender } from "@/lib/core/offer-upload";
 import { MAX_OFFER_PDF_BYTES as MAX_OFFER_BYTES, MAX_OFFER_PDF_SAY } from "@/lib/core/offer-intake";
 
 export const runtime = "nodejs";
@@ -13,7 +14,10 @@ export const maxDuration = 120;
 /**
  * Takes an offer PDF (Blueprint v5 §5.9, manual review WS8.2 and WS8.3).
  *
- * Who is sending it comes first (lib/core/offer-upload.ts), then the same
+ * It carries the page's pass (lib/core/offer-pass.ts): this is the only
+ * public route that spends money, so a post that did not come from the page
+ * is refused before the file is opened. Then who is sending it
+ * (lib/core/offer-upload.ts), then the same
  * structural checks as any document Rift keeps (lib/core/document.ts). The
  * file is then stored, which is the delivery: Kaleb has it from here, form
  * or no form. Only the first file on an upload is read automatically; an
@@ -27,6 +31,15 @@ export async function POST(req: Request) {
   const declared = Number(req.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > MAX_OFFER_BYTES + 64 * 1024) {
     return NextResponse.json({ ok: false, error: MAX_OFFER_PDF_SAY }, { status: 413 });
+  }
+
+  /* Without a secret nothing could have signed a pass (lib/db/offer-upload.ts),
+     so none is asked for: the same as the page, which then has none to send.
+     A header, so a post without one is refused before its body is read. */
+  const secret = signingSecret();
+  if (secret) {
+    const pass = checkPass(secret, req.headers.get(PASS_HEADER));
+    if (pass !== "ok") return NextResponse.json({ ok: false, error: PASS_SAY[pass] }, { status: 403 });
   }
 
   let file: File | null = null;

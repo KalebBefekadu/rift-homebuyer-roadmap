@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { allowance, costCents, monthStart, MODEL_FOR, PRICE_CENTS_PER_MTOK, MONTHLY_LIMIT_CENTS, RESERVE_CENTS } from "./ai";
+import { allowance, costCents, dayStart, monthStart, AI_WORKFLOWS, DAILY_CENTS, MODEL_FOR, PRICE_CENTS_PER_MTOK, MONTHLY_LIMIT_CENTS, RESERVE_CENTS, SHARE_CENTS } from "./ai";
 import { readCandidates, SCHEMA, FIELDS } from "./offer-extract";
 
 describe("the AI limit (Blueprint v5 §10.2, D16)", () => {
@@ -14,11 +14,40 @@ describe("the AI limit (Blueprint v5 §10.2, D16)", () => {
     expect(() => costCents("some-new-model", { input_tokens: 1, output_tokens: 1 })).toThrow(/no price/);
   });
 
+  const none = { month: 0, workflow: 0, today: 0 };
+
   it("refuses a call that could take the month over the limit, and says why", () => {
-    expect(allowance({ configured: true, spentCents: 0, workflow: "offer-extraction" })).toEqual({ ok: true });
-    const near = allowance({ configured: true, spentCents: MONTHLY_LIMIT_CENTS - RESERVE_CENTS["offer-extraction"] + 1, workflow: "offer-extraction" });
+    expect(allowance({ configured: true, spent: none, workflow: "offer-extraction" })).toEqual({ ok: true });
+    const near = allowance({ configured: true, spent: { ...none, month: MONTHLY_LIMIT_CENTS - RESERVE_CENTS["offer-extraction"] + 1 }, workflow: "offer-extraction" });
     expect(near).toMatchObject({ ok: false, reason: "over-limit" });
-    expect(allowance({ configured: false, spentCents: 0, workflow: "program-compare" })).toMatchObject({ ok: false, reason: "not-configured" });
+    expect(allowance({ configured: false, spent: none, workflow: "program-compare" })).toMatchObject({ ok: false, reason: "not-configured" });
+  });
+
+  it("gives each workflow its own share, adding up to the month (D41)", () => {
+    expect(AI_WORKFLOWS.reduce((s, w) => s + SHARE_CENTS[w], 0)).toBe(MONTHLY_LIMIT_CENTS);
+    for (const w of AI_WORKFLOWS) expect(RESERVE_CENTS[w], w).toBeLessThan(SHARE_CENTS[w]);
+  });
+
+  it("an offer upload that has used its share cannot stop the program comparison", () => {
+    const share = SHARE_CENTS["offer-extraction"];
+    const offers = allowance({ configured: true, spent: { month: share, workflow: share, today: 0 }, workflow: "offer-extraction" });
+    expect(offers).toMatchObject({ ok: false, reason: "over-limit", say: expect.stringMatching(/this month/) });
+    expect(allowance({ configured: true, spent: { month: share, workflow: 0, today: 0 }, workflow: "program-compare" })).toEqual({ ok: true });
+  });
+
+  it("the public workflow stops for the day before it can spend the week", () => {
+    const day = DAILY_CENTS["offer-extraction"]!;
+    expect(day).toBeLessThan(SHARE_CENTS["offer-extraction"] / 4);
+    const r = allowance({ configured: true, spent: { month: day, workflow: day, today: day - RESERVE_CENTS["offer-extraction"] + 1 }, workflow: "offer-extraction" });
+    expect(r).toMatchObject({ ok: false, reason: "over-limit", say: expect.stringMatching(/today's limit and starts again tomorrow/) });
+    /* Only on the workflow a stranger can start. */
+    expect(DAILY_CENTS["program-compare"]).toBeUndefined();
+  });
+
+  it("the day starts at midnight Eastern, or an hour earlier, never later", () => {
+    expect(dayStart(new Date("2026-10-15T12:00:00Z"))).toBe("2026-10-15T04:00:00Z");
+    /* 11:30pm on 14 January in Georgia is still the 14th. */
+    expect(dayStart(new Date("2026-01-15T04:30:00Z"))).toBe("2026-01-14T04:00:00Z");
   });
 
   it("the month starts at midnight Eastern, or an hour earlier, never later", () => {
