@@ -385,6 +385,7 @@ export const FEEDS: Record<InputKey, string> = {
   finish: "what to fix before listing",
   status: "what they can own, finance and close from abroad",
   use: "costs and return: living in it or renting it out",
+  target: "the date their timeline is compared against",
 };
 
 /** The live values on a side that ask a built-in question, in D20 order. */

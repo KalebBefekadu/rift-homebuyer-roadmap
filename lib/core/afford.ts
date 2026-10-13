@@ -15,6 +15,15 @@
  * the monthly-cost value uses produce k, so the two values cannot disagree
  * about the same house.
  *
+ * The real ceiling. A payment can reach a price the savings cannot close on:
+ * someone comfortable at $2,400 a month with $20,000 saved was told about
+ * $305,000 fits, when their cash reaches $250,000 once closing costs are in.
+ * Cash to close is linear in the price in the same way (every line scales
+ * except insurance, inspection and appraisal), so its inverse is exact too,
+ * and the answer is the lower of the two, named as such. Unknown savings is
+ * not zero savings: with none given, the payment alone sets it, and the page
+ * says the cash was not checked rather than implying it was.
+ *
  * Bounds: a payment that does not cover insurance leaves no price; answers
  * are capped at the same $5,000,000 every value uses and rounded down to the
  * nearest $5,000, so the figure never overstates.
@@ -22,7 +31,7 @@
  * Pure: no I/O.
  */
 
-import { BUYER_DEFAULTS, monthlyCost, money, pct, type Assumption, type BuyerInputs } from "./compute";
+import { BUYER_DEFAULTS, cashToClose, monthlyCost, money, pct, type Assumption, type BuyerInputs } from "./compute";
 
 export const MAX_PRICE = 5_000_000;
 /** Planning guidelines, not lending rules. Named as such wherever shown. */
@@ -38,6 +47,8 @@ export interface AffordInputs {
   comfort: number;
   downPct: number;
   ratePct: number;
+  /** Saved towards buying. Undefined: not given, so the cash is not checked. */
+  savings?: number;
 }
 
 type Base = Omit<BuyerInputs, "price">;
@@ -57,6 +68,31 @@ export function priceFor(payment: number, i: AffordInputs): number | null {
   const { k, fixed } = slope(i);
   if (!(payment > fixed) || !(k > 0)) return null;
   return Math.min(MAX_PRICE, floor5k((payment - fixed) / k));
+}
+
+/** Cash to close per dollar of price, and the part that does not scale. */
+function cashSlope(i: AffordInputs): { k: number; fixed: number } {
+  const at = (price: number) => cashToClose({ ...BUYER_DEFAULTS, downPct: i.downPct, ratePct: i.ratePct, hoaMo: 0, price, assistance: 0 }).total;
+  const fixed = at(0);
+  return { k: (at(1_000_000) - fixed) / 1_000_000, fixed };
+}
+
+/** The highest price whose cash to close the savings cover. Null: no price does. */
+export function priceForCash(savings: number, i: AffordInputs): number | null {
+  const { k, fixed } = cashSlope(i);
+  if (!(savings > fixed) || !(k > 0)) return null;
+  return Math.min(MAX_PRICE, floor5k((savings - fixed) / k));
+}
+
+export interface Ceiling {
+  /** The lower of the payment's price and the cash's price. Null: neither reaches one. */
+  price: number | null;
+  /** Which of the two sets it. "payment" when savings were not given. */
+  binds: "payment" | "cash";
+  /** Roughly how much price each `liftPer` dollars more of the binding thing adds. */
+  lift: number;
+  /** $1,000 more saved when cash binds; $100 more a month when the payment does. */
+  liftPer: number;
 }
 
 export interface Scenario {
@@ -83,12 +119,22 @@ export function affordability(i: AffordInputs) {
      plan that stretches should know it is stretching. */
   const stretch = comfort.price !== null && guides.every((g) => comfort.price! > g);
 
+  /* Which one binds. A tie goes to the payment: it is the number they chose. */
+  const cash = i.savings === undefined ? null : { savings: i.savings, price: priceForCash(i.savings, i) };
+  const cashBinds = cash !== null && (cash.price ?? -1) < (comfort.price ?? -1);
+  const per = (n: number) => Math.round(n / 100) * 100;
+  const ceiling: Ceiling = cashBinds
+    ? { price: cash!.price, binds: "cash", lift: per(1_000 / cashSlope(i).k), liftPer: 1_000 }
+    : { price: comfort.price, binds: "payment", lift: per(100 / slope(i).k), liftPer: 100 };
+
   const monthlyAt = comfort.price !== null ? monthlyCost({ ...slope(i).base, price: comfort.price }) : null;
 
   return {
     comfort,
     scenarios,
     stretch,
+    cash,
+    ceiling,
     monthlyAt,
     assumptions: [
       { label: "Down payment", value: pct(i.downPct) },
@@ -97,8 +143,9 @@ export function affordability(i: AffordInputs) {
       { label: "Insurance", value: `${money(BUYER_DEFAULTS.insuranceYr)} a year` },
       { label: "Mortgage insurance", value: i.downPct < 20 ? `${pct(BUYER_DEFAULTS.pmiPct, 2)} of the loan a year` : "None, 20% or more down" },
       { label: "HOA", value: "None assumed" },
+      { label: "Cash to close", value: i.savings === undefined ? "Not checked: no savings given" : `Down payment, ${pct(BUYER_DEFAULTS.closingPct)} closing costs, prepaids, inspection and appraisal, against ${money(i.savings)} saved` },
     ] as Assumption[],
     couldBeWrong:
-      "This is a plan, not an approval. A lender looks at your credit, your full debts, your savings and the loan type, and may allow more or less than any figure here. Taxes, insurance and any HOA fee depend on the home, and all of them change the price a payment reaches.",
+      "This is a plan, not an approval. A lender looks at your credit, your full debts, your savings and the loan type, and may allow more or less than any figure here. Taxes, insurance and any HOA fee depend on the home, and all of them change the price a payment reaches. Closing costs vary by lender and loan, and a seller may pay part of them, which would lift what your cash reaches.",
   };
 }

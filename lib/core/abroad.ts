@@ -16,7 +16,7 @@
  * apart.
  */
 
-import { monthlyPI, BUYER_DEFAULTS } from "./compute";
+import { monthlyPI, BUYER_DEFAULTS, PRICE_GROWTH_PCT } from "./compute";
 
 /* ------------------------------------------------------------------ status */
 
@@ -219,8 +219,9 @@ export const ASSUMPTIONS = {
   vacancyPct: 5,
   /** Repairs and turnover, set aside monthly rather than discovered at once. */
   maintenancePct: 5,
-  /** Long-run metro average. Deliberately below the recent run. */
-  appreciationPct: 4,
+  /** Long-run metro average, deliberately below the recent run. Shared with
+      the timeline's moving target (compute.ts). */
+  appreciationPct: PRICE_GROWTH_PCT,
 };
 
 export interface AbroadResult {

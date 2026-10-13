@@ -98,6 +98,46 @@ export function sellerNet(i: SaleInputs) {
   };
 }
 
+/**
+ * The lowest sale price that leaves the seller nothing short at closing.
+ *
+ * Their own payoff and their own costs, solved: not a value for the house,
+ * which MONEY-06 forbids. It is the floor under every negotiation, and the
+ * one figure an underwater or thin-equity seller most needs and is never
+ * told. Every cost line is a share of the price except the attorney and the
+ * payoff fees, so the price is (payoff + fixed) / (1 - shares) exactly; the
+ * lines round to the dollar, so the answer is stepped to the first whole
+ * dollar that leaves nothing short. With commission not agreed, it is the
+ * break-even before commission, and the page says so.
+ *
+ * Null when nothing is owed: the figure would be a few hundred dollars and
+ * mean nothing.
+ */
+export function breakEvenPrice(i: SaleInputs): number | null {
+  if (!(i.payoff > 0)) return null;
+  const share = (i.commissionPct ?? 0) / 100 + GA_TRANSFER_TAX_RATE + BUYER_DEFAULTS.taxPct / 100 / 2;
+  if (share >= 1) return null;
+  let p = Math.max(0, Math.floor((i.payoff + SELLER_SETTLEMENT + PAYOFF_FEES) / (1 - share)) - 2);
+  while (sellerNet({ ...i, price: p }).net < 0) p++;
+  return p;
+}
+
+/**
+ * What they keep if it sells five percent either side of their price, and at
+ * a point of commission either side of what they agreed.
+ *
+ * Around their own number, never a forecast of ours: the page says "if it
+ * sells for", not "it will sell for". Commission is left out when none is
+ * agreed, as everywhere else.
+ */
+export function netSensitivity(i: SaleInputs) {
+  const near = (p: number) => Math.round(p / 1_000) * 1_000;
+  const byPrice = [near(i.price * 0.95), i.price, near(i.price * 1.05)].map((price) => ({ price, net: sellerNet({ ...i, price }).net }));
+  const byCommission = i.commissionPct === null ? [] : [Math.max(0, i.commissionPct - 1), i.commissionPct, i.commissionPct + 1]
+    .map((pct) => ({ pct, net: sellerNet({ ...i, commissionPct: pct }).net }));
+  return { byPrice, byCommission };
+}
+
 /* ------------------------------------------------------------------ *
  * Preparation
  * ------------------------------------------------------------------ */

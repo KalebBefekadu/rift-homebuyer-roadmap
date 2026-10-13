@@ -272,6 +272,23 @@ export const ASKS: Record<InputKey, AskDef> = {
     ],
     fallback: "no",
   },
+  target: {
+    /* The stated half of rule 11's comparison. Each choice is an upper bound
+       in months, so "within 6 months" compares against 6; "just exploring"
+       is a real answer and gets no comparison. Not `t`: the retired readout
+       carries its own timing answer there. */
+    key: "target", param: "tg", type: "choice",
+    title: "When would you like to buy?",
+    why: "We compare it with what your numbers say, so you can see the gap and what closes it.",
+    options: [
+      { value: "6", label: "Within 6 months" },
+      { value: "12", label: "Within a year" },
+      { value: "24", label: "Within two years" },
+      { value: "36", label: "Within three years" },
+      { value: "exploring", label: "Just exploring" },
+    ],
+    fallback: "exploring",
+  },
   status: {
     key: "status", param: "st", type: "choice",
     title: "Which describes you?",
@@ -353,4 +370,5 @@ export const ASK_SHORT: Record<InputKey, string> = {
   credit: "Credit", occupation: "Work", loanType: "Loan", debts: "Other debts", comfort: "Comfortable payment", salePrice: "Sale price", payoff: "Still owed",
   commission: "Commission", yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older",
   status: "Status", use: "Use", roof: "Roof", systems: "Systems", finish: "Finishes",
+  target: "Want to buy",
 };

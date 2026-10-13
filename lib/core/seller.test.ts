@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { saleCosts, sellerNet, preparePlan, SELLER_SETTLEMENT, PAYOFF_FEES, proratedTax } from "./seller";
+import { saleCosts, sellerNet, preparePlan, breakEvenPrice, netSensitivity, SELLER_SETTLEMENT, PAYOFF_FEES, proratedTax } from "./seller";
 import { GA_TRANSFER_TAX_RATE } from "./compute";
 
 const base = { price: 400_000, payoff: 200_000, county: "Cobb", commissionPct: 5 as number | null };
@@ -53,5 +53,45 @@ describe("what to fix first", () => {
           const text = [...p.address, ...p.maybe, ...p.notYet].map((i) => `${i.item} ${i.why}`).join(" ");
           expect(text).not.toMatch(/\$|%|pays? back|return on|roi/i);
         }
+  });
+});
+
+/* Break-even and sensitivity (docs/audit/value-depth-2026-10.md §4.7): the
+   seller's own costs, solved, never a value for the house (MONEY-06). */
+describe("the price below which selling costs money", () => {
+  it("leaves nothing at the break-even price, and a dollar less is a shortfall", () => {
+    for (const payoff of [50_000, 200_000, 480_000]) {
+      for (const commissionPct of [null, 2, 5, 6]) {
+        const p = breakEvenPrice({ ...base, payoff, commissionPct })!;
+        expect(sellerNet({ ...base, price: p, payoff, commissionPct }).net).toBeGreaterThanOrEqual(0);
+        expect(sellerNet({ ...base, price: p - 1, payoff, commissionPct }).net).toBeLessThan(0);
+      }
+    }
+  });
+
+  it("is $213,162 on the audit's case: $200,000 owed and 5% commission", () => {
+    expect(breakEvenPrice(base)).toBe(213_162);
+  });
+
+  it("has nothing to say when nothing is owed", () => {
+    expect(breakEvenPrice({ ...base, payoff: 0 })).toBeNull();
+  });
+});
+
+describe("what moves what they keep", () => {
+  it("prices five percent either side of theirs, with theirs in the middle", () => {
+    const s = netSensitivity(base);
+    expect(s.byPrice.map((r) => r.price)).toEqual([380_000, 400_000, 420_000]);
+    expect(s.byPrice[1].net).toBe(sellerNet(base).net);
+    expect(s.byPrice[0].net).toBeLessThan(s.byPrice[1].net);
+    expect(s.byPrice[2].net).toBeGreaterThan(s.byPrice[1].net);
+  });
+
+  it("moves commission a point either way when one is agreed, never below zero, and not at all when none is", () => {
+    const s = netSensitivity(base);
+    expect(s.byCommission.map((r) => r.pct)).toEqual([4, 5, 6]);
+    expect(s.byCommission[0].net - s.byCommission[1].net).toBe(4_000);
+    expect(netSensitivity({ ...base, commissionPct: 0.5 }).byCommission.map((r) => r.pct)).toEqual([0, 0.5, 1.5]);
+    expect(netSensitivity({ ...base, commissionPct: null }).byCommission).toEqual([]);
   });
 });

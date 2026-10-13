@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { money } from "@/lib/core/compute";
-import { sellerNet } from "@/lib/core/seller";
+import { sellerNet, breakEvenPrice, netSensitivity } from "@/lib/core/seller";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
@@ -46,6 +46,10 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
   const commissionPct = a.commission === "none" ? null : Number(a.commission);
   const r = sellerNet({ price, payoff, county: String(a.county), commissionPct });
   const underwater = r.net < 0;
+  const inputs = { price, payoff, county: String(a.county), commissionPct };
+  const floor = breakEvenPrice(inputs);
+  const moves = netSensitivity(inputs);
+  const keeps = (n: number) => (n < 0 ? `${money(-n)} short` : money(n));
 
   const sentence = underwater
     ? <>would have to be brought to closing to sell at {money(price)}: what you owe and the costs of selling are more than the price. That is a problem to solve before listing, and it has answers; Kaleb can walk through them with you.</>
@@ -78,6 +82,40 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
         ]}
         total={{ label: underwater ? "Short at closing" : "Reaches you", amount: underwater ? `−${money(r.shortfall)}` : money(r.net) }}
       />
+      {floor !== null ? (
+        <section className="sec-sm" aria-labelledby="floor-h">
+          <div className="card p-5">
+            <div className="kicker c-brand" id="floor-h">Your floor</div>
+            <div className="num mt-2" style={{ fontSize: 28 }}>{money(floor)}</div>
+            <p className="t-sm c-2 mt-2 measure" style={{ lineHeight: 1.6 }}>
+              {underwater
+                ? <>is the price at which this sale stops costing you money: {money(floor - price)} above the price you gave. Below it, the difference has to be found before closing.</>
+                : <>is the lowest price that leaves you nothing short at closing, {money(price - floor)} under the price you gave. Below it, selling costs you money. It is your own payoff and costs, not a value for the house.</>}
+              {r.costs.commissionKnown ? null : " Commission is not agreed yet, so it is the floor before commission."}
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      <Lines
+        title="If it sells for"
+        rows={moves.byPrice.map((m) => ({
+          label: money(m.price),
+          note: m.price === price ? "The price you gave" : m.price < price ? "Five percent under your price" : "Five percent over your price",
+          amount: keeps(m.net),
+        }))}
+      />
+      {moves.byCommission.length ? (
+        <Lines
+          title="If commission is"
+          rows={moves.byCommission.map((m) => ({
+            label: `${m.pct}%`,
+            note: m.pct === commissionPct ? "What you told us you agreed" : undefined,
+            amount: keeps(m.net),
+          }))}
+        />
+      ) : null}
+
       <p className="t-sm c-3 mt-3 measure" style={{ lineHeight: 1.6 }}>
         Not taken off: moving, which is not paid at closing, and anything a buyer asks for until you agree it.
         If a buyer asks for 1% toward their costs, that is {money(r.concessionPerPoint)}.

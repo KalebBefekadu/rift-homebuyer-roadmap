@@ -7,6 +7,7 @@ import { GEORGIA_PROGRAMS, matchAssistance, type Occupation } from "./assistance
 import { firstTimeFrom, type Ownership } from "./funnel";
 import { ABROAD_DEFAULTS, abroadReturns, statusById, type StatusId, type Use } from "./abroad";
 import { VALUES, type InputKey } from "./values";
+import { timelinePlan } from "./timeline";
 
 /**
  * Every question a value asks has to be able to change its answer.
@@ -37,7 +38,7 @@ const BASE: Answers = {
   savings: "10000", monthlySaving: "500", income: "70000", household: "3",
   occupation: "other", comfort: "2200", debts: "400",
   salePrice: "400000", payoff: "200000", commission: "5",
-  roof: "10to20", systems: "working", finish: "lived",
+  roof: "10to20", systems: "working", finish: "lived", target: "24",
   status: "foreign", use: "rent",
 };
 
@@ -61,6 +62,7 @@ const TRY: Partial<Record<InputKey, string[]>> = {
   systems: ["broken", "unsure"],
   finish: ["fresh", "worn"],
   status: ["citizen", "resident", "itin"],
+  target: ["6", "12", "36", "exploring"],
   use: ["live"],
 };
 
@@ -85,9 +87,9 @@ const PROBES: Record<string, (a: Answers) => unknown> = {
   monthly: (a) => monthlyComputed({ ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, ratePct: RATE, assistance: 0 }),
   timeline: (a) => {
     const i = { ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), savings: n(a, "savings"), monthlySaving: n(a, "monthlySaving"), assistance: 0 };
-    return { g: cashGap(i), l: gapLevers(i) };
+    return { g: cashGap(i), l: gapLevers(i), p: timelinePlan(i, a.target === "exploring" ? "exploring" : n(a, "target")) };
   },
-  afford: (a) => affordability({ income: n(a, "income"), debts: n(a, "debts"), comfort: n(a, "comfort"), downPct: n(a, "downPct"), ratePct: RATE }),
+  afford: (a) => affordability({ income: n(a, "income"), debts: n(a, "debts"), comfort: n(a, "comfort"), downPct: n(a, "downPct"), ratePct: RATE, savings: n(a, "savings") }),
   lender: (a) => lenderQuestions({ price: n(a, "price"), downPct: n(a, "downPct"), firstTime: firstTimeFrom(a.ownership as Ownership), matches: [], combination: null }),
   proceeds: (a) => sellerNet({ price: n(a, "salePrice"), payoff: n(a, "payoff"), county: a.county, commissionPct: commission(a) }),
   costs: (a) => saleCosts({ price: n(a, "salePrice"), payoff: 0, county: a.county, commissionPct: commission(a) }),

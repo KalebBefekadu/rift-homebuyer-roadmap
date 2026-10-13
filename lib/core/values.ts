@@ -23,7 +23,7 @@ export type InputKey =
   | "income" | "household" | "credit" | "occupation" | "loanType" | "debts" | "comfort"
   | "salePrice" | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
   | "roof" | "systems" | "finish"
-  | "status" | "use";
+  | "status" | "use" | "target";
 
 export interface ValueDef {
   id: string;
@@ -73,9 +73,9 @@ export const VALUES: ValueDef[] = [
   {
     id: "timeline", side: "buy", href: "/buy/timeline", name: "Timeline",
     question: "When could I buy?",
-    gives: "How many months until you are ready, and the two changes that shorten it most.",
+    gives: "How many months until you are ready, against when you want to buy, and what closes the gap.",
     cta: "See when I could buy",
-    asks: ["price", "downPct", "savings", "monthlySaving"],
+    asks: ["price", "downPct", "savings", "monthlySaving", "target"],
     live: true,
   },
 
@@ -83,9 +83,9 @@ export const VALUES: ValueDef[] = [
   {
     id: "afford", side: "buy", href: "/buy/afford", name: "What fits",
     question: "How much home fits me?",
-    gives: "The price your comfortable payment reaches, beside two common planning guidelines.",
+    gives: "The price your payment reaches, the price your savings reach, and which one is your ceiling today.",
     cta: "See what fits me",
-    asks: ["comfort", "income", "debts", "downPct"],
+    asks: ["comfort", "income", "debts", "downPct", "savings"],
     live: true,
   },
 

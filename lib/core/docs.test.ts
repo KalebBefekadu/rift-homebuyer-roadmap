@@ -9,6 +9,9 @@ import { DRIFT_PCT, CROSSINGS } from "./seam";
 import { REVIEW_SLA_HOURS } from "./review";
 import { SEQUENCES, STOPS } from "./nurture";
 import { MOMENTS } from "./referral";
+import { PRICE_GROWTH_PCT, BUYER_DEFAULTS } from "./compute";
+import { SELLER_HELP_MAX, timelinePlan } from "./timeline";
+import { breakEvenPrice } from "./seller";
 
 /**
  * The documentation drift guard.
@@ -120,5 +123,17 @@ describe("docs match the code they describe", () => {
       expect(d, `${name} should tell the reader how to run the tests`).toContain("npm test");
       expect(d, `${name} names a test path that no longer exists`).not.toContain("lib/prototype/compute.test.ts");
     }
+  });
+
+  it("calculations.md states the value-depth figures the engines produce", () => {
+    /* docs/audit/value-depth-2026-10.md: the planning growth rate, the seller
+       help cap and the two reference results are quoted in the contract. */
+    const calc = doc("calculations.md");
+    expect(calc).toContain(`\`PRICE_GROWTH_PCT\` is ${PRICE_GROWTH_PCT}%`);
+    expect(calc).toContain(`\`SELLER_HELP_MAX\` (${SELLER_HELP_MAX}%`);
+    const moving = timelinePlan({ ...BUYER_DEFAULTS, assistance: 0 }, "exploring").moving!.months;
+    expect(calc).toContain(`**${moving} months** with growth`);
+    const floor = breakEvenPrice({ price: 400_000, payoff: 200_000, county: "Cobb", commissionPct: 5 })!;
+    expect(calc).toContain(`**$${floor.toLocaleString("en-US")}**`);
   });
 });

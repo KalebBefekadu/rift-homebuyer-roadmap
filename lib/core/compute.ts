@@ -71,6 +71,15 @@ export const BUYER_DEFAULTS: BuyerInputs = {
   currentRent: 1_850,
 };
 
+/**
+ * The planning rate at which home prices are assumed to rise, a year. A
+ * long-run metro average, deliberately below the recent run. One figure for
+ * every surface that projects a price forward (the timeline's moving target,
+ * the abroad return's appreciation), so two pages cannot quote two rates for
+ * the same street. Always shown as an assumption, never as a forecast.
+ */
+export const PRICE_GROWTH_PCT = 4;
+
 /** Monthly principal and interest. Mirrors the contract in docs/calculations.md. */
 export function monthlyPI(loan: number, ratePct: number, termYears: number) {
   if (loan <= 0) return 0;

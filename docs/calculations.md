@@ -127,6 +127,36 @@ home being told *"you already have the cash to close."* It is the single most da
 this product could say to a person, and the arithmetic does it by default unless something
 stops it.
 
+## What fits: the real ceiling, `affordability(i)` in `lib/core/afford.ts`
+
+A payment can reach a price the savings cannot close on. Cash to close is linear in the price
+(every line scales except insurance, inspection and appraisal), so its inverse is exact, like
+the payment's:
+
+```text
+paymentPrice = priceFor(comfort)          -- floor to $5,000, as before
+cashPrice    = floor5k((savings - fixed) / k)   where cashToClose(price) = k * price + fixed
+ceiling      = min(paymentPrice, cashPrice), naming which one binds (a tie goes to the payment)
+```
+
+Savings not given means the cash is not checked, never that it is zero. "What lifts it" is
+about `1,000 / k` of price per $1,000 saved when cash binds, or the payment slope per $100 a
+month when the payment does.
+
+## Timeline: stated against computed, `timelinePlan(i, target)` in `lib/core/timeline.ts`
+
+- **Stated.** Only when they named a date; "just exploring" has no comparison (rule 11). A
+  one-month overrun is on track, as the readout's tension rules (handoff §4.15).
+- **Levers for a date they miss**, each solved on its own, never added together:
+  monthly saving `ceil(gap / target)` to the next $10; the price whose cash to close fits
+  `savings + monthlySaving * target`, floored to $5,000; the down payment option closest to
+  theirs that meets it; seller help in half points up to `SELLER_HELP_MAX` (3%, the
+  strictest common limit: a conventional loan under 10% down).
+- **Moving target.** The first month `m` where
+  `cashToClose(price * (1 + PRICE_GROWTH_PCT/100)^(m/12)) - savings <= monthlySaving * m`.
+  `PRICE_GROWTH_PCT` is 4%, shared with the abroad return. Shown beside the headline, never as
+  it. On the reference case: **25 months** standing still, **28 months** with growth.
+
 ## Seller
 
 `netProceeds(s)` subtracts commission, concessions, Georgia transfer tax
@@ -136,6 +166,19 @@ by payback, and `unclaimedValue()` finds homestead and age-65 exemptions the own
 filed. It says an assessment looks high only against a county figure somebody gave
 (`assessedValue` is `null` when unknown, which is the default); otherwise it points at the
 appeal window and asks them to compare, without quoting a value.
+
+### The seller's floor and sensitivity, `lib/core/seller.ts`
+
+`breakEvenPrice(i)` is the lowest price that leaves nothing short at closing: their payoff and
+their costs, solved, never a value for the house (MONEY-06). Every line is a share of the
+price except the attorney and payoff fees, so
+`price = (payoff + 850 + 375) / (1 - commission - 0.001 - taxPct / 200)`, then stepped to the
+first whole dollar with a net of zero or more. Null when nothing is owed. Reference:
+$200,000 owed, 5% commission, **$213,162**.
+
+`netSensitivity(i)` gives the net at their price and five percent either side (to the
+nearest $1,000), and at a point of commission either side of what they agreed (never below
+zero; none when not agreed).
 
 ---
 

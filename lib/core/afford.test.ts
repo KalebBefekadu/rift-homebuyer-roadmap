@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
-import { affordability, priceFor, MAX_PRICE } from "./afford";
-import { BUYER_DEFAULTS, monthlyCost } from "./compute";
+import { affordability, priceFor, priceForCash, MAX_PRICE } from "./afford";
+import { BUYER_DEFAULTS, cashToClose, monthlyCost } from "./compute";
 
 const base = { income: 90_000, debts: 400, comfort: 2_400, downPct: 3.5, ratePct: 6.5 };
 const monthlyAt = (price: number, downPct = 3.5, ratePct = 6.5) =>
@@ -51,5 +51,50 @@ describe("how much home fits (Blueprint v5 §5.2, MONEY-05)", () => {
   it("never tells anybody what they can afford or qualify for", () => {
     const src = readFileSync("lib/core/afford.ts", "utf8").split("\n").filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l)).join("\n");
     expect(src).not.toMatch(/you can afford|qualif|approved for|pre-?approv/i);
+  });
+
+  /* The real ceiling (docs/audit/value-depth-2026-10.md §4.5): a payment can
+     reach a price the savings cannot close on. */
+  it("the cash a price needs stays at or under the savings, and $5,000 more would not", () => {
+    for (const savings of [12_000, 20_000, 60_000, 250_000]) {
+      for (const downPct of [3, 3.5, 10, 20]) {
+        const p = priceForCash(savings, { ...base, downPct })!;
+        const cash = (price: number) => cashToClose({ ...BUYER_DEFAULTS, price, downPct, assistance: 0 }).total;
+        expect(cash(p)).toBeLessThanOrEqual(savings + 0.01);
+        if (p < MAX_PRICE) expect(cash(p + 5_000)).toBeGreaterThan(savings);
+      }
+    }
+  });
+
+  it("savings that do not cover the fixed costs reach no price", () => {
+    expect(priceForCash(1_000, base)).toBeNull();
+    expect(priceForCash(0, base)).toBeNull();
+  });
+
+  it("the ceiling is the lower of what the payment reaches and what the cash reaches, and says which", () => {
+    const short = affordability({ ...base, savings: 20_000 });
+    expect(short.ceiling.binds).toBe("cash");
+    expect(short.ceiling.price).toBe(priceForCash(20_000, base));
+    expect(short.ceiling.price!).toBeLessThan(short.comfort.price!);
+
+    const ample = affordability({ ...base, savings: 200_000 });
+    expect(ample.ceiling.binds).toBe("payment");
+    expect(ample.ceiling.price).toBe(ample.comfort.price);
+  });
+
+  it("with no savings given, the payment alone sets it and nothing claims otherwise", () => {
+    const r = affordability(base);
+    expect(r.ceiling.binds).toBe("payment");
+    expect(r.cash).toBeNull();
+  });
+
+  it("says what lifts the ceiling, in the units of the thing that binds", () => {
+    const cashBound = affordability({ ...base, savings: 20_000 });
+    const lifted = priceForCash(21_000, base)! - priceForCash(20_000, base)!;
+    expect(cashBound.ceiling.liftPer).toBe(1_000);
+    expect(Math.abs(cashBound.ceiling.lift - lifted)).toBeLessThanOrEqual(5_000);
+    const payBound = affordability({ ...base, savings: 200_000 });
+    expect(payBound.ceiling.liftPer).toBe(100);
+    expect(payBound.ceiling.lift).toBeGreaterThan(0);
   });
 });
