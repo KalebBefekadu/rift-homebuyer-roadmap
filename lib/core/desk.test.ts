@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activity, arrange, deskHeadline, deskItems, markError, markOf, type DeskInput, type Mark } from "./desk";
+import { activity, arrange, checkInDraft, deskHeadline, deskItems, markError, markOf, type DeskInput, type Mark } from "./desk";
 import { contractFlags, datesNeeding, nextDate, waitingOnOthers, type ContractSummary } from "./transactions";
 import { deadlineView, type Revision } from "./deadline";
 import { workstreamView, WORKSTREAMS, type WorkUpdate } from "./progress";
@@ -237,5 +237,15 @@ describe("recent activity", () => {
     }, NOW);
     expect(a.map((x) => x.text)).toEqual(["New buyer lead: Luis", "Program check: ran, 6 unchanged"]);
     expect(a[1]!.auto).toBe(true);
+  });
+});
+
+describe("a check-in ready for Waiting on others (audit portals-2026-10, item 7)", () => {
+  it("names the property, the work and the last word, and carries no figure", () => {
+    const d = checkInDraft({ agentName: "Kaleb Befekadu", label: "Title", person: "Michael Brooks", address: "318 Oakhurst Ave", lastWord: "Fri, Oct 2" });
+    expect(d.subject).toBe("Title: 318 Oakhurst Ave");
+    expect(d.body).toMatch(/agent for Michael Brooks on 318 Oakhurst Ave\. Where does the title stand/);
+    expect(d.body).toMatch(/last update I have is from Fri, Oct 2/);
+    expect(d.body).not.toMatch(/\$/);
   });
 });

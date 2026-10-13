@@ -143,6 +143,7 @@ export default async function OperationsToday() {
 
   const items = deskItems({
     agentFirst: agent.name.split(/\s+/)[0] ?? agent.name,
+    agentName: agent.name,
     today,
     dates: datesNeeding(contracts, UPCOMING_DAYS),
     contracts,

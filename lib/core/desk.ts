@@ -75,12 +75,16 @@ export interface DeskItem {
   tone: Tone;
   /** A contract date is never snoozed. */
   snoozable: boolean;
+  /** Words ready for the next action, when it is a message somebody else should get. Nothing is sent by Rift. */
+  draft?: { subject: string; body: string } | null;
   /** Earlier sorts first inside a group. */
   order: number;
 }
 
 export interface DeskInput {
   agentFirst: string;
+  /** For the words of a prepared check-in; the first name when absent. */
+  agentName?: string;
   /** Georgia's calendar day, YYYY-MM-DD. */
   today: string;
   dates: DateAttention[];
@@ -260,10 +264,36 @@ export function deskItems(input: DeskInput): DeskItem[] {
       due: days <= 0 ? "Check in today" : `Check in ${short(w.checkIn)}`,
       next: days <= 0 ? `Ask ${w.on} where it stands` : "Nothing until then",
       href: `/operations/journey/${w.journeyId}?tab=contract`, tone: w.stale ? "warn" : "none", order: days,
+      draft: days <= 0 ? checkInDraft({ agentName: input.agentName ?? me, label: w.label, person: w.person, address: w.address, lastWord: w.lastWord ? short(w.lastWord.on) : null }) : null,
     });
   }
 
   return out;
+}
+
+/**
+ * A check-in, ready to send from the agent's own mail (audit portals-2026-10,
+ * item 7). Waiting on others held nineteen items in the demo book, each
+ * ending "Ask X where it stands" with nothing prepared, though the property,
+ * the workstream and the last word were all on the row. Fixed words from
+ * those facts: no figure, nothing about the client beyond their name and the
+ * address the other side already has, and nothing sent by Rift. The answer
+ * is recorded on the contract, as before.
+ */
+export function checkInDraft(input: { agentName: string; label: string; person: string; address: string; lastWord: string | null }): { subject: string; body: string } {
+  const what = input.label.toLowerCase();
+  return {
+    subject: `${input.label}: ${input.address}`,
+    body: [
+      "Hi,",
+      "",
+      `This is ${input.agentName}, the agent for ${input.person} on ${input.address}. Where does the ${what} stand, and is anything needed from our side?`,
+      input.lastWord ? `The last update I have is from ${input.lastWord}.` : "I do not have an update on it yet.",
+      "",
+      "Thank you,",
+      input.agentName,
+    ].join("\n"),
+  };
 }
 
 /**

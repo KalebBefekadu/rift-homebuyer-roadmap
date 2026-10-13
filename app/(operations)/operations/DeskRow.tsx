@@ -94,6 +94,13 @@ export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { ma
       ) : null}
       <div className={s.itemFoot}>
         <span className={s.next}><b>Next:</b> {item.next}</span>
+        {/* Opens the agent's own mail with the words ready; Rift sends nothing
+            and stores no third party's address, so "To" is theirs to fill. */}
+        {item.draft ? (
+          <a className="btn btn-s btn-sm" href={`mailto:?subject=${encodeURIComponent(item.draft.subject)}&body=${encodeURIComponent(item.draft.body)}`}>
+            <Ico.mail size={12} />Draft the check-in
+          </a>
+        ) : null}
         {marksReady ? (
           <span className={s.marks}>
             {m ? (
