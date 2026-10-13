@@ -122,14 +122,14 @@ export function WorkedOut({ assumptions, couldBeWrong, extra }: {
  * with who decides, because the headline above it counts assistance as zero
  * (rule 3) and this must never read as a second headline.
  */
-export function IfApprovedCard({ program, administrator, children }: { program: string; administrator: string; children: React.ReactNode }) {
+export function IfApprovedCard({ administrator, children }: { program: string; administrator: string; children: React.ReactNode }) {
   return (
     <section className="sec-sm" aria-labelledby="if-approved-h">
       <div className="card p-5" style={{ borderStyle: "dashed" }}>
         <div className="kicker c-3 row gap-2" id="if-approved-h"><Ico.info size={13} />If approved, and only then</div>
         <p className="t-md mt-2 measure" style={{ lineHeight: 1.6 }}>{children}</p>
         <p className="t-xs c-4 mt-2 measure" style={{ lineHeight: 1.6 }}>
-          Conditional. {administrator} and your lender decide whether {program} applies, and most programs ask for some of your own money.
+          Conditional: the program ({administrator}) and your lender decide whether it applies. Most programs ask for some of your own money.
           Not counted in the answer above.
         </p>
       </div>

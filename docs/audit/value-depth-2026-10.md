@@ -626,10 +626,10 @@ moves its value at least one rung.
 
 | # | Decision | Engineering view | Owner |
 | --- | --- | --- | --- |
-| V1 | Who verifies the county tax, exemption and rent records, and on what window | Kaleb, yearly, the same as the program registry; an agent drafts, Kaleb confirms | Kaleb |
-| V2 | Loan type: ask it on the money values, or keep one generic loan with a note | Ask it, with "Not sure yet" keeping today's figures and saying so | Kaleb |
-| V3 | May a clearly labelled "if approved" figure appear below an answer (assistance applied to cash to close and timeline)? | Yes, below and never above, labelled conditional; it is the most useful thing the assistance value could add, and MONEY-02 still holds for every headline | Kaleb |
-| V4 | Selling costs: repurpose as controllable costs, or merge into What you'd keep | Repurpose; four seller ways in are worth keeping | Kaleb |
+| V1 | Who verifies the county tax, exemption and rent records, and on what window | **Decided 13 Oct: the agent drafts, Kaleb verifies.** Built; checklist in `county-records-to-verify.md` | Kaleb |
+| V2 | Loan type: ask it on the money values, or keep one generic loan with a note | **Decided 13 Oct: ask it.** Built | Kaleb |
+| V3 | May a clearly labelled "if approved" figure appear below an answer (assistance applied to cash to close and timeline)? | **Decided 13 Oct: yes, below and labelled.** Built | Kaleb |
+| V4 | Selling costs: repurpose as controllable costs, or merge into What you'd keep | **Decided 13 Oct: controllable costs.** Built | Kaleb |
 | V5 | A sell-then-buy plan that holds both sides | Yes, as its own value (§5.1); the one-side-per-plan rule stays for everyone else | Kaleb |
 | V6 | Seller disclosure guidance on Should I fix it first | Broker approves the wording before it ships | Broker |
 | V7 | Capital gains and FIRPTA lines: are they within what an agent may say? | Facts with statute and "decided by a tax preparer", never a tax figure; broker confirms | Broker |
@@ -653,3 +653,17 @@ Built on `claude/wonderful-einstein-o01jw3`, each step with its acceptance test 
 Scores after this work, on the §2.3 anchors: What fits 10 to 15, Timeline 12 to 16, What you'd
 keep 9 to 13, Monthly cost 8 to 11, Cash to close 8 to 11, Lender questions 10 to 14, Money you
 may be losing 8 to 14. Still open: steps 9 to 14 of §7, and decisions V1 to V7.
+
+### Round two, 13 October 2026
+
+Kaleb decided V1 to V4, and steps 9 to 13 of §7 were built on the same branch.
+
+| Step | Built | Where | Still open |
+| --- | --- | --- | --- |
+| 13 (V4) | Selling costs grouped by what a seller can do about each (law, negotiable, timing), and the cost of each month on the market from a new question, with a 1% concession said in months | `controllableCosts` in `lib/core/seller.ts`, `carrying` question | Nothing |
+| 12 (V3) | Distance to each program's income limit and price cap; programs a lower price would open; the "if approved" card under cash to close and the timeline, single largest program only | `thresholds`, `opensAt` in `lib/core/assistance.ts`, `lib/core/if-approved.ts` | Repayment if you sell early needs each program's forgiveness schedule as a structured field |
+| 10 (V2) | Loan type asked on cash to close, monthly cost and what fits; FHA, VA and USDA fees and insurance; 0% down for VA and USDA | `loanTerms`, `LOAN_FEES` in `lib/core/compute.ts` | The fees were confirmed from lender and industry summaries; confirm them at the agency sources |
+| 9, 11 (V1) | County tax and HUD rent records with the verification gate, wired into every value that asks the county and the abroad return | `lib/core/county-data.ts` | Every record is a draft until verified: Gwinnett and Forsyth are complete, six counties and the Atlanta rents have a named gap. County homestead exemptions are not drafted yet. The abroad copy still says "estimate" until a rent record is verified and the copy and its test move together |
+
+Not built, and why: **14, sell and buy**, waits for V5. **Seller disclosure guidance** (V6) and the
+**capital gains and FIRPTA lines** (V7) wait for the broker.

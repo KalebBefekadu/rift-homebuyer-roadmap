@@ -414,14 +414,20 @@ not yet load-bearing — wire them as their features land.
 
 ### 8.0 Value depth (13 October 2026)
 
-`docs/audit/value-depth-2026-10.md` §8 lists seven decisions the remaining value upgrades wait
-on, each with the engineering view: who verifies the county tax, exemption and rent records
-(V1); whether the money values ask the loan type (V2); whether a labelled "if approved"
-assistance figure may appear below an answer (V3); what selling costs becomes (V4); a
-sell-then-buy plan (V5); and two the broker owns, seller disclosure guidance (V6) and the
-capital gains and FIRPTA lines (V7). Found while building, and left as it was: the county is
-still asked by cash to close, monthly cost, what you'd keep and selling costs and changes
-nothing in any of them; `lib/core/value-inputs.test.ts` pins that list so it can only shrink.
+`docs/audit/value-depth-2026-10.md` §8 lists seven decisions. Kaleb decided four on 13 October,
+and each is built: county records are drafted by the agent and verified by Kaleb (V1); the money
+values ask the loan type (V2); a labelled "if approved" assistance figure may sit below an answer,
+never in it (V3); selling costs became the costs a seller controls (V4). Still open: a
+sell-then-buy plan (V5, Kaleb), and two the broker owns, seller disclosure guidance (V6) and the
+capital gains and FIRPTA lines (V7).
+
+Waiting on a person, not on engineering:
+- **Verify the county records.** Every one is a draft, so the county still changes nothing in
+  cash to close, monthly cost, what you'd keep and selling costs; `lib/core/value-inputs.test.ts`
+  pins that list so it can only shrink. Checklist: `docs/audit/county-records-to-verify.md`.
+- **Confirm the agency fees** in `LOAN_FEES` (`lib/core/compute.ts`) at HUD, the VA and USDA.
+  They were checked against lender and industry summaries because the agency pages could not be
+  read from where this was built.
 
 ### 8.1 Product re-evaluation (22 September 2026)
 
