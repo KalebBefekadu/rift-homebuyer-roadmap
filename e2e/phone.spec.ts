@@ -33,6 +33,8 @@ const PAGES = [
   "/abroad/results?s=foreign&u=rent&p=285000&c=DeKalb",
   /* And unanswered: the first question, which is a different page. */
   "/buy/assistance", "/buy/afford", "/sell/costs", "/abroad/results",
+  /* A program's own page, with the longest name and the most rules. */
+  "/buy/programs/atl-beltline-map", "/buy/programs/ga-dream-pen",
 ];
 
 test.describe("nothing spills off the side of a phone", () => {

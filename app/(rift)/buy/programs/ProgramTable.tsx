@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Ico } from "@/components/rift/icons";
 import { KIND_LABEL, FUNDING_TEXT, upTo, type ProgramRecord } from "@/lib/core/assistance";
@@ -81,7 +82,7 @@ export function ProgramTable({ programs, counties }: { programs: ProgramRecord[]
             {rows.map((p) => (
               <tr key={p.slug}>
                 <td style={{ maxWidth: 280 }}>
-                  <div className="w6">{p.name}</div>
+                  <Link href={`/buy/programs/${p.slug}`} className="w6 c-brand">{p.name}</Link>
                   <div className="t-xs c-4">{KIND_LABEL[p.kind]} · {FUNDING_TEXT[p.funding]}</div>
                 </td>
                 <td className="t-sm">{p.area.counties.length ? p.area.counties.join(", ") : "Statewide"}{p.area.within ? <div className="t-xs c-4">Part of the county only</div> : null}{p.onlyFor ? <div className="t-xs c-4">Certain jobs only</div> : null}</td>

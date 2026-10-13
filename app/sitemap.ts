@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@/lib/core/site";
+import { GEORGIA_PROGRAMS } from "@/lib/core/assistance";
 
 /**
  * Only the pages that are the same for everybody.
@@ -38,6 +39,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/buy/monthly-cost`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/buy/timeline`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/buy/programs`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    /* One page per confirmed program: people search for them by name and by
+       county (audit 12 Oct §3 #2). A record never confirmed has no page. */
+    ...GEORGIA_PROGRAMS.filter((p) => p.status === "active").map((p) => ({
+      url: `${base}/buy/programs/${p.slug}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.7,
+    })),
     { url: `${base}/buy/how`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${base}/offer`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/sell`, lastModified: now, changeFrequency: "weekly", priority: 1 },
