@@ -658,10 +658,11 @@ left for Kaleb, and what building it found:
   would let check-ins go through the Outbox for one-click approval. Recommendation: yes.
 - **Contract-date reminders to clients**, 48 hours before a checked date they own.
   Recommendation: after the "yours" notice has run for two weeks.
-- **Found while building, not yet fixed:** `lib/db/retention.ts` reads the lead's enrolment
-  as a list, but PostgREST returns it as an object (the same shape bug fixed in
-  `rankedLeads`), so the sweep likely throws on any cold lead that has one. It changes what
-  gets deleted, so it is its own change.
+- **Found while building, fixed 13 October:** `lib/db/retention.ts` read the lead's enrolment
+  as a list when PostgREST returns an object, so the nightly sweep threw on the first cold
+  lead that had ever been enrolled, and deleted no expired lead on any night that had one.
+  From the first run after deploy it deletes what the readout promises: cold leads past the
+  window with no reply, no running sequence and no journey. Expect a larger first night.
 
 ---
 

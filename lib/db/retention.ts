@@ -178,10 +178,18 @@ export async function sweep(now = new Date()): Promise<DbResult<SweepResult>> {
       .lte("created_at", ago(WINDOWS.unconverted.days));
     if (leadErr) return failed(leadErr.message);
 
+    /* A lead has at most one enrolment (lead_id is unique), so PostgREST
+       returns it as an object, or null, never a list. This read it as a list
+       and called .some on an object: the sweep threw on the first cold lead
+       that had ever been enrolled, and no lead was deleted on any night that
+       had one. A list is still accepted, for the test doubles and for a
+       relationship PostgREST cannot tell is one-to-one. */
+    type Enrolment = { stopped_at: string | null };
+    const enrolments = (e: Enrolment | Enrolment[] | null | undefined): Enrolment[] => (Array.isArray(e) ? e : e ? [e] : []);
     const quietLeads = ((coldLeads ?? []) as unknown as {
-      id: string; rift_enrolments: { stopped_at: string | null }[];
+      id: string; rift_enrolments: Enrolment | Enrolment[] | null;
     }[])
-      .filter((l) => !l.rift_enrolments?.some((e) => e.stopped_at === null))
+      .filter((l) => !enrolments(l.rift_enrolments).some((e) => e.stopped_at === null))
       .map((l) => l.id);
 
     /* A lead with a journey is being worked, whatever its reply column says:

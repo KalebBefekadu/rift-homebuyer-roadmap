@@ -70,6 +70,28 @@ describe("what the sweep refuses to delete", () => {
     expect(read!.filters).toContain("is:human_replied_at=null");
   });
 
+  it("reads the enrolment as PostgREST returns it, an object or null, not a list", async () => {
+    /* lead_id is unique on rift_enrolments, so the embed is one-to-one. The
+       sweep used to call .some on it and threw on the first enrolled lead. */
+    build({
+      "select rift_leads": {
+        data: [
+          { id: "still-running", rift_enrolments: { stopped_at: null } },
+          { id: "stopped", rift_enrolments: { stopped_at: "2026-01-01" } },
+          { id: "never-enrolled", rift_enrolments: null },
+        ],
+      },
+    });
+
+    const r = await sweep(NOW);
+    expect(r.ok, "the sweep failed on the object shape").toBe(true);
+    expect(r.ok && "data" in r && r.data.leads).toBe(2);
+    const gone = db.to("delete rift_leads")[0]!.filters.join(" ");
+    expect(gone, "a lead still being followed up was deleted").not.toContain("still-running");
+    expect(gone).toContain("stopped");
+    expect(gone).toContain("never-enrolled");
+  });
+
   it("never deletes a lead with a sequence still running", async () => {
     build({
       "select rift_leads": {
