@@ -52,3 +52,30 @@ export async function clientRoom(m: Membership): Promise<DbResult<ClientRoom | n
   /* A failed decisions read costs the decisions, never the offers. */
   return done({ leadId, room, decisions: decisions.ok && "data" in decisions ? decisions.data : [] });
 }
+
+/**
+ * The household's own referral link, for after the closing (audit
+ * portals-2026-10, item 6). The same card for everybody whose move closed,
+ * whatever their mood or the advocacy queue says (contract 4.9): this is a
+ * link they can pass on, not an ask.
+ *
+ * Read, never minted: the column has a default, and a page a client opens
+ * does not write to the agent's records. A lead without one shows no card.
+ */
+export async function clientReferralLink(m: Membership, origin: string | null): Promise<string | null> {
+  if (!canRespond(m.role) || !origin) return null;
+  const db = serviceClient();
+  if (!db) return null;
+  const j = await boundedReport(
+    db.from("rift_journeys").select("origin_lead_id").eq("id", m.journeyId).eq("agent_id", m.agentId).maybeSingle(),
+    "your journey",
+  );
+  const leadId = j.ok && "data" in j ? (j.data as { origin_lead_id: string } | null)?.origin_lead_id : null;
+  if (!leadId) return null;
+  const r = await boundedReport(
+    db.from("rift_leads").select("referral_token").eq("id", leadId).eq("agent_id", m.agentId).maybeSingle(),
+    "your link to pass on",
+  );
+  const token = r.ok && "data" in r ? (r.data as { referral_token: string | null } | null)?.referral_token : null;
+  return token ? `${origin}/buy?r=${encodeURIComponent(token)}` : null;
+}

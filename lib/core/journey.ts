@@ -25,6 +25,20 @@ export const ROLE_LABEL: Record<Role, string> = {
   viewer: "Can view",
 };
 
+/**
+ * The role as the person reads it. The stored roles are named for a
+ * purchase, and a sale's household was being told it was "(buyer)" (audit
+ * portals-2026-10, item 9). The data keeps one set of roles; the words follow
+ * the side.
+ */
+export type RoleWord = Role | "seller" | "co-seller";
+export function roleWord(role: Role, side: Side): RoleWord {
+  if (side === "sell" && role === "buyer") return "seller";
+  if (side === "sell" && role === "co-buyer") return "co-seller";
+  return role;
+}
+export const ROLE_WORD_LABEL: Record<RoleWord, string> = { ...ROLE_LABEL, seller: "Seller", "co-seller": "Co-seller" };
+
 /** search: the brief. homes: the shortlist. money: price and HOA criteria. */
 export type Scope = "search" | "homes" | "money";
 export const SCOPES: Scope[] = ["search", "homes", "money"];

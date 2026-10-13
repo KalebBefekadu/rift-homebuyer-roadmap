@@ -553,6 +553,8 @@ const en: Dict = {
   "pt.role.buyer": "buyer",
   "pt.role.co-buyer": "co-buyer",
   "pt.role.viewer": "viewer",
+  "pt.role.seller": "seller",
+  "pt.role.co-seller": "co-seller",
 };
 
 const am: Dict = {
@@ -1038,6 +1040,8 @@ const am: Dict = {
   "pt.role.buyer": "ገዢ",
   "pt.role.co-buyer": "ተባባሪ ገዢ",
   "pt.role.viewer": "ተመልካች",
+  "pt.role.seller": "ሻጭ",
+  "pt.role.co-seller": "ተባባሪ ሻጭ",
 };
 
 const DICTS: Record<Locale, Dict> = { en, am };

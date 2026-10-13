@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { clientSession, householdOf, myJourneys, myNotices } from "@/lib/db/portal";
 import { NoticesToggle } from "./NoticesToggle";
 import { portalT } from "../lang";
-import { buyerSearchOn, ROLE_LABEL } from "@/lib/core/journey";
+import { buyerSearchOn, ROLE_WORD_LABEL, roleWord } from "@/lib/core/journey";
 import { ClientShell } from "../ClientShell";
 import { Help } from "../Help";
 import { PasswordForm } from "./PasswordForm";
@@ -52,7 +52,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
             <li className="t-sm c-2">{m.agentName} <span className="c-4">· {t("pt.acc.agent")}</span></li>
             {people.map((p, i) => (
               <li key={i} className="t-sm c-2">
-                {p.name}{p.you ? ` ${t("pt.acc.you")}` : ""} <span className="c-4">· {locale === "am" ? t(`pt.role.${p.role}`) : ROLE_LABEL[p.role]}{p.joined ? "" : `, ${t("pt.acc.invited")}`}</span>
+                {p.name}{p.you ? ` ${t("pt.acc.you")}` : ""} <span className="c-4">· {locale === "am" ? t(`pt.role.${roleWord(p.role, m.side)}`) : ROLE_WORD_LABEL[roleWord(p.role, m.side)]}{p.joined ? "" : `, ${t("pt.acc.invited")}`}</span>
               </li>
             ))}
           </ul>

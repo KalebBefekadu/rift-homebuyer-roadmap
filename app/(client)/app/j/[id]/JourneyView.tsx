@@ -13,13 +13,15 @@ import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { clientBids, clientBrief, clientHomes, clientProgress, clientTours, householdDocuments, type Membership } from "@/lib/db/portal";
 import { SendDocument } from "./SendDocument";
-import { clientRoom } from "@/lib/db/portal-room";
+import { clientRoom, clientReferralLink } from "@/lib/db/portal-room";
+import { siteUrl } from "@/lib/core/site";
+import { PassItOn } from "./PassItOn";
 import { OfferRoomView } from "@/components/rift/OfferRoomView";
 import { DecisionRoom } from "@/components/rift/DecisionRoom";
 import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
 import { todayFor } from "@/lib/core/today";
 import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";
-import { canRespond, ROLE_LABEL } from "@/lib/core/journey";
+import { canRespond, roleWord, ROLE_WORD_LABEL } from "@/lib/core/journey";
 import { describe, diffBriefs, FIELDS, STRENGTH_LABEL, type SearchStatus } from "@/lib/core/search";
 import { ClientShell } from "../../ClientShell";
 import { ClientBrief } from "./ClientBrief";
@@ -29,6 +31,7 @@ import { ClientOffers } from "./ClientOffers";
 import { Help } from "../../Help";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
+import { closingWeek } from "@/lib/core/closing-week";
 import { showDay } from "@/lib/core/day";
 import { PORTAL_TABS, pickTab, type PortalTab } from "@/lib/core/portal-tabs";
 import { portalT } from "../../lang";
@@ -99,6 +102,11 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
      the server, never the agent's note. */
   const linked = (depsRead.ok && "data" in depsRead ? depsRead.data ?? [] : []).filter((d) => stateOf(d) === "open")
     .map((d) => ({ id: d.id, line: lineFor(d, member.side === "sell" ? "sell" : "buy"), owner: d.owner }));
+  /* One the member is named as handling is theirs to do, and goes on Today
+     with their other things rather than above it (audit portals-2026-10). */
+  const isMe = (owner: string) => owner.trim().toLowerCase() === member.name.trim().toLowerCase();
+  const linkedOnMe = linked.filter((l) => isMe(l.owner)).map((l) => l.line);
+  const linkedOthers = linked.filter((l) => !isMe(l.owner));
   /* Money v2 (Blueprint v5 §10.1): only with "Price and fees", only buying. */
   const moneyOn = member.side === "buy" && member.scopes.includes("money");
   const moneyData = moneyRead.ok && "data" in moneyRead ? moneyRead.data : null;
@@ -144,6 +152,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       briefToConfirm: respond && !!b?.revision && !b.myResponse,
       showingsToAnswer: respond ? showings.filter((x) => x.completed && !x.answeredByMe).map((x) => address.get(x.homeId) ?? "A home you saw") : [],
       contractDates: p.dates,
+      dependenciesOnYou: respond ? linkedOnMe : [],
       offersToChoose: sellerRoom && !sellerRoom.choice ? sellerRoom.offers.length : 0,
       decisionsOpen: decisions.filter((d) => !d.decidedAt).map((d) => d.question),
       offersToAnswer: respond ? buyerBids.filter((x) => x.asked?.open && x.asked.mineNeeded && !x.asked.myAnswer && !x.newerDraft).map((x) => x.address) : [],
@@ -167,6 +176,17 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       canReport: w.owner === "client" && !isSettled(w.state) && w.state !== "reported",
     })),
   } : null;
+
+  /* After a recorded closing, a link to pass on (item 6), the same one the
+     agent has on the lead page. */
+  const passOn = p?.closed ? await clientReferralLink(member, siteUrl()) : null;
+
+  /* The week before closing (audit portals-2026-10, item 5): only with the
+     contract's detail, and only from a checked closing date or at Close. */
+  const closingDate = (p?.open ? p.dates : []).find((d) => d.workstream === "closing" && d.view.verified && d.view.state === "active");
+  const closingSoon = p?.detail && p.open
+    ? closingWeek({ side: member.side, stage: p.progress.stage, closingInDays: closingDate?.view.days ?? null, agentFirst })
+    : [];
 
   /* Every document shared with this household, in one place (§7.2), from
      the offers they were shared with. */
@@ -208,8 +228,8 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       <h1 className="serif" style={{ fontSize: 28, letterSpacing: "-0.02em", marginTop: 8 }}>{member.journeyLabel}</h1>
       <p className="t-xs c-4" style={{ marginTop: 4 }}>
         {preview
-          ? <>With {member.agentName} · {member.name} is ({ROLE_LABEL[member.role].toLowerCase()})</>
-          : t("pt.signedAs", { agent: member.agentName, name: member.name, role: t(`pt.role.${member.role}`) })}
+          ? <>With {member.agentName} · {member.name} ({ROLE_WORD_LABEL[roleWord(member.role, member.side)].toLowerCase()})</>
+          : t("pt.signedAs", { agent: member.agentName, name: member.name, role: t(`pt.role.${roleWord(member.role, member.side)}`) })}
         {" · "}<Link className="btn-link" href={`/app/j/${member.journeyId}/records`}>{t("pt.records")}</Link>
       </p>
       {locale === "am" ? <p className="t-2xs c-4" style={{ marginTop: 4 }}>{t("pt.english")}</p> : null}
@@ -246,9 +266,9 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
             {latestReview.decision === "keep" ? " You decided to keep the strategy." : latestReview.decision === "change" ? ` You decided to change it: ${latestReview.decisionNote}.` : ""}
           </p>
         ) : null}
-        {linked.length ? (
+        {(respond ? linkedOthers : linked).length ? (
           <ul className="t-sm" style={{ marginTop: 6 }}>
-            {linked.map((l) => <li key={l.id} className="c-2"><span aria-hidden>◷ </span>{l.line}. {l.owner} is handling it.</li>)}
+            {(respond ? linkedOthers : linked).map((l) => <li key={l.id} className="c-2"><span aria-hidden>◷ </span>{l.line}. {l.owner} is handling it.</li>)}
           </ul>
         ) : null}
         {!p ? (
@@ -282,6 +302,22 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
         )}
         </div>
       </section>
+      ) : null}
+
+      {active === "today" && closingSoon.length ? (
+        <section id="closing-week" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="closing-h">
+          <h2 id="closing-h" className="t-md w6">Before closing</h2>
+          <ol lang={EN} style={{ marginTop: 10, display: "grid", gap: 10, paddingLeft: 18 }}>
+            {closingSoon.map((c) => (
+              <li key={c.id}>
+                <span className="t-sm w6 row gap-1" style={{ alignItems: "center" }}>
+                  {c.id === "wire" ? <Ico.alert size={13} className="c-warn" style={{ flex: "none" }} /> : null}{c.title}
+                </span>
+                <p className="t-sm c-3" style={{ marginTop: 2, lineHeight: 1.6 }}>{c.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
       ) : null}
 
       {/* Blueprint v5 §7.2, B19: once the closing is recorded, what a new
@@ -319,6 +355,8 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
           </div>
         </section>
       ) : null}
+
+      {active === "today" && passOn ? <PassItOn link={passOn} agentFirst={agentFirst} /> : null}
 
       {active === "offers" && offersOn ? (
         <section id="offers" className="card p-4" style={{ marginTop: 18 }} aria-labelledby="offers-h">

@@ -54,6 +54,8 @@ export interface TodayInput {
   offersToChoose?: number;
   /** Released decisions with no outcome yet: the question each asks. */
   decisionsOpen?: string[];
+  /** A link to the household's other move that this person is named as handling (STATE-07). */
+  dependenciesOnYou?: string[];
 }
 
 /** How far ahead a checked contract date appears on Today. */
@@ -132,6 +134,12 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
   const soon = mineDated.filter((i) => daysUntil(i.dueOn!, today) <= SOON_DAYS);
   for (const i of soon) {
     items.push({ kind: "yours", title: i.title, detail: `Due ${whenPhrase(daysUntil(i.dueOn!, today))}.`, anchor: null });
+  }
+  /* A sale and a purchase linked, with this person named as the one moving
+     it. It sat above Today with "is handling it" while Today said nothing was
+     waiting on them (audit portals-2026-10, item 9). */
+  for (const line of input.dependenciesOnYou ?? []) {
+    items.push({ kind: "yours", title: line, detail: "You are named as the one handling this.", anchor: null });
   }
   for (const w of work.filter((x) => x.owner === "client" && !isSettled(x.state) && x.state !== "blocked" && x.state !== "reported")) {
     items.push({ kind: "yours", title: w.label, detail: workLine(w, agentFirst), anchor: "under-contract" });

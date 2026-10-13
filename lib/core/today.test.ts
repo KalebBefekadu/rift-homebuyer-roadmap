@@ -158,4 +158,10 @@ describe("owning the home (W11; B18, AT34)", () => {
     expect(t.items[0]!.detail).toMatch(/not accepting/);
     expect(t.nothingOwed).toBeNull();
   });
+
+  it("counts a linked move they are handling as theirs, not as nothing waiting", () => {
+    const t = todayFor({ ...base, progress: { ...base.progress, stage: "search" }, dependenciesOnYou: ["Needs the sale's possession date first: Selling 61 Ridgecrest Rd"] }, NOW);
+    expect(t.items[0]).toMatchObject({ kind: "yours" });
+    expect(t.nothingOwed).toBeNull();
+  });
 });
