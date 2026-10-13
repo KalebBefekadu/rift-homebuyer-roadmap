@@ -41,6 +41,8 @@ export const Ico = {
   layers: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M8 1.8 14.2 5 8 8.2 1.8 5 8 1.8Z" /><path d="M1.8 8.2 8 11.4l6.2-3.2M1.8 11.2 8 14.4l6.2-3.2" /></svg>),
   pin: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M8 14.2s4.8-4 4.8-7.6a4.8 4.8 0 1 0-9.6 0C3.2 10.2 8 14.2 8 14.2Z" /><circle cx="8" cy="6.4" r="1.8" /></svg>),
   mail: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><rect x="1.8" y="3.4" width="12.4" height="9.2" rx="1.2" /><path d="m2.4 4.6 5.6 4 5.6-4" /></svg>),
+  phone: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M5.2 2H3.4A1.4 1.4 0 0 0 2 3.5C2.3 9.3 6.7 13.7 12.5 14a1.4 1.4 0 0 0 1.5-1.4v-1.8l-2.8-1.2-1.4 1.4A7.4 7.4 0 0 1 5 6.2l1.4-1.4L5.2 2Z" /></svg>),
+  message: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M2 3.6A1.2 1.2 0 0 1 3.2 2.4h9.6A1.2 1.2 0 0 1 14 3.6v6.4a1.2 1.2 0 0 1-1.2 1.2H6.4L3.2 13.8v-2.6H3.2A1.2 1.2 0 0 1 2 10V3.6Z" /></svg>),
   share: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M11.5 5.4 8 1.9 4.5 5.4M8 2.2v8.4" /><path d="M3 9.6v3.2a1.2 1.2 0 0 0 1.2 1.2h7.6a1.2 1.2 0 0 0 1.2-1.2V9.6" /></svg>),
   wallet: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><rect x="1.8" y="3.6" width="12.4" height="9" rx="1.4" /><path d="M1.8 6.6h12.4" /><circle cx="11.2" cy="9.8" r=".7" fill="currentColor" stroke="none" /></svg>),
   scale: ({ size = 16, ...p }: P) => (<svg {...base(size)} {...p}><path d="M8 2v12M4 4.6h8" /><path d="M4.6 4.8 2.4 9.4h4.4L4.6 4.8ZM11.4 4.8 9.2 9.4h4.4l-2.2-4.6Z" /></svg>),

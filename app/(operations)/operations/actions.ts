@@ -7,6 +7,8 @@ import { currentAgent } from "@/lib/db/session";
 import { promoteItem } from "@/lib/db/review";
 import { stop } from "@/lib/db/nurture";
 import { markReplied } from "@/lib/db/leads";
+import { addNote } from "@/lib/db/notes";
+import { REPLY_NOTE, type ReplyChannel } from "@/lib/core/first-reply";
 import { roster } from "@/lib/db/clients";
 import type { StopId } from "@/lib/core/nurture";
 import { journeysMatching } from "@/lib/db/journeys";
@@ -50,10 +52,18 @@ export async function advanceReview(id: string, confirmedBy?: string) {
  * Stops the clock and stops the sequence in one action, because they are the
  * same event from the agent's side, and asking him to do two things after one
  * conversation is how the second one stops happening.
+ *
+ * And it records how, as contact. Relationships reads "last contact" from the
+ * lead's notes, and this used to write none: a lead answered from Today read
+ * "None logged" there and counted toward "no contact in 14 days", so the two
+ * pages disagreed until the same call was typed in a second time (audit
+ * portals-2026-10, item 1).
  */
-export async function markRepliedTo(leadId: string) {
+export async function markRepliedTo(leadId: string, how: ReplyChannel) {
   const agent = await currentAgent();
   if (!agent) return { ok: false as const, error: "not signed in" };
+  const note = REPLY_NOTE[how];
+  if (!note) return { ok: false as const, error: "Say how you replied: call, text or email." };
 
   /* A reply stops the sequence. Contract 4.11, and it is the same fact.
 
@@ -79,7 +89,18 @@ export async function markRepliedTo(leadId: string) {
       error: `The sequence is stopped, but your reply time was not recorded (${replied.ok ? replied.reason : replied.error}). Try again.`,
     };
   }
+  /* Last, because it is the one that can be put right by hand: the reply and
+     the stop are recorded whatever happens here, and the error says what to
+     add on the lead page rather than asking for the button again. */
+  const logged = await addNote(leadId, note.kind, `${note.label} them: first reply, from Today.`);
   revalidatePath("/operations");
+  revalidatePath("/operations/clients");
+  if (!logged.ok || "skipped" in logged) {
+    return {
+      ok: false as const,
+      error: `Your reply is recorded and the sequence is stopped, but the ${how} was not added to their history (${logged.ok ? logged.reason : logged.error}). Add it on their page.`,
+    };
+  }
   return { ok: true as const, repliedAt: replied.data.repliedAt };
 }
 

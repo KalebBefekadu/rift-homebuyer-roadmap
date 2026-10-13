@@ -232,7 +232,7 @@ export default async function OperationsToday() {
         hint="Ranked by what their answers say. The target is a first reply within 15 minutes.">
         <div className={s.card}>
           {fresh.length ? fresh.slice(0, NEW_LEADS).map((l) => (
-            <LeadRow key={l.id}
+            <LeadRow key={l.id} agentName={agent.name}
               lead={{ ...l, signals: l.signals as { label: string; points: number; note: string }[], slaLabel: slaOf(l).humanLabel, breached: slaOf(l).breached }} />
           )) : (
             <p className={s.cardEmpty}>{failures.length ? "Unknown: a read failed." : "Nobody new is waiting for a first reply."}</p>

@@ -292,6 +292,10 @@ export interface RankedLead {
   /** What the speed-to-lead clock needs, rather than a guess at it. */
   completion: number;
   contactable: boolean;
+  /** For the row's Call and Text (audit portals-2026-10, item 2). */
+  phone: string | null;
+  /** Whether they agreed to texts when they arrived; a text needs it (4.12). */
+  phoneConsent: boolean;
   hoursSince: number;
   /** Why the cadence stopped, or null while it is still running. */
   stopped: string | null;
@@ -387,6 +391,20 @@ function savedOf(plan: unknown, savedAt: string | null): RankedLead["saved"] {
   };
 }
 
+/**
+ * The lead's enrolment, from the embedded select. A lead has at most one
+ * (lead_id is unique), so PostgREST returns it as an object, not a list. This
+ * read `[0]` of it, which is always undefined on an object: every lead read as
+ * never stopped, and Today kept counting a lead stopped as "not interested" or
+ * "converted" as waiting for a first reply. An array is still accepted, for a
+ * relationship PostgREST cannot tell is one-to-one.
+ */
+type Enrolment = { stop_reason: string | null; phone_consent: boolean | null };
+function enrolmentOf(row: unknown): Enrolment | null {
+  const e = (row as { rift_enrolments?: Enrolment | Enrolment[] | null }).rift_enrolments;
+  return (Array.isArray(e) ? e[0] : e) ?? null;
+}
+
 export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   const db = serviceClient();
   if (!db) return skipped("no database configured");
@@ -396,7 +414,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
   try {
     const { data, error } = await db
       .from("rift_leads")
-      .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,plan,plan_saved_at,rift_enrolments(stop_reason)")
+      .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,plan,plan_saved_at,rift_enrolments(stop_reason,phone_consent)")
       .eq("agent_id", agent_id)
       /* Inbound only. "Who to call" answers one question: who volunteered
          their details and has not been answered yet, and a person the agent
@@ -449,8 +467,7 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
       }),
       createdAt: r.created_at as string,
       humanRepliedAt: r.human_replied_at as string | null,
-      stopped: (r as unknown as { rift_enrolments?: { stop_reason: string | null }[] })
-        .rift_enrolments?.[0]?.stop_reason ?? null,
+      stopped: enrolmentOf(r)?.stop_reason ?? null,
       figures: snapshots.get(r.assessment_id as string)?.figures ?? null,
       shareToken: snapshots.get(r.assessment_id as string)?.token ?? null,
       facts: {
@@ -463,6 +480,8 @@ export async function rankedLeads(limit = 50): Promise<DbResult<RankedLead[]>> {
          number cannot be replied to, and counting it as a breach would make
          the agent look late for somebody unreachable. */
       contactable: Boolean(r.email || r.phone),
+      phone: (r.phone as string | null)?.trim() || null,
+      phoneConsent: enrolmentOf(r)?.phone_consent === true,
       hoursSince: Math.max(0, (Date.now() - new Date(r.created_at as string).getTime()) / 3_600_000),
     })).sort((a, b) => b.score - a.score));
   } catch (e) {

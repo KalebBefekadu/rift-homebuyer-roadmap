@@ -8,6 +8,7 @@ import { STOPS, type StopId } from "@/lib/core/nurture";
 import { leadStrip } from "@/lib/core/lead-strip";
 import { showDay } from "@/lib/core/day";
 import { stopSequence, markRepliedTo } from "./actions";
+import { firstReply, replyChannels, REPLY_NOTE, type ReplyChannel } from "@/lib/core/first-reply";
 import { Tag } from "./_business/Tag";
 import s from "./today.module.css";
 
@@ -28,8 +29,13 @@ import s from "./today.module.css";
  * Details: the agent opens this to pick up the phone, and "who is it and what
  * are they holding" is what they need first. Details holds the arithmetic and
  * the rarely used controls.
+ *
+ * The ways to reach them are on the row too, with an opener ready for a text
+ * or an email (lib/core/first-reply.ts), and "I have replied" asks how, so the
+ * reply lands in their history as contact (audit portals-2026-10, items 1-2).
  */
-export function LeadRow({ lead }: {
+export function LeadRow({ lead, agentName }: {
+  agentName: string;
   lead: {
     id: string; name: string | null; email: string | null; side: "buy" | "sell";
     score: number; band: string;
@@ -44,9 +50,12 @@ export function LeadRow({ lead }: {
     /** How the speed-to-lead clock currently reads for this lead. */
     slaLabel?: string;
     breached?: boolean;
+    phone?: string | null;
+    phoneConsent?: boolean;
   };
 }) {
   const [open, setOpen] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -55,12 +64,22 @@ export function LeadRow({ lead }: {
      field and left an indicator permanently unable to fire, so a cast on a
      value flowing into a function that validates it is worth removing on
      sight. STOPS is the source of the ids, so this cannot drift. */
-  const replied = () =>
+  const replied = (how: ReplyChannel) =>
     startTransition(async () => {
-      const r = await markRepliedTo(lead.id);
+      const r = await markRepliedTo(lead.id, how);
       if (!r.ok) { setError(r.error); return; }
       setError(null);
+      setAsking(false);
     });
+
+  const channels = replyChannels({ phone: lead.phone ?? null, phoneConsent: lead.phoneConsent === true, email: lead.email });
+  const opener = firstReply({ agentName, name: lead.name, side: lead.side });
+  const dial = (lead.phone ?? "").replace(/[^\d+]/g, "");
+  const reach: Record<ReplyChannel, { href: string; label: string }> = {
+    call: { href: `tel:${dial}`, label: `Call ${lead.phone ?? ""}` },
+    text: { href: `sms:${dial}?&body=${encodeURIComponent(opener.text)}`, label: "Text" },
+    email: { href: `mailto:${lead.email ?? ""}?subject=${encodeURIComponent(opener.subject)}&body=${encodeURIComponent(opener.text)}`, label: "Email" },
+  };
 
   const halt = (reason: StopId) =>
     startTransition(async () => {
@@ -96,8 +115,22 @@ export function LeadRow({ lead }: {
             {typeof lead.capturedScore === "number" && lead.capturedScore - lead.score >= 8 ? <span className={s.scoreWas} title="What it scored on arrival">was {lead.capturedScore}</span> : null}
             {lead.score}
           </span>
-          {!lead.humanRepliedAt ? (
-            <button className="btn btn-p btn-sm" disabled={pending} onClick={replied}><Ico.check size={12} />I have replied</button>
+          {!lead.humanRepliedAt && !asking ? channels.map((c) => (
+            <a key={c} className="btn btn-s btn-sm" href={reach[c].href}>
+              {c === "call" ? <Ico.phone size={12} /> : c === "text" ? <Ico.message size={12} /> : <Ico.mail size={12} />}{reach[c].label}
+            </a>
+          )) : null}
+          {!lead.humanRepliedAt && !asking ? (
+            <button className="btn btn-p btn-sm" disabled={pending} onClick={() => setAsking(true)}><Ico.check size={12} />I have replied</button>
+          ) : null}
+          {!lead.humanRepliedAt && asking ? (
+            <span className="row gap-1" role="group" aria-label="How did you reply?">
+              <span className="t-xs c-3">How?</span>
+              {(["call", "text", "email"] as const).map((c) => (
+                <button key={c} className="btn btn-p btn-sm" disabled={pending} onClick={() => replied(c)}>{REPLY_NOTE[c].label}</button>
+              ))}
+              <button className="btn btn-g btn-sm" disabled={pending} onClick={() => setAsking(false)}>Cancel</button>
+            </span>
           ) : null}
           <button className="btn btn-g btn-sm" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>{expanded ? "Less" : "Details"}</button>
         </div>

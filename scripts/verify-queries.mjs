@@ -55,7 +55,7 @@ await check("readRegistry", () => db.from("rift_programs")
   .eq("active", true).order("verified_on", { ascending: false }));
 
 await check("rankedLeads (embedded enrolment)", () => db.from("rift_leads")
-  .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,plan,plan_saved_at,rift_enrolments(stop_reason)")
+  .select("id,name,email,phone,side,score,band,signals,lead_input,created_at,human_replied_at,assessment_id,plan,plan_saved_at,rift_enrolments(stop_reason,phone_consent)")
   .order("score", { ascending: false }).limit(5));
 
 await check("rankedLeads snapshot join", () => db.from("rift_readouts")
