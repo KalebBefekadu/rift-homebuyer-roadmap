@@ -195,6 +195,16 @@ filed. It says an assessment looks high only against a county figure somebody ga
 (`assessedValue` is `null` when unknown, which is the default); otherwise it points at the
 appeal window and asks them to compare, without quoting a value.
 
+### Money you may be losing, `unclaimedChecks()` in `lib/core/unclaimed.ts`
+
+The public value no longer calls `unclaimedValue()` (kept for the retired readout and the
+prototype). It answers from three answers only (homestead filed, 65 or older, years owned) and
+quotes nothing it was not told. The only dollar figures are statutory: the statewide homestead
+exemption of at least $2,000 off the assessed value (O.C.G.A. § 48-5-44) and the home-sale
+exclusion of $250,000 / $500,000 (26 U.S.C. § 121). Homestead and senior filings are dated to
+the next April 1 in Georgia (O.C.G.A. § 48-5-45); the appeal window is 45 days from the
+notice. County amounts wait for the county data set.
+
 ### The seller's floor and sensitivity, `lib/core/seller.ts`
 
 `breakEvenPrice(i)` is the lowest price that leaves nothing short at closing: their payoff and

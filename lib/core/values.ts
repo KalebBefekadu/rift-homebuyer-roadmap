@@ -110,9 +110,9 @@ export const VALUES: ValueDef[] = [
   {
     id: "unclaimed", side: "sell", href: "/sell/unclaimed", name: "Money you may be losing",
     question: "Am I losing money on my home already?",
-    gives: "Exemptions you may not have filed, and the appeal deadlines that apply.",
+    gives: "Exemptions you may not have filed, who decides each one, and the deadlines that apply.",
     cta: "Check what I may be missing",
-    asks: [],
+    asks: ["homestead", "age65", "yearsOwned"],
     live: true,
   },
   {

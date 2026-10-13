@@ -19,7 +19,7 @@ const BUILT = [
   { href: "/buy/programs", name: "Georgia programs", note: "Every assistance program tracked, including closed and stale ones." },
   { href: "/buy/how", name: "How this works", note: "Where the numbers come from, and how Kaleb is paid." },
   { href: "/sell", name: "Rift for sellers", note: "Net proceeds, unclaimed value, and repair triage. Live." },
-  { href: "/sell/unclaimed", name: "Unclaimed value", note: "Exemptions, appeals and the gains exclusion. Standalone, asks for nothing." },
+  { href: "/sell/unclaimed", name: "Unclaimed value", note: "Exemptions, appeals and the home-sale exclusion, with their deadlines. Three questions." },
   { href: "/operations", name: "Operations", note: "The agent surface. Ranked leads, review queue, follow-up, drop-off." },
 ];
 

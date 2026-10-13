@@ -8,6 +8,7 @@ import { firstTimeFrom, type Ownership } from "./funnel";
 import { ABROAD_DEFAULTS, abroadReturns, statusById, type StatusId, type Use } from "./abroad";
 import { VALUES, type InputKey } from "./values";
 import { timelinePlan } from "./timeline";
+import { unclaimedChecks, type UnclaimedAnswers } from "./unclaimed";
 
 /**
  * Every question a value asks has to be able to change its answer.
@@ -39,6 +40,7 @@ const BASE: Answers = {
   occupation: "other", comfort: "2200", debts: "400",
   salePrice: "400000", payoff: "200000", commission: "5",
   roof: "10to20", systems: "working", finish: "lived", target: "24",
+  homestead: "no", age65: "no", yearsOwned: "8",
   status: "foreign", use: "rent",
 };
 
@@ -63,6 +65,9 @@ const TRY: Partial<Record<InputKey, string[]>> = {
   finish: ["fresh", "worn"],
   status: ["citizen", "resident", "itin"],
   target: ["6", "12", "36", "exploring"],
+  homestead: ["yes", "unsure"],
+  age65: ["yes"],
+  yearsOwned: ["1", "3", "15"],
   use: ["live"],
 };
 
@@ -92,6 +97,7 @@ const PROBES: Record<string, (a: Answers) => unknown> = {
   afford: (a) => affordability({ income: n(a, "income"), debts: n(a, "debts"), comfort: n(a, "comfort"), downPct: n(a, "downPct"), ratePct: RATE, savings: n(a, "savings") }),
   lender: (a) => lenderQuestions({ price: n(a, "price"), downPct: n(a, "downPct"), firstTime: firstTimeFrom(a.ownership as Ownership), matches: [], combination: null }),
   proceeds: (a) => sellerNet({ price: n(a, "salePrice"), payoff: n(a, "payoff"), county: a.county, commissionPct: commission(a) }),
+  unclaimed: (a) => unclaimedChecks({ homestead: a.homestead as UnclaimedAnswers["homestead"], age65: a.age65 as UnclaimedAnswers["age65"], yearsOwned: n(a, "yearsOwned") }, new Date("2026-10-13T15:00:00Z")),
   costs: (a) => saleCosts({ price: n(a, "salePrice"), payoff: 0, county: a.county, commissionPct: commission(a) }),
   prepare: (a) => preparePlan({ roof: a.roof as Roof, systems: a.systems as Systems, finish: a.finish as Finish }),
   eligibility: (a) => statusById(a.status as StatusId),

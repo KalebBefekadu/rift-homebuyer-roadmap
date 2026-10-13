@@ -362,3 +362,38 @@ export function ProceedsBar({ price, parts, net }: {
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ *
+ * Money you may be losing: the deadline that matters, and how many checks
+ * ------------------------------------------------------------------ */
+
+/**
+ * A calendar sheet on the next homestead deadline, with the days left worked
+ * out from today in Georgia, beside one tile per thing worth checking. The
+ * days and the count are the same figures as the list on the page.
+ */
+export function DeadlineSheet({ days, checks }: { days: number | null; checks: number }) {
+  const W = 360, H = 200;
+  const tiles = Array.from({ length: checks }, (_, k) => k);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={frame} role="img"
+      aria-label={`${checks} worth checking${days !== null ? `; ${days} days until the April 1 homestead deadline` : ""}`}>
+      <g className="art-rise">
+        <rect x="24" y="22" width="150" height="160" rx="10" fill="var(--paper)" stroke="var(--ink)" strokeWidth="1.5" />
+        <rect x="24" y="22" width="150" height="40" rx="10" fill="var(--brand)" />
+        <rect x="24" y="50" width="150" height="12" fill="var(--brand)" />
+        <text x="99" y="48" textAnchor="middle" fontSize="15" fill="#fff" fontWeight="600" letterSpacing="2">APRIL</text>
+        <text x="99" y="122" textAnchor="middle" fontSize="54" className="art-num" fill="var(--ink)">1</text>
+        <text x="99" y="162" textAnchor="middle" fontSize="12.5" fill="var(--ink-3)">{days === null ? "Homestead deadline" : days === 0 ? "Today" : `${days} day${days === 1 ? "" : "s"} away`}</text>
+      </g>
+      {tiles.map((k) => (
+        <g key={k} className="art-rise" style={{ animationDelay: `${(k + 1) * 90}ms` }}>
+          <rect x={200 + (k % 3) * 46} y={40 + Math.floor(k / 3) * 46} width="36" height="36" rx="8"
+            fill={k === 0 ? "var(--brand-wash)" : "var(--sunk)"} stroke="var(--ink)" strokeWidth="1.2" />
+          <path d={`M${210 + (k % 3) * 46} ${58 + Math.floor(k / 3) * 46} l6 6 l11 -12`} fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </g>
+      ))}
+      <text x="268" y="182" textAnchor="middle" fontSize="11.5" fill="var(--ink-3)">{checks} worth checking</text>
+    </svg>
+  );
+}
