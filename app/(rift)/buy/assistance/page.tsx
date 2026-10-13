@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { money } from "@/lib/core/compute";
 import { firstTimeFrom, OWNERSHIP_CAVEAT, type Ownership } from "@/lib/core/funnel";
-import { matchAssistance, KIND_LABEL, FUNDING_TEXT, CAUTION, type Occupation, type Check } from "@/lib/core/assistance";
+import { matchAssistance, opensAt, thresholds, KIND_LABEL, FUNDING_TEXT, CAUTION, type Occupation, type Check, type Profile } from "@/lib/core/assistance";
 import { rulesOrDefaults } from "@/lib/db/settings";
 import { currentAgentId } from "@/lib/db/service";
 import { currentPrograms } from "@/lib/db/program-checks";
@@ -56,14 +56,21 @@ export default async function Assistance({ searchParams }: { searchParams: Promi
   const price = Number(a.price);
   const county = String(a.county);
   const [{ rules }, programs] = await Promise.all([rulesOrDefaults(await currentAgentId()), currentPrograms()]);
-  const r = matchAssistance({
+  const profile: Profile = {
     county,
     firstTime: firstTimeFrom(own),
     price,
     income: Number(a.income),
     household: Number(a.household),
     occupation: String(a.occupation) as Occupation | "other",
-  }, { today: new Date(), windowDays: rules.registryDays.value, programs });
+  };
+  const opts = { today: new Date(), windowDays: rules.registryDays.value, programs };
+  const r = matchAssistance(profile, opts);
+  /* How close to each limit, and what a lower price would open
+     (docs/audit/value-depth-2026-10.md §4.1). */
+  const opens = opensAt(profile, opts).slice(0, 2);
+  const room = (n: number, upTo: boolean, what: string) =>
+    n >= 0 ? `${money(n)} under the ${what}${upTo ? " (the highest; your county's may be lower)" : ""}` : `${money(-n)} over the ${what}`;
 
   const best = r.best;
   const figure = r.combination ? `Up to ${money(r.combination.total)}` : best ? `Up to ${money(best.amount)}` : "None yet";
@@ -105,6 +112,14 @@ export default async function Assistance({ searchParams }: { searchParams: Promi
                 <ul className="g2 gap-2 mt-3">
                   {m.checks.map((c) => <CheckLine key={c.label + c.note} c={c} />)}
                 </ul>
+                {(() => {
+                  const t = thresholds(m.program, profile);
+                  const parts = [
+                    t.income ? room(t.income.room, t.income.upTo, "income limit") : null,
+                    t.price ? room(t.price.room, t.price.upTo, "price cap") : null,
+                  ].filter(Boolean);
+                  return parts.length ? <p className="t-sm c-2 mt-2"><strong className="w55">How close you are.</strong> {parts.join("; ")}.</p> : null;
+                })()}
                 {m.alsoNote ? <p className="t-sm c-2 mt-2">{m.alsoNote}</p> : null}
                 <details className="mt-3">
                   <summary className="t-sm w55" style={{ cursor: "pointer" }}>How it works and what it asks of you</summary>
@@ -124,6 +139,19 @@ export default async function Assistance({ searchParams }: { searchParams: Promi
             Potentially eligible, based on the information provided. {CAUTION}{" "}
             {r.combination ? "" : "Whether programs can be used together depends on each one's rules; where a program does not say, they are not added up here."}
           </p>
+        </section>
+      ) : null}
+
+      {opens.length ? (
+        <section className="sec-sm" aria-labelledby="opens-h">
+          <h2 id="opens-h" className="t-lg w6">At a lower price</h2>
+          <ul className="col gap-2 mt-2">
+            {opens.map((o) => (
+              <li key={o.program.slug} className="t-sm c-2">
+                At {money(o.price)} or less, <strong className="w55">{o.program.name}</strong> may also fit, potentially up to {money(o.amount)}. Price is the only thing between you and it on your answers.
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

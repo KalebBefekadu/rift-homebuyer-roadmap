@@ -4,7 +4,10 @@ import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
 import { valueWording } from "@/lib/db/questions";
-import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
+import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut, IfApprovedCard } from "@/components/rift/value/parts";
+import { IfApprovedPrompt } from "@/components/rift/value/IfApproved";
+import { matchFromAnswers } from "@/lib/db/assistance-match";
+import { ifApproved } from "@/lib/core/if-approved";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { TimelinePath } from "@/components/rift/value/artifacts";
 import { timelinePlan } from "@/lib/core/timeline";
@@ -57,6 +60,8 @@ export default async function Timeline({ searchParams }: { searchParams: Promise
   const stated = plan.stated;
   const wanted = stated ? (stated.months === 12 ? "within a year" : stated.months % 12 === 0 ? `within ${["", "one", "two", "three"][stated.months / 12]} years` : `within ${stated.months} months`) : null;
   const span = (m: number) => `${m} month${m === 1 ? "" : "s"}`;
+  const match = g.fullyCovered ? null : await matchFromAnswers(a);
+  const approved = match ? ifApproved(inputs, match) : null;
 
   const figure = g.fullyCovered ? "Now" : months === null ? "No date yet" : `${months} month${months === 1 ? "" : "s"}`;
   const sentence = g.fullyCovered
@@ -105,6 +110,13 @@ export default async function Timeline({ searchParams }: { searchParams: Promise
           rows={levers.map((l) => ({ label: l.label, note: l.detail, amount: `${l.saved} month${l.saved === 1 ? "" : "s"} sooner` }))}
         />
       ) : null}
+      {approved && approved.months !== approved.monthsWithout ? (
+        <IfApprovedCard program={approved.program} administrator={approved.administrator}>
+          If {approved.program} approves you, up to {money(approved.amount)}, you could be ready {approved.months === 0 ? "now" : approved.months === null ? "once you set something aside each month" : `in ${span(approved.months)}`}
+          {approved.monthsWithout !== null ? ` instead of ${span(approved.monthsWithout)}` : ""}.
+        </IfApprovedCard>
+      ) : !g.fullyCovered && !match ? <IfApprovedPrompt href={def.href} asks={def.asks} given={a} /> : null}
+
       <Lines
         title="Where the months come from"
         rows={[

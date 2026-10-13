@@ -185,6 +185,19 @@ years. The break-even is the first month the lower-rate estimate's cost to date 
 the other's; with both the lower rate and the lower upfront cost, one is cheaper throughout.
 Nothing typed is stored, sent or tracked.
 
+## Assistance depth and "if approved"
+
+`thresholds(program, profile)` in `lib/core/assistance.ts` gives the dollars between their
+answers and a program's income limit and price cap (null where the program states none or the
+answers cannot place them). `opensAt(profile)` lists programs that fail on price alone, offered
+at their cap.
+
+`ifApproved(inputs, result)` in `lib/core/if-approved.ts` applies the **single largest** program
+the answers place them in (`best`, never a combination) to a copy of the inputs, giving cash to
+close less its amount (never below zero) and the months with it. It is shown below the cash to
+close and timeline answers, labelled conditional with who decides, and only when the assistance
+answers are in the address (V3, Kaleb 13 Oct 2026). The headlines stay at `assistance: 0`.
+
 ## Seller
 
 `netProceeds(s)` subtracts commission, concessions, Georgia transfer tax

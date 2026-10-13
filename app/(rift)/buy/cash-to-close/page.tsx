@@ -6,7 +6,10 @@ import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
 import { valueWording } from "@/lib/db/questions";
-import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut } from "@/components/rift/value/parts";
+import { ValueLayout, AnswerHead, BasedOn, Lines, WorkedOut, IfApprovedCard } from "@/components/rift/value/parts";
+import { IfApprovedPrompt } from "@/components/rift/value/IfApproved";
+import { matchFromAnswers } from "@/lib/db/assistance-match";
+import { ifApproved } from "@/lib/core/if-approved";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
 import { CashStack } from "@/components/rift/value/artifacts";
 import type { InputKey } from "@/lib/core/values";
@@ -52,6 +55,8 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
   const help = [3, 6].map((p) => sellerHelp(inputs, p));
   const rate = await currentRate();
   const reserve = monthlyCost({ ...inputs, ratePct: rate.pct }).total * RESERVE_MONTHS;
+  const match = await matchFromAnswers(a);
+  const approved = match ? ifApproved(inputs, match) : null;
 
   return (
     <ValueLayout def={def}>
@@ -78,6 +83,12 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
           }])}
         total={{ label: "Cash you bring", amount: money(cash.total) }}
       />
+      {approved ? (
+        <IfApprovedCard program={approved.program} administrator={approved.administrator}>
+          If {approved.program} approves you, up to {money(approved.amount)}, the cash you bring could be {money(approved.cash)} instead of {money(cash.total)}.
+        </IfApprovedCard>
+      ) : !match ? <IfApprovedPrompt href={def.href} asks={def.asks} given={a} /> : null}
+
       <Lines
         title="If the seller pays toward your costs"
         rows={[

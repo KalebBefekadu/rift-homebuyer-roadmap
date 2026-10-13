@@ -484,7 +484,7 @@ export function estimateAmount(p: ProgramRecord, profile: Pick<Profile, "price" 
   return { amount: cap, note: occ ? occ.note : null };
 }
 
-function incomeLimit(p: ProgramRecord, household: number | undefined): { limit: number | null; upTo: boolean; label: string } {
+export function incomeLimit(p: ProgramRecord, household: number | undefined): { limit: number | null; upTo: boolean; label: string } {
   const inc = p.income;
   if (inc.kind === "not-stated") return { limit: null, upTo: false, label: "Not stated on the program's page" };
   if (inc.kind === "flat") return { limit: inc.max, upTo: false, label: `Up to ${money(inc.max)}` };
@@ -569,6 +569,38 @@ export function checkProgram(p: ProgramRecord, profile: Profile): Match {
 
   const est = estimateAmount(p, profile);
   return { program: p, amount: est.amount, amountNote: est.note, checks, potential: checks.every((c) => c.state !== "no") };
+}
+
+/**
+ * How close the answers sit to a program's income limit and price cap, in
+ * dollars (docs/audit/value-depth-2026-10.md §4.1). "Fits" and "needs
+ * checking" say whether; this says by how much, which is what tells somebody
+ * whether a raise or a second earner would cost them the program. `upTo`
+ * marks a limit that is the highest of several (some counties' are lower),
+ * and the page says so. Null where the program states no limit or the
+ * answers cannot place them against it.
+ */
+export function thresholds(p: ProgramRecord, profile: Profile) {
+  const lim = incomeLimit(p, profile.household);
+  const income = lim.limit !== null && profile.income !== undefined
+    ? { limit: lim.limit, room: lim.limit - profile.income, upTo: lim.upTo }
+    : null;
+  const price = p.price ? { max: p.price.max, room: p.price.max - profile.price, upTo: p.price.upTo } : null;
+  return { income, price };
+}
+
+/**
+ * Programs that would fit at a lower price and do not at theirs: the price
+ * alone is what stands between them. Each is offered at its cap, the highest
+ * price at which it fits without the new-build question nobody is asked.
+ * Closest to their price first.
+ */
+export function opensAt(profile: Profile, opts: { today: Date; windowDays: number; programs?: ProgramRecord[] }) {
+  return (opts.programs ?? GEORGIA_PROGRAMS)
+    .filter((p) => isCurrent(p, opts.today, opts.windowDays) && p.price && p.price.max < profile.price)
+    .filter((p) => !checkProgram(p, profile).potential && checkProgram(p, { ...profile, price: p.price!.max }).potential)
+    .map((p) => ({ program: p, price: p.price!.max, amount: estimateAmount(p, { ...profile, price: p.price!.max }).amount }))
+    .sort((a, b) => b.price - a.price);
 }
 
 export interface AssistanceResult {
