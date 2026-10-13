@@ -412,6 +412,17 @@ respectively, so changing the rule changes what customers are actually shown and
 what the forecast actually says. The remaining four are declared and surfaced but
 not yet load-bearing — wire them as their features land.
 
+### 8.0 Value depth (13 October 2026)
+
+`docs/audit/value-depth-2026-10.md` §8 lists seven decisions the remaining value upgrades wait
+on, each with the engineering view: who verifies the county tax, exemption and rent records
+(V1); whether the money values ask the loan type (V2); whether a labelled "if approved"
+assistance figure may appear below an answer (V3); what selling costs becomes (V4); a
+sell-then-buy plan (V5); and two the broker owns, seller disclosure guidance (V6) and the
+capital gains and FIRPTA lines (V7). Found while building, and left as it was: the county is
+still asked by cash to close, monthly cost, what you'd keep and selling costs and changes
+nothing in any of them; `lib/core/value-inputs.test.ts` pins that list so it can only shrink.
+
 ### 8.1 Product re-evaluation (22 September 2026)
 
 The [blueprint v4 review and implementation package](blueprint-v4/README.md) reviews the

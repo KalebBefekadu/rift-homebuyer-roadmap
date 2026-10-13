@@ -294,8 +294,8 @@ are decided (D20).
 | Assistance | "What Georgia programs might help me?" | County, first-time status, then income, household, price, credit, occupation, loan type as each program needs | Potential programs and potential combinations (§6) | Headline stays conditional (MONEY-02) |
 | Cash to close | "How much cash do I really need?" | Price, down payment choice, county | Real cash needed, line by line | **Moving is removed** (Kaleb, R1) |
 | Monthly cost | "What would I pay each month?" | Price, down payment, rate (weekly Freddie Mac) | Monthly cost across three prices | Taxes, insurance, HOA shown separately (MONEY-04) |
-| Timeline | "When could I buy?" | Savings, monthly saving, cash needed | Months to ready, and the two changes that shorten it most | Unknown saving rate never becomes "ready now" |
-| Affordability | "How much home fits me?" | Income, debts, comfort payment | A comfort range as a planning scenario | Needs its own tested model first (MONEY-05) |
+| Timeline | "When could I buy?" | Savings, monthly saving, cash needed, when they want to buy | Months to ready against their date, and the smallest change on each lever that meets it | Unknown saving rate never becomes "ready now"; "just exploring" gets no comparison (rule 11) |
+| Affordability | "How much home fits me?" | Income, debts, comfort payment, savings | The lower of what the payment reaches and what the savings reach, as a planning scenario | Needs its own tested model first (MONEY-05) |
 | Lender questions | "What should I ask a lender?" | Uses earlier answers | Questions written for their situation | Existing readout section |
 | Rent vs. buy, first-time roadmap, readiness | From v3 | To define | To define | Later values |
 
@@ -313,13 +313,22 @@ payment is above both, and never states what a lender would approve. **Lender qu
 programs they may fit, each with why it matters; printable. Rent vs. buy, the first-time
 roadmap and readiness are still "to define" and wait for Kaleb.
 
+**Status (13 Oct 2026), value depth.** `docs/audit/value-depth-2026-10.md` scored every value
+against a framework (the expert gap, a depth ladder, an eight-part scorecard) and built the
+eight upgrades that needed no new data or decision: what fits names the real ceiling (payment
+or cash); the timeline compares their own date and solves each lever for it, with the moving
+target beside the headline; monthly cost shows principal, the month mortgage insurance ends and
+rate sensitivity; cash to close names Georgia's intangible tax and what seller help takes off;
+lender questions compares two Loan Estimates. County is still asked and unused in four values
+(pinned by `lib/core/value-inputs.test.ts`) until the county data set (audit §6, V1).
+
 ### 5.3 Seller values (Kaleb, R2: same lens as the buyer side)
 
 | Value | Question | Inputs | Answer |
 | --- | --- | --- | --- |
 | Net proceeds | "What would I actually keep?" | Likely price, amount owed, county | Proceeds after payoff and costs (MONEY-06) |
 | Selling costs | "What will selling cost?" | Price, county | Each cost, commission as a negotiated input, never a standard rate |
-| Unclaimed money | "Am I losing money already?" | County, homestead status | Exemptions and appeal deadlines (existing `/sell/unclaimed`) |
+| Unclaimed money | "Am I losing money already?" | Homestead filed, 65 or older, years owned | Exemptions, who decides each, and dated deadlines; statutory figures only until county data lands |
 | Preparation | "Should I fix this before listing?" | Condition questions | What is worth addressing, maybe, not yet; no invented ROI |
 | Sell first or buy first, move-up | From v3 | To define | To define |
 
@@ -337,6 +346,9 @@ the seller journey's gate (§9).
 unagreed concessions are not costs; a shortfall is said as one; preparation has no costs or
 returns); the seller landing offers the four values; `/sell/start` and `/sell/results` forward
 to the proceeds value with their answers. The front door's seller figure uses the same rules.
+**13 Oct 2026:** what you'd keep shows the seller's floor (the break-even price) and the net
+five percent either side and at a point of commission either side; money you may be losing
+was rebuilt on the value pattern, answering only from what was said (audit §4.7, §4.8).
 
 ### 5.4 Buyers abroad (Kaleb, R1 and R2)
 
@@ -1121,6 +1133,7 @@ journey is live; running it before phase 4 means piloting on today's Operations 
 
 | Date | Change |
 | --- | --- |
+| 13 Oct 2026 | Value depth (`docs/audit/value-depth-2026-10.md`): a framework for judging how much a value gives, all thirteen values scored, and steps 1 to 8 of its order of work built. What fits headlines the lower of the payment's price and the savings' price; the timeline asks when they want to buy and compares only when they said; what you'd keep shows the break-even price and sensitivity; monthly cost shows principal, the mortgage-insurance end month and rate sensitivity; cash to close names Georgia's intangible tax and seller help; lender questions compares two Loan Estimates; money you may be losing quotes nothing it was not told and joins Save my plan. `PRICE_GROWTH_PCT` is one constant for the timeline and the abroad return. Every question a value asks is tested to be able to change its answer |
 | 4 Oct 2026 | Platform audit fixes (`docs/audit/platform-2026-10.md`): a menu on phones on every public page; `npm run deploy` refuses anything but a CI-passed `origin/main` and deploys a clean checkout (D39); a migration ledger and a `schema` line on `/api/health` (migration 20261003100000); `scripts/local/run.sh` replaces sourcing `env.sh`, which on bash 3.2 silently fell back to production; the daily summary's reads wait the agent's deadline, not a visitor's. Operations: a mortgage-rate screen in Settings, Reopen on held Advocacy moments, an in-place reason for taking a home off the list, whole-row clicks and filter-aware counts on Relationships; an inbound offer records whether it was answered and the sender's deadline (migration 20261004100000); Reports counts visitors who used a value without passing a landing page. A full Content-Security-Policy in report-only, reporting through a same-origin endpoint that keeps no page address; the retired MVP's Google Fonts import is gone. A sale's Offers and Preparation are worked on its journey tabs, not only on the person's record. Operations has browser tests in CI against a seeded database; agent, client and job reads wait the agent's deadline |
 | 2 Oct 2026 | Follow-ups: a seller and a buyer abroad are sent their own words or skipped with a recorded reason (no buyer wording to a seller); the programs email matches the saved plan page's profile and matcher; the day-zero touch is skipped when the save email is recorded as sent; "Started, not finished" counts visitors who left a value, not only retired assessments |
 | 30 Sep 2026 | D37: Questions edits the values' question wording in versions (history only, who, when, a note, view and restore), with a live preview and a publish step listing every change; the public pages ask in the published words and fall back to the code's; each saved lead records the wording version; Kaleb's own questions are asked after Save my plan and their answers shown on the person's record (migration 20260929400000) |

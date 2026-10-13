@@ -20,7 +20,8 @@ on it.
 
 **What shipped with this audit:** `lib/core/value-inputs.test.ts`, which proves that every
 question a value asks can change its answer, and records the four that cannot (F1) as a list
-that may only shrink.
+that may only shrink. Then steps 1 to 8 of §7, the ones that needed no new data and no
+decision; §9 says what was built and what was built differently.
 
 **Labels** follow `manual-review-2026-10-05.md`. Priority: P0 broken now, P1 a real gain, P2
 polish. Size: S under a day, M one to three days, L more. Owner: Eng, Kaleb, Broker.
@@ -248,7 +249,7 @@ in DeKalb: **$24,788**, of which the down payment is $11,375.
 
 **Score 8/24** (Q2 I1 L1 X1 A0 H3 C0 K0). Depth D1. County inert (F1); loan type absent (F2).
 
-**The expert gap.** "Georgia charges an intangible tax on your loan: $941 on yours, and it is
+**The expert gap.** "Georgia charges an intangible tax on your loan: $942 on yours, and it is
 the one line nobody has heard of." "On FHA the upfront premium is added to the loan, so it is
 not cash, but it is $5,488 more owed." "Ask the seller for 3% and this falls by $9,750; that
 is the most powerful sentence in your offer." "Have $24,788 to close, and about two months of
@@ -268,7 +269,7 @@ payments on top so the lender sees reserves."
 - *County escrow* (D): three months of this county's tax, not a flat 1% (§6).
 
 **Acceptance.** Input efficacy (county comes off `KNOWN_INERT`); the intangible tax at a
-$313,625 loan is $941; FHA at 3.5% shows a financed premium and no change to cash; seller help
+$313,625 loan is $942; FHA at 3.5% shows a financed premium and no change to cash; seller help
 never takes the total below zero. **Size** M. **Owner** Eng.
 
 ### 4.3 Monthly cost: "What would I pay each month?"
@@ -632,3 +633,23 @@ moves its value at least one rung.
 | V5 | A sell-then-buy plan that holds both sides | Yes, as its own value (§5.1); the one-side-per-plan rule stays for everyone else | Kaleb |
 | V6 | Seller disclosure guidance on Should I fix it first | Broker approves the wording before it ships | Broker |
 | V7 | Capital gains and FIRPTA lines: are they within what an agent may say? | Facts with statute and "decided by a tax preparer", never a tax figure; broker confirms | Broker |
+
+---
+
+## 9. Status, 13 October 2026
+
+Built on `claude/wonderful-einstein-o01jw3`, each step with its acceptance test first.
+
+| Step | Built | Where | Different from the plan |
+| --- | --- | --- | --- |
+| 1, 8 | Money you may be losing on the value pattern: three questions, answers only from what was said, statutory figures only, homestead and senior filings dated to the next April 1, Save my plan | `lib/core/unclaimed.ts`, `app/(rift)/sell/unclaimed/page.tsx` | The county is no longer asked: it changed nothing, and asking it would fail the input test. It comes back with the county data set. The assessed-value question was not added; the appeal item asks them to compare their notice instead |
+| 2 | The real ceiling on What fits | `lib/core/afford.ts` (`priceForCash`, `ceiling`) | Rate sensitivity was left to Monthly cost, where it is |
+| 3 | Break-even price and sensitivity on What you'd keep | `lib/core/seller.ts` (`breakEvenPrice`, `netSensitivity`) | Carrying cost per month, the gain against the exclusion and the next home wait: each needs a new question (V5 for the last) |
+| 4 | Stated date, lever search and moving target on the Timeline | `lib/core/timeline.ts`, new `target` question (`tg`) | Assistance is not a lever (waits for V3) |
+| 5 | Principal, mortgage insurance end month and rate sensitivity on Monthly cost | `owningDetail`, `balanceAfter` in `lib/core/compute.ts` | The maintenance set-aside and the rent comparison were not added; both need wording Kaleb should see first |
+| 6 | Georgia intangible tax inside the closing estimate, seller help at 3% and 6%, the reserve beside the total | `georgiaClosing`, `sellerHelp` in `lib/core/compute.ts` | Loan-type fees wait for V2. `cashToClose()` is unchanged so the ledger and snapshots are untouched |
+| 7 | Loan Estimate comparison on Lender questions | `lib/core/loan-estimate.ts`, `components/rift/value/EstimateCompare.tsx` | Loan-type questions wait for V2 |
+
+Scores after this work, on the §2.3 anchors: What fits 10 to 15, Timeline 12 to 16, What you'd
+keep 9 to 13, Monthly cost 8 to 11, Cash to close 8 to 11, Lender questions 10 to 14, Money you
+may be losing 8 to 14. Still open: steps 9 to 14 of §7, and decisions V1 to V7.
