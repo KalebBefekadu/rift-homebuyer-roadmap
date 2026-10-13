@@ -9,7 +9,7 @@ import { DRIFT_PCT, CROSSINGS } from "./seam";
 import { REVIEW_SLA_HOURS } from "./review";
 import { SEQUENCES, STOPS } from "./nurture";
 import { MOMENTS } from "./referral";
-import { PRICE_GROWTH_PCT, BUYER_DEFAULTS } from "./compute";
+import { PRICE_GROWTH_PCT, BUYER_DEFAULTS, georgiaClosing, owningDetail } from "./compute";
 import { SELLER_HELP_MAX, timelinePlan } from "./timeline";
 import { breakEvenPrice } from "./seller";
 
@@ -135,5 +135,8 @@ describe("docs match the code they describe", () => {
     expect(calc).toContain(`**${moving} months** with growth`);
     const floor = breakEvenPrice({ price: 400_000, payoff: 200_000, county: "Cobb", commissionPct: 5 })!;
     expect(calc).toContain(`**$${floor.toLocaleString("en-US")}**`);
+    const ref = { ...BUYER_DEFAULTS, assistance: 0 };
+    expect(calc).toContain(`**$${georgiaClosing(ref).intangible.toLocaleString("en-US")}**`);
+    expect(calc).toContain(`**month ${owningDetail(ref).pmiEnds!.month}**`);
   });
 });

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BUYER_DEFAULTS, PMI_NOTE, monthlyComputed, money } from "@/lib/core/compute";
+import { BUYER_DEFAULTS, PMI_NOTE, PMI_TERMINATION_LTV, monthlyComputed, owningDetail, money } from "@/lib/core/compute";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
@@ -22,7 +22,9 @@ export const dynamic = "force-dynamic";
  * The rate is this week's Freddie Mac average (lib/db/rates.ts), the same
  * number printed in "How this was worked out", so what is shown and what is
  * computed cannot differ. Taxes, insurance and mortgage insurance are shown
- * as their own lines (MONEY-04).
+ * as their own lines (MONEY-04). Past the total: how much of it is principal,
+ * when mortgage insurance comes off on schedule, and how the payment moves
+ * with the rate (owningDetail, docs/audit/value-depth-2026-10.md §4.3).
  */
 export default async function MonthlyCost({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
@@ -44,6 +46,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
   const rate = await currentRate();
   const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), ratePct: rate.pct, assistance: 0 };
   const m = monthlyComputed(inputs);
+  const own = owningDetail(inputs);
   const step = inputs.price >= 600_000 ? 75_000 : 40_000;
   const band = [inputs.price - step, inputs.price, inputs.price + step].map((p) => ({ price: p, monthly: monthlyComputed({ ...inputs, price: p }).value }));
   const parts = [
@@ -68,6 +71,26 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
         title="What the monthly payment is made of"
         rows={parts.map((p) => ({ label: p.label, note: p.note, amount: money(Math.round(p.amount)), muted: p.amount === 0 }))}
         total={{ label: "Each month", amount: money(Math.round(m.value)) }}
+      />
+      <Lines
+        title="What your payment does"
+        rows={[
+          { label: "Principal in your first payment", note: "The part that pays down the loan and stays yours; the rest is interest, tax and insurance", amount: money(Math.round(own.principalFirst)) },
+          { label: "Principal in your first year", amount: money(Math.round(own.principalYear)) },
+          ...(own.pmiEnds ? [{
+            label: "Mortgage insurance comes off",
+            note: `Around year ${Math.ceil(own.pmiEnds.month / 12)}, when the scheduled balance reaches ${PMI_TERMINATION_LTV}% of the price. Sooner if the home gains value or you pay extra. FHA loans with under 10% down keep it for the life of the loan.`,
+            amount: `Month ${own.pmiEnds.month}: ${money(Math.round(own.pmiEnds.monthly))} a month less`,
+          }] : []),
+        ]}
+      />
+      <Lines
+        title="If the rate is different when you lock"
+        rows={own.byRate.map((r) => ({
+          label: `${r.ratePct.toFixed(2)}%`,
+          note: Math.abs(r.ratePct - rate.pct) < 0.005 ? "This week's average" : undefined,
+          amount: `${money(Math.round(r.total))} a month`,
+        }))}
       />
       <Lines
         title="Across three prices"

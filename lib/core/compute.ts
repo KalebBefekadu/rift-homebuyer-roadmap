@@ -138,6 +138,56 @@ export function monthlyComputed(i: BuyerInputs): Computed & { parts: MonthlyBrea
   };
 }
 
+/** The balance left after `months` scheduled payments. Closed form of paying it month by month. */
+export function balanceAfter(loan: number, ratePct: number, termYears: number, months: number) {
+  if (loan <= 0) return 0;
+  const n = termYears * 12;
+  const m = Math.min(Math.max(months, 0), n);
+  const r = ratePct / 100 / 12;
+  if (r === 0) return loan - (loan / n) * m;
+  const g = Math.pow(1 + r, m);
+  return loan * g - monthlyPI(loan, ratePct, termYears) * ((g - 1) / r);
+}
+
+/**
+ * Conventional mortgage insurance ends automatically when the scheduled
+ * balance reaches 78% of the original value (the Homeowners Protection Act of
+ * 1998). A borrower can ask at 80%, and a home that gains value can get there
+ * sooner with an appraisal; the scheduled date is the one nobody has to ask
+ * for. FHA insurance at under 10% down never ends, which PMI_NOTE and the
+ * page say.
+ */
+export const PMI_TERMINATION_LTV = 78;
+
+/**
+ * What a monthly payment does, beyond what it costs: how much of it is
+ * principal (theirs to keep), when mortgage insurance comes off on schedule,
+ * and how the total moves with the rate, which moves more than the price for
+ * most buyers between now and the day they lock.
+ */
+export function owningDetail(i: BuyerInputs) {
+  const loan = Math.max(i.price - (i.price * i.downPct) / 100, 0);
+  const pi = monthlyPI(loan, i.ratePct, i.termYears);
+  const principalFirst = loan > 0 ? pi - loan * (i.ratePct / 100 / 12) : 0;
+  const principalYear = loan - balanceAfter(loan, i.ratePct, i.termYears, 12);
+
+  const parts = monthlyCost(i);
+  let pmiEnds: { month: number; monthly: number } | null = null;
+  if (parts.pmi > 0) {
+    const limit = (i.price * PMI_TERMINATION_LTV) / 100;
+    for (let m = 1; m <= i.termYears * 12; m++) {
+      if (balanceAfter(loan, i.ratePct, i.termYears, m) <= limit) { pmiEnds = { month: m, monthly: parts.pmi }; break; }
+    }
+  }
+
+  const byRate = [-1, -0.5, 0, 0.5, 1]
+    .map((d) => Math.round((i.ratePct + d) * 100) / 100)
+    .filter((r) => r >= 0)
+    .map((ratePct) => ({ ratePct, total: monthlyCost({ ...i, ratePct }).total }));
+
+  return { loan, principalFirst, principalYear, pmiEnds, byRate };
+}
+
 /**
  * True cash to close: the number that misleads almost every first-time buyer,
  * because they have only been told the down payment.
@@ -183,6 +233,39 @@ export function cashToClose(i: BuyerInputs) {
     couldBeWrong:
       "Closing costs in Georgia vary by lender, attorney, and loan type, and a seller may agree to pay part of them. Escrow amounts depend on when in the tax year you close. Earnest money is shown separately because you get it back at the table.",
   };
+}
+
+/**
+ * Georgia intangible recording tax on a long-term note: $1.50 for each $500
+ * of the loan or fraction of $500, to a maximum of $25,000 (O.C.G.A.
+ * § 48-6-61). Paid by the buyer at closing, and the one closing line almost
+ * nobody has heard of. It already sits inside the 3% closing estimate; it is
+ * named here so it can be shown, not added a second time.
+ */
+export const GA_INTANGIBLE_PER_500 = 1.5;
+export const GA_INTANGIBLE_MAX = 25_000;
+
+/** The closing estimate with Georgia's intangible tax named inside it. The sum is unchanged. */
+export function georgiaClosing(i: BuyerInputs) {
+  const loan = Math.max(i.price - (i.price * i.downPct) / 100, 0);
+  const closing = (i.price * i.closingPct) / 100;
+  /* "or fraction thereof": a part of $500 is charged as a whole one. The
+     epsilon keeps an exact multiple from rounding up on float noise. */
+  const tax = Math.min(GA_INTANGIBLE_MAX, Math.ceil(loan / 500 - 1e-9) * GA_INTANGIBLE_PER_500);
+  const intangible = Math.min(tax, closing);
+  return { loan, closing, intangible, other: closing - intangible };
+}
+
+/**
+ * The cash to close if the seller pays a share of the price toward the
+ * buyer's costs. It comes off the closing costs, prepaids, inspection and
+ * appraisal, never off the down payment, which no seller may pay. How much a
+ * seller may contribute depends on the loan; the page names the limits.
+ */
+export function sellerHelp(i: BuyerInputs, pct: number) {
+  const c = cashToClose(i);
+  const amount = Math.min((i.price * pct) / 100, c.total - c.down);
+  return { pct, amount, total: c.total - amount };
 }
 
 export interface GapResult {

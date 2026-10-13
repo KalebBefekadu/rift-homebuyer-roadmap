@@ -95,6 +95,24 @@ The two lines nobody quotes, inspection and appraisal, are held as constants rat
 percentages because they do not scale with price. Moving was a third until Blueprint v5
 (Kaleb, R1): it is not paid at closing, so it is not part of the cash to close.
 
+### Inside the closing estimate, and seller help
+
+`georgiaClosing(i)` names Georgia's intangible recording tax inside the closing estimate:
+**$1.50 per $500 of the loan or part of $500**, capped at $25,000 (O.C.G.A. § 48-6-61), so
+**$942** on the reference loan. It is carved out of `closingPct`, never added to it, so the
+cash to close does not move. `sellerHelp(i, pct)` takes the seller's share off everything but
+the down payment, which no seller may pay. The page shows it at 3% (conventional under 10%
+down) and 6% (FHA, or conventional with 10% or more down). The ledger's suggested reserve
+(`RESERVE_MONTHS` of the full payment) is shown beside the total, never in it.
+
+### What a payment does: `owningDetail(i)`
+
+`balanceAfter(loan, rate, term, m)` is the closed form of paying month by month. The page
+shows principal in the first payment and the first year; the month conventional mortgage
+insurance ends on schedule, the first month the balance is at or under
+`PMI_TERMINATION_LTV` (78%) of the price (Homeowners Protection Act of 1998): **month 142**
+on the reference case; and the total at a half and a whole point either side of the rate.
+
 ## The gap — `cashGap(i)`
 
 ```text
