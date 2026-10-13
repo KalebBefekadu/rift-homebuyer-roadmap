@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { money, pct } from "@/lib/core/compute";
-import { saleCosts } from "@/lib/core/seller";
+import { controllableCosts } from "@/lib/core/seller";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
@@ -11,7 +11,7 @@ import { CostBlocks } from "@/components/rift/value/artifacts";
 
 export const metadata: Metadata = {
   title: "What will selling my home cost?",
-  description: "Each cost of selling a home in Georgia, line by line, with commission as your own number rather than a standard rate.",
+  description: "Each cost of selling a home in Georgia by what you can do about it, with commission as your own number, and what each month on the market costs you.",
 };
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,11 @@ export const dynamic = "force-dynamic";
  *
  * The costs alone, without the loan, for somebody who is not ready to say
  * what they owe. Commission is an answer, never a rate we assume.
+ *
+ * It used to be What you'd keep without one input. Now it answers the
+ * question people actually have about cost: which of these can I do
+ * anything about, and what does waiting cost (V4, Kaleb 13 Oct 2026;
+ * docs/audit/value-depth-2026-10.md §4.9).
  */
 export default async function Costs({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
@@ -43,7 +48,9 @@ export default async function Costs({ searchParams }: { searchParams: Promise<Re
   const commissionPct = a.commission === "none" ? null : Number(a.commission);
   /* The loan is not a cost of selling; it is left out here, so the payoff fee
      is too. What you owe belongs to the net proceeds value. */
-  const c = saleCosts({ price, payoff: 0, county: String(a.county), commissionPct });
+  const cc = controllableCosts({ price, payoff: 0, county: String(a.county), commissionPct }, Number(a.carrying));
+  const c = cc.costs;
+  const months = (n: number) => `${n.toFixed(1).replace(/\.0$/, "")} month${n === 1 ? "" : "s"}`;
   const share = (c.total / price) * 100;
 
   return (
@@ -53,15 +60,31 @@ export default async function Costs({ searchParams }: { searchParams: Promise<Re
         figure={money(c.total)}
         sentence={<>
           is what selling a {money(price)} home in {String(a.county)} County costs{c.commissionKnown ? `, ${pct(share)} of the price` : " before commission"}.
-          {c.commissionKnown ? " Most of it is the commission you agreed." : ` Each 1% of commission you agree adds ${money(c.perPoint)}.`}
+          {c.commissionKnown ? ` ${money(cc.negotiable)} of it is yours to negotiate.` : ` Each 1% of commission you agree adds ${money(c.perPoint)}.`}
         </>}
         art={<CostBlocks parts={c.lines.map((l) => ({ label: l.short, amount: l.amount }))} total={c.total} />}
       />
       <BasedOn def={def} answers={a} defs={words.defs} />
+      {cc.groups.map((g) => (
+        <Lines
+          key={g.kind}
+          title={g.label}
+          rows={g.lines.map((l) => ({ label: l.label, note: l.note, amount: money(l.amount) }))}
+          total={{ label: g.kind === "negotiable" ? "Yours to negotiate" : g.kind === "law" ? "Fixed" : "Moves with the date", amount: money(g.total) }}
+        />
+      ))}
+
       <Lines
-        title="Each cost"
-        rows={c.lines.map((l) => ({ label: l.label, note: l.note, amount: money(l.amount) }))}
-        total={{ label: "Selling costs", amount: money(c.total) }}
+        title="The cost nobody lists: time"
+        rows={[
+          { label: "Each month on the market", note: "What the home costs you now, all in, from your answer", amount: money(cc.perMonth) },
+          ...(cc.concessionMonths !== null ? [{
+            label: "A 1% price cut or concession",
+            note: `${money(c.perPoint)} on this price: the same as ${months(cc.concessionMonths)} on the market. Worth weighing when an offer asks for one`,
+            amount: months(cc.concessionMonths),
+          }] : []),
+          ...(c.commissionKnown ? [{ label: "Half a point of commission", note: "What each half point you negotiate is worth on this price", amount: money(cc.halfPoint) }] : []),
+        ]}
       />
       <p className="t-sm c-3 mt-3 measure" style={{ lineHeight: 1.6 }}>
         Not counted: your loan (see what you would keep for that), moving, and anything a buyer asks for until you agree it.

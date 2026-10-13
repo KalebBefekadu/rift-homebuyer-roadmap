@@ -23,7 +23,7 @@ export type InputKey =
   | "income" | "household" | "credit" | "occupation" | "loanType" | "debts" | "comfort"
   | "salePrice" | "payoff" | "commission" | "yearsOwned" | "homestead" | "age65"
   | "roof" | "systems" | "finish"
-  | "status" | "use" | "target";
+  | "status" | "use" | "target" | "carrying";
 
 export interface ValueDef {
   id: string;
@@ -118,9 +118,9 @@ export const VALUES: ValueDef[] = [
   {
     id: "costs", side: "sell", href: "/sell/costs", name: "Selling costs",
     question: "What will selling cost me?",
-    gives: "Each cost of selling, line by line, with commission as your own number.",
+    gives: "Each cost of selling by what you can do about it, and what each month on the market costs.",
     cta: "See my selling costs",
-    asks: ["county", "salePrice", "commission"],
+    asks: ["county", "salePrice", "commission", "carrying"],
     live: true,
   },
   {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BUYER_DEFAULTS, cashGap, cashToClose, gapLevers, monthlyComputed } from "./compute";
 import { affordability } from "./afford";
-import { preparePlan, saleCosts, sellerNet, type Finish, type Roof, type Systems } from "./seller";
+import { controllableCosts, preparePlan, sellerNet, type Finish, type Roof, type Systems } from "./seller";
 import { lenderQuestions } from "./lender-questions";
 import { GEORGIA_PROGRAMS, matchAssistance, type Occupation } from "./assistance";
 import { firstTimeFrom, type Ownership } from "./funnel";
@@ -40,7 +40,7 @@ const BASE: Answers = {
   occupation: "other", comfort: "2200", debts: "400",
   salePrice: "400000", payoff: "200000", commission: "5",
   roof: "10to20", systems: "working", finish: "lived", target: "24",
-  homestead: "no", age65: "no", yearsOwned: "8",
+  homestead: "no", age65: "no", yearsOwned: "8", carrying: "2400",
   status: "foreign", use: "rent",
 };
 
@@ -66,6 +66,7 @@ const TRY: Partial<Record<InputKey, string[]>> = {
   status: ["citizen", "resident", "itin"],
   target: ["6", "12", "36", "exploring"],
   homestead: ["yes", "unsure"],
+  carrying: ["0", "4000"],
   age65: ["yes"],
   yearsOwned: ["1", "3", "15"],
   use: ["live"],
@@ -98,7 +99,7 @@ const PROBES: Record<string, (a: Answers) => unknown> = {
   lender: (a) => lenderQuestions({ price: n(a, "price"), downPct: n(a, "downPct"), firstTime: firstTimeFrom(a.ownership as Ownership), matches: [], combination: null }),
   proceeds: (a) => sellerNet({ price: n(a, "salePrice"), payoff: n(a, "payoff"), county: a.county, commissionPct: commission(a) }),
   unclaimed: (a) => unclaimedChecks({ homestead: a.homestead as UnclaimedAnswers["homestead"], age65: a.age65 as UnclaimedAnswers["age65"], yearsOwned: n(a, "yearsOwned") }, new Date("2026-10-13T15:00:00Z")),
-  costs: (a) => saleCosts({ price: n(a, "salePrice"), payoff: 0, county: a.county, commissionPct: commission(a) }),
+  costs: (a) => controllableCosts({ price: n(a, "salePrice"), payoff: 0, county: a.county, commissionPct: commission(a) }, n(a, "carrying")),
   prepare: (a) => preparePlan({ roof: a.roof as Roof, systems: a.systems as Systems, finish: a.finish as Finish }),
   eligibility: (a) => statusById(a.status as StatusId),
   "abroad-cost": (a) => abroadReturns({ price: n(a, "price"), county: a.county, status: a.status as StatusId, use: a.use as Use }),

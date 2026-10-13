@@ -272,6 +272,15 @@ export const ASKS: Record<InputKey, AskDef> = {
     ],
     fallback: "no",
   },
+  carrying: {
+    key: "carrying", param: "cr", type: "money",
+    title: "What does the home cost you each month now?",
+    why: "All in: the mortgage payment, tax, insurance and any HOA. It is what each month on the market costs you.",
+    slider: { min: 0, max: 8_000, step: 50 },
+    limits: { min: 0, max: 100_000 },
+    unitLabel: "Each month",
+    fallback: 2_000,
+  },
   target: {
     /* The stated half of rule 11's comparison. Each choice is an upper bound
        in months, so "within 6 months" compares against 6; "just exploring"
@@ -370,5 +379,5 @@ export const ASK_SHORT: Record<InputKey, string> = {
   credit: "Credit", occupation: "Work", loanType: "Loan", debts: "Other debts", comfort: "Comfortable payment", salePrice: "Sale price", payoff: "Still owed",
   commission: "Commission", yearsOwned: "Owned for", homestead: "Homestead", age65: "65 or older",
   status: "Status", use: "Use", roof: "Roof", systems: "Systems", finish: "Finishes",
-  target: "Want to buy",
+  target: "Want to buy", carrying: "Costs each month",
 };

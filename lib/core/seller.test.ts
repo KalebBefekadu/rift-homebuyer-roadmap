@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { saleCosts, sellerNet, preparePlan, breakEvenPrice, netSensitivity, SELLER_SETTLEMENT, PAYOFF_FEES, proratedTax } from "./seller";
+import { saleCosts, sellerNet, preparePlan, breakEvenPrice, netSensitivity, controllableCosts, SELLER_SETTLEMENT, PAYOFF_FEES, proratedTax } from "./seller";
 import { GA_TRANSFER_TAX_RATE } from "./compute";
 
 const base = { price: 400_000, payoff: 200_000, county: "Cobb", commissionPct: 5 as number | null };
@@ -93,5 +93,37 @@ describe("what moves what they keep", () => {
     expect(s.byCommission[0].net - s.byCommission[1].net).toBe(4_000);
     expect(netSensitivity({ ...base, commissionPct: 0.5 }).byCommission.map((r) => r.pct)).toEqual([0, 0.5, 1.5]);
     expect(netSensitivity({ ...base, commissionPct: null }).byCommission).toEqual([]);
+  });
+});
+
+/* Selling costs as the costs a seller controls (V4, Kaleb 13 Oct 2026;
+   docs/audit/value-depth-2026-10.md §4.9). */
+describe("what selling costs, by what you can do about it", () => {
+  it("puts every cost in exactly one group, and the groups add up to the same total", () => {
+    for (const commissionPct of [null, 2.5, 6]) {
+      const c = controllableCosts({ ...base, payoff: 0, commissionPct }, 2_400);
+      const lines = c.groups.flatMap((g) => g.lines);
+      expect(lines.length).toBe(saleCosts({ ...base, payoff: 0, commissionPct }).lines.length);
+      expect(c.groups.reduce((s, g) => s + g.total, 0)).toBe(c.total);
+      expect(c.total).toBe(saleCosts({ ...base, payoff: 0, commissionPct }).total);
+    }
+  });
+
+  it("calls the transfer tax law, commission and the attorney negotiable, and the tax share timing", () => {
+    const c = controllableCosts({ ...base, payoff: 0 }, 2_400);
+    const kindOf = (short: string) => c.groups.find((g) => g.lines.some((l) => l.short === short))!.kind;
+    expect(kindOf("Transfer tax")).toBe("law");
+    expect(kindOf("Commission")).toBe("negotiable");
+    expect(kindOf("Attorney")).toBe("negotiable");
+    expect(kindOf("Property tax")).toBe("timing");
+    expect(c.negotiable).toBe(c.groups.find((g) => g.kind === "negotiable")!.total);
+  });
+
+  it("prices each month on the market at what the home costs them now, and a 1% concession in those months", () => {
+    const c = controllableCosts({ ...base, payoff: 0 }, 2_500);
+    expect(c.perMonth).toBe(2_500);
+    expect(c.concessionMonths).toBeCloseTo(4_000 / 2_500, 6);
+    expect(c.halfPoint).toBe(2_000);
+    expect(controllableCosts({ ...base, payoff: 0 }, 0).concessionMonths).toBeNull();
   });
 });

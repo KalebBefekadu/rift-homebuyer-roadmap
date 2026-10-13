@@ -32,12 +32,16 @@ export interface SaleInputs {
   commissionPct: number | null;
 }
 
+/** What a seller can do about a cost: nothing (law), negotiate it, or move it with the date. */
+export type CostKind = "law" | "negotiable" | "timing";
+
 export interface SaleLine {
   label: string;
   /** For the drawing, where a long label would run off the edge. */
   short: string;
   amount: number;
   note: string;
+  kind: CostKind;
 }
 
 /** Closing attorney, deed preparation and recording: a planning figure. */
@@ -56,14 +60,14 @@ export const proratedTax = (price: number) => Math.round((price * BUYER_DEFAULTS
 export function saleCosts(i: SaleInputs) {
   const lines: SaleLine[] = [];
   if (i.commissionPct !== null) {
-    lines.push({ label: "Commission", short: "Commission", amount: Math.round((i.price * i.commissionPct) / 100), note: `${pct(i.commissionPct)} in total, as you agree it. Negotiable, and never a set rate` });
+    lines.push({ label: "Commission", short: "Commission", amount: Math.round((i.price * i.commissionPct) / 100), note: `${pct(i.commissionPct)} in total, as you agree it. Negotiable, and never a set rate`, kind: "negotiable" });
   }
   lines.push(
-    { label: "Georgia transfer tax", short: "Transfer tax", amount: Math.round(i.price * GA_TRANSFER_TAX_RATE), note: "$1.00 per $1,000 of the sale price, set by the state" },
-    { label: "Closing attorney and recording", short: "Attorney", amount: SELLER_SETTLEMENT, note: "Deed preparation, the attorney's fee and county recording. A planning figure" },
-    { label: "Your share of this year's property tax", short: "Property tax", amount: proratedTax(i.price), note: `About half a year at ${pct(BUYER_DEFAULTS.taxPct)} of value; the real figure depends on the closing date` },
+    { label: "Georgia transfer tax", short: "Transfer tax", amount: Math.round(i.price * GA_TRANSFER_TAX_RATE), note: "$1.00 per $1,000 of the sale price, set by the state", kind: "law" },
+    { label: "Closing attorney and recording", short: "Attorney", amount: SELLER_SETTLEMENT, note: "Deed preparation, the attorney's fee and county recording. A planning figure", kind: "negotiable" },
+    { label: "Your share of this year's property tax", short: "Property tax", amount: proratedTax(i.price), note: `About half a year at ${pct(BUYER_DEFAULTS.taxPct)} of value; the real figure depends on the closing date`, kind: "timing" },
   );
-  if (i.payoff > 0) lines.push({ label: "Payoff statement and wire fees", short: "Payoff fees", amount: PAYOFF_FEES, note: "Charged by your lender and the closing attorney to pay the loan off" });
+  if (i.payoff > 0) lines.push({ label: "Payoff statement and wire fees", short: "Payoff fees", amount: PAYOFF_FEES, note: "Charged by your lender and the closing attorney to pay the loan off", kind: "law" });
   const total = lines.reduce((s, l) => s + l.amount, 0);
   return {
     lines,
@@ -136,6 +140,43 @@ export function netSensitivity(i: SaleInputs) {
   const byCommission = i.commissionPct === null ? [] : [Math.max(0, i.commissionPct - 1), i.commissionPct, i.commissionPct + 1]
     .map((pct) => ({ pct, net: sellerNet({ ...i, commissionPct: pct }).net }));
   return { byPrice, byCommission };
+}
+
+const KIND_LABEL: Record<CostKind, string> = {
+  law: "Set by law or the lender",
+  negotiable: "Yours to negotiate",
+  timing: "Moves with the date",
+};
+
+/**
+ * Selling costs as the costs a seller controls (V4, Kaleb 13 Oct 2026).
+ *
+ * The same lines as `saleCosts`, so the two values cannot disagree, grouped
+ * by what can be done about each: nothing, negotiate it, or move it with the
+ * closing date. Beside them, the cost nobody lists: each month on the market
+ * costs what the home costs them now, and a 1% concession is that many
+ * months, which is the comparison a seller weighing a price cut needs.
+ */
+export function controllableCosts(i: SaleInputs, carrying: number) {
+  const c = saleCosts(i);
+  const groups = (["law", "negotiable", "timing"] as CostKind[])
+    .map((kind) => {
+      const lines = c.lines.filter((l) => l.kind === kind);
+      return { kind, label: KIND_LABEL[kind], lines, total: lines.reduce((s, l) => s + l.amount, 0) };
+    })
+    .filter((g) => g.lines.length);
+  return {
+    costs: c,
+    groups,
+    total: c.total,
+    negotiable: groups.find((g) => g.kind === "negotiable")?.total ?? 0,
+    /** What each month on the market costs: their own answer. */
+    perMonth: carrying,
+    /** A 1% concession, in months on the market. Null when nothing is paid each month. */
+    concessionMonths: carrying > 0 ? c.perPoint / carrying : null,
+    /** Half a point of commission on this price. */
+    halfPoint: Math.round(i.price / 200),
+  };
 }
 
 /* ------------------------------------------------------------------ *

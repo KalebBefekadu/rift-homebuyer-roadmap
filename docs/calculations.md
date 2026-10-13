@@ -195,6 +195,14 @@ filed. It says an assessment looks high only against a county figure somebody ga
 (`assessedValue` is `null` when unknown, which is the default); otherwise it points at the
 appeal window and asks them to compare, without quoting a value.
 
+### Selling costs by what a seller controls, `controllableCosts()` in `lib/core/seller.ts`
+
+The same lines as `saleCosts`, each with a `kind`: set by law or the lender (transfer tax,
+payoff fees), yours to negotiate (commission, attorney), or moves with the date (the tax
+share). The groups add up to the same total. Beside them, time: each month on the market
+costs what the home costs them now (their answer), and a 1% price cut or concession is
+`price / 100 / perMonth` months of it.
+
 ### Money you may be losing, `unclaimedChecks()` in `lib/core/unclaimed.ts`
 
 The public value no longer calls `unclaimedValue()` (kept for the retired readout and the
