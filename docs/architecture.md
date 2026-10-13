@@ -215,7 +215,7 @@ one at a time, not as a tree.
 | `lib/core/nurture.ts` | The cadence engine. Four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
 | `lib/core/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party — enforced in `promote()`, not in the UI |
 | `lib/core/seam.ts` | The readout→plan crossing. Ten carry rules, a 3% drift threshold, and the preconditions on publishing |
-| `lib/core/settings.ts` | The six business decisions that used to be literals, each with its consequence and whose call it is |
+| `lib/core/settings.ts` | The seven business decisions, six of which used to be literals, each with its consequence and whose call it is |
 | `components/rift/Trust.tsx` | The four-state trust ladder, rendered. Never colour alone |
 | `lib/prototype/fixtures.ts`, `clients.ts` | Demonstration people, tasks, offers, meetings, documents, playbooks |
 

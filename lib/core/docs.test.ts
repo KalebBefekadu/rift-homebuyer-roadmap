@@ -91,11 +91,11 @@ describe("docs match the code they describe", () => {
     expect(STOPS.length).toBe(6);
     expect(MOMENTS.length).toBe(8);
     expect(CROSSINGS.length).toBe(10);
-    expect(Object.keys(DEFAULT_RULES).length).toBe(6);
+    expect(Object.keys(DEFAULT_RULES).length).toBe(7);
     /* Spelled out in prose, so assert the words the docs actually use. */
     expect(all).toContain("four sequences");
     expect(all).toContain("six stop conditions");
-    expect(all).toContain("six business");
+    expect(all).toContain("seven business");
   });
 
   it("the docs point at test paths that exist", () => {

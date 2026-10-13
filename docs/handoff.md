@@ -406,6 +406,7 @@ surface distinguishes *decided* from *still on the default*.
 | 4 | Programme re-check window | 90 days | Kaleb | Longer means stale offers reach people |
 | 5 | Client record retention after closing | 5 years | **The broker** | The one setting with a legal floor — confirm before anything deletes on it |
 | 6 | Marketing to unrepresented buyers in a Rift Offer deal | No | **The broker, with counsel** | A conflict question before it is a marketing one |
+| 7 | Remind clients of their contract dates (`clientDateReminders`) | Off | Kaleb | An email about a legal date, sent in his name; off until the other client emails have run two weeks (portals audit, decision 4) |
 
 `registryDays` and `commissionPct` are read by `registry.ts` and `pipeline.ts`
 respectively, so changing the rule changes what customers are actually shown and
@@ -744,7 +745,7 @@ Scored against [benchmark.md](benchmark.md); nothing below is a surprise.
 - **The learned weights have no real history behind them yet.** The mechanism is built and the
   seeded history is deliberately thin and uneven, so most stages correctly report *assumed*.
   This gap now closes by itself as closings accumulate, which is the point of the change.
-- **Four of the six business rules are declared but not yet load-bearing.** `autoEmailReadout`,
+- **Four of the seven business rules are declared but not yet load-bearing.** `autoEmailReadout`,
   `clientRetentionYears`, `marketUnrepresented` and `registryOwner` are surfaced and stored;
   they change nothing until the features they govern exist.
 - **Nurture sequences are not connected to a sending system.** The engine resolves what is

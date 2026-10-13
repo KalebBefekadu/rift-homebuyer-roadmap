@@ -22,6 +22,11 @@ export async function tellHousehold(
   journeyId: string, kind: NoticeKind, agentName: string,
   /** Addresses already told in this round, across journeys; filled as it goes. */
   already?: Set<string>,
+  /**
+   * What it is about, when a kind is said once per thing rather than once per
+   * window: a reminder is said once per date (decision 4). An id, never words.
+   */
+  about?: string,
 ): Promise<{ told: number }> {
   const db = serviceClient();
   if (!db || !isUuid(journeyId)) return { told: 0 };
@@ -60,12 +65,26 @@ export async function tellHousehold(
       if (!/rift_client_notices/.test(last.error)) captureOpError(new Error(last.error), { op: "notice.read" });
       return { told: 0 };
     }
+    /* Once per person per thing, whatever the window says. Only a sent one
+       counts, as for the window below: one that failed is tried tomorrow. */
+    let toldAbout = new Set<string>();
+    if (about) {
+      const prior = await boundedReport(
+        db.from("rift_client_notices").select("member_id")
+          .in("member_id", people.map((p) => p.id)).eq("kind", kind).eq("about", about).eq("outcome", "sent").limit(200),
+        "the earlier reminders",
+      );
+      if (!prior.ok) return { told: 0 };
+      toldAbout = new Set((("data" in prior ? prior.data : []) as { member_id: string }[]).map((r) => r.member_id));
+    }
     const lastAt = new Map<string, string>();
     for (const r of ("data" in last ? last.data : []) as { member_id: string; created_at: string }[]) if (!lastAt.has(r.member_id)) lastAt.set(r.member_id, r.created_at);
 
     let told = 0;
     for (const p of people) {
-      if (!noticeDue(lastAt.get(p.id) ?? null)) continue;
+      if (toldAbout.has(p.id)) continue;
+      /* A thing said once per person needs no window: the record above is the throttle. */
+      if (!about && !noticeDue(lastAt.get(p.id) ?? null)) continue;
       const address = p.email.trim().toLowerCase();
       if (already?.has(address)) continue;
       already?.add(address);
@@ -77,7 +96,7 @@ export async function tellHousehold(
       if (!sent.ok) captureOpError(new Error(sent.error), { op: "email.notice", extra: { kind } });
       if (outcome === "sent") told++;
       const w = await boundedWrite(
-        db.from("rift_client_notices").insert({ agent_id: agentId, journey_id: journeyId, member_id: p.id, kind, outcome }),
+        db.from("rift_client_notices").insert({ agent_id: agentId, journey_id: journeyId, member_id: p.id, kind, outcome, ...(about ? { about } : {}) }),
         "the record of the email",
       );
       if (!w.ok) captureOpError(new Error(w.error), { op: "notice.record" });

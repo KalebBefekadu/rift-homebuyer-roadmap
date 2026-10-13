@@ -32,6 +32,8 @@ export interface BusinessRules {
   clientRetentionYears: Rule<number>;
   /** Whether an unrepresented buyer using Rift Offer may be marketed to. */
   marketUnrepresented: Rule<boolean>;
+  /** Email a client two days before a checked contract date of theirs. */
+  clientDateReminders: Rule<boolean>;
 }
 
 export const DEFAULT_RULES: BusinessRules = {
@@ -67,6 +69,15 @@ export const DEFAULT_RULES: BusinessRules = {
     value: false,
     affects: "Whether an unrepresented buyer on the other side of a Rift Offer deal enters the funnel. Off by default: soliciting the counterparty mid-transaction is a conflict question before it is a marketing one.",
     owner: "The broker, with counsel. Not an engineering decision and not a product one.",
+  },
+  clientDateReminders: {
+    /* Off until the "yours" notices have run for two weeks without a
+       complaint (audit portals-2026-10, decision 4): a reminder nobody asked
+       for, about a legal date, is the email most likely to be read as Rift
+       speaking for the agent. */
+    value: false,
+    affects: "Whether a buyer or seller is emailed, once, when a checked contract date for work they own is two days away or less. The email names no date; it links to their portal.",
+    owner: "Kaleb. Default off until the other client emails have run for two weeks.",
   },
 };
 
@@ -135,6 +146,7 @@ export const RULE_LABEL: Record<keyof BusinessRules, string> = {
   registryDays: "Programme re-check window",
   clientRetentionYears: "Client record retention",
   marketUnrepresented: "Market to unrepresented buyers",
+  clientDateReminders: "Remind clients of their contract dates",
 };
 
 /* ------------------------------------------------------------------ *
@@ -194,6 +206,10 @@ export const RULE_REACH: Record<keyof BusinessRules, Reach> = {
   marketUnrepresented: {
     live: false,
     where: "Recorded only. Rift Offer does not exist outside the prototype, so there is no unrepresented buyer for this to apply to.",
+  },
+  clientDateReminders: {
+    live: true,
+    where: "Read every morning by the follow-up emails job. When on, each household member who can see the contract is emailed once per date.",
   },
 };
 

@@ -16,7 +16,7 @@ import type { PortalTab } from "./portal-tabs";
  * who has signed in.
  */
 
-export type NoticeKind = "home" | "offer" | "priorities" | "pricing" | "proceeds" | "yours";
+export type NoticeKind = "home" | "offer" | "priorities" | "pricing" | "proceeds" | "yours" | "date";
 
 interface Rule {
   /** Only members who can see the thing are told about it; null when no scope gates it. */
@@ -45,6 +45,10 @@ export const NOTICE: Record<NoticeKind, Rule> = {
      on Today and nobody was told, in the stretch with the most deadlines. A
      workstream or a plan step the agent puts on the client. */
   yours: { scope: null, side: null, respondOnly: true, tab: "today", what: "put something on your list to do", asks: false, subject: "put something on your list in Rift" },
+  /* A checked contract date of theirs, two days out or less (decision 4),
+     only while the business rule clientDateReminders is on. The email names
+     no date and no deadline: the portal does, behind their sign-in. */
+  date: { scope: null, side: null, respondOnly: true, tab: "today", what: "has a contract date of yours coming up in the next two days", asks: false, subject: "has a contract date of yours coming up" },
 };
 
 /**
@@ -89,3 +93,32 @@ export interface NoticeEmail {
   /** The journey page on this site, without the tab. */
   journeyUrl: string;
 }
+
+/** How far ahead, in days, a contract date of theirs is reminded. */
+export const REMIND_DAYS = 2;
+
+/**
+ * Which checked contract dates to remind the household about: on an open
+ * contract, still active, not passed, due within REMIND_DAYS, and for work
+ * the client owns. A date nobody has checked against the document is never
+ * said (REQ-DATE-02), and one that belongs to the lender is the lender's.
+ */
+export function datesToRemind(contracts: {
+  journeyId: string; outcome: unknown | null;
+  work: { workstream: string; owner: string }[];
+  dates: { id: string; kind: string; workstream: string | null; view: { verified: boolean; missed: boolean; state: string; days: number | null } }[];
+}[]): { journeyId: string; deadlineId: string }[] {
+  const out: { journeyId: string; deadlineId: string }[] = [];
+  for (const c of contracts) {
+    if (c.outcome) continue;
+    for (const d of c.dates) {
+      const v = d.view;
+      if (d.kind !== "contractual" || !v.verified || v.missed || v.state !== "active" || v.days === null) continue;
+      if (v.days < 0 || v.days > REMIND_DAYS) continue;
+      if (!d.workstream || c.work.find((w) => w.workstream === d.workstream)?.owner !== "client") continue;
+      out.push({ journeyId: c.journeyId, deadlineId: d.id });
+    }
+  }
+  return out;
+}
+

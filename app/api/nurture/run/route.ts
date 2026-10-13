@@ -6,6 +6,7 @@ import { sendTouch, sendPlanTouch, sendResume, blockedContacts } from "@/lib/db/
 import { currentAgentId } from "@/lib/db/service";
 import { runOptions, blockedStop, listsPrograms, programsCopy, type TouchKind } from "@/lib/core/nurture";
 import { captureOpError } from "@/lib/monitoring/capture";
+import { remindDates } from "@/lib/db/reminders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -243,8 +244,17 @@ async function run(req: Request) {
     failedCount++;
   }
 
+  /* Contract-date reminders to clients ride on this morning job (audit
+     portals-2026-10, decision 4). Off unless the business rule is on, and
+     never able to fail the follow-ups above. */
+  const reminders = await remindDates(new Date(), { dry }).catch((e: unknown) => {
+    captureOpError(e, { op: "reminders.run" });
+    return { on: true, dates: 0, told: 0, reason: "failed" };
+  });
+
   return NextResponse.json({
     ok: true,
+    reminders,
     /* Said outright, at the top. A dry run's body is otherwise shaped exactly
        like a real one's, and a reader who assumes the wrong one has either
        panicked over nothing or relaxed about something that already went. */

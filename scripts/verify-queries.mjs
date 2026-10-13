@@ -469,6 +469,7 @@ await check("saleCadences: stages", () => db.from("rift_journey_events").select(
 await check("saleCadences: sellers", () => db.from("rift_leads").select("id,name,email").eq("agent_id", NIL).in("id", [NIL]));
 await check("contactsFor (portals audit, decision 3)", () => db.from("rift_contract_contacts").select("transaction_id,workstream,name,email,created_at").eq("agent_id", NIL).in("transaction_id", [NIL]).order("created_at", { ascending: false }).limit(1));
 await check("lastLook (portals audit, item 10)", () => db.from("rift_journey_members").select("seen_at,seen_before").eq("id", NIL).eq("journey_id", NIL).maybeSingle());
+await check("tellHousehold: once per date (portals audit, decision 4)", () => db.from("rift_client_notices").select("member_id").in("member_id", [NIL]).eq("kind", "date").eq("about", NIL).eq("outcome", "sent").limit(1));
 
 /* The Offers board (lib/db/offer-board.ts): buyers' offers, sellers' offers and rooms, in a bounded number of reads. */
 for (const [name, table, cols] of [
