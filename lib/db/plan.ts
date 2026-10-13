@@ -117,47 +117,10 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
     ? (items.data as Record<string, unknown>[]).map(shapeItem)
     : [];
 
-  /* Only a seller can have offers ON them, and only released ones are ever
-     read: the filter is in the query in lib/db/offers.ts, not applied here,
-     because a filter applied after the read is one refactor from being
-     dropped. */
   const side = row.side as "buy" | "sell";
-  let offers: Offer[] = [];
-  let sellerCosts: SellerCosts | null = null;
-  let take: ClientPlan["take"] = null;
-  let choice: ClientPlan["choice"] = null;
-
-  if (side === "sell") {
-    const [released, costs, room] = await Promise.all([
-      releasedOffersFor(row.id as string),
-      boundedRead(
-        db.from("rift_leads").select("payoff_cents,commission_pct").eq("id", row.id as string).maybeSingle(),
-        "the seller's costs",
-      ),
-      clientRoomFor(row.id as string),
-    ]);
-    if (released.ok && "data" in released) offers = released.data;
-
-    /* A failed room read costs the take and the recorded choice, never the
-       offers themselves. The page then offers a choice it cannot record, and
-       the write refuses (loudly) rather than the page going blank. */
-    if (room.ok && "data" in room) {
-      const r = room.data;
-      if (takeIsCurrent(r, offers)) take = { text: r.take!, approvedAt: r.approvedAt! };
-      if (r.chosenOfferId && r.chosenAt && r.chosenSeen) {
-        choice = { offerId: r.chosenOfferId, at: r.chosenAt, seen: r.chosenSeen };
-      }
-    }
-
-    const c = costs.ok && "data" in costs
-      ? (costs.data as { payoff_cents: number | null; commission_pct: number | null } | null)
-      : null;
-    /* Both, or neither. A net computed against an assumed payoff of zero reads
-       perfectly and is wrong by the size of their mortgage. */
-    if (c && c.payoff_cents !== null && c.commission_pct !== null) {
-      sellerCosts = { payoff: Number(c.payoff_cents) / 100, commissionPct: Number(c.commission_pct) };
-    }
-  }
+  const { offers, sellerCosts, take, choice } = side === "sell"
+    ? await sellerRoomOf(row.id as string)
+    : { offers: [], sellerCosts: null, take: null, choice: null };
 
   const name = ((row.name as string | null) ?? "").trim();
   return done({
@@ -172,6 +135,62 @@ export async function readPlanByToken(token: string): Promise<DbResult<ClientPla
     take,
     choice,
   });
+}
+
+export type SellerRoom = Pick<ClientPlan, "offers" | "sellerCosts" | "take" | "choice">;
+
+/**
+ * What a seller is shown about the offers on their home: the released ones,
+ * the costs to rank them against, the agent's current take and their own
+ * recorded choice. One read for both of the seller's pages, the old plan link
+ * and the portal (audit portals-2026-10, item 4), so the two can never show
+ * the same seller two different rooms.
+ *
+ * The caller has already decided this lead is theirs to show: the plan link
+ * by its token, the portal by a live membership on a journey grown from it.
+ */
+export async function sellerRoomOf(leadId: string): Promise<SellerRoom> {
+  const db = serviceClient();
+  if (!db) return { offers: [], sellerCosts: null, take: null, choice: null };
+  /* Only a seller can have offers ON them, and only released ones are ever
+     read: the filter is in the query in lib/db/offers.ts, not applied here,
+     because a filter applied after the read is one refactor from being
+     dropped. */
+  let offers: Offer[] = [];
+  let sellerCosts: SellerCosts | null = null;
+  let take: ClientPlan["take"] = null;
+  let choice: ClientPlan["choice"] = null;
+
+  const [released, costs, room] = await Promise.all([
+    releasedOffersFor(leadId),
+    boundedRead(
+      db.from("rift_leads").select("payoff_cents,commission_pct").eq("id", leadId).maybeSingle(),
+      "the seller's costs",
+    ),
+    clientRoomFor(leadId),
+  ]);
+  if (released.ok && "data" in released) offers = released.data;
+
+  /* A failed room read costs the take and the recorded choice, never the
+     offers themselves. The page then offers a choice it cannot record, and
+     the write refuses (loudly) rather than the page going blank. */
+  if (room.ok && "data" in room) {
+    const r = room.data;
+    if (takeIsCurrent(r, offers)) take = { text: r.take!, approvedAt: r.approvedAt! };
+    if (r.chosenOfferId && r.chosenAt && r.chosenSeen) {
+      choice = { offerId: r.chosenOfferId, at: r.chosenAt, seen: r.chosenSeen };
+    }
+  }
+
+  const c = costs.ok && "data" in costs
+    ? (costs.data as { payoff_cents: number | null; commission_pct: number | null } | null)
+    : null;
+  /* Both, or neither. A net computed against an assumed payoff of zero reads
+     perfectly and is wrong by the size of their mortgage. */
+  if (c && c.payoff_cents !== null && c.commission_pct !== null) {
+    sellerCosts = { payoff: Number(c.payoff_cents) / 100, commissionPct: Number(c.commission_pct) };
+  }
+  return { offers, sellerCosts, take, choice };
 }
 
 /* ------------------------------------------------------------------ *

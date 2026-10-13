@@ -50,6 +50,10 @@ export interface TodayInput {
   offersToAnswer?: string[];
   /** The open contract's contractual dates. Only checked ones are ever shown (REQ-DATE-02). */
   contractDates?: { label: string; workstream: Workstream | null; view: DeadlineView }[];
+  /** A seller's released offers, when they have not said which one they want yet. */
+  offersToChoose?: number;
+  /** Released decisions with no outcome yet: the question each asks. */
+  decisionsOpen?: string[];
 }
 
 /** How far ahead a checked contract date appears on Today. */
@@ -99,6 +103,17 @@ export function todayFor(input: TodayInput, today = new Date()): Today {
       kind: "decision", title: `Your offer on ${address}`,
       detail: `Tell ${agentFirst} how to proceed on the current terms. Your answer is an instruction, not a signature.`, anchor: "offers",
     });
+  }
+  /* What used to wait only on the plan link (audit portals-2026-10, item 4):
+     a seller with offers in front of them is never told nothing is waiting. */
+  if (input.offersToChoose) {
+    items.push({
+      kind: "decision", title: input.offersToChoose === 1 ? "An offer on your home" : `${input.offersToChoose} offers on your home`,
+      detail: `Look at what each would leave you, and tell ${agentFirst} which one you want. Choosing is not accepting.`, anchor: "seller-offers",
+    });
+  }
+  for (const q of input.decisionsOpen ?? []) {
+    items.push({ kind: "decision", title: q, detail: `${agentFirst} laid out the options. The choice is yours.`, anchor: "decisions" });
   }
   if (searching && input.briefToConfirm) {
     items.push({

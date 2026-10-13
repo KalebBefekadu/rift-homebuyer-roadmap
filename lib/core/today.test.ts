@@ -148,4 +148,14 @@ describe("owning the home (W11; B18, AT34)", () => {
     const t = todayFor({ ...base, progress: own, work: [keys] }, NOW);
     expect(t.items.some((i) => i.title.startsWith("Possession"))).toBe(false);
   });
+
+  it("never tells a seller with offers in front of them that nothing is waiting (audit portals-2026-10)", () => {
+    const t = todayFor({ ...base, progress: { ...base.progress, stage: "review-offers" as never }, offersToChoose: 2, decisionsOpen: ["Which price do we list at?"] }, NOW);
+    expect(t.items.slice(0, 2)).toMatchObject([
+      { kind: "decision", title: "2 offers on your home", anchor: "seller-offers" },
+      { kind: "decision", title: "Which price do we list at?", anchor: "decisions" },
+    ]);
+    expect(t.items[0]!.detail).toMatch(/not accepting/);
+    expect(t.nothingOwed).toBeNull();
+  });
 });

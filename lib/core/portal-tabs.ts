@@ -39,6 +39,8 @@ const TAB_OF: Record<string, PortalTab> = {
   priorities: "homes",
   homes: "homes",
   offers: "offers",
+  "seller-offers": "offers",
+  decisions: "today",
   money: "money",
   pricing: "money",
   proceeds: "money",

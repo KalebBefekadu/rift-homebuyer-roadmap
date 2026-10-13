@@ -212,10 +212,16 @@ describe("release", () => {
  */
 describe("what both pages show", () => {
   const src = readFileSync("app/(rift)/plan/[token]/page.tsx", "utf8");
+  /* The seller's offers render in one component on both of their pages, the
+     plan link and the portal (audit portals-2026-10, item 4). */
+  const roomSrc = readFileSync("components/rift/OfferRoomView.tsx", "utf8");
+  const portalSrc = readFileSync("app/(client)/app/j/[id]/JourneyView.tsx", "utf8");
   const agentSrc = readFileSync("app/(operations)/operations/lead/[id]/Offers.tsx", "utf8");
 
   it("puts the paperwork gaps on the seller's page too", () => {
-    expect(src, "the seller is not told what is missing from an offer").toMatch(/gapsIn\(/);
+    expect(roomSrc, "the seller is not told what is missing from an offer").toMatch(/gapsIn\(/);
+    expect(src).toMatch(/<OfferRoomView /);
+    expect(portalSrc).toMatch(/<OfferRoomView /);
     expect(agentSrc).toMatch(/gapsIn\(/);
   });
 
@@ -224,5 +230,6 @@ describe("what both pages show", () => {
        releasedOffersFor: filtered in the query. Asserted here so a future
        edit cannot reach for the unfiltered list that sits next to it. */
     expect(src).not.toMatch(/offersFor\(/);
+    expect(roomSrc).not.toMatch(/offersFor\(/);
   });
 });

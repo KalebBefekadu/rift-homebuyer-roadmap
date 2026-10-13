@@ -19,8 +19,9 @@ const focusOnShow = (el: HTMLElement | null) => el?.focus();
  * Every figure shown here was computed on the server and arrives as a string.
  * The action records what the server computes, not what this sends.
  */
-export function Choose({ token, agentFirst, options }: {
-  token: string;
+export function OfferChoose({ post, agentFirst, options }: {
+  /** Where the choice goes, and what proves it is theirs (a plan token, or the member's journey). */
+  post: { url: string; body: Record<string, string> };
   agentFirst: string;
   options: { id: string; label: string; detail: string }[];
 }) {
@@ -41,10 +42,10 @@ export function Choose({ token, agentFirst, options }: {
     if (!pick || pending) return;
     setPending(true);
     try {
-      const res = await fetch("/api/plan/choose", {
+      const res = await fetch(post.url, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token, offerId: pick, note }),
+        body: JSON.stringify({ ...post.body, offerId: pick, note }),
       });
       const r = (await res.json().catch(() => null)) as { ok?: boolean; stored?: boolean; error?: string } | null;
       if (!r?.ok || r.stored !== true) {

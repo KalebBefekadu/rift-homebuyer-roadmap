@@ -13,6 +13,9 @@ import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { clientBids, clientBrief, clientHomes, clientProgress, clientTours, householdDocuments, type Membership } from "@/lib/db/portal";
 import { SendDocument } from "./SendDocument";
+import { clientRoom } from "@/lib/db/portal-room";
+import { OfferRoomView } from "@/components/rift/OfferRoomView";
+import { DecisionRoom } from "@/components/rift/DecisionRoom";
 import { WORK_STATE_LABEL, isSettled, stageStrip, workLine, workSummary } from "@/lib/core/progress";
 import { todayFor } from "@/lib/core/today";
 import { OFFER_LABEL, buyerLabel } from "@/lib/core/tour";
@@ -60,7 +63,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
   const EN = locale === "am" ? "en" : undefined;
 
   const sellerMoneyOn = member.side === "sell" && member.scopes.includes("money");
-  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead, listingRead, sentRead] = await Promise.all([
+  const [brief, homes, tours, prog, offers, moneyRead, depsRead, sellerRead, listingRead, sentRead, roomRead] = await Promise.all([
     member.scopes.includes("search") && member.side === "buy" ? clientBrief(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientHomes(member) : Promise.resolve(null),
     member.scopes.includes("homes") && member.side === "buy" ? clientTours(member) : Promise.resolve(null),
@@ -71,7 +74,14 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
     sellerMoneyOn ? sellerMoney(member.journeyId, member.agentId) : Promise.resolve(null),
     member.side === "sell" ? listingOf(member.journeyId, member.agentId) : Promise.resolve(null),
     householdDocuments(member),
+    clientRoom(member),
   ]);
+  /* The seller's offers and the released decisions, once only on the plan
+     link (audit portals-2026-10, items 4 and 8). A failed read shows neither,
+     and Today then says nothing about them rather than something wrong. */
+  const roomData = roomRead.ok && "data" in roomRead ? roomRead.data : null;
+  const sellerRoom = roomData?.room && roomData.room.offers.length ? roomData.room : null;
+  const decisions = [...(roomData?.decisions ?? [])].sort((a, b) => Number(Boolean(a.decidedAt)) - Number(Boolean(b.decidedAt)));
   /* What the household sent (WS11.3). A failed read shows a sentence, not an empty list. */
   const sent = sentRead.ok && "data" in sentRead ? sentRead.data : null;
   /* The listing's summary line only: never the showing agents' names, the
@@ -134,6 +144,8 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       briefToConfirm: respond && !!b?.revision && !b.myResponse,
       showingsToAnswer: respond ? showings.filter((x) => x.completed && !x.answeredByMe).map((x) => address.get(x.homeId) ?? "A home you saw") : [],
       contractDates: p.dates,
+      offersToChoose: sellerRoom && !sellerRoom.choice ? sellerRoom.offers.length : 0,
+      decisionsOpen: decisions.filter((d) => !d.decidedAt).map((d) => d.question),
       offersToAnswer: respond ? buyerBids.filter((x) => x.asked?.open && x.asked.mineNeeded && !x.asked.myAnswer && !x.newerDraft).map((x) => x.address) : [],
     })
     : null;
@@ -169,7 +181,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
   const can: Record<PortalTab, boolean> = {
     today: true,
     homes: member.side === "buy" && (member.scopes.includes("search") || member.scopes.includes("homes")),
-    offers: offersOn,
+    offers: offersOn || Boolean(sellerRoom),
     money: moneyOn || (sellerMoneyOn && (Boolean(latestOpinion) || saleViews.length > 0)),
     documents: true,
     help: true,
@@ -287,6 +299,24 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
             ))}
           </ul>
           <p className="t-2xs c-4" style={{ marginTop: 10 }}>Checked against the official pages on {showDay(MOVE_IN_CHECKED, { month: "long", day: "numeric", year: "numeric" })}.</p>
+        </section>
+      ) : null}
+
+      {active === "today" && decisions.length ? (
+        <section id="decisions" style={{ marginTop: 18 }} aria-labelledby="decisions-h">
+          <h2 id="decisions-h" className="t-md w6">{decisions.length === 1 ? "A decision" : "Decisions"}</h2>
+          <div lang={EN} className="col gap-3" style={{ marginTop: 10 }}>
+            {decisions.map((d) => <DecisionRoom key={d.id} decision={d} agentFirst={agentFirst} />)}
+          </div>
+        </section>
+      ) : null}
+
+      {active === "offers" && sellerRoom ? (
+        <section id="seller-offers" style={{ marginTop: 18 }} aria-labelledby="seller-offers-h">
+          <h2 id="seller-offers-h" className="sr-only">Offers on your home</h2>
+          <div lang={EN}>
+            <OfferRoomView room={sellerRoom} agentFirst={agentFirst} post={{ url: "/api/app/choose", body: { journeyId: member.journeyId } }} />
+          </div>
         </section>
       ) : null}
 
