@@ -11,6 +11,7 @@ import { ValueFlow } from "@/components/rift/value/ValueFlow";
 import { valueWording } from "@/lib/db/questions";
 import { ValueLayout, BasedOn } from "@/components/rift/value/parts";
 import { AfterAnswer } from "@/components/rift/value/AfterAnswer";
+import { EstimateCompare } from "@/components/rift/value/EstimateCompare";
 import { PrintButton } from "@/components/rift/PrintButton";
 
 export const metadata: Metadata = {
@@ -89,6 +90,9 @@ export default async function LenderQuestions({ searchParams }: { searchParams: 
             </ol>
           </section>
         ))}
+      </div>
+      <div className="no-print">
+        <EstimateCompare loan={Number(a.price) * (1 - Number(a.downPct) / 100)} />
       </div>
       <AfterAnswer
         questions={words}

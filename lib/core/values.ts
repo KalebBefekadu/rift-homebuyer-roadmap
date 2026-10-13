@@ -92,7 +92,7 @@ export const VALUES: ValueDef[] = [
   {
     id: "lender", side: "buy", href: "/buy/lender-questions", name: "Lender questions",
     question: "What should I ask a lender?",
-    gives: "Questions written for your situation, and why each one matters.",
+    gives: "Questions written for your situation, and a way to compare the Loan Estimates you get back.",
     cta: "Get my questions",
     asks: ["price", "downPct", "ownership"],
     live: true,

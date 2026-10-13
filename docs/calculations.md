@@ -175,6 +175,16 @@ month when the payment does.
   `PRICE_GROWTH_PCT` is 4%, shared with the abroad return. Shown beside the headline, never as
   it. On the reference case: **25 months** standing still, **28 months** with growth.
 
+## Two Loan Estimates, `compareEstimates()` in `lib/core/loan-estimate.ts`
+
+Three figures typed from each estimate: rate, origination charges (section A, including
+points) and lender credits. Cost to date is
+`origination - credits + interest paid to month m`, where interest paid is the payments less
+the principal repaid (`balanceAfter`); the principal is theirs either way. Shown at 3, 5 and 7
+years. The break-even is the first month the lower-rate estimate's cost to date is at or under
+the other's; with both the lower rate and the lower upfront cost, one is cheaper throughout.
+Nothing typed is stored, sent or tracked.
+
 ## Seller
 
 `netProceeds(s)` subtracts commission, concessions, Georgia transfer tax
