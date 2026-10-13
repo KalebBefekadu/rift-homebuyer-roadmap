@@ -15,7 +15,7 @@
  * to `rift_consents` and the browser renders it, and those two must be the same
  * text. It used to sit in a "use client" module, which meant the server-side
  * capture path imported a client module to learn what somebody had agreed to.
- * The client-side helpers that act on this data stay in lib/prototype/privacy.ts.
+ * The browser's half ("delete all of it") is components/rift/Forget.tsx.
  */
 
 /* ------------------------------------------------------------------ *

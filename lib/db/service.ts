@@ -16,8 +16,8 @@ import { captureOpError } from "@/lib/monitoring/capture";
  * be poisoned from a console, and the first sign of it would be a strategy
  * built on invented data.
  *
- * Returns null when unconfigured rather than throwing. The specification at
- * /prototype runs with an empty environment on purpose, and a missing
+ * Returns null when unconfigured rather than throwing. Every public page must
+ * render with an empty environment (the e2e suite runs that way), and a missing
  * integration must degrade visibly rather than take the process down:
  * see docs/integrations.md.
  */

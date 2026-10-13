@@ -34,8 +34,8 @@ If you are about to write code, read **[AGENTS.md](AGENTS.md)** first.
 not code (email deliverability, the broker's sign-off, counsel, the Amharic review, backups);
 the list with owners is [docs/audit/full-audit-2026-10-12.md](docs/audit/full-audit-2026-10-12.md) §5.
 
-The September prototype (`app/prototype`) is kept as reference, answers 404 in production, and
-is not extended.
+The September prototype was deleted on 13 October 2026, once every screen in it had a live
+replacement. It is in git history.
 
 ## Documentation
 

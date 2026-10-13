@@ -50,11 +50,10 @@ export const metadata: Metadata = {
 /**
  * The public product shell.
  *
- * Shares the design system with the specification rather than forking it. The
- * stylesheet is scoped under `.rift`, so the two can coexist while screens are
- * migrated one at a time, which is the migration rule in docs/architecture.md:
- * a prototype screen is deleted when its production replacement is live and has
- * been checked against it, never as a tree.
+ * The stylesheet (app/styles/rift.css) is scoped under `.rift`, so nothing in
+ * it collides with app/globals.css. It started as the September prototype's;
+ * the prototype was deleted on 13 October 2026, once every screen had a live
+ * replacement.
  */
 export default function RiftLayout({ children }: { children: React.ReactNode }) {
   return (

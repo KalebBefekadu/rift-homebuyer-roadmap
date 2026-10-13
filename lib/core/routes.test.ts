@@ -84,14 +84,6 @@ describe("the production import graph", () => {
     expect(closure.has("lib/core/compute.ts")).toBe(true);
   });
 
-  it("leaves the prototype-only shells out", () => {
-    /* These link into /prototype on purpose and are rendered only by
-       /prototype/*. If one of them ever appears here, its links become live
-       404s and the test below is the one that should say so. */
-    expect(closure.has("components/rift/Shell.tsx")).toBe(false);
-    expect(closure.has("components/rift/ProductShell.tsx")).toBe(false);
-  });
-
   it("contains no link into /prototype", () => {
     const dead = [...closure]
       .filter((f) => f.endsWith(".tsx"))
@@ -105,7 +97,7 @@ describe("the production import graph", () => {
 
     expect(
       dead,
-      "/prototype returns 404 in production, so each of these is a dead link on a live page",
+      "/prototype was deleted on 13 October 2026, so each of these is a dead link on a live page",
     ).toEqual([]);
   });
 });

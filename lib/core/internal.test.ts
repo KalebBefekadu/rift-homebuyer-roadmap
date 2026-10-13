@@ -48,7 +48,6 @@ describe("every disallowed page is refused, not merely uncrawled", () => {
     .filter(Boolean);
 
   it("reads the list out of robots.ts", () => {
-    expect(disallow).toContain("/prototype/");
     expect(disallow).toContain("/operations");
   });
 

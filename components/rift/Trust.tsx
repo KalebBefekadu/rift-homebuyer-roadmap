@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Ico } from "./icons";
 import type { TrustState } from "@/lib/core/review";
-import { askReview } from "@/lib/prototype/reviewStore";
 
 /**
  * The trust ladder, rendered.
@@ -21,7 +19,7 @@ import { askReview } from "@/lib/prototype/reviewStore";
  */
 
 /* Re-exported so existing component imports keep working; the type is owned
-   by lib/prototype/review.ts. See the note there. */
+   by lib/core/review.ts. */
 export type { TrustState };
 
 const S: Record<TrustState, {
@@ -59,85 +57,5 @@ export function Trust({ state, short, title }: { state: TrustState; short?: bool
       <I size={11} />
       {short ? s.short : s.label}
     </span>
-  );
-}
-
-/**
- * The ladder itself, for the one place a person should see all four.
- *
- * It now carries the control that moves them up it. That was the gap: the
- * second rung was described here and could not be reached from anywhere,
- * which meant we were showing somebody a path with no door on it. The ask
- * below creates a real item in Kaleb's review queue.
- */
-export function TrustLadder({ at, ask }: {
-  at: TrustState;
-  /** What the person would be asking him to check. Omit to hide the control. */
-  ask?: { what: string; claim: string };
-}) {
-  const order: TrustState[] = ["preliminary", "pending-review", "reviewed", "verified"];
-  const ix = order.indexOf(at);
-  const [sent, setSent] = useState(false);
-  return (
-    <div className="card" style={{ overflow: "hidden" }}>
-      <div className="between" style={{ padding: "11px 16px", borderBottom: "1px solid var(--line-2)" }}>
-        <span className="t-sm w6">How sure is this number?</span>
-        <Trust state={at} short title={false} />
-      </div>
-      {order.map((k, i) => {
-        const s = S[k];
-        const I = s.icon;
-        const isAt = i === ix;
-        return (
-          <div key={k} className="row gap-3" style={{
-            padding: "11px 16px", alignItems: "flex-start",
-            borderBottom: i === order.length - 1 ? undefined : "1px solid var(--line-3)",
-            background: isAt ? "var(--sunk)" : undefined,
-          }}>
-            <I size={14} className={isAt ? "c-acc" : "c-4"} style={{ marginTop: 2, flex: "none" }} />
-            <div className="grow">
-              {/* A step already passed is set back in ink rather than faded.
-                  At 0.5 its label and its meaning both fell under AA, on the
-                  component that exists to tell somebody how far a number can
-                  be trusted, which is not a thing to make hard to read. The
-                  current step is already marked three other ways: a sunk
-                  ground, an accent icon, and a chip saying "You are here". */}
-              <div className="row gap-2">
-                <span className={`t-sm ${isAt ? "w6" : "w5"}`} style={{ color: i < ix ? "var(--ink-4)" : undefined }}>{s.label}</span>
-                {isAt ? <span className="chip chip-acc">You are here</span> : null}
-              </div>
-              <p className="t-xs c-3" style={{ marginTop: 3, lineHeight: 1.5 }}>{s.meaning}</p>
-            </div>
-          </div>
-        );
-      })}
-      {ask && at === "preliminary" ? (
-        <div style={{ padding: "12px 16px", background: "var(--sunk)", borderTop: "1px solid var(--line-2)" }}>
-          {sent ? (
-            <div className="row gap-2">
-              <Ico.checkCircle size={14} className="c-pos" style={{ flex: "none" }} />
-              <p className="t-xs c-3" style={{ lineHeight: 1.55 }}>
-                It is with Kaleb. He aims to come back inside a day. Until he does, the number
-                on this page is still an estimate. Asking does not make it truer, it just
-                gets a person looking at it.
-              </p>
-            </div>
-          ) : (
-            <div className="between wrap gap-2">
-              <p className="t-xs c-3" style={{ lineHeight: 1.55, maxWidth: 380 }}>
-                Want a person to go through it? No account, no obligation, and your answer
-                comes back whether or not you ever work with him.
-              </p>
-              <button
-                className="btn btn-g btn-sm"
-                onClick={() => { askReview({ who: "You", whoId: "self", kind: "figure", ceiling: "verified", ...ask }); setSent(true); }}
-              >
-                <Ico.shield size={13} />Ask Kaleb to check this
-              </button>
-            </div>
-          )}
-        </div>
-      ) : null}
-    </div>
   );
 }

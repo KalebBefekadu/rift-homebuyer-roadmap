@@ -42,7 +42,7 @@
  *
  * The rule it broke is already written down: the domain layer does not depend
  * on the framework. Keep the dependency pointing one way: components import
- * from `lib/prototype`, never the reverse.
+ * from `lib/core`, never the reverse.
  */
 export type TrustState = "preliminary" | "pending-review" | "reviewed" | "verified";
 

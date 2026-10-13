@@ -17,9 +17,6 @@ is not connected: a value computes its answer, Save my plan says "Not saved.", t
 back to a labelled starting assumption. That degraded state is a contract, walked by the e2e
 suite on every CI run. Operations and the client portal need Supabase (§4 onwards).
 
-`/prototype` is the September specification, still runnable locally for reference. It answers
-404 in production and is not extended.
-
 ## 2. Verify before touching anything
 
 ```bash
@@ -359,7 +356,6 @@ app/
   (operations)/      Operations, the agent's workspace
   api/               route handlers: capture, plan save, crons, health
   styles/rift.css    the one stylesheet
-  prototype/         the September specification: 404 in production, reference only
 components/rift/     shared components; value/ holds the pieces every value page uses
 lib/
   core/              the domain: compute, rules, wording. Pure, no I/O
@@ -367,7 +363,6 @@ lib/
   rift/              browser helpers for the public site
   supabase/          server and middleware clients
   monitoring/        Sentry capture and redaction
-  prototype/         the specification's browser stores
 supabase/
   migrations/        the Rift schema, one file per change, each recorded in the ledger
   seed/              the assistance programs

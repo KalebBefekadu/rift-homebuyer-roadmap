@@ -34,7 +34,7 @@ export default function robots(): MetadataRoute.Robots {
            outside the country was the one without the protection. */
         disallow: [
           "/r/", "/summary/", "/buy/results", "/sell/results", "/abroad/results",
-          "/book", "/operations", "/studio", "/api/", "/prototype/", "/plan/", "/app", "/saved/",
+          "/book", "/operations", "/studio", "/api/", "/plan/", "/app", "/saved/",
         ],
       },
     ],

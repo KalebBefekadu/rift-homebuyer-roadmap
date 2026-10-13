@@ -3,9 +3,8 @@
 ## Where this repository actually is (12 October 2026)
 
 The product is built and live: the public site, the client portal and Operations, on Supabase
-with row-level security, Brevo, Sentry and Vercel. `app/prototype` and `lib/prototype` are
-the September specification it was built against, kept for reference, 404 in production, and
-not extended. Plans live in [blueprint v5](blueprint-v5/README.md); what is left before real
+with row-level security, Brevo, Sentry and Vercel. The September prototype it was built
+against was deleted on 13 October 2026 and is in git history. Plans live in [blueprint v5](blueprint-v5/README.md); what is left before real
 traffic is in [the 12 October audit](audit/full-audit-2026-10-12.md) §5.
 
 ### What was removed, and why it is not coming back
@@ -41,11 +40,8 @@ Browser
 | **Data** | `lib/db/` | `lib/core`, Supabase. `server-only` — importing it from a client component is a build error |
 | **Surface** | `app/`, `components/` | Both |
 
-Dependencies point one way. The domain layer was promoted out of `lib/prototype/` for exactly
-this reason: the specification and the production build must share **one** compute engine, or
-they will disagree about a number a stranger is shown and both will look correct in isolation.
-`lib/prototype/` now holds only what is genuinely prototype-shaped — fixtures, and the
-localStorage stand-ins for persistence.
+Dependencies point one way. There is **one** compute engine, in `lib/core`, or two surfaces
+will disagree about a number a stranger is shown and both will look correct in isolation.
 
 A cycle across this boundary is not theoretical. `TrustState` briefly lived in a React
 component that two domain modules imported, and when the component came to need one of them
@@ -61,8 +57,7 @@ Rift owns pipeline state. Brevo owns messaging. Do not create a second place to 
 
 ## Production routes
 
-Built and live. `/prototype` is the September specification they were built against, now
-404 in production.
+Built and live.
 
 | Route | What |
 | --- | --- |
@@ -87,7 +82,6 @@ Built and live. `/prototype` is the September specification they were built agai
 | Client portal | `app/(client)` | Invitation sign-in and the client's journey |
 | Operations | `app/(operations)` | The agent's workspace, behind a server-checked session |
 | Stylesheet | `app/styles/rift.css`, `components/rift/Fonts.tsx` | The one stylesheet and the one font link every surface uses |
-| Specification prototype | `app/prototype`, `lib/prototype` | The September specification, 404 in production, reference only |
 | Auth | `lib/supabase`, `lib/db/session.ts`, `lib/db/signin.ts`, `app/(client)/auth/callback`, `app/auth/confirm` | Supabase Auth: passwords or email links for clients, email links for the agent |
 | Messaging | `lib/db/email.ts`, `lib/db/sender.ts` | Brevo transactional email, and whether Brevo will actually send |
 | Observability | `lib/monitoring`, `instrumentation*.ts`, `sentry.*.config.ts` | Capture failures without PII |
@@ -173,9 +167,9 @@ service, each with what happens when it is absent. Every public page renders wit
 
 ## Where the product rules live
 
-The September prototype (`/prototype`, mock fixtures, no database) was the specification. Every
-screen in it now has a live replacement, so it is reference only; its route map is
-[prototypes.md](prototypes.md). The rules it encoded were promoted into `lib/core`:
+The September prototype (mock fixtures, no database) was the specification; it was deleted on
+13 October 2026 once every screen had a live replacement. The rules it encoded live in
+`lib/core`:
 
 | Location | Contents |
 | --- | --- |
@@ -226,11 +220,11 @@ a lender named as the decider. Folding an unapproved program midpoint into the h
 someone they are ready to buy when they are not, which is the most damaging thing this product
 could do to a person — and it is exactly what the arithmetic does if nobody stops it.
 
-### Rules the prototype enforces in code
+### Rules enforced in code
 
 These are not decorative. Four product rules from [product.md](product.md) are implemented rather than described:
 
-1. **Computed, never generated.** Every figure a visitor sees is produced by `lib/core/compute.ts` or matched from `lib/core/registry.ts`. No number anywhere in the prototype is authored text.
+1. **Computed, never generated.** Every figure a visitor sees is produced by `lib/core/compute.ts` or matched from `lib/core/registry.ts`. No number anywhere on the site is authored text.
 2. **No bare numbers.** The `Computed` type in `lib/core/compute.ts` requires an
    `assumptions` list and a `couldBeWrong` statement on every figure it produces. Keeping
    this in the type rather than in review is the point: a figure that renders without them is
@@ -240,11 +234,6 @@ These are not decorative. Four product rules from [product.md](product.md) are i
 4. **Never colour alone.** Every badge in the kit carries an icon and a word alongside its colour, so state survives monochrome and colourblindness.
 
 Funding exhaustion is a first-class state, not a hide: a closed or waitlisted program is shown **with** its state rather than removed, because a buyer planning around money that is not currently available needs to know.
-
-### The prototype
-
-`/prototype` answers 404 in production and runs locally with nothing configured. It is not
-extended: a change that belongs in the product is built in the product.
 
 ## Engineering rules
 

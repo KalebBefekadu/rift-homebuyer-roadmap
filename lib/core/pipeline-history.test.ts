@@ -31,12 +31,11 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("the seeded history cannot reach production", () => {
-  it("is imported by nothing outside the prototype and its own tests", () => {
+  it("is imported by nothing but pipeline.ts and its own tests", () => {
     const offenders: string[] = [];
 
     for (const file of walk(ROOT)) {
       const rel = file.slice(ROOT.length + 1);
-      if (rel.startsWith("app/prototype/") || rel.startsWith("lib/prototype/")) continue;
       if (rel === "lib/core/pipeline.ts") continue;
       if (rel.endsWith(".test.ts") || rel.endsWith(".test.tsx")) continue;
 

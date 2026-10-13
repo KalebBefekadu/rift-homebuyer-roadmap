@@ -1,19 +1,13 @@
 /**
  * Which surfaces exist only for the people building this.
  *
- * Two routes were reachable by anybody who typed them:
+ * Two routes used to be reachable by anybody who typed them: `/dev`, the
+ * build index, and `/prototype/*`, forty screens of invented clients on the
+ * same host and typeface as the real product. Both were deleted (12 and 13
+ * October 2026). What is left here is the rule for the next internal surface,
+ * which `app/api/dev/email-preview` still uses.
  *
- *   `/dev` is the build index. It says, in plain English, which parts of the
- *   product are real and which are specification. That is the right thing to
- *   tell a contributor and the wrong thing to tell a stranger who is deciding
- *   whether to hand this site their finances.
- *
- *   `/prototype/*` is the specification: forty screens of invented clients,
- *   invented offers and an invented budget, on the same host and in the same
- *   typeface as the real product. Someone who lands there cannot tell that the
- *   names are fiction, and nothing on the page says so.
- *
- * `robots.txt` already disallowed both. A disallow is a request to crawlers,
+ * `robots.txt` disallowed both. A disallow is a request to crawlers,
  * not access control: it keeps a page out of an index while leaving it served
  * to anybody with the URL, which is the weaker half of the problem.
  *
@@ -29,7 +23,7 @@ export interface InternalEnv {
 }
 
 /**
- * True when `/dev` and `/prototype/*` should answer 404.
+ * True when an internal surface should answer 404.
  *
  * Deliberately closed by default rather than gated on an opt-out: a surface
  * that leaks when a variable is *missing* leaks on the first deployment that

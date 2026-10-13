@@ -31,7 +31,6 @@ backups, and the pilot itself. The list, with owners, is
 | `lib/rift` | Browser helpers for the public site (answers, telemetry, session) |
 | `supabase/migrations` | The schema, with its row-level security, one file per change |
 | `app/styles/rift.css` | The one stylesheet every surface uses |
-| `app/prototype`, `lib/prototype` | The September specification. 404 in production, reference only |
 
 ## Read in this order
 
@@ -106,8 +105,8 @@ These are in [handoff.md](docs/handoff.md) §4 in full, with the reasoning. Comp
 
 - Do not put an LLM anywhere in the customer-facing value path.
 - Do not add third-party analytics to the funnel. Telemetry is first-party for a reason.
-- Do not extend the prototype. It is the September specification, kept for reference, and
-  every screen in it has a live replacement. Build in the product.
+- Do not bring back a prototype. The September one was deleted on 13 October 2026 once
+  every screen had a live replacement; it is in git history if a question needs it.
 - Do not repurpose the retired MVP's tables (`clients`, `roadmaps`, `dpa_programs`,
   `agents_settings`). They are history.
 - If a page renders but nothing responds to a click, it is almost certainly a stale `.next`
