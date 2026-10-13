@@ -33,7 +33,7 @@ import { ClientOffers } from "./ClientOffers";
 import { Help } from "../../Help";
 import { FAMILY_LABEL, type Family } from "@/lib/core/document";
 import { MOVE_IN, MOVE_IN_CHECKED } from "@/lib/core/movein";
-import { closingWeek } from "@/lib/core/closing-week";
+import { closingWeek, CLOSING_WEEK_CHECKED } from "@/lib/core/closing-week";
 import { showDay } from "@/lib/core/day";
 import { PORTAL_TABS, pickTab, type PortalTab } from "@/lib/core/portal-tabs";
 import { portalT } from "../../lang";
@@ -337,9 +337,11 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
                   {c.id === "wire" ? <Ico.alert size={13} className="c-warn" style={{ flex: "none" }} /> : null}{c.title}
                 </span>
                 <p className="t-sm c-3" style={{ marginTop: 2, lineHeight: 1.6 }}>{c.body}</p>
+                {c.source ? <a className="t-xs btn-link" href={c.source.url} target="_blank" rel="noopener noreferrer">{c.source.name}</a> : null}
               </li>
             ))}
           </ol>
+          <p className="t-2xs c-4" style={{ marginTop: 10 }}>From the CFPB&apos;s pages as of {showDay(CLOSING_WEEK_CHECKED, { month: "long", day: "numeric", year: "numeric" })}.</p>
         </section>
       ) : null}
 

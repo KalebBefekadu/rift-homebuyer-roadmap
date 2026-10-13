@@ -147,6 +147,9 @@ against the demo book. Where the build differs from the plan above:
 
 ## 5. Decisions for Kaleb
 
+**Made on 13 October, on these recommendations, and built** (handoff §8.3). The date reminders
+are built behind business rule 7, `clientDateReminders`, which starts off.
+
 - **Retire the plan link for clients with a portal.** Once 4 and 8 are live, a member opening
   `/plan/<token>` could be sent to the portal. *Recommendation:* yes, for joined members only;
   leads without a portal keep the link.

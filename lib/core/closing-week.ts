@@ -10,11 +10,13 @@
  * The wire warning leads. Closing funds sent to instructions from a forged
  * email are the one mistake in this process nobody can undo.
  *
- * Practical steps only, with no figure, no day count and no rule stated as
- * law: the amount is on their Money tab, computed like every other figure
- * (rule 1), and the statutory timings belong with a source checked on a date,
- * as lib/core/movein.ts does. These were written while the official pages
- * could not be read from here (docs/handoff.md §8), so none is claimed.
+ * No figure: the amount is on their Money tab, computed like every other
+ * figure (rule 1). Where an item states a rule or a warning, it names the
+ * official page it came from and the day it was checked, as
+ * lib/core/movein.ts does. The CFPB pages could not be opened from the build
+ * environment on CLOSING_WEEK_CHECKED; their content was read through a web
+ * search of consumerfinance.gov that day, so Kaleb reads them once more
+ * before the first real closing (docs/handoff.md §8.3).
  *
  * Pure: no I/O.
  */
@@ -22,7 +24,12 @@
 import type { Side } from "./journey";
 import type { Stage } from "./progress";
 
-export interface ClosingWeekItem { id: string; title: string; body: string }
+export interface ClosingWeekItem { id: string; title: string; body: string; source?: { name: string; url: string } }
+
+export const CLOSING_WEEK_CHECKED = "2026-10-13";
+
+const SCAMS = { name: "CFPB, mortgage closing scams", url: "https://www.consumerfinance.gov/archive/blog/mortgage-closing-scams-how-protect-yourself-and-your-closing-funds/" };
+const DISCLOSURE = { name: "CFPB, what is a Closing Disclosure", url: "https://www.consumerfinance.gov/ask-cfpb/what-is-a-closing-disclosure-en-1983/" };
 
 /** How many days ahead of the closing date the list appears. */
 export const CLOSING_WEEK_DAYS = 7;
@@ -38,8 +45,9 @@ export function closingWeek(input: { side: Side; stage: Stage; closingInDays: nu
     id: "wire",
     title: input.side === "buy" ? "Before you send any money, call to confirm" : "Confirm where your proceeds go, by phone",
     body: input.side === "buy"
-      ? `Call the closing attorney's office at a number you already have, or one ${a} gives you, and confirm the wiring instructions before you send anything. Never use a number, a link or new instructions from an email or a text, even one that looks like it came from them or from ${a}. Instructions do not change at the last minute; a message saying they did is the warning sign.`
+      ? `Save the closing attorney's and ${a}'s phone numbers now, from somewhere other than an email. Before you send anything, call the attorney's office on the number you saved and confirm the wiring instructions. Never use a number, a link or new instructions from an email or a text, even one that looks like it came from them or from ${a}: a last-minute change is the warning sign. If money goes somewhere it should not have, call your bank straight away and ask for a wire recall, then report it at ic3.gov.`
       : `If your proceeds will be wired, give your account details to the closing attorney's office by phone or in person, at a number you already have. Never send them in reply to an email or a text, even one that looks like it came from them or from ${a}.`,
+    source: SCAMS,
   };
   const id: ClosingWeekItem = {
     id: "id",
@@ -56,7 +64,7 @@ export function closingWeek(input: { side: Side; stage: Stage; closingInDays: nu
   }
   return [
     wire,
-    { id: "disclosure", title: "Read your Closing Disclosure", body: `Your lender sends it before closing. Compare it with the Loan Estimate you were given, and ask ${a} or your lender about anything that changed. A cash purchase has a settlement statement from the closing attorney instead.` },
+    { id: "disclosure", title: "Read your Closing Disclosure", body: `Your lender must give it to you at least three business days before closing. Compare it with the Loan Estimate you were given, and ask ${a} or your lender about anything that changed. A cash purchase has a settlement statement from the closing attorney instead.`, source: DISCLOSURE },
     { id: "funds", title: "Know how much to bring, and how", body: `The amount is on your Money tab and on the attorney's final figures, which win if the two differ. Most closings want a wire or a cashier's check, not a personal check; ask the attorney's office which.` },
     id,
     { id: "walkthrough", title: "Do the final walkthrough", body: `A last look at the house before signing, usually within a day of closing, to check it is as agreed. ${a} will set the time with you.` },

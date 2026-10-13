@@ -641,29 +641,29 @@ migrations are additive, so older code runs against the newer schema.
 
 ### 8.3 From the portals audit (13 October 2026)
 
-The top ten of [audit/portals-2026-10.md](audit/portals-2026-10.md) are built. What it
-left for Kaleb, and what building it found:
+The top ten of [audit/portals-2026-10.md](audit/portals-2026-10.md) are built, and so are the
+four decisions it left, on its recommendations (Kaleb, 13 October: "go ahead"):
 
-- **The closing-week list cites no official page yet.** The CFPB and FBI pages could not be
-  read from the build environment, so `lib/core/closing-week.ts` holds practical steps only:
-  no figure, no day count, no rule stated as law. Before the first real closing, Kaleb reads
-  the wording, and the Closing Disclosure timing and the wire-fraud guidance get a source
-  and a checked date, as `lib/core/movein.ts` has.
-- **Retire the plan link for clients with a portal?** Offers, the seller's choice and released
-  decisions are now in the portal too. Recommendation: send a joined member who opens
-  `/plan/<token>` to the portal; leads without a portal keep the link.
-- **"Ask Kaleb about this" on a Today item**, opening the client's own email with the item
-  named. §3.13 rules out a chat; this would not be one. Recommendation: try it on Today only.
-- **Third-party contacts on a contract.** "Draft the check-in" opens Kaleb's mail with the
-  words and an empty "To", because no lender's or attorney's address is stored. Storing them
-  would let check-ins go through the Outbox for one-click approval. Recommendation: yes.
-- **Contract-date reminders to clients**, 48 hours before a checked date they own.
-  Recommendation: after the "yours" notice has run for two weeks.
-- **Found while building, fixed 13 October:** `lib/db/retention.ts` read the lead's enrolment
-  as a list when PostgREST returns an object, so the nightly sweep threw on the first cold
-  lead that had ever been enrolled, and deleted no expired lead on any night that had one.
-  From the first run after deploy it deletes what the readout promises: cold leads past the
-  window with no reply, no running sequence and no journey. Expect a larger first night.
+- **Plan link to portal.** A joined household member opening `/plan/<token>` is sent to their
+  portal. Anyone else, and everybody while the portal is switched off, reads the link as before.
+- **"Ask Kaleb"** on every item of the client's Today: their own email, addressed to the agent,
+  with the item named. Not a chat (§3.13).
+- **Third-party contacts.** The Contract tab takes an email for whoever owns a workstream
+  (`rift_contract_contacts`). With one on record, Today's "Prepare the check-in" puts the fixed
+  words in the outbox (purpose `check-in`, no lead) for approval; without one, a mail draft.
+- **Contract-date reminders** are built and **off**: business rule 7, `clientDateReminders`.
+  Turn it on in Settings once the "yours" emails have run two weeks without a complaint.
+
+Still Kaleb's:
+
+- **Read the "Before closing" list once more.** The wire-fraud steps and the Closing Disclosure's
+  three business days now cite the CFPB (`lib/core/closing-week.ts`), but the pages could not
+  be opened from the build environment; their content was read through a web search of
+  consumerfinance.gov on 13 October. Open the two links on the list before the first real closing.
+- **The retention sweep was fixed on 13 October.** It read the lead's enrolment as a list when
+  PostgREST returns an object, threw on the first cold lead that had ever been enrolled, and
+  deleted no expired lead on any night that had one. From the first run after deploy it deletes
+  what the readout promises; expect a larger first night.
 
 ---
 
