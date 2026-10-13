@@ -28,8 +28,9 @@
 import { ASKS } from "./asks";
 import { PRICE_GROWTH_PCT, cashGap, cashToClose, money, type BuyerInputs } from "./compute";
 
-/** The down payments the question offers, so a lever never suggests one it cannot ask. */
-export const DOWN_OPTIONS: number[] = (ASKS.downPct.options ?? []).map((o) => Number(o.value)).sort((a, b) => a - b);
+/** The down payments the question offers, so a lever never suggests one it cannot ask. Not 0%:
+ *  that is VA and USDA only, and the timeline does not ask the loan. */
+export const DOWN_OPTIONS: number[] = (ASKS.downPct.options ?? []).map((o) => Number(o.value)).filter((d) => d > 0).sort((a, b) => a - b);
 
 /**
  * The most a seller may put toward a buyer's costs on the strictest common

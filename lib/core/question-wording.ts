@@ -371,7 +371,7 @@ export const FEEDS: Record<InputKey, string> = {
   household: "program income limits, which rise with household size",
   credit: "program credit minimums",
   occupation: "programs for particular jobs",
-  loanType: "which loan's rules apply",
+  loanType: "which loan's fees and insurance apply",
   debts: "what fits, through the debt-to-income guideline",
   comfort: "what fits: the price their payment reaches",
   salePrice: "every seller figure: commission, costs and what they keep",

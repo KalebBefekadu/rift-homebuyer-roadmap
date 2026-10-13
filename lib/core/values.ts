@@ -59,7 +59,7 @@ export const VALUES: ValueDef[] = [
     question: "How much cash do I really need?",
     gives: "Every line you pay before you get the keys, not just the down payment.",
     cta: "See my cash to close",
-    asks: ["price", "downPct", "county"],
+    asks: ["price", "loanType", "downPct", "county"],
     live: true,
   },
   {
@@ -67,7 +67,7 @@ export const VALUES: ValueDef[] = [
     question: "What would I pay each month?",
     gives: "Your all-in monthly payment, and how it moves across three prices.",
     cta: "See my monthly cost",
-    asks: ["price", "downPct", "county"],
+    asks: ["price", "loanType", "downPct", "county"],
     live: true,
   },
   {
@@ -85,7 +85,7 @@ export const VALUES: ValueDef[] = [
     question: "How much home fits me?",
     gives: "The price your payment reaches, the price your savings reach, and which one is your ceiling today.",
     cta: "See what fits me",
-    asks: ["comfort", "income", "debts", "downPct", "savings"],
+    asks: ["comfort", "income", "debts", "loanType", "downPct", "savings"],
     live: true,
   },
 

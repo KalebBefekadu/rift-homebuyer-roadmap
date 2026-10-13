@@ -31,7 +31,7 @@
  * Pure: no I/O.
  */
 
-import { BUYER_DEFAULTS, cashToClose, monthlyCost, money, pct, type Assumption, type BuyerInputs } from "./compute";
+import { BUYER_DEFAULTS, LOAN_FEES, LOAN_NAME, cashToClose, loanTerms, loanWords, monthlyCost, money, pct, type Assumption, type BuyerInputs } from "./compute";
 
 export const MAX_PRICE = 5_000_000;
 /** Planning guidelines, not lending rules. Named as such wherever shown. */
@@ -49,13 +49,15 @@ export interface AffordInputs {
   ratePct: number;
   /** Saved towards buying. Undefined: not given, so the cash is not checked. */
   savings?: number;
+  /** The loan they plan; its fees and insurance change what a payment reaches (V2). */
+  loanType?: BuyerInputs["loanType"];
 }
 
 type Base = Omit<BuyerInputs, "price">;
 
 /** The monthly cost per dollar of price, and the part that does not scale. */
 function slope(i: AffordInputs): { k: number; fixed: number; base: Base } {
-  const base: Base = { ...BUYER_DEFAULTS, downPct: i.downPct, ratePct: i.ratePct, hoaMo: 0 };
+  const base: Base = { ...BUYER_DEFAULTS, downPct: i.downPct, ratePct: i.ratePct, hoaMo: 0, loanType: i.loanType };
   const at = (price: number) => monthlyCost({ ...base, price }).total;
   const fixed = at(0);
   return { k: (at(1_000_000) - fixed) / 1_000_000, fixed, base };
@@ -65,9 +67,22 @@ const floor5k = (n: number) => Math.max(0, Math.floor(n / 5_000) * 5_000);
 
 /** The highest price whose all-in monthly cost stays at or under a payment. Null: no price does. */
 export function priceFor(payment: number, i: AffordInputs): number | null {
-  const { k, fixed } = slope(i);
+  const { k, fixed, base } = slope(i);
   if (!(payment > fixed) || !(k > 0)) return null;
-  return Math.min(MAX_PRICE, floor5k((payment - fixed) / k));
+  /* FHA's annual premium steps up once the loan passes its high-balance line,
+     so the cost is linear on each side of it but not across it. Solve on the
+     lower line; if that lands past the step, solve on the upper one, and if
+     the step itself is the answer (the payment falls between the two lines),
+     stop just under it. Every other loan has one line and returns at once. */
+  const at = (price: number) => monthlyCost({ ...base, price }).total;
+  const kLow = (at(100_000) - fixed) / 100_000;
+  let price = (payment - fixed) / kLow;
+  const step = base.loanType === "fha" ? LOAN_FEES.fha.highBalance / (1 - i.downPct / 100) : Infinity;
+  if (price > step) {
+    const high = (payment - fixed) / k;
+    price = high > step ? high : step;
+  }
+  return Math.min(MAX_PRICE, floor5k(price));
 }
 
 /** Cash to close per dollar of price, and the part that does not scale. */
@@ -141,7 +156,8 @@ export function affordability(i: AffordInputs) {
       { label: "Interest rate", value: pct(i.ratePct, 2) },
       { label: "Property tax", value: `${pct(BUYER_DEFAULTS.taxPct)} of price a year` },
       { label: "Insurance", value: `${money(BUYER_DEFAULTS.insuranceYr)} a year` },
-      { label: "Mortgage insurance", value: i.downPct < 20 ? `${pct(BUYER_DEFAULTS.pmiPct, 2)} of the loan a year` : "None, 20% or more down" },
+      { label: "Loan", value: LOAN_NAME[i.loanType ?? "unsure"] },
+      { label: "Mortgage insurance", value: loanWords(loanTerms({ ...slope(i).base, price: comfort.price ?? 300_000 })).mi.note },
       { label: "HOA", value: "None assumed" },
       { label: "Cash to close", value: i.savings === undefined ? "Not checked: no savings given" : `Down payment, ${pct(BUYER_DEFAULTS.closingPct)} closing costs, prepaids, inspection and appraisal, against ${money(i.savings)} saved` },
     ] as Assumption[],

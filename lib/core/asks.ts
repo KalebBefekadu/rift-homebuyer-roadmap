@@ -73,13 +73,14 @@ export const ASKS: Record<InputKey, AskDef> = {
   downPct: {
     key: "downPct", param: "d", type: "choice",
     title: "How much would you put down?",
-    why: "Not sure? 3.5% is the usual FHA minimum, and 3% is possible on some conventional loans.",
+    why: "Not sure? 3.5% is the usual FHA minimum, 3% is possible on some conventional loans, and VA and USDA loans can need nothing down.",
     options: [
+      { value: "0", label: "0%", hint: "VA and USDA loans" },
       { value: "3", label: "3%", hint: "Some conventional loans" },
       { value: "3.5", label: "3.5%", hint: "The FHA minimum" },
       { value: "5", label: "5%" },
       { value: "10", label: "10%" },
-      { value: "20", label: "20%", hint: "No mortgage insurance" },
+      { value: "20", label: "20%", hint: "No mortgage insurance on a conventional loan" },
     ],
     fallback: "3.5",
   },
@@ -169,6 +170,7 @@ export const ASKS: Record<InputKey, AskDef> = {
   loanType: {
     key: "loanType", param: "l", type: "choice",
     title: "What kind of loan are you planning?",
+    why: "Each kind has its own fees and insurance. Not sure is a fine answer: we use a conventional loan and say so.",
     options: [
       { value: "fha", label: "FHA" },
       { value: "conventional", label: "Conventional" },

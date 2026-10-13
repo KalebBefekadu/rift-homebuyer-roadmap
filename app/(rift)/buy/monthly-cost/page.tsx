@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { BUYER_DEFAULTS, PMI_NOTE, PMI_TERMINATION_LTV, monthlyComputed, owningDetail, money } from "@/lib/core/compute";
+import { BUYER_DEFAULTS, LOAN_NAME, PMI_TERMINATION_LTV, loanTerms, loanWords, monthlyComputed, owningDetail, money, type BuyerLoan } from "@/lib/core/compute";
+import { Ico } from "@/components/rift/icons";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
@@ -44,16 +45,18 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
   }
 
   const rate = await currentRate();
-  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), ratePct: rate.pct, assistance: 0 };
+  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), ratePct: rate.pct, assistance: 0, loanType: a.loanType as BuyerLoan };
+  const terms = loanTerms(inputs);
+  const lw = loanWords(terms);
   const m = monthlyComputed(inputs);
   const own = owningDetail(inputs);
   const step = inputs.price >= 600_000 ? 75_000 : 40_000;
   const band = [inputs.price - step, inputs.price, inputs.price + step].map((p) => ({ price: p, monthly: monthlyComputed({ ...inputs, price: p }).value }));
   const parts = [
-    { label: "Principal and interest", amount: m.parts.pi, note: `${inputs.termYears}-year loan at ${rate.pct.toFixed(2)}%` },
+    { label: "Principal and interest", amount: m.parts.pi, note: `${inputs.termYears}-year loan of ${money(Math.round(terms.loan))} at ${rate.pct.toFixed(2)}%${lw.fee && terms.upfront > 0 ? `, including the ${lw.fee}` : ""}` },
     { label: "Property tax", amount: m.parts.tax, note: `About ${inputs.taxPct}% of the price a year, before any homestead exemption` },
     { label: "Home insurance", amount: m.parts.insurance, note: `${money(inputs.insuranceYr)} a year` },
-    { label: "Mortgage insurance", amount: m.parts.pmi, note: inputs.downPct < 20 ? `Charged when less than 20% is put down. ${PMI_NOTE}` : "None at 20% down" },
+    { label: lw.mi.label, amount: m.parts.pmi, note: lw.mi.note },
     { label: "HOA", amount: m.parts.hoa, note: "None assumed; add it if the home has one" },
   ];
 
@@ -66,6 +69,12 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
         art={<MonthlyHomes band={band} focus={1} parts={parts.map((p) => ({ label: p.label, amount: p.amount }))} />}
       />
       <BasedOn def={def} answers={a} defs={words.defs} />
+      {lw.minimum ? (
+        <p className="t-sm c-2 mt-3 measure row-t gap-2" style={{ lineHeight: 1.6 }}>
+          <Ico.info size={14} className="c-warn" style={{ flex: "none", marginTop: 3 }} />
+          <span>{lw.minimum} The figures use the {inputs.downPct}% you chose.</span>
+        </p>
+      ) : null}
 
       <Lines
         title="What the monthly payment is made of"
@@ -78,9 +87,16 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
           { label: "Principal in your first payment", note: "The part that pays down the loan and stays yours; the rest is interest, tax and insurance", amount: money(Math.round(own.principalFirst)) },
           { label: "Principal in your first year", amount: money(Math.round(own.principalYear)) },
           ...(own.pmiEnds ? [{
-            label: "Mortgage insurance comes off",
-            note: `Around year ${Math.ceil(own.pmiEnds.month / 12)}, when the scheduled balance reaches ${PMI_TERMINATION_LTV}% of the price. Sooner if the home gains value or you pay extra. FHA loans with under 10% down keep it for the life of the loan.`,
+            label: `${lw.mi.label} comes off`,
+            note: terms.miEnds === "11 years"
+              ? "After eleven years, by FHA's rules at 10% down or more."
+              : `Around year ${Math.ceil(own.pmiEnds.month / 12)}, when the scheduled balance reaches ${PMI_TERMINATION_LTV}% of the price. Sooner if the home gains value or you pay extra.`,
             amount: `Month ${own.pmiEnds.month}: ${money(Math.round(own.pmiEnds.monthly))} a month less`,
+          }] : []),
+          ...(own.miForLife ? [{
+            label: `${lw.mi.label} stays`,
+            note: "For the life of the loan on these terms. Refinancing into a conventional loan once you have 20% equity is the usual way out.",
+            amount: `${money(Math.round(terms.miMonthly))} a month`,
           }] : []),
         ]}
       />
@@ -97,7 +113,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
         rows={band.map((b) => ({ label: money(b.price), note: b.price === inputs.price ? "The price you gave" : undefined, amount: `${money(Math.round(b.monthly))} a month` }))}
       />
       <WorkedOut
-        assumptions={[...m.assumptions, { label: "Rate source", value: rate.label }]}
+        assumptions={[...m.assumptions, { label: "Loan", value: LOAN_NAME[terms.kind] }, { label: "Rate source", value: rate.label }]}
         couldBeWrong={m.couldBeWrong}
       />
 

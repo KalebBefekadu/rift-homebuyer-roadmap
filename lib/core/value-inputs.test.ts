@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUYER_DEFAULTS, cashGap, cashToClose, gapLevers, monthlyComputed } from "./compute";
+import { BUYER_DEFAULTS, cashGap, cashToClose, gapLevers, georgiaClosing, loanTerms, monthlyComputed, type BuyerLoan } from "./compute";
 import { affordability } from "./afford";
 import { controllableCosts, preparePlan, sellerNet, type Finish, type Roof, type Systems } from "./seller";
 import { lenderQuestions } from "./lender-questions";
@@ -39,7 +39,7 @@ const BASE: Answers = {
   savings: "10000", monthlySaving: "500", income: "70000", household: "3",
   occupation: "other", comfort: "2200", debts: "400",
   salePrice: "400000", payoff: "200000", commission: "5",
-  roof: "10to20", systems: "working", finish: "lived", target: "24",
+  roof: "10to20", systems: "working", finish: "lived", target: "24", loanType: "unsure",
   homestead: "no", age65: "no", yearsOwned: "8", carrying: "2400",
   status: "foreign", use: "rent",
 };
@@ -49,7 +49,7 @@ const TRY: Partial<Record<InputKey, string[]>> = {
   county: ["DeKalb", "Cobb", "Gwinnett", "Clayton", "Cherokee", "Chatham", "Richmond", "Bibb"],
   ownership: ["primary", "investment"],
   price: ["150000", "450000", "900000"],
-  downPct: ["3", "5", "10", "20"],
+  downPct: ["0", "3", "5", "10", "20"],
   savings: ["0", "40000", "200000"],
   monthlySaving: ["0", "150", "2000"],
   income: ["30000", "150000", "400000"],
@@ -67,6 +67,7 @@ const TRY: Partial<Record<InputKey, string[]>> = {
   target: ["6", "12", "36", "exploring"],
   homestead: ["yes", "unsure"],
   carrying: ["0", "4000"],
+  loanType: ["fha", "va", "usda"],
   age65: ["yes"],
   yearsOwned: ["1", "3", "15"],
   use: ["live"],
@@ -89,13 +90,16 @@ const PROBES: Record<string, (a: Answers) => unknown> = {
     const r = assistance(a);
     return { m: r.matches.map((x) => [x.program.slug, x.amount, x.checks.map((c) => c.state)]), c: r.combination?.total ?? null };
   },
-  cash: (a) => cashToClose({ ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, assistance: 0 }),
-  monthly: (a) => monthlyComputed({ ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, ratePct: RATE, assistance: 0 }),
+  cash: (a) => {
+    const i = { ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, assistance: 0, loanType: a.loanType as BuyerLoan };
+    return { c: cashToClose(i), g: georgiaClosing(i), t: loanTerms(i) };
+  },
+  monthly: (a) => monthlyComputed({ ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, ratePct: RATE, assistance: 0, loanType: a.loanType as BuyerLoan }),
   timeline: (a) => {
     const i = { ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), savings: n(a, "savings"), monthlySaving: n(a, "monthlySaving"), assistance: 0 };
     return { g: cashGap(i), l: gapLevers(i), p: timelinePlan(i, a.target === "exploring" ? "exploring" : n(a, "target")) };
   },
-  afford: (a) => affordability({ income: n(a, "income"), debts: n(a, "debts"), comfort: n(a, "comfort"), downPct: n(a, "downPct"), ratePct: RATE, savings: n(a, "savings") }),
+  afford: (a) => affordability({ income: n(a, "income"), debts: n(a, "debts"), comfort: n(a, "comfort"), downPct: n(a, "downPct"), ratePct: RATE, savings: n(a, "savings"), loanType: a.loanType as BuyerLoan }),
   lender: (a) => lenderQuestions({ price: n(a, "price"), downPct: n(a, "downPct"), firstTime: firstTimeFrom(a.ownership as Ownership), matches: [], combination: null }),
   proceeds: (a) => sellerNet({ price: n(a, "salePrice"), payoff: n(a, "payoff"), county: a.county, commissionPct: commission(a) }),
   unclaimed: (a) => unclaimedChecks({ homestead: a.homestead as UnclaimedAnswers["homestead"], age65: a.age65 as UnclaimedAnswers["age65"], yearsOwned: n(a, "yearsOwned") }, new Date("2026-10-13T15:00:00Z")),

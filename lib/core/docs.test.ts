@@ -9,7 +9,7 @@ import { DRIFT_PCT, CROSSINGS } from "./seam";
 import { REVIEW_SLA_HOURS } from "./review";
 import { SEQUENCES, STOPS } from "./nurture";
 import { MOMENTS } from "./referral";
-import { PRICE_GROWTH_PCT, BUYER_DEFAULTS, georgiaClosing, owningDetail } from "./compute";
+import { PRICE_GROWTH_PCT, BUYER_DEFAULTS, LOAN_FEES, georgiaClosing, owningDetail } from "./compute";
 import { SELLER_HELP_MAX, timelinePlan } from "./timeline";
 import { breakEvenPrice } from "./seller";
 
@@ -138,5 +138,11 @@ describe("docs match the code they describe", () => {
     const ref = { ...BUYER_DEFAULTS, assistance: 0 };
     expect(calc).toContain(`**$${georgiaClosing(ref).intangible.toLocaleString("en-US")}**`);
     expect(calc).toContain(`**month ${owningDetail(ref).pmiEnds!.month}**`);
+    /* The agency fees the loan-type table quotes. */
+    expect(calc).toContain(`**${LOAN_FEES.fha.upfrontPct}%**`);
+    expect(calc).toContain(`**${LOAN_FEES.fha.annual.over95}%**`);
+    expect(calc).toContain(`**${LOAN_FEES.va.tiers[0].pct}%**`);
+    expect(calc).toContain(`**${LOAN_FEES.usda.upfrontPct}%**`);
+    expect(calc).toContain(`**${LOAN_FEES.usda.annualPct}%**`);
   });
 });

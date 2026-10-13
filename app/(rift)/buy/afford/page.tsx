@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PMI_NOTE, money } from "@/lib/core/compute";
+import { BUYER_DEFAULTS, PMI_NOTE, loanTerms, loanWords, money, type BuyerLoan } from "@/lib/core/compute";
 import { affordability } from "@/lib/core/afford";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
@@ -43,8 +43,9 @@ export default async function Afford({ searchParams }: { searchParams: Promise<R
   }
 
   const rate = await currentRate();
-  const r = affordability({ income: Number(a.income), debts: Number(a.debts), comfort: Number(a.comfort), downPct: Number(a.downPct), ratePct: rate.pct, savings: Number(a.savings) });
+  const r = affordability({ income: Number(a.income), debts: Number(a.debts), comfort: Number(a.comfort), downPct: Number(a.downPct), ratePct: rate.pct, savings: Number(a.savings), loanType: a.loanType as BuyerLoan });
   const ceiling = r.ceiling;
+  const miWords = loanWords(loanTerms({ ...BUYER_DEFAULTS, price: r.comfort.price ?? 0, downPct: Number(a.downPct), ratePct: rate.pct, loanType: a.loanType as BuyerLoan })).mi;
   const saved = money(Number(a.savings));
   const figure = ceiling.price !== null ? `About ${money(ceiling.price)}` : "No price yet";
   const priced = r.scenarios.filter((x) => x.price !== null).sort((x, y) => x.price! - y.price!);
@@ -109,7 +110,7 @@ export default async function Afford({ searchParams }: { searchParams: Promise<R
             { label: "Principal and interest", amount: money(Math.round(m.pi)) },
             { label: "Property tax", amount: money(Math.round(m.tax)) },
             { label: "Home insurance", amount: money(Math.round(m.insurance)) },
-            ...(m.pmi > 0 ? [{ label: "Mortgage insurance", note: `Until you reach 20% equity. ${PMI_NOTE}`, amount: money(Math.round(m.pmi)) }] : []),
+            ...(m.pmi > 0 ? [{ label: miWords.label, note: a.loanType === "fha" || a.loanType === "va" || a.loanType === "usda" ? miWords.note : `Until you reach 20% equity. ${PMI_NOTE}`, amount: money(Math.round(m.pmi)) }] : []),
           ]}
         />
       ) : null}

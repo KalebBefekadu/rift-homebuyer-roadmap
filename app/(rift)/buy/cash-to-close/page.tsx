@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { BUYER_DEFAULTS, cashToClose, georgiaClosing, monthlyCost, sellerHelp, money } from "@/lib/core/compute";
+import { BUYER_DEFAULTS, LOAN_NAME, cashToClose, georgiaClosing, loanTerms, loanWords, monthlyCost, sellerHelp, money, type BuyerLoan } from "@/lib/core/compute";
+import { Ico } from "@/components/rift/icons";
 import { RESERVE_MONTHS } from "@/lib/core/ledger";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
@@ -48,7 +49,9 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
     );
   }
 
-  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), assistance: 0 };
+  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), assistance: 0, loanType: a.loanType as BuyerLoan };
+  const terms = loanTerms(inputs);
+  const lw = loanWords(terms);
   const cash = cashToClose(inputs);
   const extra = cash.total - cash.down;
   const ga = georgiaClosing(inputs);
@@ -67,6 +70,12 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
         art={<CashStack lines={cash.lines} total={cash.total} down={cash.down} />}
       />
       <BasedOn def={def} answers={a} defs={words.defs} />
+      {lw.minimum ? (
+        <p className="t-sm c-2 mt-3 measure row-t gap-2" style={{ lineHeight: 1.6 }}>
+          <Ico.info size={14} className="c-warn" style={{ flex: "none", marginTop: 3 }} />
+          <span>{lw.minimum} The figures use the {inputs.downPct}% you chose.</span>
+        </p>
+      ) : null}
 
       <Lines
         title="Line by line"
@@ -83,6 +92,13 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
           }])}
         total={{ label: "Cash you bring", amount: money(cash.total) }}
       />
+      {lw.fee && terms.upfront > 0 ? (
+        <Lines
+          title="Added to your loan, not paid in cash"
+          rows={[{ label: lw.fee, note: `Usually added to the loan, so you borrow ${money(terms.loan)} and pay it off over the years. It can be paid in cash instead`, amount: money(Math.round(terms.upfront)) }]}
+        />
+      ) : null}
+
       {approved ? (
         <IfApprovedCard program={approved.program} administrator={approved.administrator}>
           If {approved.program} approves you, up to {money(approved.amount)}, the cash you bring could be {money(approved.cash)} instead of {money(cash.total)}.
@@ -111,7 +127,7 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
         }]}
       />
       <WorkedOut
-        assumptions={[...cash.assumptions, { label: "Georgia intangible tax", value: "$1.50 per $500 of the loan (O.C.G.A. § 48-6-61), inside the closing estimate" }]}
+        assumptions={[...cash.assumptions, { label: "Loan", value: LOAN_NAME[terms.kind] }, { label: "Georgia intangible tax", value: "$1.50 per $500 of the loan (O.C.G.A. § 48-6-61), inside the closing estimate" }]}
         couldBeWrong={cash.couldBeWrong}
       />
 

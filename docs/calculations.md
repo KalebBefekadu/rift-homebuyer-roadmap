@@ -71,6 +71,23 @@ hoa       = hoaMo
 total     = pi + tax + insurance + pmi + hoa
 ```
 
+## Loan type — `loanTerms(i)` and `LOAN_FEES`
+
+Asked by cash to close, monthly cost and what fits (V2, Kaleb 13 Oct 2026). `monthlyCost`,
+`owningDetail` and the intangible tax all read `loanTerms`, so the loan types cannot drift
+apart. **Conventional and "not sure yet" are unchanged**, and so is the reference case below.
+
+| Loan | Financed upfront fee | Yearly insurance or fee, on the base loan | Ends |
+| --- | --- | --- | --- |
+| FHA | **1.75%** | **0.55%** above 95% of the price, 0.50% at or under (0.75% / 0.70% above a $726,200 loan) | Life of the loan above 90%; eleven years at or under |
+| VA | Funding fee **2.15%** under 5% down, 1.5% under 10%, 1.25% from 10% | None | Not charged |
+| USDA | **1%** | **0.35%** | Life of the loan |
+| Conventional | None | `pmiPct` below 20% down | At 78% of the price on schedule |
+
+Financed fees raise what is borrowed (and the intangible tax, which is on the note); they never
+change the cash to close. Checked 13 October 2026 against lender and industry summaries of the
+agency rules; the agency pages could not be read from where this was built.
+
 ## Cash to close — `cashToClose(i)`
 
 The figure that misleads almost every first-time buyer, because they have only ever been

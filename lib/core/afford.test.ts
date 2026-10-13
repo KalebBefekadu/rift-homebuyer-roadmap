@@ -97,4 +97,13 @@ describe("how much home fits (Blueprint v5 §5.2, MONEY-05)", () => {
     expect(payBound.ceiling.liftPer).toBe(100);
     expect(payBound.ceiling.lift).toBeGreaterThan(0);
   });
+
+  it("solves FHA exactly on both sides of its high-balance premium step", () => {
+    const fhaAt = (price: number, downPct: number) => monthlyCost({ ...BUYER_DEFAULTS, price, downPct, ratePct: 6.5, hoaMo: 0, loanType: "fha" }).total;
+    for (const comfort of [2_000, 4_800, 5_200, 9_000]) {
+      const p = priceFor(comfort, { ...base, comfort, downPct: 3.5, loanType: "fha" })!;
+      expect(fhaAt(p, 3.5)).toBeLessThanOrEqual(comfort + 0.01);
+      if (p < MAX_PRICE) expect(fhaAt(p + 5_000, 3.5)).toBeGreaterThan(comfort);
+    }
+  });
 });
