@@ -125,6 +125,26 @@ Acceptance tests, written first, in the style of handoff §7:
 10. Given a member who last opened the portal on day D, Today lists what changed since D that
     they are allowed to see, and nothing they are not; a first visit lists nothing.
 
+## Status (13 October 2026)
+
+All ten are built, each in its own commit with its acceptance test, and checked in a browser
+against the demo book. Where the build differs from the plan above:
+
+- **Item 2.** Text is offered only with the phone consent recorded on the lead's enrolment
+  (4.12); the opener names no figure and no day.
+- **Item 3.** The new kind is `yours` (migration `20261013100000`). A person on two journeys
+  from one lead is told once.
+- **Item 5.** Practical steps only, without sources: the official pages could not be read from
+  the build environment (handoff §8.3).
+- **Item 7.** A mail draft with an empty "To", not an Outbox message: no third party's
+  address is stored (decision below).
+- **Item 10.** Changes are counted by Georgia day, after the day of the last visit, because
+  most records carry a day and not a time (migration `20261013110000`).
+- **Found on the way:** Today read the lead's enrolment as a list when PostgREST returns an
+  object, so no lead ever read as stopped and stopped leads kept counting as waiting for a
+  first reply. Fixed with item 1. The same shape in the retention sweep is listed in
+  handoff §8.3.
+
 ## 5. Decisions for Kaleb
 
 - **Retire the plan link for clients with a portal.** Once 4 and 8 are live, a member opening

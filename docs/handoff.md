@@ -638,6 +638,31 @@ there, and two follow-up runs started at the same moment recorded each step once
 itself is at fault, Vercel's instant rollback to the previous deployment is the faster route;
 migrations are additive, so older code runs against the newer schema.
 
+### 8.3 From the portals audit (13 October 2026)
+
+The top ten of [audit/portals-2026-10.md](audit/portals-2026-10.md) are built. What it
+left for Kaleb, and what building it found:
+
+- **The closing-week list cites no official page yet.** The CFPB and FBI pages could not be
+  read from the build environment, so `lib/core/closing-week.ts` holds practical steps only:
+  no figure, no day count, no rule stated as law. Before the first real closing, Kaleb reads
+  the wording, and the Closing Disclosure timing and the wire-fraud guidance get a source
+  and a checked date, as `lib/core/movein.ts` has.
+- **Retire the plan link for clients with a portal?** Offers, the seller's choice and released
+  decisions are now in the portal too. Recommendation: send a joined member who opens
+  `/plan/<token>` to the portal; leads without a portal keep the link.
+- **"Ask Kaleb about this" on a Today item**, opening the client's own email with the item
+  named. §3.13 rules out a chat; this would not be one. Recommendation: try it on Today only.
+- **Third-party contacts on a contract.** "Draft the check-in" opens Kaleb's mail with the
+  words and an empty "To", because no lender's or attorney's address is stored. Storing them
+  would let check-ins go through the Outbox for one-click approval. Recommendation: yes.
+- **Contract-date reminders to clients**, 48 hours before a checked date they own.
+  Recommendation: after the "yours" notice has run for two weeks.
+- **Found while building, not yet fixed:** `lib/db/retention.ts` reads the lead's enrolment
+  as a list, but PostgREST returns it as an object (the same shape bug fixed in
+  `rankedLeads`), so the sweep likely throws on any cold lead that has one. It changes what
+  gets deleted, so it is its own change.
+
 ---
 
 ## 9. What the built MVP actually is
