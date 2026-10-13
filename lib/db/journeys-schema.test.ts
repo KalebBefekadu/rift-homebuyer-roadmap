@@ -6,8 +6,9 @@ import { Client } from "pg";
  * Journeys, members, the search brief and the shortlist, against a real
  * Postgres with the whole migration history applied.
  *
- * The acceptance list in docs/blueprint-v4/first-migration-proposal.md is the
- * spine of this file, extended to the three migrations after it. Policies are
+ * The acceptance list in blueprint v4's first-migration-proposal.md (deleted
+ * 13 October 2026; `git show abfee67:docs/blueprint-v4/first-migration-proposal.md`)
+ * is the spine of this file, extended to the three migrations after it. Policies are
  * exercised as a role that is NOT the table owner (the owner bypasses RLS,
  * which is how a first version of lib/db/rls.test.ts passed while proving
  * nothing).

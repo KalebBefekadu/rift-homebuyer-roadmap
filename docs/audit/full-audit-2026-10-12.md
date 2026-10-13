@@ -30,8 +30,12 @@ there is none yet.
 | `output/`, `app/dev`, `lib/brevo/sync.ts` and its script, `lib/supabase/client.ts`, `lib/core/params.ts` | **Deleted** 12 Oct |
 | Production depending on `app/prototype/rift.css` | **Fixed** 12 Oct: `app/styles/rift.css`. Fonts are one component |
 | AGENTS.md, README, architecture, setup §1 and §13, integrations, agent-kickoff, the Cursor rule | **Corrected** 12 Oct |
-| Deleting the prototype, blueprint v4, prototypes.md; cutting handoff, benchmark, product and vision | **Waiting on Kaleb.** Blueprint v5 keeps v4 as the record, and blueprint §14 and handoff §8.2 are cross-referenced; each cut is his call |
-| Switching off campaigns, seller workspace, money v2, advocacy, the Equb form; trimming the Operations sidebar | **Waiting on Kaleb.** Each reverses a recorded decision (D27 to D29) |
+| The prototype (about 10,350 lines) and prototypes.md | **Deleted** 13 Oct, approved by Kaleb |
+| Blueprint v4 | **Deleted** 13 Oct; v5 had carried its requirements and contracts. Citations point at git history |
+| benchmark.md, handoff.md | **Cut** 13 Oct: benchmark 645 to 217 lines (the criteria code cites and the field metrics stay); handoff 725 to about 530 (§4, §6, §7, §8 stay; section numbers kept) |
+| Merging product.md into vision.md | **Not done, on purpose.** About 15 code comments cite product.md as the source of a rule; it now says which of its capabilities are long-term direction only |
+| Consolidating `docs/audit/`, moving the blueprint change log | **Not done, on purpose.** The older audits are dated records cited from code and the blueprint; moving the change log only relocates it |
+| Switching off campaigns, seller workspace, money v2, advocacy, the Equb form; trimming the Operations sidebar | **Kept on**, Kaleb's decision 13 Oct |
 | Self-hosted fonts | **Blocked** in the build environment (Fontshare unreachable); one file to change when it is reachable |
 | Everything in §5 owned by Kaleb, the broker or counsel | Open |
 

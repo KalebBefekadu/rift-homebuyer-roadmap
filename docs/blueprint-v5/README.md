@@ -2,8 +2,9 @@
 
 **The single source of truth for what Rift is and what gets built next.**
 **Written:** 24 September 2026. **Owner:** Kaleb Befekadu.
-**Replaces:** blueprint v4 (`docs/blueprint-v4`, now kept only as the record of the September
-review) and the test feedback file from Kaleb's page-by-page review (rounds R1 and R2, merged
+**Replaces:** blueprint v4 (the record of the September review; its requirements and journey
+contracts are carried into this folder, and the folder itself was deleted on 13 October 2026:
+`git show abfee67:docs/blueprint-v4/README.md`) and the test feedback file from Kaleb's page-by-page review (rounds R1 and R2, merged
 here in full and then deleted).
 
 Blueprint v5 exists because blueprint v4 built the private client journey and Operations

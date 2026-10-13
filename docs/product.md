@@ -1,6 +1,6 @@
 # Rift Product Operating Reference
 
-This document translates [the Rift product vision](vision.md) into the product model, canonical journeys, operating rules, and feature boundaries. The clickable product definitions are maintained in [prototypes.md](prototypes.md), and every plan here is graded by [benchmark.md](benchmark.md).
+This document translates [the Rift product vision](vision.md) into the product model, canonical journeys, operating rules, and feature boundaries. What gets built next is decided in [blueprint v5](blueprint-v5/README.md); this file is the rule book code comments cite, and it describes some capabilities (Meeting-to-Plan, Document-to-Journey, the Property Passport) that are long-term direction, not planned work.
 
 ## Product surfaces
 

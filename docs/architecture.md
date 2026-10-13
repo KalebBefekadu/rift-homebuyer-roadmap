@@ -185,7 +185,7 @@ The September prototype (mock fixtures, no database) was the specification; it w
 | `lib/core/privacy.ts` | Retention rules and versioned TCPA consent wording: data the server stores and the browser renders |
 | `lib/core/referral.ts` | Eight referral moments with escalating asks, and the private service check, which raises follow-ups and never decides who is asked for a review |
 | `lib/core/pipeline.ts` | Stage rules, stall detection with named causes, weighted forward view. Weights shrink toward the agent's own closed history and are labelled with their basis |
-| `lib/core/nurture.ts` | The cadence engine. Four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
+| `lib/core/nurture.ts` | The cadence engine: four sequences, widening intervals, six stop conditions, consent gating the channel rather than the sequence |
 | `lib/core/review.ts` | The producer for `pending-review`. Per-item ceilings, and `verified` requires a named party: enforced in `promote()`, not in the UI |
 | `lib/core/seam.ts` | The readout to plan crossing. Ten carry rules, a 3% drift threshold, and the preconditions on publishing |
 | `lib/core/settings.ts` | The six business decisions that used to be literals, each with its consequence and whose call it is |

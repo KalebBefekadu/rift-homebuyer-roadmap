@@ -2,38 +2,21 @@
 
 **Written:** 6 September 2026, for the MVP. **Status, 12 October 2026:** the whole product is
 built and live (public site, client portal, Operations); the pilot has not started.
-**Still binding:** §4 (the contracts that must not drift), §6 (requirements that are easy to
-miss) and §7 (acceptance tests). **Superseded:** §2 and §3 (the MVP cut, the traffic gate and
-the phase order were set aside by blueprint decisions D08 and D21), §5 (it describes the
-prototype, now reference only) and §9 (the MVP as it was on 6 September).
+**Binding:** §4 (the contracts that must not drift), §6 (requirements that are easy to miss)
+and §7 (acceptance tests). §8 is the record of decisions and releases. The MVP cut, traffic gate
+and phase order (§2, §3, set aside by blueprint D08 and D21), the prototype's fakes (§5) and the
+6 September state of the MVP (§9, §9b) were cut on 13 October 2026 and are in git history;
+section numbers are kept so references elsewhere still land. The acceptance tests run with
+`npm test`.
 
 > **Planning moved to [Blueprint v5](blueprint-v5/README.md) on 24 September 2026.** It is the
 > only source of truth for what is built next. This handoff stays the engineering record of what
 > is built and how it works.
 
-This document is the bridge between the prototype and the real build. It says what to
-build, in what order, which contracts must not drift, and what is deliberately fake.
-
 Read [AGENTS.md](../AGENTS.md) first if you are writing code, then this. [vision.md](vision.md)
-is why, [product.md](product.md) is what, [schema.md](schema.md) is the data model,
+is why, [schema.md](schema.md) is the data model,
 [integrations.md](integrations.md) is every external service, and [setup.md](setup.md) takes a
 fresh clone to a running environment.
-
-### What is already in the repository
-
-Two things that did not exist at the first handoff, both of which change where you start:
-
-- **A test harness that runs.** `npm test`. The compute contract and the readout's timing rule in
-  `lib/core/compute.test.ts`, the schema's constraints against a real Postgres in
-  `lib/db/schema.test.ts`, and a drift guard in `lib/core/docs.test.ts` that fails when this
-  documentation disagrees with the code.
-  The rest of §7 is written against that harness, not from scratch.
-- **Working plumbing.** Supabase auth with a localStorage fallback, Sentry with a tunnel
-  route, and a Brevo client that degrades honestly. It came from the portal MVP that Rift
-  replaced; that MVP's product surface has been deleted and its schema is documented as
-  history in [schema.md](schema.md). **Do not build on its tables.**
-
----
 
 ## 1. The one-paragraph brief
 
@@ -42,87 +25,6 @@ Its lead generation thesis is **overloading value on the front end so leads conv
 a stranger receives a complete, computed, honest readout of their situation for free,
 before any account, and keeps it whether or not they ever speak to the agent. Everything
 else in the product exists to make that promise survivable at scale for one person.
-
----
-
-## 2. What ships first, and what waits
-
-Read this before the build order. The order below tells you the sequence; **this section
-tells you where to stop and put it in front of real people.**
-
-### The cut
-
-**The MVP is phases 1–3, buyers only.** It ships to real traffic on its own.
-
-| In the MVP | Why it cannot wait |
-| --- | --- |
-| Schema, compute engine, programme registry | Nothing is real without them |
-| Telemetry and first-touch attribution | The event you forgot to emit cannot be recovered retrospectively. It ships in phase 1 or the first quarter of data does not exist |
-| Buyer landing → assessment → readout, ungated and shareable | This *is* the product thesis. Everything else is downstream of a stranger getting something valuable for free |
-| Email capture, TCPA consent, real booking | A readout nobody can act on is a demo |
-| Studio: the ranked lead list and the review queue | The minimum an agent needs to answer the people the readout produces. Not the whole of Studio |
-| Automatic email nurture steps | The `now` and `soon` sequences, email only. No SMS — it degrades honestly and is already built to |
-
-| Deferred, and it is safe to defer | Why |
-| --- | --- |
-| **Seller product** | Same engine, different questions. Genuinely cheap once phase 2 exists, and it is the **first thing built after the MVP** |
-| Client portal | Serves clients who do not exist yet |
-| Referral engine | A closing produces a referral. There are no closings yet |
-| Rift Offer, Decision Rooms, Playbooks, Meeting-to-Plan, Document-to-Journey | Operating depth for a book of business the MVP is trying to create |
-| Funnel editor | The funnel does not need tuning until there is drop-off data to tune against |
-| SMS, e-signature | Both have real lead times. Start the accounts now; the MVP does not block on them |
-
-### Why the cut is here and not later
-
-The benchmark's own conclusion after four grading passes was that the three lowest-scoring
-criteria **cannot be raised by building** — they need a failure drill, somebody to not answer
-a referral request, and a channel that should be left alone. That is the signal that the
-specification is finished and the constraint has moved.
-
-**Every number the instrumentation reports is currently zero.** The score of 93 is explicitly
-provisional under the benchmark's own rule that nothing above 84 is validated without field
-metrics. Building phases 4–7 before phase 3 meets traffic adds six months of work to a product
-whose central claim — *that a free, honest, computed readout converts strangers* — has never
-been tested on one stranger.
-
-The first 200 real assessments are worth more than the next 2,000 lines of code.
-
-### What "shipped" means for the MVP
-
-- A stranger arriving from an ad reaches a complete readout with no account.
-- They can keep it, share it, and book a call about their actual blocker.
-- Consent is captured lawfully and stored with its wording.
-- The agent sees them ranked, with the arithmetic visible, inside the reply target.
-- Drop-off per question is measurable from day one.
-- Nothing on screen is a number the engine did not compute.
-
-### The gate before phase 4
-
-Do not start the seller product until the MVP has produced **200 completed assessments** or
-**60 days of live traffic**, whichever comes first, and the funnel report has been read. If
-the readout does not convert strangers, building a second one that also does not convert them
-is the most expensive possible mistake — and the instrumentation exists precisely so that
-this is a measurement rather than an argument.
-
----
-
-## 3. Build order
-
-The sequence matters. Each phase produces something usable, and each depends on the one
-before it. **Do not build the agent surface first** — without live traffic through the
-funnel, the operating tools have nothing to operate on and will be built against guesses.
-
-Phases 1–3 are the MVP. Phase 4 begins only after the gate above.
-
-| Phase | Ship | Why here | Done when |
-| --- | --- | --- | --- |
-| **1** ✅ | Schema + compute engine + program registry + telemetry | Nothing downstream is real without these. Telemetry belongs in phase one because the event you forgot to emit cannot be recovered retrospectively. | `calculations.md` reference case passes (it already does); every table has an RLS policy; a programme can be inserted with a verification date and a stale one is suppressed from matching; events land. **No admin UI** — that arrives with Studio in phase 5, and the migration must not wait on a screen |
-| **2** ✅ | Buyer product end to end — landing, assessment, readout | The revenue path. One product fully working beats two half working. | A stranger can go from ad click to a shareable readout without an account |
-| **3** ✅ | Capture, consent, and booking — calendar adapter built, awaiting credentials | Turns a readout into a relationship. Consent is a phase-3 gate, not a later fix. | Email capture, TCPA-compliant phone consent, and a real calendar booking |
-| **4** | Seller product | Same engine, different questions and outputs. Cheap once phase 2 exists. | Seller parity with buyer |
-| **5** | Studio — the rest of it: clients, offers, calendar | The ranked lead list and review queue already shipped with the MVP. This is the depth. | Agent can run a week from Studio alone |
-| **6** | Client portal | Post-conversion experience. | Client can answer the five questions on one screen |
-| **7** | Referral engine and funnel editor | Compounding, and self-service tuning. | Moments fire; edits go live and are versioned |
 
 ---
 
@@ -226,6 +128,8 @@ the agent sees why a channel changed.
 `promote()` rejects a verification with no name attached. A green chip with nobody behind it is
 the exact false confidence the trust ladder exists to prevent, and enforcing it in the UI alone
 means the second surface skips it.
+A person who asks for a number to be checked is promised an answer inside 24h
+(`REVIEW_SLA_HOURS` in `lib/core/review.ts`), and the queue shows how long each has waited.
 
 ### 4.14 Publishing a plan may change numbers, but never quietly
 A recomputed figure that differs from the person's readout snapshot by ≥ `DRIFT_PCT` blocks
@@ -273,23 +177,6 @@ just the formatter. Underwater now outranks the stated timeline for status, beca
 what the agent sorts the lead list by and somebody who cannot close is not ready to list; the
 shortfall is stated as an amount to **find**, not a negative amount to receive; it becomes
 the blocker ahead of homestead and assessment; and the plan leads with the lender.
-
----
-
-## 5. What is deliberately fake in the prototype
-
-Do not port any of this. It exists to make the interaction model reviewable.
-
-| Faked | Real build needs |
-| --- | --- |
-| `localStorage` for funnel edits, attribution, events | Per-tenant rows; events to a real sink |
-| Fixture clients, leads, offers, referral state | Database, with the stage transition log as the source of `daysInStage` |
-| `PROTO_TODAY` frozen at 2026-09-06 | Real clock; re-check every staleness and deadline calculation against it |
-| Booking slots as a static array | Real calendar availability, timezone-correct, with holds |
-| `DAYS_IN_STAGE` constant map | Derived from the stage transition log so it cannot drift |
-| Pipeline stage weights | Start with these as stated assumptions, replace with the agent's own history at ~30 closings |
-| Email/SMS sending | Real provider, with the bounce path in §5 |
-| Document understanding, meeting transcription | Out of scope until phase 7+ |
 
 ---
 
@@ -416,7 +303,8 @@ not yet load-bearing — wire them as their features land.
 
 ### 8.1 Product re-evaluation (22 September 2026)
 
-The [blueprint v4 review and implementation package](blueprint-v4/README.md) reviews the
+The blueprint v4 review and implementation package (deleted 13 October 2026; `git show
+abfee67:docs/blueprint-v4/README.md`) reviewed the
 supplied buyer/seller blueprint against this repository. It is a **proposal for review**,
 not an applied migration or authorization to begin the new product work.
 
@@ -433,9 +321,8 @@ The following decisions were explicitly confirmed by Kaleb during that review:
 These answers settle the corresponding directions in the new package; they do **not**
 accept every proposed implementation, resolve the old traffic-gate/build-order conflict,
 or confirm that integration permissions exist. Existing nurture authority is not changed
-implicitly. The [decision register](blueprint-v4/review-and-decisions.md#4-decision-register)
-tracks the remaining owner/broker decisions and the
-[findings](blueprint-v4/review-and-decisions.md#2-findings-requiring-explicit-resolution).
+implicitly. What its decision register and findings left open, blueprint v5 carried forward
+(§11, and requirements.md).
 Record their acceptance, rejection, or parking here before dependent implementation.
 Do not infer that unanswered active-client/migration questions mean there are no clients.
 
@@ -639,89 +526,3 @@ switch off, a write left every journey table unchanged; switched back on, every 
 there, and two follow-up runs started at the same moment recorded each step once. If the code
 itself is at fault, Vercel's instant rollback to the previous deployment is the faster route;
 migrations are additive, so older code runs against the newer schema.
-
----
-
-## 9. What the built MVP actually is
-
-Verified against a real Postgres and a real PostgREST, with the application
-running, not in pieces.
-
-**Works end to end**
-
-| | |
-| --- | --- |
-| Landing → assessment → readout | Server-computed figures, ungated, URL-addressable |
-| Attribution | First touch immutable by trigger; referring host only, landing path without its query |
-| Telemetry | Question ids and dwell; answer values stripped before the write and rejected by a constraint if they get through |
-| Capture | Scored with the full six signals, both consent records stored with their exact wording |
-| Consent gate | A phone number without the box ticked is refused outright |
-| Enrolment | Automatic on capture, carrying phone consent |
-| Snapshot + share link | Numbers rendered as saved, never recomputed. What *does* update is how sure anybody is about them |
-| Trust ladder | Connected end to end: a request from the readout creates a review item against a specific figure, and advancing it in Studio changes the chip the customer sees |
-| Scheduled jobs | Both reject an unauthenticated call and report honestly |
-| Retention | Deletion is deletion; "delete all of it" reachable from the readout |
-| Studio | Ranked leads with their arithmetic and their figures, review queue, follow-up, abandoned, drop-off, stale programmes, stale rate |
-
-**Not yet true**
-
-- **No traffic.** Every number the instrumentation reports is zero. The score in
-  [benchmark.md](benchmark.md) remains provisional under its own rule.
-- **Sign-in itself has never been exercised.** Studio's authenticated view *has* now been
-  rendered against real data — ranked leads with their figures, the review queue, the
-  follow-up queue, the stale-rate and stale-programme tasks — using a session cookie minted
-  locally. What is untested is the magic-link round trip, which needs a real GoTrue.
-- **Email has never actually sent.** The path is exercised and degrades honestly; no message
-  has left the building. `BREVO_FROM_EMAIL` must be a verified sender.
-- **The calendar has never returned a real slot.** Same shape: adapter built, credentials
-  absent, and the UI says so rather than inventing times.
-- **SMS does not exist**, so every text step permanently downgrades to email. The consent
-  machinery that makes texting lawful is built and currently protects nothing.
-- **The rate is a manual weekly habit.** Studio nags when it lapses, which is the best that
-  can be done without a licensed feed.
-
-**Six defects that only running it could have found**, each of which produced a plausible
-result rather than an error — recorded because the pattern matters more than the list:
-
-1. `NEXT_PUBLIC_` variables are inlined at build time, so server code read a stale URL.
-2. A null agent lookup was cached permanently, surviving the bootstrap that fixed it.
-3. The readout sent half the lead signals — the same person scored 100 or 46.
-4. Email capture from the readout failed on every submission.
-5. Abandonment fired once per tab switch rather than once per session.
-6. The nurture runner reported unsendable touches as agent tasks.
-
-## 9b. Known gaps, honestly
-
-Scored against [benchmark.md](benchmark.md); nothing below is a surprise.
-
-### Closed since the first handoff
-
-- **Nurture is now a cadence engine, not a band.** `lib/core/nurture.ts` — four
-  sequences, escalating intervals, per-step *what this gives them*, six stop conditions, and
-  consent gating the channel rather than the sequence. Surfaced at Studio → Queue → Follow-up.
-- **`pending-review` has a producer.** `lib/core/review.ts` and the control now inside
-  `TrustLadder`. A person can ask for a figure to be checked from any readout; it lands in
-  Studio → Queue → Review against a 24h promise. Two constraints hold it honest: every item
-  has a **ceiling** (a repair estimate can never reach `verified`), and promoting to
-  `verified` **requires the name of who confirmed it** — enforced in `promote()`, not in the UI.
-- **Pipeline weights learn.** `weightFor()` shrinks the agent's own closed history toward the
-  starting assumption with a prior of 12, and every weight is labelled *assumed* /
-  *part observed* / *his own history* wherever it is displayed.
-- **The readout → plan seam is defined.** `lib/core/seam.ts` — ten fields with an explicit
-  carry rule, a 3% drift threshold above which a changed figure must be disclosed before
-  publishing, and `canPublish()` preconditions. Surfaced at Studio → Queue → Publishing.
-
-### Still open
-
-- **No field data.** Instrumentation exists and is verified working, but every funnel number
-  is currently zero. Per the benchmark's own rule, **the score is provisional and
-  unvalidated until real traffic runs through it.** Treat the first 200 assessments as the
-  real grading event.
-- **The learned weights have no real history behind them yet.** The mechanism is built and the
-  seeded history is deliberately thin and uneven, so most stages correctly report *assumed*.
-  This gap now closes by itself as closings accumulate, which is the point of the change.
-- **Four of the six business rules are declared but not yet load-bearing.** `autoEmailReadout`,
-  `clientRetentionYears`, `marketUnrepresented` and `registryOwner` are surfaced and stored;
-  they change nothing until the features they govern exist.
-- **Nurture sequences are not connected to a sending system.** The engine resolves what is
-  owed and to whom; actually delivering it is phase 3 infrastructure.
