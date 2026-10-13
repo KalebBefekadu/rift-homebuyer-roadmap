@@ -9,6 +9,7 @@ import { ABROAD_DEFAULTS, abroadReturns, statusById, type StatusId, type Use } f
 import { VALUES, type InputKey } from "./values";
 import { timelinePlan } from "./timeline";
 import { unclaimedChecks, type UnclaimedAnswers } from "./unclaimed";
+import { taxFor } from "./county-data";
 
 /**
  * Every question a value asks has to be able to change its answer.
@@ -76,6 +77,8 @@ const TRY: Partial<Record<InputKey, string[]>> = {
 const n = (a: Answers, k: string) => Number(a[k]);
 const commission = (a: Answers) => (a.commission === "none" ? null : n(a, "commission"));
 const RATE = 6.5;
+/* The pages take the county's verified tax rate when one exists (V1). */
+const taxPct = (a: Answers) => taxFor(a.county, BUYER_DEFAULTS.taxPct).pct;
 
 function assistance(a: Answers) {
   return matchAssistance({
@@ -91,19 +94,19 @@ const PROBES: Record<string, (a: Answers) => unknown> = {
     return { m: r.matches.map((x) => [x.program.slug, x.amount, x.checks.map((c) => c.state)]), c: r.combination?.total ?? null };
   },
   cash: (a) => {
-    const i = { ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, assistance: 0, loanType: a.loanType as BuyerLoan };
+    const i = { ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, assistance: 0, loanType: a.loanType as BuyerLoan, taxPct: taxPct(a) };
     return { c: cashToClose(i), g: georgiaClosing(i), t: loanTerms(i) };
   },
-  monthly: (a) => monthlyComputed({ ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, ratePct: RATE, assistance: 0, loanType: a.loanType as BuyerLoan }),
+  monthly: (a) => monthlyComputed({ ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), county: a.county, ratePct: RATE, assistance: 0, loanType: a.loanType as BuyerLoan, taxPct: taxPct(a) }),
   timeline: (a) => {
     const i = { ...BUYER_DEFAULTS, price: n(a, "price"), downPct: n(a, "downPct"), savings: n(a, "savings"), monthlySaving: n(a, "monthlySaving"), assistance: 0 };
     return { g: cashGap(i), l: gapLevers(i), p: timelinePlan(i, a.target === "exploring" ? "exploring" : n(a, "target")) };
   },
   afford: (a) => affordability({ income: n(a, "income"), debts: n(a, "debts"), comfort: n(a, "comfort"), downPct: n(a, "downPct"), ratePct: RATE, savings: n(a, "savings"), loanType: a.loanType as BuyerLoan }),
   lender: (a) => lenderQuestions({ price: n(a, "price"), downPct: n(a, "downPct"), firstTime: firstTimeFrom(a.ownership as Ownership), matches: [], combination: null }),
-  proceeds: (a) => sellerNet({ price: n(a, "salePrice"), payoff: n(a, "payoff"), county: a.county, commissionPct: commission(a) }),
+  proceeds: (a) => sellerNet({ price: n(a, "salePrice"), payoff: n(a, "payoff"), county: a.county, commissionPct: commission(a), taxPct: taxPct(a) }),
   unclaimed: (a) => unclaimedChecks({ homestead: a.homestead as UnclaimedAnswers["homestead"], age65: a.age65 as UnclaimedAnswers["age65"], yearsOwned: n(a, "yearsOwned") }, new Date("2026-10-13T15:00:00Z")),
-  costs: (a) => controllableCosts({ price: n(a, "salePrice"), payoff: 0, county: a.county, commissionPct: commission(a) }, n(a, "carrying")),
+  costs: (a) => controllableCosts({ price: n(a, "salePrice"), payoff: 0, county: a.county, commissionPct: commission(a), taxPct: taxPct(a) }, n(a, "carrying")),
   prepare: (a) => preparePlan({ roof: a.roof as Roof, systems: a.systems as Systems, finish: a.finish as Finish }),
   eligibility: (a) => statusById(a.status as StatusId),
   "abroad-cost": (a) => abroadReturns({ price: n(a, "price"), county: a.county, status: a.status as StatusId, use: a.use as Use }),
@@ -116,7 +119,8 @@ const PROBES: Record<string, (a: Answers) => unknown> = {
  */
 const KNOWN_INERT: Record<string, InputKey[]> = {
   /* F1: property tax is a flat 1% and insurance a flat $1,650 in every
-     county, so the county is printed in the sentence and used nowhere. */
+     county until a county's tax record is verified (lib/core/county-data.ts).
+     Verifying one moves the answer, and this list must then shrink. */
   cash: ["county"],
   monthly: ["county"],
   proceeds: ["county"],

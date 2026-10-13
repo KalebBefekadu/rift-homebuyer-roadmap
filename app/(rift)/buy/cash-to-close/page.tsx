@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BUYER_DEFAULTS, LOAN_NAME, cashToClose, georgiaClosing, loanTerms, loanWords, monthlyCost, sellerHelp, money, type BuyerLoan } from "@/lib/core/compute";
 import { Ico } from "@/components/rift/icons";
 import { RESERVE_MONTHS } from "@/lib/core/ledger";
+import { taxFor } from "@/lib/core/county-data";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById } from "@/lib/core/values";
@@ -49,7 +50,9 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
     );
   }
 
-  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), assistance: 0, loanType: a.loanType as BuyerLoan };
+  /* The county's verified tax rate when there is one (V1), the planning rate otherwise. */
+  const tax = taxFor(String(a.county), BUYER_DEFAULTS.taxPct);
+  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), assistance: 0, loanType: a.loanType as BuyerLoan, taxPct: tax.pct };
   const terms = loanTerms(inputs);
   const lw = loanWords(terms);
   const cash = cashToClose(inputs);
@@ -127,7 +130,7 @@ export default async function CashToClose({ searchParams }: { searchParams: Prom
         }]}
       />
       <WorkedOut
-        assumptions={[...cash.assumptions, { label: "Loan", value: LOAN_NAME[terms.kind] }, { label: "Georgia intangible tax", value: "$1.50 per $500 of the loan (O.C.G.A. § 48-6-61), inside the closing estimate" }]}
+        assumptions={[...cash.assumptions, { label: "Loan", value: LOAN_NAME[terms.kind] }, { label: "Property tax", value: tax.note }, { label: "Georgia intangible tax", value: "$1.50 per $500 of the loan (O.C.G.A. § 48-6-61), inside the closing estimate" }]}
         couldBeWrong={cash.couldBeWrong}
       />
 

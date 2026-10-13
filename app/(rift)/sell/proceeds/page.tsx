@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { money } from "@/lib/core/compute";
 import { sellerNet, breakEvenPrice, netSensitivity } from "@/lib/core/seller";
+import { taxFor } from "@/lib/core/county-data";
+import { BUYER_DEFAULTS } from "@/lib/core/compute";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
@@ -44,9 +46,11 @@ export default async function Proceeds({ searchParams }: { searchParams: Promise
   const price = Number(a.salePrice);
   const payoff = Number(a.payoff);
   const commissionPct = a.commission === "none" ? null : Number(a.commission);
-  const r = sellerNet({ price, payoff, county: String(a.county), commissionPct });
+  /* The county's verified tax rate when there is one (V1), the planning rate otherwise. */
+  const taxPct = taxFor(String(a.county), BUYER_DEFAULTS.taxPct).pct;
+  const r = sellerNet({ price, payoff, county: String(a.county), commissionPct, taxPct });
   const underwater = r.net < 0;
-  const inputs = { price, payoff, county: String(a.county), commissionPct };
+  const inputs = { price, payoff, county: String(a.county), commissionPct, taxPct };
   const floor = breakEvenPrice(inputs);
   const moves = netSensitivity(inputs);
   const keeps = (n: number) => (n < 0 ? `${money(-n)} short` : money(n));

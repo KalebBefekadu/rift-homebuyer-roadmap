@@ -71,6 +71,17 @@ hoa       = hoaMo
 total     = pi + tax + insurance + pmi + hoa
 ```
 
+## County records — `lib/core/county-data.ts`
+
+`taxFor(county, fallback)` returns the county's verified tax rate as a share of market value
+(`totalMills / 1000 * 0.4 * 100`, Georgia's 40% assessment) or the planning rate, with a note
+saying which. Cash to close, monthly cost, what you'd keep, selling costs and the abroad engine
+all read it. `rentsFor(county)` returns a verified HUD fair market rent area, and the abroad
+return then uses its three-bedroom rent. A record is used only when it is complete (no `gap`,
+a total recorded) and `verified` names a person and a date (V1, handoff §4.13). On 13 October
+2026 every record is a draft, so no figure has moved; the checklist is
+`docs/audit/county-records-to-verify.md`.
+
 ## Loan type — `loanTerms(i)` and `LOAN_FEES`
 
 Asked by cash to close, monthly cost and what fits (V2, Kaleb 13 Oct 2026). `monthlyCost`,

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { money, pct } from "@/lib/core/compute";
 import { controllableCosts } from "@/lib/core/seller";
+import { taxFor } from "@/lib/core/county-data";
+import { BUYER_DEFAULTS } from "@/lib/core/compute";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
 import { ValueFlow } from "@/components/rift/value/ValueFlow";
@@ -48,7 +50,9 @@ export default async function Costs({ searchParams }: { searchParams: Promise<Re
   const commissionPct = a.commission === "none" ? null : Number(a.commission);
   /* The loan is not a cost of selling; it is left out here, so the payoff fee
      is too. What you owe belongs to the net proceeds value. */
-  const cc = controllableCosts({ price, payoff: 0, county: String(a.county), commissionPct }, Number(a.carrying));
+  /* The county's verified tax rate when there is one (V1), the planning rate otherwise. */
+  const taxPct = taxFor(String(a.county), BUYER_DEFAULTS.taxPct).pct;
+  const cc = controllableCosts({ price, payoff: 0, county: String(a.county), commissionPct, taxPct }, Number(a.carrying));
   const c = cc.costs;
   const months = (n: number) => `${n.toFixed(1).replace(/\.0$/, "")} month${n === 1 ? "" : "s"}`;
   const share = (c.total / price) * 100;

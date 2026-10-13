@@ -30,6 +30,8 @@ export interface SaleInputs {
   county: string;
   /** Total commission, as agreed. Null: not agreed yet. */
   commissionPct: number | null;
+  /** Property tax a year as a share of value: the county's verified rate, or the planning one when unset. */
+  taxPct?: number;
 }
 
 /** What a seller can do about a cost: nothing (law), negotiate it, or move it with the date. */
@@ -55,7 +57,7 @@ export const PAYOFF_FEES = 375;
  * year at the same rate the buyer values use, because the closing date is not
  * known; the note says so.
  */
-export const proratedTax = (price: number) => Math.round((price * BUYER_DEFAULTS.taxPct) / 100 / 2);
+export const proratedTax = (price: number, taxPct: number = BUYER_DEFAULTS.taxPct) => Math.round((price * taxPct) / 100 / 2);
 
 export function saleCosts(i: SaleInputs) {
   const lines: SaleLine[] = [];
@@ -65,7 +67,7 @@ export function saleCosts(i: SaleInputs) {
   lines.push(
     { label: "Georgia transfer tax", short: "Transfer tax", amount: Math.round(i.price * GA_TRANSFER_TAX_RATE), note: "$1.00 per $1,000 of the sale price, set by the state", kind: "law" },
     { label: "Closing attorney and recording", short: "Attorney", amount: SELLER_SETTLEMENT, note: "Deed preparation, the attorney's fee and county recording. A planning figure", kind: "negotiable" },
-    { label: "Your share of this year's property tax", short: "Property tax", amount: proratedTax(i.price), note: `About half a year at ${pct(BUYER_DEFAULTS.taxPct)} of value; the real figure depends on the closing date`, kind: "timing" },
+    { label: "Your share of this year's property tax", short: "Property tax", amount: proratedTax(i.price, i.taxPct), note: `About half a year at ${pct(i.taxPct ?? BUYER_DEFAULTS.taxPct)} of value; the real figure depends on the closing date`, kind: "timing" },
   );
   if (i.payoff > 0) lines.push({ label: "Payoff statement and wire fees", short: "Payoff fees", amount: PAYOFF_FEES, note: "Charged by your lender and the closing attorney to pay the loan off", kind: "law" });
   const total = lines.reduce((s, l) => s + l.amount, 0);
@@ -94,7 +96,7 @@ export function sellerNet(i: SaleInputs) {
       { label: "Commission", value: i.commissionPct === null ? "Not agreed yet, so not included" : pct(i.commissionPct) },
       { label: "Transfer tax", value: "$1.00 per $1,000 of price (Georgia)" },
       { label: "Attorney and recording", value: money(SELLER_SETTLEMENT) },
-      { label: "Property tax share", value: `Half a year at ${pct(BUYER_DEFAULTS.taxPct)} of value` },
+      { label: "Property tax share", value: `Half a year at ${pct(i.taxPct ?? BUYER_DEFAULTS.taxPct)} of value` },
       { label: "Not included", value: "Moving, and anything a buyer asks for until you agree it" },
     ] as Assumption[],
     couldBeWrong:
@@ -119,7 +121,7 @@ export function sellerNet(i: SaleInputs) {
  */
 export function breakEvenPrice(i: SaleInputs): number | null {
   if (!(i.payoff > 0)) return null;
-  const share = (i.commissionPct ?? 0) / 100 + GA_TRANSFER_TAX_RATE + BUYER_DEFAULTS.taxPct / 100 / 2;
+  const share = (i.commissionPct ?? 0) / 100 + GA_TRANSFER_TAX_RATE + (i.taxPct ?? BUYER_DEFAULTS.taxPct) / 100 / 2;
   if (share >= 1) return null;
   let p = Math.max(0, Math.floor((i.payoff + SELLER_SETTLEMENT + PAYOFF_FEES) / (1 - share)) - 2);
   while (sellerNet({ ...i, price: p }).net < 0) p++;

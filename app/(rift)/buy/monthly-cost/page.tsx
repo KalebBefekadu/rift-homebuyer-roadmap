@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BUYER_DEFAULTS, LOAN_NAME, PMI_TERMINATION_LTV, loanTerms, loanWords, monthlyComputed, owningDetail, money, type BuyerLoan } from "@/lib/core/compute";
 import { Ico } from "@/components/rift/icons";
+import { taxFor } from "@/lib/core/county-data";
 import { currentRate } from "@/lib/db/rates";
 import { hasAll, parseAnswers, answersToQuery } from "@/lib/core/asks";
 import { valueById, type InputKey } from "@/lib/core/values";
@@ -45,7 +46,9 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
   }
 
   const rate = await currentRate();
-  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), ratePct: rate.pct, assistance: 0, loanType: a.loanType as BuyerLoan };
+  /* The county's verified tax rate when there is one (V1), the planning rate otherwise. */
+  const tax = taxFor(String(a.county), BUYER_DEFAULTS.taxPct);
+  const inputs = { ...BUYER_DEFAULTS, price: Number(a.price), downPct: Number(a.downPct), county: String(a.county), ratePct: rate.pct, assistance: 0, loanType: a.loanType as BuyerLoan, taxPct: tax.pct };
   const terms = loanTerms(inputs);
   const lw = loanWords(terms);
   const m = monthlyComputed(inputs);
@@ -54,7 +57,7 @@ export default async function MonthlyCost({ searchParams }: { searchParams: Prom
   const band = [inputs.price - step, inputs.price, inputs.price + step].map((p) => ({ price: p, monthly: monthlyComputed({ ...inputs, price: p }).value }));
   const parts = [
     { label: "Principal and interest", amount: m.parts.pi, note: `${inputs.termYears}-year loan of ${money(Math.round(terms.loan))} at ${rate.pct.toFixed(2)}%${lw.fee && terms.upfront > 0 ? `, including the ${lw.fee}` : ""}` },
-    { label: "Property tax", amount: m.parts.tax, note: `About ${inputs.taxPct}% of the price a year, before any homestead exemption` },
+    { label: "Property tax", amount: m.parts.tax, note: tax.note },
     { label: "Home insurance", amount: m.parts.insurance, note: `${money(inputs.insuranceYr)} a year` },
     { label: lw.mi.label, amount: m.parts.pmi, note: lw.mi.note },
     { label: "HOA", amount: m.parts.hoa, note: "None assumed; add it if the home has one" },

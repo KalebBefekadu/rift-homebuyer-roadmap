@@ -17,6 +17,7 @@
  */
 
 import { monthlyPI, BUYER_DEFAULTS, PRICE_GROWTH_PCT } from "./compute";
+import { rentsFor, taxFor } from "./county-data";
 
 /* ------------------------------------------------------------------ status */
 
@@ -175,8 +176,18 @@ export const RENT_RATIO_SOURCE: { basis: "assumed" | "published"; name: string |
   name: null,
 };
 
-export const rentFor = (price: number, county: string) =>
-  Math.round((price * (RENT_RATIO[county] ?? 0.007)) / 25) * 25;
+/**
+ * Rent for a home. A verified HUD fair market rent for the county's area
+ * (lib/core/county-data.ts), three bedrooms as the typical house, replaces
+ * the assumed ratio when one exists; until then the ratio stands, and the
+ * page keeps calling it an estimate. Verifying a rent record should also
+ * move RENT_RATIO_SOURCE and the copy abroad.test.ts guards.
+ */
+export const rentFor = (price: number, county: string) => {
+  const hud = rentsFor(county);
+  if (hud) return hud.rents![3];
+  return Math.round((price * (RENT_RATIO[county] ?? 0.007)) / 25) * 25;
+};
 
 /* ----------------------------------------------------------------- returns */
 
@@ -277,7 +288,8 @@ export function abroadReturns(i: AbroadInputs, a = ASSUMPTIONS): AbroadResult {
   const cashIn = down + closing;
 
   const pi = monthlyPI(loan, ratePct, a.termYears);
-  const tax = (i.price * a.taxPct) / 100 / 12;
+  /* The county's verified rate when there is one (V1); the assumption otherwise. */
+  const tax = (i.price * taxFor(i.county, a.taxPct).pct) / 100 / 12;
   const insurance = a.insuranceYr / 12;
   /* The buyer engine's rule (lib/core/compute.ts monthlyCost), applied only
      where the loan is the kind that charges it. Leaving it out made a citizen
