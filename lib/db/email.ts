@@ -72,9 +72,10 @@ async function send(payload: Record<string, unknown>, op: string): Promise<SendR
 }
 
 import {
-  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded, buildClientDocument, buildNotice,
+  buildReadout, buildTouch, buildPlanTouch, buildResume, buildNewLead, buildNewLeadText, buildOfferChosen, buildSavedPlan, buildSignIn, buildInvitation, buildOfferUploaded, buildClientDocument, buildNotice,
   type OfferUploadedEmail, type ClientDocumentEmail, type ReadoutEmail, type TouchEmail, type PlanTouchEmail, type ResumeEmail, type NewLeadEmail, type OfferChosenEmail, type SavedPlanEmail, type SignInEmail, type InvitationEmail,
 } from "@/lib/core/email";
+import { sendAgentText } from "@/lib/db/sms";
 
 /* Re-exported so callers keep importing their email types from one place. */
 export {
@@ -236,12 +237,21 @@ export async function sendNewLead(l: NewLeadEmail): Promise<SendResult> {
   if (!built) {
     return { ok: true, skipped: true, reason: "no way to reach this person; an alert with no action in it" };
   }
-  return send({
-    to: [{ email: l.to, name: "Kaleb" }],
-    subject: built.subject,
-    htmlContent: built.html,
-    tags: ["agent-alert"],
-  }, "email.newLead");
+  /* The text to Kaleb's phone goes alongside, not after: a visitor's Save is
+     waiting on this call, and two sends in a row would double the wait. Its
+     own failure is reported by sendAgentText and never changes what the
+     email's result says (D40). */
+  const text = buildNewLeadText(l);
+  const [mail] = await Promise.all([
+    send({
+      to: [{ email: l.to, name: "Kaleb" }],
+      subject: built.subject,
+      htmlContent: built.html,
+      tags: ["agent-alert"],
+    }, "email.newLead"),
+    text ? sendAgentText(text) : Promise.resolve(null),
+  ]);
+  return mail;
 }
 
 /** The alert that a seller has picked an offer. Same tag, same reasons, as the lead alert. */

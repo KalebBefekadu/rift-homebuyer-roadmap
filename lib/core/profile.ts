@@ -43,7 +43,7 @@ export const PROFILE: Record<ProfileField, FieldSpec> = {
     expected: true,
     reach: {
       live: true,
-      where: "The client plan page, a client's journey portal and invitations, this sidebar, and the name recorded against every decision you make here. The public pages spell your name in their own text and do not read it from here.",
+      where: "The footer of every public page, the client plan page, a client's journey portal and invitations, this sidebar, and the name recorded against every decision you make here. Much of the public pages' own wording still says \"Kaleb\" in its text.",
     },
   },
   email: {
@@ -64,8 +64,8 @@ export const PROFILE: Record<ProfileField, FieldSpec> = {
     max: 40,
     expected: true,
     reach: {
-      live: false,
-      where: "Recorded only. No page or email shows it yet, so it is kept ready for the footer and signature that will.",
+      live: true,
+      where: "Where new-lead texts go, when text alerts are switched on (BREVO_SMS_SENDER). Not shown on any public page.",
     },
   },
   license: {
@@ -75,8 +75,8 @@ export const PROFILE: Record<ProfileField, FieldSpec> = {
     max: 40,
     expected: true,
     reach: {
-      live: false,
-      where: "Recorded only. Nothing reads it yet; the search-engine profile on the public pages leaves it out rather than guess at it.",
+      live: true,
+      where: "The footer of every public page. The search-engine profile on the public pages still leaves it out.",
     },
   },
   brokerage: {
@@ -86,8 +86,8 @@ export const PROFILE: Record<ProfileField, FieldSpec> = {
     max: 120,
     expected: true,
     reach: {
-      live: false,
-      where: "Recorded only. The public footer, the readout and the privacy page spell \"Peachtree Cardinal\" in their own text, so changing this does not change them.",
+      live: true,
+      where: "The footer of every public page. The privacy page still spells \"Peachtree Cardinal\" in its own text.",
     },
   },
 };
@@ -144,4 +144,20 @@ export function profileChanges(
 /** Expected fields with nothing recorded, in form order. */
 export function missingProfile(p: AgentProfile): ProfileField[] {
   return PROFILE_FIELDS.filter((f) => PROFILE[f].expected && !(p[f] ?? "").trim());
+}
+
+/* What the public footer said before it read Settings, kept for when Settings
+   cannot be read: the brokerage line is how Georgia advertising rules expect
+   the brokerage to be identified (manual review D2), so it is never blank. */
+export const PUBLIC_AGENT_FALLBACK = "Kaleb Befekadu, Peachtree Cardinal, Georgia.";
+
+/**
+ * The agent as every public page names him (D40): "Name, Georgia licence N,
+ * Brokerage." Only what Settings holds; a missing licence or brokerage is
+ * left out, never filled in.
+ */
+export function publicAgentLine(a: { name: string; license: string | null; brokerage: string | null } | null): string {
+  if (!a?.name.trim()) return PUBLIC_AGENT_FALLBACK;
+  const parts = [a.name.trim(), a.license ? `Georgia licence ${a.license}` : null, a.brokerage ?? "Georgia"];
+  return `${parts.filter(Boolean).join(", ")}.`;
 }

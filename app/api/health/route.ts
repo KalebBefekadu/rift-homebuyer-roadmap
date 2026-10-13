@@ -179,6 +179,8 @@ export async function GET(req: Request) {
   const checks: Record<string, string> = {
     ...fatal,
     email: await emailCheck(deep),
+    /* The new-lead text (D40). Off is a choice, not a fault: email still goes. */
+    leadText: process.env.BREVO_SMS_SENDER ? "configured" : "off: BREVO_SMS_SENDER not set, alerts go by email only",
     calendar: process.env.CAL_API_KEY && process.env.CAL_EVENT_TYPE_ID ? "configured" : "missing",
     /* "Configured" is not "working", and conflating them cost this product
        every scheduled run it ever had. The secret was set, this said

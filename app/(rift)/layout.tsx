@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Noto_Sans_Ethiopic } from "next/font/google";
 import "../styles/rift.css";
 import { siteUrl } from "@/lib/core/site";
+import { currentAgentPublic } from "@/lib/db/service";
+import { AgentProvider } from "@/components/rift/site/Agent";
 import { Fonts } from "@/components/rift/Fonts";
 
 /**
@@ -55,12 +57,18 @@ export const metadata: Metadata = {
  * the prototype was deleted on 13 October 2026, once every screen had a live
  * replacement.
  */
-export default function RiftLayout({ children }: { children: React.ReactNode }) {
+export default async function RiftLayout({ children }: { children: React.ReactNode }) {
+  /* Who the pages are from, once for all of them (D40). Cached five minutes
+     per instance, and null rather than slow: the footer then says what it
+     said before it read Settings. */
+  const agent = await currentAgentPublic().catch(() => null);
   return (
+    <AgentProvider agent={agent}>
     <div className={`rift ${ethiopic.variable}`}>
       {/* Third-party for now; see components/rift/Fonts.tsx. */}
       <Fonts preconnect />
       {children}
     </div>
+    </AgentProvider>
   );
 }

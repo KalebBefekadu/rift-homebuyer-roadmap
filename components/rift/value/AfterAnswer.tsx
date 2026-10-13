@@ -10,6 +10,8 @@ import { missingPhrase, nextValues, valueById } from "@/lib/core/values";
 import type { Answers } from "@/lib/core/asks";
 import type { CustomQuestion } from "@/lib/core/question-wording";
 import { SavePlan } from "./SavePlan";
+import { AgentLine, useAgentFirstName } from "@/components/rift/site/Agent";
+import { EmailMe } from "./EmailMe";
 import { ForgetMe } from "@/components/rift/Forget";
 
 /**
@@ -33,6 +35,7 @@ export function AfterAnswer({ tool, entry, answers, questions }: {
   answers: Answers;
 }) {
   const def = valueById(tool)!;
+  const who = useAgentFirstName();
   const [known, setKnown] = useState(() => answeredKeys(answers));
   const [plan, setPlan] = useState<PlanEntry[]>([]);
   const [saving, setSaving] = useState<null | "save" | "review">(null);
@@ -94,7 +97,7 @@ export function AfterAnswer({ tool, entry, answers, questions }: {
               {plan.length > 1
                 ? `Your ${plan.length} answers so far, saved together so you can reopen them on any device.`
                 : "Save this answer and the ones you find next, so you can reopen them on any device."}
-              {" "}Kaleb can also look over your numbers and tell you what he would do.
+              {" "}{who} can also look over your numbers and tell you what he would do.
             </p>
             {plan.length > 1 ? (
               <ul className="row wrap gap-1" style={{ marginTop: 14 }}>
@@ -111,8 +114,11 @@ export function AfterAnswer({ tool, entry, answers, questions }: {
               Save my plan <Ico.arrowR size={15} />
             </button>
             <button className="btn" style={{ background: "transparent", color: "#fff", border: "1px solid rgba(255,255,255,.26)" }} onClick={() => setSaving("review")}>
-              Ask Kaleb to review my numbers
+              Ask {who} to review my numbers
             </button>
+            {/* Who is asking for their details, next to where they are asked
+                (D40): name, licence and brokerage, from Settings. */}
+            <p className="t-2xs" style={{ color: "rgba(255,255,255,.6)", lineHeight: 1.5, maxWidth: 260 }}><AgentLine /></p>
             <button className="btn btn-sm" style={{ background: "transparent", color: "rgba(255,255,255,.72)" }} onClick={share}>
               <Ico.share size={13} />{copied ? "Link copied" : "Share this answer"}
             </button>
@@ -124,6 +130,8 @@ export function AfterAnswer({ tool, entry, answers, questions }: {
         <p className="t-xs c-4" style={{ marginBottom: 8 }}>Your answers stay on this device for thirty days, so the next question is not asked twice. This page&apos;s link carries them too, so anyone you share it with sees them.</p>
         <ForgetMe side={def.side === "abroad" ? undefined : def.side} />
       </section>
+
+      <EmailMe side={def.side} plan={plan} hidden={saving !== null} wordingVersion={questions?.versionId ?? null} />
 
       {saving ? (
         <SavePlan

@@ -10,6 +10,7 @@ import { track, flush } from "@/lib/rift/track";
 import type { PlanEntry } from "@/lib/rift/plan";
 import { customFor, type CustomQuestion } from "@/lib/core/question-wording";
 import { CustomQuestions } from "./CustomQuestions";
+import { useAgentFirstName } from "@/components/rift/site/Agent";
 
 /* Stable, so it runs once when the element appears and never pulls focus back later. */
 const focusOnShow = (el: HTMLElement | null) => el?.focus();
@@ -32,6 +33,7 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
   /** The published wording this page was rendered with (D37): the agent's questions for this side, and its version. */
   questions?: { custom: CustomQuestion[]; versionId: string | null };
 }) {
+  const who = useAgentFirstName();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -143,11 +145,11 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
           /* The submit button that had focus is gone; the answer takes it. */
           <div tabIndex={-1} ref={focusOnShow}>
             <h2 id="save-h" className="serif" style={{ fontSize: 26, letterSpacing: "-0.022em" }}>
-              {!result?.stored ? "Not saved." : mode === "review" ? "Kaleb has it." : "Saved."}
+              {!result?.stored ? "Not saved." : mode === "review" ? `${who} has it.` : "Saved."}
             </h2>
             <p className="t-md c-2 mt-2" style={{ lineHeight: 1.6 }}>
               {!result?.stored
-                ? `This copy of the site is not connected to where plans are kept, so nothing was stored${mode === "review" ? " and Kaleb was not told" : ""}. Your answers are still in this page's address: bookmark it to come back to them.`
+                ? `This copy of the site is not connected to where plans are kept, so nothing was stored${mode === "review" ? ` and ${who} was not told` : ""}. Your answers are still in this page's address: bookmark it to come back to them.`
                 : <>
                     {mode === "review"
                       ? "He will look over your numbers and reply by email, on business days usually the same day."
@@ -157,7 +159,7 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
                       ? `We emailed a link to ${email.trim()} so you can reopen it on any device.`
                       : result.url
                         ? "Email is not sending right now, so keep the link below."
-                        : "The link that reopens it could not be made just now. Kaleb has your details and can send it to you."}
+                        : `The link that reopens it could not be made just now. ${who} has your details and can send it to you.`}
                   </>}
             </p>
             {result?.url ? (
@@ -172,13 +174,13 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
           <form onSubmit={submit}>
             <div className="between">
               <h2 id="save-h" className="serif" style={{ fontSize: 26, letterSpacing: "-0.022em", lineHeight: 1.15 }}>
-                {mode === "review" ? "Ask Kaleb to review" : "Save my plan"}
+                {mode === "review" ? `Ask ${who} to review` : "Save my plan"}
               </h2>
               <button type="button" className="btn btn-g btn-ico" onClick={onClose} aria-label="Close"><Ico.x size={15} /></button>
             </div>
             <p className="t-sm c-2 mt-2" style={{ lineHeight: 1.6 }}>
               {mode === "review"
-                ? "Kaleb looks at your answers and replies with what he would do next. No obligation."
+                ? `${who} looks at your answers and replies with what he would do next. No obligation.`
                 : "Your answers, saved together, with a link that reopens them on any device."}
             </p>
 
@@ -205,7 +207,7 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
               <label className="opt mt-3" data-on={alerts} style={{ alignItems: "flex-start" }}>
                 <input type="checkbox" checked={alerts} onChange={() => setAlerts(!alerts)} />
                 <span className="t-xs c-2" style={{ lineHeight: 1.55 }}>
-                  Tell me when a Georgia program I may fit opens, changes or runs out of funds. Kaleb writes to you himself.
+                  Tell me when a Georgia program I may fit opens, changes or runs out of funds. {who} writes to you himself.
                 </span>
               </label>
             ) : null}
@@ -219,7 +221,7 @@ export function SavePlan({ side, mode, plan, onClose, questions }: {
             </LiveRegion>
 
             <button type="submit" className="btn btn-brand btn-lg mt-4" style={{ width: "100%" }} disabled={!ready || state === "sending"}>
-              {state === "sending" ? "Saving…" : mode === "review" ? "Send it to Kaleb" : "Save my plan"}
+              {state === "sending" ? "Saving…" : mode === "review" ? `Send it to ${who}` : "Save my plan"}
             </button>
             {!ready && state !== "sending" ? <p className="t-xs c-3 mt-2">Still needed: {missing}.</p> : null}
             <p className="t-xs c-4 mt-3" style={{ lineHeight: 1.55 }}>{EMAIL_NOTE}</p>

@@ -15,8 +15,12 @@ let emailResult: Record<string, unknown> = { ok: true };
 let attach: Record<string, unknown> = { ok: true, data: { token: "tok-abc" } };
 let record: Record<string, unknown> = { ok: true, data: { recorded: true } };
 
+const leads: Record<string, unknown>[] = [];
 vi.mock("@/lib/db/leads", () => ({
-  captureLead: async () => ({ ok: true, data: { id: "lead-1", score: { band: "now", score: 80, headline: "h", action: "a", signals: [] } } }),
+  captureLead: async (input: Record<string, unknown>) => {
+    leads.push(input);
+    return { ok: true, data: { id: "lead-1", score: { band: "now", score: 80, headline: "h", action: "a", signals: [] } } };
+  },
 }));
 vi.mock("@/lib/db/saved-plan", () => ({ attachPlan: async () => attach }));
 vi.mock("@/lib/db/email", () => ({
@@ -33,15 +37,15 @@ vi.mock("@/lib/monitoring/capture", () => ({ captureOpError: (...a: unknown[]) =
 const { POST } = await import("./route");
 const { reset } = await import("@/lib/core/ratelimit");
 
-const post = () =>
+const post = (over: Record<string, unknown> = {}) =>
   POST(new Request("https://rift.test/api/plan/save", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.9" },
-    body: JSON.stringify({ name: "Sam", email: "sam@example.com", side: "buy", answers: { county: "Cobb" }, values: [] }),
+    body: JSON.stringify({ name: "Sam", email: "sam@example.com", side: "buy", answers: { county: "Cobb" }, values: [], ...over }),
   }));
 
 beforeEach(() => {
-  seen.recorded = []; seen.emails = []; captured.mockReset(); reset();
+  seen.recorded = []; seen.emails = []; leads.length = 0; captured.mockReset(); reset();
   emailResult = { ok: true };
   attach = { ok: true, data: { token: "tok-abc" } };
   record = { ok: true, data: { recorded: true } };
@@ -81,5 +85,26 @@ describe("POST /api/plan/save: the save email's outcome", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).emailed).toBe(true);
     expect(captured).toHaveBeenCalledWith(expect.objectContaining({ message: "statement timeout" }), expect.objectContaining({ op: "email.planRecord" }));
+  });
+});
+
+describe("POST /api/plan/save: email only (\"Email me this\")", () => {
+  it("still asks Save my plan for a name", async () => {
+    const res = await post({ name: "" });
+    expect(res.status).toBe(400);
+    expect(leads).toHaveLength(0);
+  });
+
+  it("saves without a name when the visitor asked for email only", async () => {
+    const res = await post({ name: "", quick: true });
+    expect((await res.json()).ok).toBe(true);
+    /* No name, not a blank one: the emails then greet "Hello,". */
+    expect(leads[0]!.name).toBeUndefined();
+    expect(seen.emails[0]!.name).toBeUndefined();
+  });
+
+  it("still refuses an address that does not look like one", async () => {
+    const res = await post({ name: "", quick: true, email: "sam@" });
+    expect(res.status).toBe(400);
   });
 });

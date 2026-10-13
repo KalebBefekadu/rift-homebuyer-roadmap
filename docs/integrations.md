@@ -24,7 +24,7 @@ The prototype at `/prototype` needs **none** of these. It runs on an empty `.env
 | --- | --- | --- | --- |
 | **Supabase** | Auth, Postgres, RLS, file storage | Live, on the Rift schema; four retired MVP tables are still present and should be exported and dropped | `lib/supabase/*`, `lib/db/*`, `supabase/migrations/` |
 | **Sentry** | Errors, tracing, source maps | Wired and deployed | `next.config.ts`, `instrumentation*.ts`, `lib/monitoring/capture.ts` |
-| **Brevo** | Transactional email | Live; a verified sending domain (SPF, DKIM, DMARC) is still to do | `lib/db/email.ts`, `lib/db/sender.ts` |
+| **Brevo** | Transactional email; the new-lead text to the agent's own phone | Email live; a verified sending domain (SPF, DKIM, DMARC) is still to do. The text is off until `BREVO_SMS_SENDER` is set, the account has SMS credits and Settings has a phone number | `lib/db/email.ts`, `lib/db/sender.ts`, `lib/db/sms.ts` |
 | **Vercel** | Hosting, edge, cron | Project linked (`rift-homebuyer-roadmap`) | `.vercel/project.json` |
 | **Anthropic (Claude API)** | Reading an uploaded offer PDF into the form; comparing a changed program page with its record | Built, off until `ANTHROPIC_API_KEY` is set (Blueprint v5 §10.2, D16) | `lib/core/ai.ts`, `lib/db/ai.ts`, `lib/db/offer-read.ts`, `lib/db/program-checks.ts` |
 

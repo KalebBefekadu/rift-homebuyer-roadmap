@@ -36,6 +36,7 @@ there is none yet.
 | Merging product.md into vision.md | **Not done, on purpose.** About 15 code comments cite product.md as the source of a rule; it now says which of its capabilities are long-term direction only |
 | Consolidating `docs/audit/`, moving the blueprint change log | **Not done, on purpose.** The older audits are dated records cited from code and the blueprint; moving the change log only relocates it |
 | Switching off campaigns, seller workspace, money v2, advocacy, the Equb form; trimming the Operations sidebar | **Kept on**, Kaleb's decision 13 Oct |
+| §3 #2 to #5: program pages, "Email me this", the lead text, the agent on the page | **Built** 13 Oct (D40). The text needs `BREVO_SMS_SENDER`, SMS credits and a phone in Settings; the licence shows once it is in Settings. About 50 "Kaleb" strings remain in public page text; the answer pages' are moved |
 | Self-hosted fonts | **Blocked** in the build environment (Fontshare unreachable); one file to change when it is reachable |
 | Everything in §5 owned by Kaleb, the broker or counsel | Open |
 

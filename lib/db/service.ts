@@ -196,7 +196,29 @@ export async function currentAgentEmail(): Promise<string | null> {
   return email;
 }
 
-let agentPublic: { name: string; at: number } | null = null;
+let agentPhone: { value: string; at: number } | null = null;
+
+/**
+ * The agent's own phone number from Settings, for the new-lead text
+ * (lib/db/sms.ts). Same read, cache and refusals as `currentAgentEmail`.
+ */
+export async function currentAgentPhone(): Promise<string | null> {
+  if (agentPhone && Date.now() - agentPhone.at < PROFILE_TTL_MS) return agentPhone.value;
+  const id = await currentAgentId();
+  if (!id) return null;
+  const db = serviceClient();
+  if (!db) return null;
+  const query = Promise.resolve(db.from("rift_agents").select("phone").eq("id", id).maybeSingle());
+  const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
+  if (timedOut || !result || result.error) return null;
+  const phone = (result.data as { phone?: string | null } | null)?.phone;
+  if (!phone) return null;
+  agentPhone = { value: phone, at: Date.now() };
+  return phone;
+}
+
+export interface PublicAgent { name: string; license: string | null; brokerage: string | null }
+let agentPublic: (PublicAgent & { at: number }) | null = null;
 
 /**
  * The agent's name, for a page rendered to somebody who is not signed in.
@@ -206,14 +228,18 @@ let agentPublic: { name: string; at: number } | null = null;
  * design, and reaching for the session-based one there would have returned
  * null and addressed the client's own agent as "your agent" on every line.
  *
- * Name only. It is the one field on the agent row that is already public:
- * it is on the landing page, in the structured data and on the readout, and
- * a helper that returned the row would put the email in front of the next
- * page that calls it.
+ * The name, licence number and brokerage: the fields that are public by
+ * their nature (Georgia advertising rules expect the brokerage named, and the
+ * licence number is how a stranger checks the agent is real; audit 12 Oct
+ * §3 #5, D40). Never the email or phone: a helper that returned the row would
+ * put them in front of the next page that calls it.
  */
-export async function currentAgentPublic(): Promise<{ name: string } | null> {
+export async function currentAgentPublic(): Promise<PublicAgent | null> {
   /* Five minutes, like the email above and for the same reason. */
-  if (agentPublic && Date.now() - agentPublic.at < PROFILE_TTL_MS) return { name: agentPublic.name };
+  if (agentPublic && Date.now() - agentPublic.at < PROFILE_TTL_MS) {
+    const { name, license, brokerage } = agentPublic;
+    return { name, license, brokerage };
+  }
 
   const id = await currentAgentId();
   if (!id) return null;
@@ -221,13 +247,14 @@ export async function currentAgentPublic(): Promise<{ name: string } | null> {
   const db = serviceClient();
   if (!db) return null;
 
-  const query = Promise.resolve(db.from("rift_agents").select("name").eq("id", id).maybeSingle());
+  const query = Promise.resolve(db.from("rift_agents").select("name,license,brokerage").eq("id", id).maybeSingle());
   const { value: result, timedOut } = await withTimeout(query, READ_DEADLINE_MS, null);
   if (timedOut || !result || result.error) return null;
 
-  const name = (result.data as { name?: string } | null)?.name;
-  if (!name) return null;
+  const row = result.data as { name?: string; license?: string | null; brokerage?: string | null } | null;
+  if (!row?.name) return null;
 
-  agentPublic = { name, at: Date.now() };
-  return { name };
+  const out: PublicAgent = { name: row.name, license: row.license?.trim() || null, brokerage: row.brokerage?.trim() || null };
+  agentPublic = { ...out, at: Date.now() };
+  return out;
 }

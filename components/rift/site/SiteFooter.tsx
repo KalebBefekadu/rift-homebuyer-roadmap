@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mark } from "@/components/rift/icons";
 import { valuesFor } from "@/lib/core/values";
+import { AgentLine } from "./Agent";
 
 /**
  * The one footer for every public page (Blueprint v5 §4.2, Kaleb R1).
@@ -62,9 +63,10 @@ export function SiteFooter() {
         {/* Kept, in small type, until the broker agrees they can go (manual
             review D2): the brokerage line is how Georgia advertising rules
             expect the brokerage to be identified, and the disclaimer is what
-            keeps a computed figure from reading as a lending commitment. */}
+            keeps a computed figure from reading as a lending commitment. The
+            name, licence and brokerage come from Settings (D40). */}
         <p className="t-2xs c-4" style={{ lineHeight: 1.6, maxWidth: 760 }}>
-          Kaleb Befekadu, Peachtree Cardinal, Georgia. Figures are planning estimates, not a lending
+          <AgentLine />{" "}Figures are planning estimates, not a lending
           commitment, valuation, or tax or legal advice.
         </p>
       </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { checkField, missingProfile, profileChanges, PROFILE, PROFILE_FIELDS, type AgentProfile } from "./profile";
+import { checkField, missingProfile, profileChanges, publicAgentLine, PUBLIC_AGENT_FALLBACK, PROFILE, PROFILE_FIELDS, type AgentProfile } from "./profile";
 
 const KALEB: AgentProfile = { name: "Kaleb Befekadu", email: "kaleb@example.com", phone: null, license: null, brokerage: "Peachtree Cardinal" };
 
@@ -47,13 +47,31 @@ describe("what a save would change", () => {
 describe("where each field reaches", () => {
   it("says so for every field, in words, and admits the ones that reach nothing", () => {
     for (const f of PROFILE_FIELDS) expect(PROFILE[f].reach.where.length).toBeGreaterThan(20);
-    /* Nothing reads these three today. If one gets wired, flip it and say where. */
-    expect(PROFILE.phone.reach.live).toBe(false);
-    expect(PROFILE.license.reach.live).toBe(false);
-    expect(PROFILE.brokerage.reach.live).toBe(false);
+    /* All three were recorded-only until D40 (13 Oct): the licence and the
+       brokerage now name the agent on every public page, and the phone is
+       where the new-lead text goes. Each says where, in words. */
+    expect(PROFILE.phone.reach.live).toBe(true);
+    expect(PROFILE.license.reach.where).toContain("public page");
+    expect(PROFILE.brokerage.reach.where).toContain("public page");
   });
 
   it("lists what is missing in form order", () => {
     expect(missingProfile(KALEB)).toEqual(["phone", "license"]);
+  });
+});
+
+describe("the agent line on every public page", () => {
+  it("names the agent, the licence and the brokerage from Settings", () => {
+    expect(publicAgentLine({ name: "Kaleb Befekadu", license: "123456", brokerage: "Peachtree Cardinal" }))
+      .toBe("Kaleb Befekadu, Georgia licence 123456, Peachtree Cardinal.");
+  });
+
+  it("leaves out what Settings does not hold, never inventing it", () => {
+    expect(publicAgentLine({ name: "Kaleb Befekadu", license: null, brokerage: null })).toBe("Kaleb Befekadu, Georgia.");
+  });
+
+  it("never goes blank: without Settings it says what it always said", () => {
+    expect(publicAgentLine(null)).toBe(PUBLIC_AGENT_FALLBACK);
+    expect(PUBLIC_AGENT_FALLBACK).toContain("Peachtree Cardinal");
   });
 });

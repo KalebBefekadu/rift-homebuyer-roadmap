@@ -32,12 +32,17 @@ export async function POST(req: Request) {
   const b = read.body as Record<string, unknown>;
 
   const str = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
-  const name = str(b.name, 120);
+  /* Undefined, not "", when not given: stored as no name rather than a blank one. */
+  const name = str(b.name, 120) || undefined;
   const email = str(b.email, 200);
   const phone = str(b.phone, 40);
   const phoneOk = b.phoneConsent === true;
 
-  if (!name) return NextResponse.json({ ok: false, error: "Add your name." }, { status: 400 });
+  /* "Email me this" (components/rift/value/EmailMe.tsx) asks for an email
+     only. Everything downstream already copes with a lead without a name:
+     the emails greet "Hello," and Operations shows the address. */
+  const quick = b.quick === true;
+  if (!name && !quick) return NextResponse.json({ ok: false, error: "Add your name." }, { status: 400 });
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ ok: false, error: "That email address does not look right." }, { status: 400 });
   }

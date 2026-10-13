@@ -842,3 +842,17 @@
 /* A heading reached from an in-page link lands below a sticky bar, not
    under it (the client journey's section menu, manual review WS11.2). */
 .rift h2[id], .rift section[id] { scroll-margin-top: 64px; }
+
+/* "Email me this" (components/rift/value/EmailMe.tsx): kept in reach at the
+   foot of the screen once the answer has been read past its headline. Under
+   the dialog veil (z-index 100), above the sticky header (40). */
+.email-me {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+.email-me-in {
+  pointer-events: auto; max-width: 520px; margin: 0 auto; padding: 12px;
+  box-shadow: var(--sh-3);
+}
+@media print { .email-me { display: none; } }

@@ -171,6 +171,26 @@ const REPLY_WITHIN: Record<Band, string> = {
  * interruption with no available action at the end of it, and an alert stream
  * that is sometimes not worth opening stops being opened.
  */
+/**
+ * The same alert as a text to Kaleb's own phone (audit 12 Oct §3 #4, D40).
+ *
+ * Speed to lead is the strongest lever once a lead exists, and an email can
+ * sit unread for an hour. One message, short enough for one or two SMS parts:
+ * who, what, how fast to reply, how to reach them, and the link. Only ever
+ * sent to the agent's own number, never to a lead. Null when there is no way
+ * to reach the person, for the same reason as the email.
+ */
+export function buildNewLeadText(l: NewLeadEmail): string | null {
+  if (!l.email && !l.phone) return null;
+  const who = l.name ? l.name.slice(0, 40) : "Someone";
+  const where = l.county ? ` in ${l.county}` : "";
+  const doing = l.side === "buy" ? "buying" : "selling";
+  const abroad = l.source === "abroad" ? ", from abroad" : "";
+  const price = l.value > 0 ? `, ${money(l.value)}` : "";
+  const reach = l.phone ? `Call ${l.phone}` : `Email ${l.email}`;
+  return `Rift lead (${BAND_LABEL[l.band]}): ${who}, ${doing}${where}${price}${abroad}. Reply ${REPLY_WITHIN[l.band]}. ${reach}. ${l.studioUrl}`;
+}
+
 export function buildNewLead(l: NewLeadEmail): { subject: string; html: string } | null {
   const reachable: [string, string][] = [];
   if (l.email) reachable.push(["Email", l.email]);
