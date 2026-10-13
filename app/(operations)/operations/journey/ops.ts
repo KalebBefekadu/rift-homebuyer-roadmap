@@ -8,7 +8,8 @@ import type { DbResult } from "@/lib/db/result";
 import { createJourney, invite, invitedMemberForToken, joinedMemberEmail, reissueInvite, revokeMember, renameJourney } from "@/lib/db/journeys";
 import { sendSignInLink } from "@/lib/db/signin";
 import { sendInvitation } from "@/lib/db/email";
-import { tellHousehold } from "@/lib/db/notices";
+import { tellHousehold, tellHouseholdsOfLead } from "@/lib/db/notices";
+import { workIsTheirs } from "@/lib/core/notice";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
 import { feedbackAsAgent, recordTourStep, requestTourAsAgent } from "@/lib/db/tours";
@@ -303,6 +304,7 @@ export async function updateWork(
   if ("error" in g) return { ok: false as const, error: g.error };
   if (!isUuid(journeyId) || !isUuid(contractId) || !isUuid(requestId)) return { ok: false as const, error: "Reload the page and try again" };
   const r = await recordWorkAsAgent(journeyId, contractId, workstream, input, expectedSeq, g.name, requestId);
+  if (r.ok && !("skipped" in r) && workIsTheirs(input)) await tellHousehold(journeyId, "yours", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
 }
@@ -538,6 +540,7 @@ export async function sellerOp(journeyId: string, op: SellerOp) {
       case "step-drop": return removePlanItem(op.itemId);
     }
   })();
+  if (op.kind === "step-add" && op.owner === "client" && r.ok && !("skipped" in r)) await tellHouseholdsOfLead(leadId, "yours", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   revalidatePath(`/operations/lead/${leadId}`);
   if (op.kind === "choice-reopen") revalidatePath("/operations");

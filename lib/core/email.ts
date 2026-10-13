@@ -684,5 +684,5 @@ export function buildNotice(n: NoticeEmail): { subject: string; html: string } {
     <a href="${escapeHtml(account)}" style="color:#888">Turn these emails off</a> on your account page.
   </p>
 </div>`.trim();
-  return { subject: r.asks ? `${first} needs your answer on Rift` : `${first} shared something new on Rift`, html };
+  return { subject: r.subject ? `${first} ${r.subject}` : r.asks ? `${first} needs your answer on Rift` : `${first} shared something new on Rift`, html };
 }

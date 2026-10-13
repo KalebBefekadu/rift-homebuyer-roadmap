@@ -1,4 +1,4 @@
-import type { Scope, Side } from "./journey";
+import { canRespond, type Role, type Scope, type Side } from "./journey";
 import type { PortalTab } from "./portal-tabs";
 
 /**
@@ -16,17 +16,22 @@ import type { PortalTab } from "./portal-tabs";
  * who has signed in.
  */
 
-export type NoticeKind = "home" | "offer" | "priorities" | "pricing" | "proceeds";
+export type NoticeKind = "home" | "offer" | "priorities" | "pricing" | "proceeds" | "yours";
 
 interface Rule {
-  /** Only members who can see the thing are told about it. */
-  scope: Scope;
-  side: Side;
+  /** Only members who can see the thing are told about it; null when no scope gates it. */
+  scope: Scope | null;
+  /** null: either side. */
+  side: Side | null;
+  /** Only buyers and co-buyers (sellers on a sale) see the contract and the plan's steps. */
+  respondOnly?: boolean;
   tab: PortalTab;
   /** "Kaleb added ...", finished in the email. */
   what: string;
   /** Whether it asks them for an answer, which the subject says. */
   asks: boolean;
+  /** A subject of its own, after the agent's first name, when neither of the two fits. */
+  subject?: string;
 }
 
 export const NOTICE: Record<NoticeKind, Rule> = {
@@ -35,6 +40,11 @@ export const NOTICE: Record<NoticeKind, Rule> = {
   priorities: { scope: "search", side: "buy", tab: "homes", what: "wrote down your search priorities for you to check", asks: true },
   pricing: { scope: "money", side: "sell", tab: "money", what: "shared a pricing opinion on your home for you to answer", asks: true },
   proceeds: { scope: "money", side: "sell", tab: "money", what: "updated what you would keep from the sale", asks: false },
+  /* The contract phase had no notice at all (audit portals-2026-10, item 3):
+     insurance becoming theirs, a step put on them with a date, all appeared
+     on Today and nobody was told, in the stretch with the most deadlines. A
+     workstream or a plan step the agent puts on the client. */
+  yours: { scope: null, side: null, respondOnly: true, tab: "today", what: "put something on your list to do", asks: false, subject: "put something on your list in Rift" },
 };
 
 /**
@@ -51,9 +61,23 @@ export function noticeDue(lastAt: string | null, now: Date = new Date()): boolea
 }
 
 /** Who is told: joined, not removed, on this side, and able to see the thing. */
-export function shouldTell(kind: NoticeKind, m: { side: Side; scopes: Scope[]; joined: boolean; revoked: boolean }): boolean {
+export function shouldTell(kind: NoticeKind, m: { side: Side; scopes: Scope[]; joined: boolean; revoked: boolean; role?: Role }): boolean {
   const r = NOTICE[kind];
-  return m.joined && !m.revoked && m.side === r.side && m.scopes.includes(r.scope);
+  if (!m.joined || m.revoked) return false;
+  if (r.side && m.side !== r.side) return false;
+  if (r.scope && !m.scopes.includes(r.scope)) return false;
+  /* A viewer sees neither the contract's work nor the plan's steps (clientProgress). */
+  if (r.respondOnly && !(m.role && canRespond(m.role))) return false;
+  return true;
+}
+
+/**
+ * Whether a workstream update puts something on the client to do: theirs,
+ * and still open. Recording "confirmed" on their insurance is news, not a
+ * task, and is not emailed as one.
+ */
+export function workIsTheirs(input: { owner: string; state: string }): boolean {
+  return input.owner === "client" && !["confirmed", "not-applicable", "reported"].includes(input.state);
 }
 
 export interface NoticeEmail {

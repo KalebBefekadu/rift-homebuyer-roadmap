@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { tellHouseholdsOfLead } from "@/lib/db/notices";
 import { currentAgent } from "@/lib/db/session";
 import { addNote, setStage, archiveLead, restoreLead, setNextAction, representationOf, setRepresentation, type NoteKind, type Stage, type RepStatus } from "@/lib/db/clients";
 import { openPlan, closePlan, addPlanItem, setPlanItemDone, removePlanItem } from "@/lib/db/plan";
@@ -304,6 +305,8 @@ export async function addStep(leadId: string, title: string, owner: Owner, owner
   if (!agent) return { ok: false as const, error: "not signed in" };
 
   const r = await addPlanItem({ leadId, title, owner, ownerName, dueOn });
+  /* A step put on the client is something to tell them about (audit portals-2026-10, item 3). */
+  if (owner === "client" && r.ok && !("skipped" in r)) await tellHouseholdsOfLead(leadId, "yours", agent.name);
   revalidatePath(`/operations/lead/${leadId}`);
 
   if (!r.ok) return { ok: false as const, error: r.error };

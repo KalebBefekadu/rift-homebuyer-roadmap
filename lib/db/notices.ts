@@ -6,7 +6,7 @@ import { captureOpError } from "@/lib/monitoring/capture";
 import { siteUrl } from "@/lib/core/site";
 import { isUuid } from "@/lib/core/ids";
 import { noticeDue, shouldTell, type NoticeKind } from "@/lib/core/notice";
-import type { Scope, Side } from "@/lib/core/journey";
+import type { Role, Scope, Side } from "@/lib/core/journey";
 
 /**
  * Telling the household something new is in their portal (manual review
@@ -18,7 +18,11 @@ import type { Scope, Side } from "@/lib/core/journey";
  * nobody is emailed rather than everybody every time: the throttle is the
  * table, and an email per click is worse than none.
  */
-export async function tellHousehold(journeyId: string, kind: NoticeKind, agentName: string): Promise<{ told: number }> {
+export async function tellHousehold(
+  journeyId: string, kind: NoticeKind, agentName: string,
+  /** Addresses already told in this round, across journeys; filled as it goes. */
+  already?: Set<string>,
+): Promise<{ told: number }> {
   const db = serviceClient();
   if (!db || !isUuid(journeyId)) return { told: 0 };
   const agentId = await currentAgentId();
@@ -30,7 +34,7 @@ export async function tellHousehold(journeyId: string, kind: NoticeKind, agentNa
     const [j, members] = await Promise.all([
       boundedReport(db.from("rift_journeys").select("label,side").eq("id", journeyId).eq("agent_id", agentId).maybeSingle(), "the journey"),
       boundedReport(
-        db.from("rift_journey_members").select("id,email,display_name,scopes,accepted_at,revoked_at,notices")
+        db.from("rift_journey_members").select("id,email,display_name,role,scopes,accepted_at,revoked_at,notices")
           .eq("journey_id", journeyId).eq("agent_id", agentId),
         "the household",
       ),
@@ -39,9 +43,9 @@ export async function tellHousehold(journeyId: string, kind: NoticeKind, agentNa
     const journey = ("data" in j ? j.data : null) as { label: string; side: Side } | null;
     if (!journey) return { told: 0 };
     const people = (("data" in members ? members.data : []) as {
-      id: string; email: string; display_name: string | null; scopes: Scope[] | null; accepted_at: string | null; revoked_at: string | null; notices: boolean | null;
+      id: string; email: string; display_name: string | null; role: Role; scopes: Scope[] | null; accepted_at: string | null; revoked_at: string | null; notices: boolean | null;
     }[]).filter((m) => m.notices !== false && shouldTell(kind, {
-      side: journey.side, scopes: m.scopes ?? [], joined: Boolean(m.accepted_at), revoked: Boolean(m.revoked_at),
+      side: journey.side, scopes: m.scopes ?? [], joined: Boolean(m.accepted_at), revoked: Boolean(m.revoked_at), role: m.role,
     }));
     if (!people.length) return { told: 0 };
 
@@ -62,6 +66,9 @@ export async function tellHousehold(journeyId: string, kind: NoticeKind, agentNa
     let told = 0;
     for (const p of people) {
       if (!noticeDue(lastAt.get(p.id) ?? null)) continue;
+      const address = p.email.trim().toLowerCase();
+      if (already?.has(address)) continue;
+      already?.add(address);
       const sent = await sendNotice({
         to: p.email, name: p.display_name, agentName, journeyLabel: journey.label, kind,
         journeyUrl: `${origin}/app/j/${journeyId}`,
@@ -80,4 +87,26 @@ export async function tellHousehold(journeyId: string, kind: NoticeKind, agentNa
     captureOpError(e, { op: "notice" });
     return { told: 0 };
   }
+}
+
+/**
+ * The same, for every journey that grew from a lead. A plan step belongs to
+ * the lead (the old plan page is per lead), and its household is on the
+ * journeys started from it. Somebody buying and selling at once is on both,
+ * and is told once.
+ */
+export async function tellHouseholdsOfLead(leadId: string, kind: NoticeKind, agentName: string): Promise<{ told: number }> {
+  const db = serviceClient();
+  if (!db || !isUuid(leadId)) return { told: 0 };
+  const agentId = await currentAgentId();
+  if (!agentId) return { told: 0 };
+  const j = await boundedReport(
+    db.from("rift_journeys").select("id").eq("origin_lead_id", leadId).eq("agent_id", agentId).limit(10),
+    "their journeys",
+  );
+  if (!j.ok || !("data" in j)) return { told: 0 };
+  let told = 0;
+  const already = new Set<string>();
+  for (const r of j.data as { id: string }[]) told += (await tellHousehold(r.id, kind, agentName, already)).told;
+  return { told };
 }

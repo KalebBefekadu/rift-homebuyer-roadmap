@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { noticeDue, shouldTell, NOTICE_WINDOW_HOURS } from "./notice";
+import { noticeDue, shouldTell, workIsTheirs, NOTICE_WINDOW_HOURS } from "./notice";
 import { buildNotice } from "./email";
 
 describe("telling a client something new is shared (WS11.5)", () => {
@@ -30,5 +30,21 @@ describe("telling a client something new is shared (WS11.5)", () => {
     expect(e.html).toContain("https://rift.example/app/j/0f8fad5b-d9cb-469f-a165-70867728950e?tab=offers");
     expect(e.html).toContain("https://rift.example/app/account");
     expect(e.html).not.toMatch(/\$\d/);
+  });
+
+  it("tells a buyer or seller, never a viewer, when something is put on their list (audit portals-2026-10)", () => {
+    expect(shouldTell("yours", { ...member, scopes: [], role: "buyer" })).toBe(true);
+    expect(shouldTell("yours", { ...member, side: "sell", scopes: [], role: "co-buyer" })).toBe(true);
+    expect(shouldTell("yours", { ...member, role: "viewer" })).toBe(false);
+    expect(shouldTell("yours", member)).toBe(false);
+    const e = buildNotice({ to: "a@example.com", name: null, agentName: "Kaleb Befekadu", journeyLabel: "First home", kind: "yours", journeyUrl: "https://rift.example/app/j/0f8fad5b-d9cb-469f-a165-70867728950e" });
+    expect(e.subject).toBe("Kaleb put something on your list in Rift");
+    expect(e.html).toContain("?tab=today");
+  });
+
+  it("counts only open work the client owns as theirs to do", () => {
+    expect(workIsTheirs({ owner: "client", state: "waiting" })).toBe(true);
+    expect(workIsTheirs({ owner: "client", state: "confirmed" })).toBe(false);
+    expect(workIsTheirs({ owner: "other", state: "waiting" })).toBe(false);
   });
 });
