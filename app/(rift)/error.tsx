@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import * as Sentry from "@sentry/nextjs";
+import { reportError } from "@/lib/monitoring/browser";
 
 /**
  * The public surfaces' error boundary.
@@ -14,7 +14,7 @@ import * as Sentry from "@sentry/nextjs";
  * It also captures, because an error nobody is told about is one nobody fixes.
  */
 export default function RiftError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { Sentry.captureException(error); }, [error]);
+  useEffect(() => { reportError(error); }, [error]);
 
   return (
     <main className="shell-w sec buy">

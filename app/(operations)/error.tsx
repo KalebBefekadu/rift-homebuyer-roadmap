@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import * as Sentry from "@sentry/nextjs";
+import { reportError } from "@/lib/monitoring/browser";
 import { Ico } from "@/components/rift/icons";
 
 /**
@@ -18,7 +18,7 @@ import { Ico } from "@/components/rift/icons";
  * catches a rendering failure, not a data one.
  */
 export default function StudioError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => { Sentry.captureException(error); }, [error]);
+  useEffect(() => { reportError(error); }, [error]);
 
   return (
     <main className="shell-w sec" style={{ maxWidth: 560 }}>

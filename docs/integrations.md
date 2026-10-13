@@ -99,9 +99,9 @@ silently**, and an operator cannot act on a log line nobody reads.
 
 ### Session Replay is off, deliberately
 
-`instrumentation-client.ts` does not load `replayIntegration()`. It recorded one session
+`lib/monitoring/browser-init.ts` does not load `replayIntegration()`. It recorded one session
 in ten on pages where somebody types their savings, their payoff and their income, on a
-product that asks for no account and says so — and `lib/core/privacy.ts` lists every
+product that asks for no account and says so, and `lib/core/privacy.ts` lists every
 category of data this product keeps, with session recordings sent to a third party absent
 from that list. The panel also tells a visitor "we do not know what they typed", which was
 true only because of a library default nothing in this repo had written down.
@@ -111,6 +111,18 @@ by every route from 229 kB to 189 kB, and `/buy` from 242 kB to 207 kB.
 
 Errors and traces are unaffected. If replay is ever wanted back, it goes in `RETENTION`
 first, and `maskAllText` / `maskAllInputs` get set explicitly rather than inherited.
+
+### The browser SDK loads when the page is idle
+
+The Sentry client was still 85 kB of the 189 kB every page shared. It is now its own chunk
+(`lib/monitoring/browser.ts`), fetched once the browser is idle or as soon as an error boundary
+has something to report, and never without `NEXT_PUBLIC_SENTRY_DSN`. Shared JavaScript went from
+189 kB to 105 kB, `/buy` from 193 kB to 113 kB, `/privacy` from 191 kB to 108 kB (13 Oct).
+
+An uncaught error before it loads is held by `instrumentation-client.ts` and sent once it has;
+an error thrown before any of the page's own scripts run, or on a page closed in its first
+second or two, is not reported. Navigation timing starts once it has loaded. Server-side
+reporting is unchanged.
 
 ### What to add during the build
 - A tag for the build phase, so an error in a half-built surface is triageable.

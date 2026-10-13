@@ -1,40 +1,29 @@
-import * as Sentry from "@sentry/nextjs";
-import { scrubEvent } from "./lib/monitoring/redact";
+import { loadSentry, sentryIfLoaded } from "./lib/monitoring/browser";
 
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+/*
+ * Sentry starts when the browser is idle, not before the page can be used
+ * (lib/monitoring/browser.ts). Until then an uncaught error is held here and
+ * sent once it has started, so the first seconds are not a blind spot.
+ */
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  const held: unknown[] = [];
+  const onError = (e: ErrorEvent) => { held.push(e.error ?? e.message); };
+  const onRejection = (e: PromiseRejectionEvent) => { held.push(e.reason); };
+  window.addEventListener("error", onError);
+  window.addEventListener("unhandledrejection", onRejection);
 
-Sentry.init({
-  dsn,
-  enabled: Boolean(dsn),
-  environment: process.env.NODE_ENV,
-  // 100% in dev, 10% in production (Sentry Next.js skill default)
-  tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
-  enableLogs: true,
-  /* Link tokens and answers never leave in an error report (ACCESS-02). */
-  beforeSend: (event) => scrubEvent(event),
-  beforeSendTransaction: (event) => scrubEvent(event),
-  /**
-   * No Session Replay. Two reasons, and the second is the one that decides it.
-   *
-   * It is the heaviest thing this product ships to a browser: the replay
-   * recorder is most of the Sentry client bundle, on a public funnel whose
-   * audience includes people opening it on a phone from another continent.
-   *
-   * And it recorded one in ten sessions of pages where somebody types their
-   * savings, their payoff and their income, on a product that asks for no
-   * account and says so. `lib/core/privacy.ts` lists every category of data
-   * this product keeps: its own comment says a retention list that omits a
-   * category "is not a retention list, it is a selection": and says of the
-   * funnel telemetry: "We know someone stopped on the savings question; we do
-   * not know what they typed." Session recordings sent to a third party were
-   * not on that list, and the only thing making that sentence true was a
-   * library default nothing here had written down.
-   *
-   * Errors and traces are unaffected; nothing about diagnosing a crash needed
-   * the recording. If it is ever wanted back it is one integration, but it
-   * belongs in RETENTION first, with maskAllText and maskAllInputs set here
-   * explicitly rather than inherited.
-   */
-});
+  const start = () => {
+    void loadSentry().then((s) => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      for (const e of held.splice(0)) s?.captureException(e);
+    });
+  };
+  if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 4_000 });
+  else setTimeout(start, 2_000);
+}
 
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+/* Navigation timing, once the SDK is there; a navigation before it is not measured. */
+export function onRouterTransitionStart(href: string, navigationType: string) {
+  sentryIfLoaded()?.captureRouterTransitionStart(href, navigationType);
+}

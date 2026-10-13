@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import * as Sentry from "@sentry/nextjs";
+import { reportError } from "@/lib/monitoring/browser";
 import { Mark } from "@/components/rift/icons";
 
 /**
@@ -18,7 +18,7 @@ import { Mark } from "@/components/rift/icons";
  * the server, and resetting the boundary re-renders the same failed reply.
  */
 export default function ClientError({ error }: { error: Error & { digest?: string } }) {
-  useEffect(() => { Sentry.captureException(error); }, [error]);
+  useEffect(() => { reportError(error); }, [error]);
 
   return (
     <main className="shell-w sec" style={{ maxWidth: 520 }}>
