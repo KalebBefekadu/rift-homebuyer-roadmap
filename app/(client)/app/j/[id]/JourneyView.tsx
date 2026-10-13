@@ -13,7 +13,9 @@ import Link from "next/link";
 import { Ico } from "@/components/rift/icons";
 import { clientBids, clientBrief, clientHomes, clientProgress, clientTours, householdDocuments, type Membership } from "@/lib/db/portal";
 import { SendDocument } from "./SendDocument";
-import { clientRoom, clientReferralLink } from "@/lib/db/portal-room";
+import { clientRoom, clientReferralLink, lastLook } from "@/lib/db/portal-room";
+import { sinceLastLook } from "@/lib/core/since";
+import { STAGE_LABEL } from "@/lib/core/progress";
 import { siteUrl } from "@/lib/core/site";
 import { PassItOn } from "./PassItOn";
 import { OfferRoomView } from "@/components/rift/OfferRoomView";
@@ -177,6 +179,16 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
     })),
   } : null;
 
+  /* What moved since they last looked (item 10), from what this page already
+     shows them. The member's own visit moves the marker; the preview reads it. */
+  const since = p ? sinceLastLook({
+    lastSeen: await lastLook(member, { record: !preview }),
+    stage: { label: STAGE_LABEL[p.progress.stage], since: p.progress.stageSince },
+    work: p.detail ? (shown?.work ?? []).map((w) => ({ label: w.label, stateLabel: WORK_STATE_LABEL[w.state], lastWord: w.lastWord })) : [],
+    homes: (h ?? []).map((x) => ({ address: x.address, createdAt: x.createdAt, withdrawnAt: x.withdrawnAt })),
+    decisions: decisions.map((d) => ({ question: d.question, releasedAt: d.releasedAt })),
+  }) : null;
+
   /* After a recorded closing, a link to pass on (item 6), the same one the
      agent has on the lead page. */
   const passOn = p?.closed ? await clientReferralLink(member, siteUrl()) : null;
@@ -259,6 +271,16 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
       <section className="card p-4" style={{ marginTop: 18 }} aria-labelledby="today-h">
         <h2 id="today-h" className="t-md w6">{t("pt.today.h")}</h2>
         <div lang={EN}>
+        {since ? (
+          <div className="card p-3" style={{ marginTop: 8, background: "var(--sunk)" }}>
+            <div className="t-xs w6">Since you last looked, on {showDay(since.day, { month: "short", day: "numeric" })}</div>
+            {since.lines.length ? (
+              <ul className="t-sm c-2" style={{ marginTop: 4, display: "grid", gap: 2 }}>
+                {since.lines.map((l) => <li key={l}>{l}</li>)}
+              </ul>
+            ) : <p className="t-sm c-3" style={{ marginTop: 2 }}>Nothing new on this page.</p>}
+          </div>
+        ) : null}
         {listingSays ? <p className="t-sm" style={{ marginTop: 6 }}>{listingSays}</p> : null}
         {latestReview ? (
           <p className="t-xs c-3" style={{ marginTop: 4, lineHeight: 1.6 }}>

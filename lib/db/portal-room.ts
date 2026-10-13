@@ -1,10 +1,11 @@
 import "server-only";
 import { serviceClient } from "./service";
-import { boundedReport } from "./bounded";
+import { boundedReport, boundedWrite } from "./bounded";
 import { done, skipped, type DbResult } from "./result";
 import { sellerRoomOf, type SellerRoom } from "./plan";
 import { releasedFor } from "./decisions";
 import { canRespond } from "@/lib/core/journey";
+import { nextSeen } from "@/lib/core/since";
 import type { Decision } from "@/lib/core/decision";
 import type { Membership } from "./portal";
 
@@ -78,4 +79,31 @@ export async function clientReferralLink(m: Membership, origin: string | null): 
   );
   const token = r.ok && "data" in r ? (r.data as { referral_token: string | null } | null)?.referral_token : null;
   return token ? `${origin}/buy?r=${encodeURIComponent(token)}` : null;
+}
+
+/**
+ * When this member last looked, for "Since you last looked" (audit
+ * portals-2026-10, item 10). The member's own page moves the visit on; the
+ * agent's preview only reads, so previewing never changes what the client is
+ * shown. A failed read or write shows nothing rather than a wrong list.
+ */
+export async function lastLook(m: Membership, opts: { record: boolean }): Promise<string | null> {
+  const db = serviceClient();
+  if (!db) return null;
+  const r = await boundedReport(
+    db.from("rift_journey_members").select("seen_at,seen_before").eq("id", m.memberId).eq("journey_id", m.journeyId).maybeSingle(),
+    "your last visit",
+  );
+  if (!r.ok || !("data" in r) || !r.data) return null;
+  const cur = r.data as { seen_at: string | null; seen_before: string | null };
+  const next = nextSeen({ seenAt: cur.seen_at, seenBefore: cur.seen_before });
+  if (opts.record && next.write) {
+    const w = await boundedWrite(
+      db.from("rift_journey_members").update({ seen_at: next.write.seenAt, seen_before: next.write.seenBefore })
+        .eq("id", m.memberId).eq("journey_id", m.journeyId),
+      "your visit",
+    );
+    if (!w.ok) return null;
+  }
+  return opts.record ? next.since : cur.seen_at;
 }
