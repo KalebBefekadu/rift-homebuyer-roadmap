@@ -31,6 +31,8 @@ const HEADING: Record<TodayKind, string> = {
    0.55 the label fell to 3:1, and the stages ahead are exactly the ones a
    buyer reads to see what is coming. --ink-4 is the AA floor on --sunk. */
 const AHEAD = { color: "var(--ink-4)", borderStyle: "dashed" } as const;
+const askHref = (ask: { to: string; journeyLabel: string }, about: string) =>
+  `mailto:${ask.to}?subject=${encodeURIComponent(`${ask.journeyLabel}: ${about}`)}&body=${encodeURIComponent(`About "${about}" on ${ask.journeyLabel}:\n\n`)}`;
 const ORDER: TodayKind[] = ["blocker", "overdue", "decision", "yours", "others"];
 const CHIP: Partial<Record<WorkState, string>> = { blocked: "chip-neg", reported: "chip-warn", confirmed: "chip-pos", waiting: "chip-warn" };
 
@@ -40,8 +42,16 @@ const CHIP: Partial<Record<WorkState, string>> = { blocked: "chip-neg", reported
  * here: saying they did their part, which is recorded as reported until the
  * person it depends on confirms it (REQ-UX-02).
  */
-export function Today({ journeyId, where, strip, items, nothingOwed, contract, canRespond, agentFirst }: {
+export function Today({ journeyId, where, strip, items, nothingOwed, contract, canRespond, agentFirst, ask }: {
   journeyId: string;
+  /**
+   * "Ask Kaleb about this" on each item (audit portals-2026-10, decision 2):
+   * the client's own email, addressed to the agent, with the item named, so
+   * the question arrives saying which thing it is about. Not a message box:
+   * §3.13 rules out a chat, and the record stays in email. Null without an
+   * address for the agent.
+   */
+  ask?: { to: string; journeyLabel: string } | null;
   where: string;
   strip: { stage: string; label: string; state: "done" | "skipped" | "now" | "ahead" }[];
   items: TodayItem[];
@@ -99,6 +109,7 @@ export function Today({ journeyId, where, strip, items, nothingOwed, contract, c
                   <span className="w6">{i.title}</span>
                   <span className="c-3"> {i.detail}</span>
                   {i.anchor ? <> <a className="btn-link t-xs" href={placeHref(i.anchor)}>Go to it</a></> : null}
+                  {ask ? <> <a className="btn-link t-xs c-3" href={askHref(ask, i.title)}>Ask {agentFirst}</a></> : null}
                 </li>
               ))}
             </ul>

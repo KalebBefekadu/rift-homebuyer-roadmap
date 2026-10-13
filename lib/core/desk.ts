@@ -75,8 +75,17 @@ export interface DeskItem {
   tone: Tone;
   /** A contract date is never snoozed. */
   snoozable: boolean;
-  /** Words ready for the next action, when it is a message somebody else should get. Nothing is sent by Rift. */
-  draft?: { subject: string; body: string } | null;
+  /**
+   * Words ready for the next action, when it is a message somebody else
+   * should get. With an address on record it can be prepared in the outbox
+   * for approval; without one it opens the agent's own mail. Rift sends
+   * nothing that was not approved.
+   */
+  draft?: {
+    subject: string; body: string;
+    to?: { name: string | null; email: string } | null;
+    work?: { journeyId: string; transactionId: string; workstream: string } | null;
+  } | null;
   /** Earlier sorts first inside a group. */
   order: number;
 }
@@ -95,6 +104,8 @@ export interface DeskInput {
   /** `held` is why the last check refused an approved message (lib/core/outbox.ts heldReason), or null. */
   outbox: { id: string; state: "prepared" | "approved" | "failed" | "unknown"; subject: string; to: string; held?: string | null }[];
   programFlags: string[];
+  /** Addresses on record for a contract's workstreams, by `contactKey` (lib/core/contacts.ts). */
+  contacts?: Record<string, { name: string | null; email: string }>;
   /** Records nobody re-verified in time, and who owns re-verifying them (a setting). */
   programsWithheld: { names: string[]; owner: string; withinDays: number };
   reviews: { id: string; who: string; whoId: string; what: string; waitingHours: number; overdue: boolean }[];
@@ -264,7 +275,11 @@ export function deskItems(input: DeskInput): DeskItem[] {
       due: days <= 0 ? "Check in today" : `Check in ${short(w.checkIn)}`,
       next: days <= 0 ? `Ask ${w.on} where it stands` : "Nothing until then",
       href: `/operations/journey/${w.journeyId}?tab=contract`, tone: w.stale ? "warn" : "none", order: days,
-      draft: days <= 0 ? checkInDraft({ agentName: input.agentName ?? me, label: w.label, person: w.person, address: w.address, lastWord: w.lastWord ? short(w.lastWord.on) : null }) : null,
+      draft: days <= 0 ? {
+        ...checkInDraft({ agentName: input.agentName ?? me, label: w.label, person: w.person, address: w.address, lastWord: w.lastWord ? short(w.lastWord.on) : null }),
+        to: input.contacts?.[`${w.transactionId}:${w.workstream}`] ?? null,
+        work: { journeyId: w.journeyId, transactionId: w.transactionId, workstream: w.workstream },
+      } : null,
     });
   }
 

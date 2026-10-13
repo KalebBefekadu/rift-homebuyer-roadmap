@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { limited, readJson } from "@/lib/db/guard";
+import { cleanContact } from "@/lib/core/contacts";
 import { SCOPES, type Role, type Scope, type Side } from "@/lib/core/journey";
 import { CADENCE_LABEL, EMPTY_FACTS, type Cadence, type PropertyFacts, type SearchBrief } from "@/lib/core/search";
 import {
   startJourney, relabelJourney, saveBrief, approveSearch, confirmSearchSetUp, pauseSearch,
   inviteMember, newInviteLink, sendMemberSignIn, emailInvitation, withdrawAccess, addShortlistHome, takeHomeOff,
   requestShowing, recordShowingStep, recordShowingAnswer,
-  moveStage, setJourneyStatus, openContract, closeContract, updateWork,
+  moveStage, setJourneyStatus, openContract, closeContract, updateWork, saveContact,
   documentSlot, documentFinish, openBid, bidStep, bidAnswerForThem, addDate, reviseDate, amendDates, reconcile, recordMoney, linkJourneys, dependencyHappened, recordPricing, recordProceeds, listingHappened, showingStep, weeklyReview, sellerOp, type SellerOp,
 } from "@/app/(operations)/operations/journey/ops";
 import { RULE_IDS, type DeadlineInput, type RuleId } from "@/lib/core/deadline";
@@ -248,6 +249,17 @@ export async function POST(req: Request) {
         state, owner, ownerName: str(b.ownerName, 160) || null, source: str(b.source, 160) || null,
         confirmedOn: str(b.confirmedOn, 10) || null, note: str(b.note, 500) || null,
       }, num(b.expectedSeq), str(b.requestId, 40)));
+    }
+    case "contact": {
+      /* An address for whoever owns a workstream (decision 3). Its own write,
+         not part of an update: an address is not word from anybody, and
+         recording it as an update moved the "last word" and the day to ask. */
+      const workstream = str(b.workstream, 20) as Workstream;
+      const email = str(b.email, 200).trim();
+      if (!WORKSTREAMS.includes(workstream) || !cleanContact(null, email)) {
+        return json({ ok: false, error: "That email address does not look right." }, 400);
+      }
+      return json(await saveContact(journeyId, str(b.contractId, 40), workstream, str(b.name, 160) || null, email));
     }
     case "doc-slot":
       return json(await documentSlot(journeyId));

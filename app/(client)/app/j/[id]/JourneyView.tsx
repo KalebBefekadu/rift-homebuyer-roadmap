@@ -309,6 +309,7 @@ export async function JourneyView({ member, preview, tab }: { member: Membership
             contract={contract}
             canRespond={respond}
             agentFirst={agentFirst}
+            ask={member.agentEmail && respond ? { to: member.agentEmail, journeyLabel: member.journeyLabel } : null}
           />
         ) : (
           <Today

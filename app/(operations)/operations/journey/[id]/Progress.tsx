@@ -1,5 +1,6 @@
 "use client";
 
+import type { Contact } from "@/lib/core/contacts";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -46,8 +47,10 @@ const MANUAL: Record<Side, Stage[]> = {
  * disagree. Each workstream has its own owner and the date of the last word
  * from whoever gave it; one gone quiet for a week says so.
  */
-export function Progress({ journeyId, side = "buy", progress, events, open, past, homes, coverage, leadId, person, unavailable, nudge }: {
+export function Progress({ journeyId, side = "buy", progress, events, open, past, homes, coverage, leadId, person, unavailable, nudge, contacts = {} }: {
   journeyId: string;
+  /** Addresses on record for the open contract's workstreams, by workstream (decision 3). */
+  contacts?: Partial<Record<Workstream, Contact>>;
   /** A buyer's stages or a seller's (STATE-03). */
   side?: Side;
   progress: ProgressState;
@@ -190,7 +193,7 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
 
       <div style={{ marginTop: 16 }}>
         {open ? (
-          <OpenContract c={open} side={side} busy={busy} run={run} person={person}
+          <OpenContract c={open} side={side} busy={busy} run={run} person={person} contacts={contacts}
             ending={form === "end"} setEnding={(v) => setForm(v ? "end" : null)}
             outcome={outcome} setOutcome={setOutcome} backTo={backTo} setBackTo={setBackTo} reason={reason} setReason={setReason} />
         ) : form === "contract" ? (
@@ -251,9 +254,10 @@ export function Progress({ journeyId, side = "buy", progress, events, open, past
   );
 }
 
-function OpenContract({ c, side, busy, run, person, ending, setEnding, outcome, setOutcome, backTo, setBackTo, reason, setReason }: {
+function OpenContract({ c, side, busy, run, person, contacts, ending, setEnding, outcome, setOutcome, backTo, setBackTo, reason, setReason }: {
   c: ContractView;
   side: Side;
+  contacts: Partial<Record<Workstream, Contact>>;
   busy: boolean;
   run: (op: string, body: Record<string, unknown>) => Promise<boolean>;
   person: string;
@@ -276,7 +280,7 @@ function OpenContract({ c, side, busy, run, person, ending, setEnding, outcome, 
       <p className="t-xs" style={{ marginTop: 8 }}>{workSummary(c.work)}</p>
 
       <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-        {c.work.map((w) => <Work key={w.workstream} contractId={c.id} w={w} history={c.history[w.workstream]} busy={busy} run={run} person={person} side={side} />)}
+        {c.work.map((w) => <Work key={w.workstream} contractId={c.id} w={w} history={c.history[w.workstream]} busy={busy} run={run} person={person} side={side} contact={contacts[w.workstream] ?? null} />)}
       </div>
 
       <div style={{ marginTop: 12 }}>
@@ -319,8 +323,10 @@ function OpenContract({ c, side, busy, run, person, ending, setEnding, outcome, 
   );
 }
 
-function Work({ contractId, w, history, busy, run, person, side }: {
+function Work({ contractId, w, history, busy, run, person, side, contact }: {
   contractId: string;
+  /** Who to ask, when an address is on record. Only the open contract has these. */
+  contact?: Contact | null;
   side: Side;
   w: WorkstreamView;
   history: WorkUpdate[];
@@ -336,6 +342,8 @@ function Work({ contractId, w, history, busy, run, person, side }: {
   const [source, setSource] = useState("");
   const [confirmedOn, setConfirmedOn] = useState(today());
   const [note, setNote] = useState("");
+  const [email, setEmail] = useState(contact?.email ?? "");
+  const [addingEmail, setAddingEmail] = useState(false);
 
   const open = () => { setState(w.state); setOwner(w.owner); setOwnerName(w.ownerName ?? ""); setSource(""); setConfirmedOn(today()); setNote(""); setEditing(true); };
   const who = w.owner === "client" ? person : ownerText(w, "agent", "");
@@ -347,13 +355,30 @@ function Work({ contractId, w, history, busy, run, person, side }: {
           <span className="t-sm w6">{w.label}</span>
           <span className={`chip t-2xs ${CHIP[w.state]}`}>{WORK_STATE_LABEL[w.state]}</span>
         </div>
-        <span className="t-2xs c-4">{who}</span>
+        <span className="t-2xs c-4">{who}{contact && w.owner === "other" ? ` · ${contact.email}` : ""}</span>
       </div>
       <p className={`t-2xs ${w.stale ? "c-warn" : "c-4"}`} style={{ marginTop: 4, lineHeight: 1.5 }}>
         {w.lastWord ? `Last word ${DAY(w.lastWord.on)}, from ${w.lastWord.from}.` : "No word from anybody yet."}
         {w.stale ? ` ${w.daysSinceWord === null ? "Nobody has given word yet" : `Nothing for ${w.daysSinceWord} days`}: ask for an update. The ${side === "sell" ? "seller" : "buyer"} sees "waiting for an update".` : ""}
         {w.note ? ` ${w.note}` : ""}
       </p>
+      {/* Who to ask, for check-ins through the outbox (decision 3). Only on
+          the open contract, only for work someone else owns. */}
+      {contact !== undefined && w.owner === "other" ? (
+        addingEmail ? (
+          <div className="row gap-2 wrap" style={{ marginTop: 6, alignItems: "flex-end" }}>
+            <label className="field" style={{ flex: "2 1 220px" }}><span className="label">Their email, for check-ins</span>
+              <input className="input" type="email" value={email} maxLength={200} placeholder="dana@peachmortgage.com" onChange={(e) => setEmail(e.target.value)} /></label>
+            <button type="button" className="btn btn-p btn-sm" disabled={busy || !email.trim()}
+              onClick={async () => { if (await run("contact", { contractId, workstream: w.workstream, name: w.ownerName ?? "", email: email.trim() })) setAddingEmail(false); }}>Save</button>
+            <button type="button" className="btn btn-g btn-sm" onClick={() => { setEmail(contact?.email ?? ""); setAddingEmail(false); }}>Cancel</button>
+          </div>
+        ) : (
+          <button type="button" className="btn-link t-2xs" style={{ marginTop: 4 }} onClick={() => setAddingEmail(true)}>
+            {contact ? "Change the email for check-ins" : `Add an email for ${w.ownerName ?? "them"}, for check-ins`}
+          </button>
+        )
+      ) : null}
       {w.state === "reported" ? (
         <p className="t-2xs c-warn" style={{ marginTop: 4 }}>
           {person} says this is done. Confirm it once {w.workstream === "earnest-money" ? "the holder confirms receipt" : "whoever it depends on confirms it"}.
@@ -377,6 +402,7 @@ function Work({ contractId, w, history, busy, run, person, side }: {
               <label className="field" style={{ flex: "2 1 180px" }}><span className="label">Who</span>
                 <input className="input" value={ownerName} maxLength={160} placeholder="Dana at Peach Mortgage" onChange={(e) => setOwnerName(e.target.value)} /></label>
             ) : null}
+
           </div>
           <div className="row gap-2 wrap" style={{ marginTop: 8 }}>
             <label className="field" style={{ flex: "2 1 180px" }}><span className="label">Heard from{state === "confirmed" ? "" : " (optional)"}</span>

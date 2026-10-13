@@ -24,6 +24,7 @@ import { CHANNEL_LABEL } from "@/lib/core/nurture";
 import { sla, type Band } from "@/lib/core/lead";
 import { STAGE_LABEL, STATUS_LABEL, marketDay, type JourneyStatus, type Stage } from "@/lib/core/progress";
 import { datesNeeding, waitingOnOthers } from "@/lib/core/transactions";
+import { contactsFor } from "@/lib/db/contacts";
 import { GROUP_LABEL, GROUP_QUESTION, UPCOMING_DAYS, activity, arrange, deskHeadline, deskItems, type DeskGroup, type Group } from "@/lib/core/desk";
 import { heldReason } from "@/lib/core/outbox";
 import { captureOpError } from "@/lib/monitoring/capture";
@@ -141,13 +142,20 @@ export default async function OperationsToday() {
   const choices = list(choicesRead);
   const marks = marksRead.ok && "data" in marksRead ? marksRead.data : null;
 
+  /* The addresses on record for the work waiting on others (decision 3). A
+     failed read leaves each check-in as a mail draft, which still works. */
+  const waiting = waitingOnOthers(contracts, today);
+  const contactsRead = await contactsFor(agent.agentId, [...new Set(waiting.map((w) => w.transactionId))]);
+  const contacts = contactsRead.ok && "data" in contactsRead ? contactsRead.data : {};
+
   const items = deskItems({
     agentFirst: agent.name.split(/\s+/)[0] ?? agent.name,
     agentName: agent.name,
     today,
     dates: datesNeeding(contracts, UPCOMING_DAYS),
     contracts,
-    waiting: waitingOnOthers(contracts, today),
+    waiting,
+    contacts,
     commitments: list(commitmentsRead),
     touches: touches.filter((t) => !t.auto).map((t) => ({ leadId: t.leadId, name: t.name, says: t.says, channel: CHANNEL_LABEL[t.channel], daysLate: t.daysLate })),
     outbox: drafts.flatMap((d) => d.state === "prepared" || d.state === "approved" || d.state === "failed" || d.state === "unknown"

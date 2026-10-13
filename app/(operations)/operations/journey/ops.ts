@@ -9,6 +9,7 @@ import { createJourney, invite, invitedMemberForToken, joinedMemberEmail, reissu
 import { sendSignInLink } from "@/lib/db/signin";
 import { sendInvitation } from "@/lib/db/email";
 import { tellHousehold, tellHouseholdsOfLead } from "@/lib/db/notices";
+import { addContact } from "@/lib/db/contacts";
 import { workIsTheirs } from "@/lib/core/notice";
 import { saveAgentRevision, approveRevision, recordActivation, setSearchPaused } from "@/lib/db/search";
 import { addHome, withdrawHome } from "@/lib/db/shortlist";
@@ -307,6 +308,18 @@ export async function updateWork(
   if (r.ok && !("skipped" in r) && workIsTheirs(input)) await tellHousehold(journeyId, "yours", g.name);
   revalidatePath(`/operations/journey/${journeyId}`);
   return out(r, (d) => ({ seq: d.seq }));
+}
+
+/** An address for whoever owns a workstream, for check-ins (audit portals-2026-10, decision 3). */
+export async function saveContact(journeyId: string, contractId: string, workstream: Workstream, name: string | null, email: string) {
+  const g = await gate();
+  if ("error" in g) return { ok: false as const, error: g.error };
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  const r = await addContact(agent.agentId, { journeyId, transactionId: contractId, workstream, name, email });
+  revalidatePath(`/operations/journey/${journeyId}`);
+  revalidatePath("/operations");
+  return out(r);
 }
 
 /* ------------------------------------------------------------------ *

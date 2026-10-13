@@ -4,7 +4,7 @@ import { boundedReport, boundedWrite } from "./bounded";
 import { done, skipped, type DbResult } from "./result";
 import { sellerRoomOf, type SellerRoom } from "./plan";
 import { releasedFor } from "./decisions";
-import { canRespond } from "@/lib/core/journey";
+import { buyerSearchOn, canRespond } from "@/lib/core/journey";
 import { nextSeen } from "@/lib/core/since";
 import type { Decision } from "@/lib/core/decision";
 import type { Membership } from "./portal";
@@ -106,4 +106,30 @@ export async function lastLook(m: Membership, opts: { record: boolean }): Promis
     if (!w.ok) return null;
   }
   return opts.record ? next.since : cur.seen_at;
+}
+
+/**
+ * The portal journey a signed-in person has for a lead, if any (audit
+ * portals-2026-10, decision 1). The old plan link sends a joined household
+ * member to the portal, where the same offers and decisions now are and a
+ * choice is recorded behind a sign-in (AT04). Somebody who is not signed in,
+ * or not a joined member, keeps the plan link exactly as it was.
+ */
+export async function portalJourneyFor(userId: string, leadId: string): Promise<string | null> {
+  if (!buyerSearchOn(process.env)) return null;
+  const db = serviceClient();
+  if (!db) return null;
+  const mine = await boundedReport(
+    db.from("rift_journey_members").select("journey_id")
+      .eq("auth_user_id", userId).is("revoked_at", null).not("accepted_at", "is", null).limit(20),
+    "your journeys",
+  );
+  const ids = mine.ok && "data" in mine ? (mine.data as { journey_id: string }[]).map((r) => r.journey_id) : [];
+  if (!ids.length) return null;
+  const j = await boundedReport(
+    db.from("rift_journeys").select("id").eq("origin_lead_id", leadId).in("id", ids)
+      .order("created_at", { ascending: false }).limit(1),
+    "your journey",
+  );
+  return j.ok && "data" in j ? ((j.data as { id: string }[])[0]?.id ?? null) : null;
 }

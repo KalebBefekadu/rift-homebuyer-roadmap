@@ -43,7 +43,7 @@ export interface OutboxItem {
 }
 
 type Row = {
-  id: string; lead_id: string | null; channel: "email"; purpose: "program-alert"; to_address: string; to_name: string | null;
+  id: string; lead_id: string | null; channel: "email"; purpose: "program-alert" | "check-in"; to_address: string; to_name: string | null;
   subject: string; body: string; content_hash: string; replaces: string | null; created_at: string;
 };
 

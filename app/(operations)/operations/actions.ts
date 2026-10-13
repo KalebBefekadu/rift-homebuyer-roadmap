@@ -9,6 +9,11 @@ import { stop } from "@/lib/db/nurture";
 import { markReplied } from "@/lib/db/leads";
 import { addNote } from "@/lib/db/notes";
 import { REPLY_NOTE, type ReplyChannel } from "@/lib/core/first-reply";
+import { contactsFor } from "@/lib/db/contacts";
+import { contactKey } from "@/lib/core/contacts";
+import { outbox as readOutbox, prepare } from "@/lib/db/outbox";
+import { WORKSTREAMS, type Workstream } from "@/lib/core/progress";
+import { isUuid } from "@/lib/core/ids";
 import { roster } from "@/lib/db/clients";
 import type { StopId } from "@/lib/core/nurture";
 import { journeysMatching } from "@/lib/db/journeys";
@@ -170,3 +175,40 @@ export async function markItem(input: {
   if ("skipped" in r) return { ok: false as const, error: r.reason };
   return { ok: true as const };
 }
+
+/**
+ * Put a check-in in the outbox, for the agent to read and approve (audit
+ * portals-2026-10, decision 3). The address is looked up here, from the
+ * agent's own records for this contract and workstream, never taken from the
+ * browser. The words are the ones shown on Today; approval is bound to them,
+ * and the outbox's last check (opt-outs, the approval itself) runs before
+ * anything leaves. Preparing the same words to the same address twice is
+ * refused, so a double press does not queue two.
+ */
+export async function prepareCheckIn(input: { transactionId: string; workstream: string; subject: string; body: string }) {
+  const agent = await currentAgent();
+  if (!agent) return { ok: false as const, error: "not signed in" };
+  if (!isUuid(input.transactionId) || !WORKSTREAMS.includes(input.workstream as Workstream)) return { ok: false as const, error: "Reload the page and try again" };
+  const subject = input.subject.trim().slice(0, 200);
+  const body = input.body.trim().slice(0, 5000);
+  if (!subject || !body) return { ok: false as const, error: "There is nothing to send" };
+
+  const c = await contactsFor(agent.agentId, [input.transactionId]);
+  if (!c.ok || "skipped" in c) return { ok: false as const, error: "Their address could not be read. Try again." };
+  const to = c.data[contactKey(input.transactionId, input.workstream as Workstream)];
+  if (!to) return { ok: false as const, error: "No address is on record for this. Add one on the contract." };
+
+  const existing = await readOutbox(agent.agentId);
+  if (existing.ok && "data" in existing && (existing.data ?? []).some((x) =>
+    x.draft.purpose === "check-in" && x.draft.to === to.email && x.draft.subject === subject
+    && (x.state === "prepared" || x.state === "approved"))) {
+    return { ok: false as const, error: "This check-in is already in your outbox." };
+  }
+  const r = await prepare(agent.agentId, null, { channel: "email", purpose: "check-in", to: to.email, name: to.name, subject, body }, agent.name);
+  revalidatePath("/operations");
+  revalidatePath("/operations/outbox");
+  if (!r.ok) return { ok: false as const, error: r.error };
+  if ("skipped" in r) return { ok: false as const, error: r.reason };
+  return { ok: true as const };
+}
+

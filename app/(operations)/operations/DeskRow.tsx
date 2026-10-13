@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Ico } from "@/components/rift/icons";
 import type { DeskItem, ItemMark, MarkKind, Tone } from "@/lib/core/desk";
-import { markItem } from "./actions";
+import { markItem, prepareCheckIn } from "./actions";
 import { showTime } from "@/lib/core/day";
 import { newRequestId } from "@/lib/core/ids";
 import { Tag } from "./_business/Tag";
@@ -47,6 +47,15 @@ export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { ma
   const [menu, setMenu] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [queued, setQueued] = useState(false);
+  const queue = () => start(async () => {
+    const d = item.draft;
+    if (!d?.work) return;
+    const r = await prepareCheckIn({ transactionId: d.work.transactionId, workstream: d.work.workstream, subject: d.subject, body: d.body });
+    if (!r.ok) { setError(r.error); return; }
+    setError(null);
+    setQueued(true);
+  });
   const t = TONE[item.tone];
 
   const send = (kind: MarkKind, extra: { until?: string; person?: string; reason?: string } = {}) => start(async () => {
@@ -96,7 +105,15 @@ export function DeskRow({ item, agentName, marksReady }: { item: DeskItem & { ma
         <span className={s.next}><b>Next:</b> {item.next}</span>
         {/* Opens the agent's own mail with the words ready; Rift sends nothing
             and stores no third party's address, so "To" is theirs to fill. */}
-        {item.draft ? (
+        {/* With an address on record, into the outbox for approval (decision
+            3); without one, the agent's own mail with "To" left to him. */}
+        {item.draft?.to && item.draft.work ? (
+          queued
+            ? <Link className="btn btn-s btn-sm" href="/operations/outbox"><Ico.check size={12} />In your outbox</Link>
+            : <button type="button" className="btn btn-s btn-sm" disabled={pending} onClick={queue} title={`To ${item.draft.to.name ? `${item.draft.to.name}, ` : ""}${item.draft.to.email}`}>
+                <Ico.send size={12} />Prepare the check-in
+              </button>
+        ) : item.draft ? (
           <a className="btn btn-s btn-sm" href={`mailto:?subject=${encodeURIComponent(item.draft.subject)}&body=${encodeURIComponent(item.draft.body)}`}>
             <Ico.mail size={12} />Draft the check-in
           </a>

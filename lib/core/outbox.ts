@@ -21,7 +21,7 @@
  */
 
 export type Channel = "email";
-export type Purpose = "program-alert";
+export type Purpose = "program-alert" | "check-in";
 export type OutboxState = "prepared" | "approved" | "running" | "succeeded" | "failed" | "unknown" | "cancelled";
 
 export const STATE_LABEL: Record<OutboxState, string> = {

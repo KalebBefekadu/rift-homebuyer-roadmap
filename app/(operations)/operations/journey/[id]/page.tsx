@@ -58,6 +58,7 @@ import { Ico } from "@/components/rift/icons";
 import { JourneyHead } from "./Frame";
 import { AttentionList, NeedsUpdate, Panel, Unread } from "./Bits";
 import s from "./journey.module.css";
+import { contactsFor } from "@/lib/db/contacts";
 
 export const metadata: Metadata = { title: "Journey", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -161,6 +162,10 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
   const memberList = members.ok && "data" in members ? members.data : null;
   const leadRow = lead.ok && "data" in lead ? lead.data?.lead ?? null : null;
   const prog = progress && progress.ok && "data" in progress ? progress.data : null;
+  /* Who to ask about each workstream on the open contract (decision 3). */
+  const contactRead = prog?.open ? await contactsFor(agent.agentId, [prog.open.id]) : null;
+  const contacts = Object.fromEntries(Object.entries(contactRead && contactRead.ok && "data" in contactRead ? contactRead.data : {})
+    .map(([k, c]) => [k.split(":")[1], c]));
   const s0 = search && search.ok && "data" in search ? search.data : null;
   const latest = s0?.revisions[0] ?? null;
   const previous = s0?.revisions[1] ?? null;
@@ -419,7 +424,7 @@ export default async function JourneyPage({ params, searchParams }: { params: Pr
               <Panel>
                 {prog ? (
                   <Progress journeyId={id} side={journey.side} progress={prog.progress} events={prog.events} open={prog.open} past={prog.contracts.filter((c) => c.outcome)}
-                    homes={prog.homes} coverage={prog.coverage} leadId={journey.leadId} person={person} unavailable={prog.unavailable} nudge={nudge} />
+                    homes={prog.homes} coverage={prog.coverage} leadId={journey.leadId} person={person} unavailable={prog.unavailable} nudge={nudge} contacts={contacts} />
                 ) : <Unread what="stage and contract" />}
               </Panel>
             </Section>

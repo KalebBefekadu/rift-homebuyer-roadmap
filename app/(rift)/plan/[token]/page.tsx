@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { clientSession } from "@/lib/db/portal";
+import { portalJourneyFor } from "@/lib/db/portal-room";
 import { readPlanByToken } from "@/lib/db/plan";
 import { currentAgentPublic, currentAgentId } from "@/lib/db/service";
 import { releasedFor } from "@/lib/db/decisions";
@@ -79,6 +82,17 @@ export default async function ClientPlan({ params }: { params: Promise<{ token: 
         </p>
       </Shell>
     );
+  }
+
+  /* A joined household member has this plan in their portal now, offers and
+     decisions included, behind their sign-in (audit portals-2026-10,
+     decision 1). Anyone else, signed in or not, reads the link as before,
+     and so does everybody while the portal is switched off: the switch is
+     checked in portalJourneyFor, so this page never depends on it. */
+  const session = await clientSession();
+  if (session.state === "signed-in") {
+    const journeyId = await portalJourneyFor(session.userId, plan.leadId);
+    if (journeyId) redirect(`/app/j/${journeyId}`);
   }
 
   const agent = await currentAgentPublic();

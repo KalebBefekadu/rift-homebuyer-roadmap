@@ -249,3 +249,17 @@ describe("a check-in ready for Waiting on others (audit portals-2026-10, item 7)
     expect(d.body).not.toMatch(/\$/);
   });
 });
+
+describe("a check-in with an address on record (audit portals-2026-10, decision 3)", () => {
+  it("carries the professional's address and the work it is about, once it is time to ask", () => {
+    const c = contract({}, { financing: [update("in-progress")] });
+    const waiting = waitingOnOthers([c], "2026-10-03");
+    const key = `${waiting[0]!.transactionId}:financing`;
+    const item = deskItems(base({ today: "2026-10-03", waiting, contacts: { [key]: { name: "Dana", email: "dana@peach.example" } } }))
+      .find((i) => i.group === "waiting")!;
+    expect(item.draft?.to).toEqual({ name: "Dana", email: "dana@peach.example" });
+    expect(item.draft?.work).toMatchObject({ workstream: "financing" });
+    const without = deskItems(base({ today: "2026-10-03", waiting })).find((i) => i.group === "waiting")!;
+    expect(without.draft?.to).toBeNull();
+  });
+});
